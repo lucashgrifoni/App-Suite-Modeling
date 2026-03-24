@@ -1,0 +1,25 @@
+id: finance
+name: "Serviços financeiros"
+sector: finance
+description: "Pagamentos, contas e dados sensíveis — maior impacto regulatório."
+risk_tuning:
+  likelihood_multiplier: 1.05
+  impact_multiplier: 1.15
+additional_threats:
+  # STRIDE não coberto pelo motor base para estes tipos (evita duplicado)
+  - id: pay_auth_abuse
+    title: "Fraude em transferências ou repúdio de operações"
+    description: "Rever SoD, limites e aprovações em dois passos."
+    stride: repudiation
+    target_component_kinds: [process, gateway]
+    likelihood_delta: 1
+    impact_delta: 1
+  - id: sensitive_data_exfil
+    title: "Spoofing de identidade em repositório de dados"
+    stride: spoofing
+    target_component_kinds: [datastore]
+    impact_delta: 1
+control_hints:
+  - "Segmentação de rede para dados de pagamento e contas privilegiadas"
+  - "Monitorização de transações e regras antifraude"
+  - "Registos imutáveis para auditoria (repudio)"

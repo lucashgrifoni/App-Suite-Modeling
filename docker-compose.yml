@@ -1,0 +1,10 @@
+# MVP: API + (opcional) frontend quando o Dockerfile do web existir.
+services:
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - OTM_ENV=development

@@ -1,0 +1,6 @@
+{
+  "id": "saas-web",
+  "title": "SaaS — aplicação web",
+  "description": "Fluxo típico browser → WAF → API → base de dados.",
+  "suggested_pack": "saas"
+}

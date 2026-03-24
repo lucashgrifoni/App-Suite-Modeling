@@ -1,0 +1,6 @@
+{
+  "id": "api-backend",
+  "title": "API + fila + worker",
+  "description": "Integrações síncronas e processamento assíncrono.",
+  "suggested_pack": "saas"
+}

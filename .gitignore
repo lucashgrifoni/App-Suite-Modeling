@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+dist/
+build/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.venv/
+venv/
+env/
+
+# Node / frontend
+node_modules/
+apps/web/dist/
+apps/web/.vite/
+npm-debug.log*
+yarn-error.log*
+*.local
+
+# IDE
+.idea/
+.vscode/
+.cursor/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env
+.env
+.env.*.local
+
+# Test / coverage artefacts
+.coverage
+coverage/
+coverage-output.txt

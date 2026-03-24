@@ -1,0 +1,23 @@
+id: telecom
+name: "Telecomunicações"
+sector: telecom
+description: "Canais de assinatura, identidade de assinante e infraestrutura de rede."
+risk_tuning:
+  likelihood_multiplier: 1.08
+  impact_multiplier: 1.1
+additional_threats:
+  - id: signal_integrity
+    title: "Divulgação indevida de metadados de rede"
+    stride: information_disclosure
+    target_component_kinds: [gateway]
+    likelihood_delta: 1
+    impact_delta: 0
+  - id: queue_spoof
+    title: "Mensagens falsas ou reordenação em fila"
+    stride: spoofing
+    target_component_kinds: [queue]
+    likelihood_delta: 1
+    impact_delta: 0
+control_hints:
+  - "Autenticação forte de dispositivos e canais de provisionamento"
+  - "Capacidade e rate limiting em APIs expostas ao acesso"

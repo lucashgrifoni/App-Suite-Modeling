@@ -1,0 +1,210 @@
+# Exemplo realista — e-commerce B2B, schema OTM v1 (Threat Modeling as Code)
+model:
+  schema_version: "1.0.0"
+  system_type: web_application
+  industry_sector: saas
+
+metadata:
+  title: "Plataforma de pedidos B2B — ameaças e mitigações"
+  summary: "Web + API + workers + PostgreSQL na cloud."
+  owner: "appsec@empresa.example"
+  document_version: "0.3.0"
+  tags:
+    - producao
+    - pci-adjacente
+
+business_context:
+  description: >
+    Sistema recebe pedidos de clientes corporativos, integra com ERP e antifraude.
+    Dados de pagamento são tokenizados por parceiro; não armazenamos PAN.
+  business_goals:
+    - "Disponibilidade 99.9% em horário comercial"
+    - "Integridade dos pedidos e do estado de workflow"
+  stakeholders:
+    - "Operações comerciais"
+    - "TI interna"
+    - "Parceiro de pagamentos"
+  regulatory_context: "LGPD para dados pessoais de contatos; requisitos contratuais PCI DSS no parceiro."
+  assumptions:
+    - "Autenticação corporativa via IdP SAML do cliente (fora do nosso modelo detalhado)."
+
+trust_boundaries:
+  - id: internet
+    name: "Internet / utilizadores"
+  - id: dmz
+    name: "Perímetro (WAF / LB)"
+    member_component_ids:
+      - waf
+  - id: app_tier
+    name: "Tier de aplicação (VPC)"
+    member_component_ids:
+      - api
+      - worker
+  - id: data_tier
+    name: "Dados (sub-rede restrita)"
+    member_component_ids:
+      - db
+      - cache
+
+assets:
+  - id: pedidos_pii
+    name: "Dados de pedidos e contactos"
+    asset_kind: data
+    sensitivity: "confidential"
+    description: "Metadados de pedido e PII mínima para contacto."
+    related_component_ids:
+      - db
+      - api
+  - id: token_pagamento
+    name: "Referência de pagamento tokenizada"
+    asset_kind: data
+    sensitivity: "restricted"
+    related_component_ids:
+      - api
+      - worker
+
+components:
+  - id: user
+    name: "Utilizador B2B"
+    kind: user
+    in_trust_boundary: internet
+  - id: waf
+    name: "WAF / LB"
+    kind: gateway
+    technology: "AWS ALB + WAF"
+    in_trust_boundary: dmz
+  - id: api
+    name: "Serviço de API"
+    kind: process
+    technology: "FastAPI / Kubernetes"
+    in_trust_boundary: app_tier
+    asset_ids:
+      - pedidos_pii
+      - token_pagamento
+  - id: worker
+    name: "Worker de integração"
+    kind: process
+    in_trust_boundary: app_tier
+    asset_ids:
+      - token_pagamento
+  - id: cache
+    name: "Redis"
+    kind: datastore
+    technology: "Redis"
+    in_trust_boundary: data_tier
+  - id: db
+    name: "PostgreSQL pedidos"
+    kind: datastore
+    technology: "PostgreSQL"
+    in_trust_boundary: data_tier
+    asset_ids:
+      - pedidos_pii
+
+data_flows:
+  - id: user_to_waf
+    from_component: user
+    to_component: waf
+    protocol: "HTTPS"
+    authenticated: true
+    encrypted: true
+  - id: waf_to_api
+    from_component: waf
+    to_component: api
+    protocol: "HTTPS"
+    authenticated: true
+    encrypted: true
+  - id: api_to_worker
+    from_component: api
+    to_component: worker
+    protocol: "internal"
+    authenticated: true
+  - id: api_to_cache
+    from_component: api
+    to_component: cache
+    protocol: "TCP"
+    encrypted: true
+  - id: worker_to_db
+    from_component: worker
+    to_component: db
+    protocol: "TCP"
+    encrypted: true
+
+threats:
+  - id: thr_broken_auth
+    title: "Quebra de autenticação na API"
+    stride: spoofing
+    target_component_id: api
+    target_asset_id: pedidos_pii
+    description: "Tokens de sessão fracos ou endpoints sem autorização adequada."
+    risk:
+      likelihood: 3
+      impact: 4
+      score: 12.0
+    treatment_status: triaged
+    assignee: "appsec"
+    due_date: "2025-06-30"
+    framework_refs:
+      - framework: owasp_asvs
+        control_id: "V2.1.1"
+      - framework: nist_800_53
+        control_id: "AC-3"
+    evidence_suggestion_ids:
+      - ev_authz_tests
+
+  - id: thr_sqli
+    title: "Injeção SQL no acesso a pedidos"
+    stride: tampering
+    target_component_id: db
+    target_data_flow_id: worker_to_db
+    target_asset_id: pedidos_pii
+    risk:
+      likelihood: 2
+      impact: 5
+      score: 10.0
+    treatment_status: in_progress
+    assignee: "dev-backend"
+    evidence_suggestion_ids:
+      - ev_sast
+      - ev_db_audit
+
+mitigations:
+  - id: mit_oauth_hardening
+    title: "Endurecer OAuth2/OIDC e escopos por tenant"
+    status: in_progress
+    owner: "dev-backend"
+    threat_ids:
+      - thr_broken_auth
+    framework_refs:
+      - framework: owasp_asvs
+        control_id: "V2.2.1"
+
+  - id: mit_param_queries
+    title: "Consultas parametrizadas e revisão de ORM"
+    status: planned
+    owner: "dev-backend"
+    threat_ids:
+      - thr_sqli
+
+evidence_suggestions:
+  - id: ev_authz_tests
+    title: "Casos de teste automatizados de autorização por tenant"
+    evidence_kind: automated_scan
+    description: "Cobrir cenários IDOR entre tenants."
+    related_threat_ids:
+      - thr_broken_auth
+
+  - id: ev_sast
+    title: "Relatório SAST na pipeline (branch main)"
+    evidence_kind: automated_scan
+    related_threat_ids:
+      - thr_sqli
+
+  - id: ev_db_audit
+    title: "Revisão de permissões ao role da aplicação na BD"
+    evidence_kind: config_review
+    related_threat_ids:
+      - thr_sqli
+
+residual_risk_summary:
+  aggregate_score: 12.0
+  notes: "Maior risco residual atualmente associado a autenticação/autorização na API."

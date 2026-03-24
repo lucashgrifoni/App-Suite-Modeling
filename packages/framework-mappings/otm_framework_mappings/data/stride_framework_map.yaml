@@ -1,0 +1,135 @@
+# Mapeamento funcional STRIDE → referências de controlo (MVP).
+# IDs ASVS alinhados a OWASP ASVS 4.0.3; NIST CSF 2.0; ISO/IEC 27001:2022 Annex A.
+# OWASP TM: categorização metodológica (Cheat Sheet / guia STRIDE), não um ID normativo único.
+
+version: "1"
+
+by_stride:
+  spoofing:
+    - framework: owasp_tm
+      control_id: STRIDE-S
+      notes: "Tratar falsificação de identidade na matriz STRIDE e no diagrama (OWASP Threat Modeling Cheat Sheet)."
+    - framework: owasp_asvs
+      control_id: V2.2.1
+      notes: "Verificação de identidade reforçada (MFA onde aplicável) — ASVS V2 Authentication."
+    - framework: owasp_asvs
+      control_id: V3.2.1
+      notes: "Gestão de sessão e vinculação a utilizador — ASVS V3."
+    - framework: nist_csf
+      control_id: PR.AA-01
+      notes: "Identidades e credenciais são geridos por pessoal autorizado (NIST CSF 2.0 PR.AA)."
+    - framework: nist_csf
+      control_id: PR.AA-05
+      notes: "Acesso a ativos é limitado a pessoas, processos e dispositivos autorizados."
+    - framework: iso_27001
+      control_id: A.8.5
+      notes: "Autenticação segura (ISO/IEC 27001:2022 A.8.5)."
+    - framework: iso_27001
+      control_id: A.5.16
+      notes: "Gestão de identidades (A.5.16)."
+
+  tampering:
+    - framework: owasp_tm
+      control_id: STRIDE-T
+      notes: "Modelar alteração não autorizada de dados ou fluxos (STRIDE Tampering)."
+    - framework: owasp_asvs
+      control_id: V5.1.1
+      notes: "Validação de entrada e integridade — ASVS V5 Validation, Sanitization and Encoding."
+    - framework: owasp_asvs
+      control_id: V14.1.1
+      notes: "Ambiente de build e dependências — ASVS V14 Configuration."
+    - framework: nist_csf
+      control_id: PR.DS-06
+      notes: "Integridade de software e firmware (NIST CSF 2.0 PR.DS)."
+    - framework: nist_csf
+      control_id: PR.PS-01
+      notes: "Configuração e manutenção de componentes de infraestrutura (PR.PS)."
+    - framework: iso_27001
+      control_id: A.8.9
+      notes: "Gestão de configuração (A.8.9)."
+    - framework: iso_27001
+      control_id: A.8.12
+      notes: "Prevenção de fuga de dados (relevante a integridade em canais — A.8.12)."
+
+  repudiation:
+    - framework: owasp_tm
+      control_id: STRIDE-R
+      notes: "Avaliar se atores podem negar ações; ligar a logging e auditoria."
+    - framework: owasp_asvs
+      control_id: V7.1.1
+      notes: "Registo de eventos de segurança — ASVS V7 Error Handling and Logging."
+    - framework: nist_csf
+      control_id: PR.PS-04
+      notes: "Registos de atividades são criados e mantidos (NIST CSF 2.0 PR.PS)."
+    - framework: nist_csf
+      control_id: DE.CM-03
+      notes: "Atividades de pessoal são monitorizadas para comportamento anómalo (DE.CM)."
+    - framework: iso_27001
+      control_id: A.8.17
+      notes: "Registo de eventos (A.8.17)."
+    - framework: iso_27001
+      control_id: A.8.15
+      notes: "Registo de acessos (A.8.15)."
+
+  information_disclosure:
+    - framework: owasp_tm
+      control_id: STRIDE-I
+      notes: "Expor dados sensíveis no modelo e controlos de confidencialidade."
+    - framework: owasp_asvs
+      control_id: V8.3.1
+      notes: "Proteção de dados sensíveis em repouso — ASVS V8 Data Protection."
+    - framework: owasp_asvs
+      control_id: V9.1.1
+      notes: "Comunicações seguras com TLS — ASVS V9 Communication."
+    - framework: nist_csf
+      control_id: PR.DS-01
+      notes: "Dados em repouso são protegidos (PR.DS)."
+    - framework: nist_csf
+      control_id: PR.DS-02
+      notes: "Dados em trânsito são protegidos."
+    - framework: iso_27001
+      control_id: A.8.11
+      notes: "Criptografia (A.8.11)."
+    - framework: iso_27001
+      control_id: A.5.14
+      notes: "Transferência de informação (A.5.14)."
+
+  denial_of_service:
+    - framework: owasp_tm
+      control_id: STRIDE-D
+      notes: "Disponibilidade e abuso de recursos no modelo de ameaças."
+    - framework: owasp_asvs
+      control_id: V11.1.1
+      notes: "Lógica de negócio e quotas — ASVS V11 Business Logic."
+    - framework: nist_csf
+      control_id: PR.IR-01
+      notes: "Resiliência de infraestruturas e recursos (NIST CSF 2.0 PR.IR)."
+    - framework: iso_27001
+      control_id: A.8.6
+      notes: "Gestão de capacidade (A.8.6)."
+    - framework: iso_27001
+      control_id: A.8.13
+      notes: "Redundância de recursos de processamento (A.8.13)."
+
+  elevation_of_privilege:
+    - framework: owasp_tm
+      control_id: STRIDE-E
+      notes: "Rever superfícies de autorização e escalação no diagrama."
+    - framework: owasp_asvs
+      control_id: V4.1.1
+      notes: "Controlos de acesso — ASVS V4 Access Control."
+    - framework: owasp_asvs
+      control_id: V4.2.1
+      notes: "Operações com permissão explícita por política."
+    - framework: nist_csf
+      control_id: PR.AC-01
+      notes: "Identidades e credenciais são geridas, autenticadas e sujeitas a ciclo de vida (PR.AC)."
+    - framework: nist_csf
+      control_id: PR.AC-04
+      notes: "Permissões de acesso são geridas, incorporando princípio do menor privilégio."
+    - framework: iso_27001
+      control_id: A.8.2
+      notes: "Direitos de acesso privilegiado (A.8.2)."
+    - framework: iso_27001
+      control_id: A.8.3
+      notes: "Restrição de acesso à informação (A.8.3)."

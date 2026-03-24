@@ -1,0 +1,63 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "open-threat-model"
+version = "0.1.0"
+description = "Plataforma open source de Threat Modeling as Code (core, API, CLI, UI)."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Open Threat Model contributors" }]
+dependencies = [
+  "pydantic>=2.5",
+  "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+api = [
+  "fastapi>=0.109",
+  "uvicorn[standard]>=0.27",
+  "sqlalchemy>=2.0",
+]
+cli = ["typer>=0.9", "rich>=13.7"]
+dev = ["pytest>=7.4", "httpx>=0.26", "ruff>=0.3", "mypy>=1.8"]
+
+[project.scripts]
+otm = "otm_cli.main:main"
+
+[tool.setuptools.packages.find]
+where = [
+  "packages/core-schema",
+  "packages/threat-engine",
+  "packages/framework-mappings",
+  "packages/exporters",
+  "packages/diagram-engine",
+  "packages/industry-packs",
+  "apps/cli",
+  "apps/api",
+]
+
+[tool.setuptools.package-data]
+otm_industry_packs = ["data/**/*"]
+otm_framework_mappings = ["data/**/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = [
+  "packages/core-schema",
+  "packages/threat-engine",
+  "packages/framework-mappings",
+  "packages/exporters",
+  "packages/diagram-engine",
+  "packages/industry-packs",
+  "apps/api",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]

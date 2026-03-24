@@ -1,0 +1,64 @@
+# Exemplo mínimo — schema canônico OTM v1
+model:
+  schema_version: "1.0.0"
+  system_type: web_application
+  industry_sector: saas
+
+metadata:
+  title: "Exemplo — API de pedidos"
+  summary: "Serviço REST com fila e banco."
+  owner: "equipe-plataforma"
+  tags:
+    - exemplo
+
+trust_boundaries:
+  - id: internet
+    name: "Internet"
+  - id: vpc
+    name: "Conta cloud / VPC"
+    member_component_ids:
+      - api
+      - worker
+      - db
+
+components:
+  - id: user
+    name: "Usuário"
+    kind: user
+    in_trust_boundary: internet
+  - id: api
+    name: "API"
+    kind: process
+    technology: "REST"
+    in_trust_boundary: vpc
+  - id: worker
+    name: "Worker"
+    kind: process
+    in_trust_boundary: vpc
+  - id: db
+    name: "Pedidos"
+    kind: datastore
+    technology: "PostgreSQL"
+    in_trust_boundary: vpc
+
+data_flows:
+  - id: http_in
+    name: "HTTPS"
+    from_component: user
+    to_component: api
+    protocol: "HTTPS"
+    authenticated: true
+    encrypted: true
+  - id: to_worker
+    from_component: api
+    to_component: worker
+    protocol: "internal"
+  - id: to_db
+    from_component: worker
+    to_component: db
+    protocol: "TCP"
+
+assets: []
+threats: []
+mitigations: []
+evidence_suggestions: []

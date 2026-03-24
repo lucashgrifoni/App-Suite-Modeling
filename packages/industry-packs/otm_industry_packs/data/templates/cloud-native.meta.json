@@ -1,0 +1,6 @@
+{
+  "id": "cloud-native",
+  "title": "Cloud-native (Kubernetes)",
+  "description": "Ingress, workload, cache e BD no cluster.",
+  "suggested_pack": "cloud_native"
+}
