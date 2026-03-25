@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Path, status
+from fastapi import APIRouter, Path, status
 from pydantic import ValidationError as PydanticValidationError
 
+from otm_api.routers._errors import raise_template_invalid, raise_template_not_found
 from otm_api.schemas.bodies import CreateModelResponse
 from otm_api.services.documents import document_from_template
 from otm_api.services.templates_catalog import TemplateListItem, list_templates
@@ -33,17 +34,7 @@ def instantiate_template(
     try:
         doc = document_from_template(template_id)
     except FileNotFoundError as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail={"code": "TEMPLATE_NOT_FOUND", "message": str(e)},
-        ) from e
+        raise raise_template_not_found(e) from e
     except PydanticValidationError as e:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            detail={
-                "code": "TEMPLATE_INVALID",
-                "message": "O template não produz um documento canónico válido.",
-                "errors": e.errors(),
-            },
-        ) from e
+        raise raise_template_invalid(e) from e
     return CreateModelResponse(document=doc.model_dump(mode="json", by_alias=True))

@@ -19,6 +19,16 @@ const FORMATS: { id: ExportFormat; label: string; hint: string }[] = [
   { id: "bundle_json", label: "Bundle (JSON)", hint: "Documento + análise num ficheiro" },
 ];
 
+function downloadArtifact(name: string, content: string, mime: string) {
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = globalThis.document.createElement("a");
+  a.href = url;
+  a.download = name;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export function ExportPage() {
   const { document: otmDoc, analysis } = useSession();
   const [selected, setSelected] = useState<Set<ExportFormat>>(
@@ -63,16 +73,6 @@ export function ExportPage() {
     } finally {
       setLoading(false);
     }
-  }
-
-  function download(name: string, content: string, mime: string) {
-    const blob = new Blob([content], { type: mime });
-    const url = URL.createObjectURL(blob);
-    const a = window.document.createElement("a");
-    a.href = url;
-    a.download = name;
-    a.click();
-    URL.revokeObjectURL(url);
   }
 
   return (
@@ -121,7 +121,7 @@ export function ExportPage() {
                   variant="secondary"
                   className="!py-1.5 !text-xs"
                   onClick={() =>
-                    download(
+                    downloadArtifact(
                       `otm-export-${key}.${extFor(key)}`,
                       text,
                       mimeFor(key),

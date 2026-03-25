@@ -5,6 +5,7 @@ from pathlib import Path
 from otm_core_schema import (
     Metadata,
     ModelInfo,
+    RiskAssessment,
     Threat,
     ThreatModelDocument,
     load_document_from_yaml_path,
@@ -15,6 +16,8 @@ from otm_threat_engine import (
     merge_heuristic_threats,
     recommend_methodology,
 )
+from otm_threat_engine.engine import suppress_stride_genericity_noise
+from otm_threat_engine.result import HeuristicThreat
 
 _ROOT = Path(__file__).resolve().parents[1]
 _MINIMAL = _ROOT / "examples" / "minimal.otm.yaml"
@@ -222,10 +225,192 @@ def test_plot4ai_phase2_adds_subdomain_insights_and_recommendations() -> None:
     assert "plot4ai_retrieval_grounding" in ids
     assert "plot4ai_agent_tool_execution" in ids
     assert "plot4ai_governance_pipeline" in ids
+    assert "plot4ai_rag_vector_composition" in ids
     finding_codes = {f.code for f in r.structural_findings}
     assert "PLOT4AI_REC_PROMPT_RETRIEVAL" in finding_codes
     assert "PLOT4AI_REC_AGENT_ISOLATION" in finding_codes
+    assert "PLOT4AI_REC_VECTOR_GOVERNANCE" in finding_codes
     assert r.methodology_insights is not None
     keys = {b.key for b in r.methodology_insights.blocks}
-    assert "model_interaction_risks" in keys
-    assert "agent_tool_execution_risks" in keys
+    assert "model_interaction_layer" in keys
+    assert "agent_tool_layer" in keys
+    assert "vector_embedding_layer" in keys
+    assert r.ai_system_context is not None
+    assert r.ai_system_context.heuristic_ids_by_layer
+    assert any(e.type.value == "ai_specialized_rationale" for e in r.explanations)
+
+
+def test_recommendation_priority_prefers_plot4ai_over_pasta_signals() -> None:
+    doc = load_document_from_yaml_path(_MINIMAL).model_copy(
+        update={"metadata": Metadata(title="Enterprise attack-chain with LLM RAG agents")}
+    )
+    rec = recommend_methodology(doc)
+    assert rec.methodology == ThreatModelMethodology.PLOT4AI
+
+
+def test_recommendation_priority_prefers_pasta_over_linddun_signals() -> None:
+    doc = load_document_from_yaml_path(_MINIMAL).model_copy(
+        update={"metadata": Metadata(title="Advanced attack risk-centric LGPD PII context")}
+    )
+    rec = recommend_methodology(doc)
+    assert rec.methodology == ThreatModelMethodology.PASTA
+
+
+def test_explicit_methodology_supported_for_all_enum_values() -> None:
+    doc = load_document_from_yaml_path(_MINIMAL)
+    for methodology in ThreatModelMethodology:
+        result = analyze_document(doc, methodology=methodology)
+        assert result.methodology == methodology
+
+
+def test_octave_lens_adds_expected_engine_note() -> None:
+    doc = load_document_from_yaml_path(_MINIMAL)
+    result = analyze_document(doc, methodology=ThreatModelMethodology.OCTAVE_ALLEGRO)
+    notes = [f for f in result.structural_findings if f.code == "ENGINE_LENS_OCTAVE_ALLEGRO"]
+    assert notes
+    assert "risco de negócio" in notes[0].message.lower()
+
+
+def test_cia_die_lens_keeps_top_active_threats_only() -> None:
+    doc = load_document_from_yaml_path(_MINIMAL)
+    result = analyze_document(doc, methodology=ThreatModelMethodology.CIA_DIE)
+    active = [h for h in result.heuristic_threats if not h.skipped_as_duplicate]
+    assert len(active) <= 10
+
+
+def test_no_duplicate_heuristic_ids_for_same_flow_conditions() -> None:
+    doc = load_document_from_yaml_path(_MINIMAL)
+    result = analyze_document(doc, methodology=ThreatModelMethodology.STRIDE)
+    flow_ids = [h.id for h in result.heuristic_threats if h.target_data_flow_id is not None]
+    assert len(flow_ids) == len(set(flow_ids))
+
+
+def test_summary_generated_counts_match_active_heuristics_without_pack() -> None:
+    doc = load_document_from_yaml_path(_MINIMAL)
+    result = analyze_document(doc, methodology=ThreatModelMethodology.STRIDE)
+    active = [h for h in result.heuristic_threats if not h.skipped_as_duplicate]
+    summary_total = (
+        result.summary.heuristic_threats_generated + result.summary.pack_threats_generated
+    )
+    assert summary_total == len(active)
+
+
+def test_business_abuse_heuristics_present_for_finance_fixture() -> None:
+    finance_doc = load_document_from_yaml_path(
+        _ROOT / "examples" / "test-apps" / "finance-wallet.otm.yaml"
+    )
+    result = analyze_document(finance_doc, methodology=ThreatModelMethodology.STRIDE)
+    ids = {h.id for h in result.heuristic_threats if not h.skipped_as_duplicate}
+    assert "biz_webhook_replay_economic_abuse" in ids
+    assert "biz_double_submission_financial_action" in ids
+    assert "biz_balance_transaction_inconsistency" in ids
+
+
+def test_business_abuse_heuristics_present_for_ecommerce_fixture() -> None:
+    ecommerce_doc = load_document_from_yaml_path(
+        _ROOT / "examples" / "test-apps" / "ecommerce-subscription.otm.yaml"
+    )
+    result = analyze_document(ecommerce_doc, methodology=ThreatModelMethodology.PASTA)
+    active = [h for h in result.heuristic_threats if not h.skipped_as_duplicate]
+    ids = {h.id for h in active}
+    assert "biz_payment_entitlement_mismatch" in ids
+    assert "biz_coupon_reuse_and_discount_stacking" in ids
+    assert "biz_cancel_without_entitlement_revocation" in ids
+    descriptions = " ".join(h.description.lower() for h in active if h.id.startswith("biz_"))
+    assert "owner" in descriptions
+    assert "idempot" in descriptions
+    assert "econom" in descriptions
+
+
+def test_phase3_engine_suppresses_stride_noise_only_when_biz_present_finance() -> None:
+    finance_doc = load_document_from_yaml_path(
+        _ROOT / "examples" / "test-apps" / "finance-wallet.otm.yaml"
+    )
+    result = analyze_document(finance_doc, methodology=ThreatModelMethodology.STRIDE)
+
+    all_ids = {h.id for h in result.heuristic_threats}
+    assert "biz_webhook_replay_economic_abuse" in all_ids
+    assert "eng_flow_webhook_flow_tampering" in all_ids
+
+    active_ids = {h.id for h in result.heuristic_threats if not h.skipped_as_duplicate}
+    assert "biz_webhook_replay_economic_abuse" in active_ids
+    # Ruído STRIDE (cluster webhook) deve sair da visão ativa, mas continuar rastreável no JSON.
+    assert "eng_flow_webhook_flow_tampering" not in active_ids
+
+    # Controle: STRIDE fora do cluster webhook deve permanecer ativo.
+    assert "eng_flow_login_flow_tampering" in active_ids
+
+
+def test_phase3_engine_suppresses_stride_noise_only_when_biz_present_ecommerce() -> None:
+    ecommerce_doc = load_document_from_yaml_path(
+        _ROOT / "examples" / "test-apps" / "ecommerce-subscription.otm.yaml"
+    )
+    result = analyze_document(ecommerce_doc, methodology=ThreatModelMethodology.PASTA)
+    all_ids = {h.id for h in result.heuristic_threats}
+    assert "biz_payment_entitlement_mismatch" in all_ids
+    assert "eng_payment_gateway_tampering" in all_ids
+    active_ids = {h.id for h in result.heuristic_threats if not h.skipped_as_duplicate}
+    assert "biz_payment_entitlement_mismatch" in active_ids
+    assert "eng_payment_gateway_tampering" not in active_ids
+
+
+def test_phase3_engine_does_not_suppress_when_no_biz_families_present() -> None:
+    doc = load_document_from_yaml_path(_MINIMAL)
+    result = analyze_document(doc, methodology=ThreatModelMethodology.STRIDE)
+    # Documento minimal não tem `biz_*`, então não deve haver supressão adicional por Etapa 3.
+    suppressed_eng = [
+        h
+        for h in result.heuristic_threats
+        if h.id.startswith("eng_")
+        and h.stride in {StrideCategory.TAMPERING, StrideCategory.ELEVATION_OF_PRIVILEGE}
+        and h.skipped_as_duplicate
+    ]
+    assert suppressed_eng == []
+
+
+def test_phase3_suppression_toggle_off_does_not_change_heuristics(monkeypatch) -> None:
+    monkeypatch.setenv("OTM_ENGINE_STRIDE_NOISE_SUPPRESSION", "0")
+    eng = HeuristicThreat(
+        id="eng_coupon_tampering",
+        title="Coupon tampering on checkout",
+        description="x",
+        stride=StrideCategory.TAMPERING,
+        risk=RiskAssessment(likelihood=1, impact=1, score=1.0),
+    )
+    heuristics = [
+        HeuristicThreat(
+            id="biz_coupon_reuse",
+            title="Coupon reuse and stacking",
+            description="x",
+            stride=StrideCategory.TAMPERING,
+            risk=RiskAssessment(likelihood=1, impact=1, score=1.0),
+        ),
+        eng,
+    ]
+    suppressed = suppress_stride_genericity_noise(heuristics)
+    assert suppressed == 0
+    assert eng.skipped_as_duplicate is False
+
+
+def test_phase3_suppression_toggle_on_can_mark_eng_as_skipped(monkeypatch) -> None:
+    monkeypatch.setenv("OTM_ENGINE_STRIDE_NOISE_SUPPRESSION", "1")
+    eng = HeuristicThreat(
+        id="eng_coupon_tampering",
+        title="Coupon tampering on checkout",
+        description="x",
+        stride=StrideCategory.TAMPERING,
+        risk=RiskAssessment(likelihood=1, impact=1, score=1.0),
+    )
+    heuristics = [
+        HeuristicThreat(
+            id="biz_coupon_reuse",
+            title="Coupon reuse and stacking",
+            description="x",
+            stride=StrideCategory.TAMPERING,
+            risk=RiskAssessment(likelihood=1, impact=1, score=1.0),
+        ),
+        eng,
+    ]
+    suppressed = suppress_stride_genericity_noise(heuristics)
+    assert suppressed == 1
+    assert eng.skipped_as_duplicate is True

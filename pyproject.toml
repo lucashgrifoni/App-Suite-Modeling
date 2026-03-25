@@ -30,11 +30,13 @@ otm = "otm_cli.main:main"
 [tool.setuptools.packages.find]
 where = [
   "packages/core-schema",
+  "packages/explainability",
   "packages/threat-engine",
   "packages/framework-mappings",
   "packages/exporters",
   "packages/diagram-engine",
   "packages/industry-packs",
+  "packages/artifact-import",
   "apps/cli",
   "apps/api",
 ]
@@ -47,11 +49,13 @@ otm_framework_mappings = ["data/**/*"]
 testpaths = ["tests"]
 pythonpath = [
   "packages/core-schema",
+  "packages/explainability",
   "packages/threat-engine",
   "packages/framework-mappings",
   "packages/exporters",
   "packages/diagram-engine",
   "packages/industry-packs",
+  "packages/artifact-import",
   "apps/api",
 ]
 
@@ -61,3 +65,9 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP"]
+
+[tool.ruff.lint.per-file-ignores]
+# Mensagens de inferência e docstrings PT-PT tendem a ultrapassar 100 carateres.
+"packages/artifact-import/**" = ["E501"]
+"packages/threat-engine/otm_threat_engine/remediation/**" = ["E501"]
+"tests/test_artifact_import.py" = ["E501"]

@@ -22,9 +22,9 @@ from otm_core_schema.enums import (
     EvidenceKind,
     IndustrySector,
     MitigationStatus,
-    ThreatModelMethodology,
     StrideCategory,
     SystemType,
+    ThreatModelMethodology,
     TreatmentStatus,
 )
 from otm_core_schema.io import (
@@ -35,6 +35,15 @@ from otm_core_schema.io import (
     load_document_from_yaml,
     load_document_from_yaml_path,
 )
+from otm_core_schema.diff_insights import structural_key_insights
+from otm_core_schema.diff import (
+    FieldChange,
+    IdListSectionDiff,
+    ModifiedEntity,
+    ThreatModelDiff,
+    diff_documents,
+)
+from otm_core_schema.starters import BLANK_DOCUMENT_YAML, create_blank_document
 from otm_core_schema.version import CANONICAL_SCHEMA_VERSION
 
 __all__ = [
@@ -68,4 +77,12 @@ __all__ = [
     "load_document_from_dict",
     "load_document_from_yaml",
     "load_document_from_yaml_path",
+    "BLANK_DOCUMENT_YAML",
+    "create_blank_document",
+    "diff_documents",
+    "FieldChange",
+    "IdListSectionDiff",
+    "ModifiedEntity",
+    "ThreatModelDiff",
+    "structural_key_insights",
 ]

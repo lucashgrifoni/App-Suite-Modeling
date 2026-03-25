@@ -1,0 +1,143 @@
+model:
+  schema_version: "1.0.0"
+  system_type: web_application
+  industry_sector: healthcare
+
+metadata:
+  title: "Teste Saude - agendamento e prontuario leve"
+  summary: "Fixture para validar privacidade, segregacao por papeis e documentos."
+  owner: "validation-team"
+  tags:
+    - test-app
+    - health
+    - privacy
+
+trust_boundaries:
+  - id: internet
+    name: "Internet"
+  - id: clinic_app
+    name: "Aplicacao clinica"
+    member_component_ids:
+      - patient_portal
+      - professional_portal
+      - scheduling_service
+      - medical_record_service
+  - id: clinic_data
+    name: "Dados clinicos"
+    member_component_ids:
+      - ehr_db
+      - document_store
+  - id: ext_notify
+    name: "Notificacao externa"
+    member_component_ids:
+      - notification_gateway
+
+components:
+  - id: patient
+    name: "Paciente"
+    kind: user
+    in_trust_boundary: internet
+  - id: professional
+    name: "Profissional de saude"
+    kind: user
+    in_trust_boundary: internet
+  - id: admin
+    name: "Administrador"
+    kind: user
+    in_trust_boundary: internet
+  - id: patient_portal
+    name: "Portal do paciente"
+    kind: process
+    technology: "Python app"
+    in_trust_boundary: clinic_app
+  - id: professional_portal
+    name: "Portal do profissional"
+    kind: process
+    technology: "Python app"
+    in_trust_boundary: clinic_app
+  - id: scheduling_service
+    name: "Servico de agenda"
+    kind: process
+    in_trust_boundary: clinic_app
+  - id: medical_record_service
+    name: "Servico de prontuario"
+    kind: process
+    in_trust_boundary: clinic_app
+  - id: ehr_db
+    name: "Banco clinico"
+    kind: datastore
+    technology: "SQL"
+    in_trust_boundary: clinic_data
+  - id: document_store
+    name: "Repositiorio de documentos"
+    kind: datastore
+    technology: "File store"
+    in_trust_boundary: clinic_data
+  - id: notification_gateway
+    name: "Gateway de notificacoes mock"
+    kind: external_entity
+    in_trust_boundary: ext_notify
+
+data_flows:
+  - id: patient_login
+    from_component: patient
+    to_component: patient_portal
+    protocol: "HTTPS"
+    encrypted: true
+  - id: pro_login
+    from_component: professional
+    to_component: professional_portal
+    protocol: "HTTPS"
+    encrypted: true
+  - id: patient_schedule
+    from_component: patient_portal
+    to_component: scheduling_service
+    protocol: "internal"
+    authenticated: true
+  - id: pro_record_access
+    from_component: professional_portal
+    to_component: medical_record_service
+    protocol: "internal"
+    authenticated: true
+  - id: record_db
+    from_component: medical_record_service
+    to_component: ehr_db
+    protocol: "TCP"
+    encrypted: true
+  - id: docs_upload
+    from_component: patient_portal
+    to_component: document_store
+    protocol: "HTTPS"
+    authenticated: true
+    encrypted: true
+  - id: notify_out
+    from_component: scheduling_service
+    to_component: notification_gateway
+    protocol: "HTTPS"
+    encrypted: true
+
+assets:
+  - id: medical_record
+    name: "Prontuario do paciente"
+    asset_kind: data
+    sensitivity: "restricted"
+    related_component_ids:
+      - medical_record_service
+      - ehr_db
+  - id: clinical_documents
+    name: "Documentos clinicos"
+    asset_kind: data
+    sensitivity: "restricted"
+    related_component_ids:
+      - document_store
+  - id: appointments
+    name: "Agenda de consultas"
+    asset_kind: data
+    sensitivity: "confidential"
+    related_component_ids:
+      - scheduling_service
+      - ehr_db
+
+threats: []
+mitigations: []
+evidence_suggestions: []

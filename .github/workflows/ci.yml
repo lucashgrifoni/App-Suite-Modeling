@@ -17,6 +17,8 @@ jobs:
         run: pip install -e ".[dev,cli,api]"
       - name: Ruff
         run: ruff check packages apps tests
+      - name: Core vs adapter import boundary
+        run: python scripts/check_core_adapter_boundary.py
       - name: Tests
         run: python -m pytest
       - name: Smoke suite
@@ -47,3 +49,22 @@ jobs:
         if: runner.os == 'Windows'
         working-directory: apps/web
         run: npm run ci:build:portable
+
+  web-e2e-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - name: Install web dependencies
+        working-directory: apps/web
+        run: npm ci
+      - name: Install Playwright browser
+        working-directory: apps/web
+        run: node ./node_modules/@playwright/test/cli.js install chromium
+      - name: Run UI smoke E2E
+        working-directory: apps/web
+        run: npm run e2e:smoke:portable

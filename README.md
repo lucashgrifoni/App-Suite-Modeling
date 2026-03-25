@@ -31,6 +31,8 @@ Guia completo: [**`docs/MONOREPO.md`**](docs/MONOREPO.md). Resumo:
 
 Consulte [**`docs/README.md`**](docs/README.md) para o fluxo completo de início.
 
+Contratos de saída, códigos de erro da API, snapshots e gate de regressão: [**`docs/CONTRACT_AND_SNAPSHOTS.md`**](docs/CONTRACT_AND_SNAPSHOTS.md).
+
 ### CLI
 
 ```bash
@@ -136,7 +138,17 @@ POST /v1/models/recommend-methodology
 - [docs/CLI.md](docs/CLI.md)
 - [docs/API.md](docs/API.md)
 - [docs/UI.md](docs/UI.md)
+- [docs/CHOOSE_METHODOLOGY.md](docs/CHOOSE_METHODOLOGY.md)
+- [docs/RELEASE_CHECKLIST_RC.md](docs/RELEASE_CHECKLIST_RC.md)
+- [docs/SMOKE_VALIDATION.md](docs/SMOKE_VALIDATION.md)
+- [docs/PUBLISH_PLAYBOOK.md](docs/PUBLISH_PLAYBOOK.md)
 - [docs/TEMPLATES_AND_PACKS.md](docs/TEMPLATES_AND_PACKS.md)
+- [docs/EXPLAINABILITY.md](docs/EXPLAINABILITY.md)
+- [docs/PLOT4AI_AI_SYSTEM.md](docs/PLOT4AI_AI_SYSTEM.md)
+- [docs/THREAT_MODEL_DIFF.md](docs/THREAT_MODEL_DIFF.md)
+- [docs/ARTIFACT_IMPORT.md](docs/ARTIFACT_IMPORT.md)
+- [docs/REMEDIATION_BACKLOG.md](docs/REMEDIATION_BACKLOG.md)
+- [docs/INNOVATION_PHASE_FINAL_INTEGRATION_RC.md](docs/INNOVATION_PHASE_FINAL_INTEGRATION_RC.md)
 
 ## Governança OSS
 

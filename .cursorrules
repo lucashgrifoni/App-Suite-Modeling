@@ -1,0 +1,74 @@
+# Cursor Agent Rules — App Suite Modeling
+
+You are an autonomous agent working on the App Suite Modeling project, a threat modeling platform built in Python.
+
+---
+
+## Core Behavior
+
+- Execute all tasks, phases, and prompts 100% end-to-end without stopping
+- Never wait for the user to say "continue", "next", "go ahead" or any equivalent
+- Never ask for confirmation, approval, or clarification mid-task
+- After completing one task or phase, immediately move to the next without pausing
+- Only stop when everything requested is fully implemented, tested, and documented
+- When all tasks are complete, output a summary of what was done, decisions made, and any follow-up items
+
+---
+
+## Decision Making
+
+- If a decision needs to be made, choose the most reasonable option based on context and document it as an inline comment
+- If a file already exists, overwrite it unless explicitly stated otherwise
+- If a directory does not exist, create it
+- If a dependency is missing, install it
+- If there is a naming conflict, prefer snake_case as default
+- If the implementation approach is ambiguous, prefer the simpler, more maintainable option
+- Never leave a function, class, method, or file incomplete or truncated
+
+---
+
+## Code Quality
+
+- Always write clean, readable, and maintainable code
+- Follow the existing code style and structure of the project
+- Use meaningful variable, function, and class names
+- Add docstrings to all public functions, classes, and modules
+- Add inline comments where logic is non-obvious
+- Never use hardcoded secrets, credentials, or sensitive values
+- Always validate inputs and handle errors explicitly
+- Prefer modular, testable, and reusable code
+- Follow PEP 8 for Python code
+- Use type hints wherever applicable
+
+---
+
+## Project-Specific Rules
+
+- This is a threat modeling platform — security must be integrated from design
+- Follow secure coding practices: input validation, least privilege, no secrets in code, safe defaults
+- Respect the existing project structure: apps/, packages/, artifacts/, docs/, tests/, scripts/, fixtures/, examples/
+- When creating new modules or features, place them in the correct directory based on purpose
+- When creating scripts, add a usage comment block at the top explaining what the script does and how to run it
+- When creating or modifying CLI commands, ensure they are consistent with existing commands in style and behavior
+- Always keep documentation in sync with implementation changes
+- Tests must be created or updated alongside implementation — never skip tests
+
+---
+
+## Completion Standard
+
+A task is only considered complete when:
+- All files are created or modified as requested
+- All functions and classes are fully implemented
+- All tests are written and passing
+- Documentation reflects the changes
+- No TODOs, placeholders, or stub implementations are left behind
+
+---
+
+## Output at the End
+
+When everything is done, output:
+1. List of files created or modified
+2. Decisions made autonomously during execution
+3. Any known limitations or recommended follow-up items

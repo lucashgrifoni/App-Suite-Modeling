@@ -11,7 +11,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 
 from otm_api.errors import request_validation_handler
-from otm_api.routers import exports, models, system, templates
+from otm_api.routers import analyses, exports, imports, models, remediation, system, templates
 
 app = FastAPI(
     title="App Suite Modeling API",
@@ -22,9 +22,18 @@ app = FastAPI(
     ),
     openapi_tags=[
         {"name": "Sistema", "description": "Saúde do serviço."},
-        {"name": "Modelos", "description": "Criação, validação e análise do documento canónico."},
+        {"name": "Modelos", "description": "Criação, validação, análise e comparação do documento canónico."},
+        {"name": "Análises", "description": "Diff entre resultados de motor (`AnalysisResult`)."},
         {"name": "Templates", "description": "Modelos iniciais embutidos."},
         {"name": "Exportação", "description": "JSON, Markdown, Mermaid e bundles."},
+        {
+            "name": "Importação assistida",
+            "description": "Rascunho canónico a partir de OpenAPI, Terraform ou Kubernetes (sem análise final).",
+        },
+        {
+            "name": "Remediação",
+            "description": "Backlog acionável a partir de `AnalysisResult` (priorização heurística, não Jira).",
+        },
     ],
 )
 
@@ -45,6 +54,9 @@ app.include_router(system.router)
 
 v1 = APIRouter(prefix="/v1")
 v1.include_router(models.router)
+v1.include_router(analyses.router)
 v1.include_router(templates.router)
 v1.include_router(exports.router)
+v1.include_router(imports.router)
+v1.include_router(remediation.router)
 app.include_router(v1)

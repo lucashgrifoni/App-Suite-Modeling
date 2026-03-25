@@ -1,0 +1,6 @@
+projectKey=otm-app-suite-modeling
+serverUrl=http://localhost:9000
+serverVersion=25.12.0.117093
+dashboardUrl=http://localhost:9000/dashboard?id=otm-app-suite-modeling
+ceTaskId=ad8aa047-a9ee-428a-92b7-02b0387948c9
+ceTaskUrl=http://localhost:9000/api/ce/task?id=ad8aa047-a9ee-428a-92b7-02b0387948c9

@@ -9,6 +9,8 @@ import { Label } from "../components/ui/Label";
 import { Select } from "../components/ui/Select";
 import { Alert } from "../components/ui/Alert";
 import { useSession } from "../context/SessionContext";
+import { removeArrayItem, updateArrayItem } from "../utils/collections";
+import { stepPillClass } from "../utils/wizardStepPill";
 import {
   COMPONENT_KINDS,
   SYSTEM_TYPES,
@@ -29,13 +31,13 @@ export function WizardPage() {
   const [error, setError] = useState<string | null>(null);
   const [validating, setValidating] = useState(false);
 
+  const componentIds = useMemo(
+    () => document?.components.map((c) => c.id).filter(Boolean) ?? [],
+    [document?.components],
+  );
+
   if (!document) return <Navigate to="/" replace />;
   const doc = document;
-
-  const componentIds = useMemo(
-    () => doc.components.map((c) => c.id).filter(Boolean),
-    [doc.components],
-  );
 
   function updateMetadata(partial: Partial<typeof doc.metadata>) {
     setDocument({
@@ -92,13 +94,7 @@ export function WizardPage() {
             <button
               type="button"
               onClick={() => (i <= step ? setStep(s.id) : undefined)}
-              className={`rounded-full px-3 py-1 text-xs font-medium ${
-                s.id === step
-                  ? "bg-slate-900 text-white"
-                  : i < step
-                    ? "bg-slate-200 text-slate-800"
-                    : "bg-slate-100 text-slate-400"
-              }`}
+              className={`rounded-full px-3 py-1 text-xs font-medium ${stepPillClass(step, i)}`}
             >
               {i + 1}. {s.label}
             </button>
@@ -150,39 +146,36 @@ export function WizardPage() {
           <div className="space-y-3">
             {doc.components.map((c, idx) => (
               <div
-                key={idx}
+                key={`comp-${c.id}-${c.name}`}
                 className="grid gap-2 rounded-lg border border-slate-100 p-3 sm:grid-cols-12 sm:items-end"
               >
                 <div className="sm:col-span-3">
-                  <Label>ID</Label>
+                  <Label htmlFor={`comp-${idx}-id`}>ID</Label>
                   <Input
+                    id={`comp-${idx}-id`}
                     value={c.id}
                     onChange={(e) => {
-                      const next = [...doc.components];
-                      next[idx] = { ...c, id: e.target.value };
-                      setComponents(next);
+                      setComponents(updateArrayItem(doc.components, idx, { ...c, id: e.target.value }));
                     }}
                   />
                 </div>
                 <div className="sm:col-span-4">
-                  <Label>Nome</Label>
+                  <Label htmlFor={`comp-${idx}-name`}>Nome</Label>
                   <Input
+                    id={`comp-${idx}-name`}
                     value={c.name}
                     onChange={(e) => {
-                      const next = [...doc.components];
-                      next[idx] = { ...c, name: e.target.value };
-                      setComponents(next);
+                      setComponents(updateArrayItem(doc.components, idx, { ...c, name: e.target.value }));
                     }}
                   />
                 </div>
                 <div className="sm:col-span-3">
-                  <Label>Tipo</Label>
+                  <Label htmlFor={`comp-${idx}-kind`}>Tipo</Label>
                   <Select
+                    id={`comp-${idx}-kind`}
                     value={c.kind}
                     onChange={(e) => {
-                      const next = [...doc.components];
-                      next[idx] = { ...c, kind: e.target.value };
-                      setComponents(next);
+                      setComponents(updateArrayItem(doc.components, idx, { ...c, kind: e.target.value }));
                     }}
                   >
                     {COMPONENT_KINDS.map((k) => (
@@ -196,9 +189,7 @@ export function WizardPage() {
                   <Button
                     variant="ghost"
                     className="w-full text-red-600"
-                    onClick={() =>
-                      setComponents(doc.components.filter((_, j) => j !== idx))
-                    }
+                    onClick={() => setComponents(removeArrayItem(doc.components, idx))}
                   >
                     Remover
                   </Button>
@@ -228,28 +219,28 @@ export function WizardPage() {
           <div className="space-y-3">
             {doc.data_flows.map((f, idx) => (
               <div
-                key={idx}
+                key={`flow-${f.id}-${f.from_component}-${f.to_component}`}
                 className="grid gap-2 rounded-lg border border-slate-100 p-3 sm:grid-cols-12 sm:items-end"
               >
                 <div className="sm:col-span-2">
-                  <Label>ID fluxo</Label>
+                  <Label htmlFor={`flow-${idx}-id`}>ID fluxo</Label>
                   <Input
+                    id={`flow-${idx}-id`}
                     value={f.id}
                     onChange={(e) => {
-                      const next = [...doc.data_flows];
-                      next[idx] = { ...f, id: e.target.value };
-                      setFlows(next);
+                      setFlows(updateArrayItem(doc.data_flows, idx, { ...f, id: e.target.value }));
                     }}
                   />
                 </div>
                 <div className="sm:col-span-3">
-                  <Label>De</Label>
+                  <Label htmlFor={`flow-${idx}-from`}>De</Label>
                   <Select
+                    id={`flow-${idx}-from`}
                     value={f.from_component}
                     onChange={(e) => {
-                      const next = [...doc.data_flows];
-                      next[idx] = { ...f, from_component: e.target.value };
-                      setFlows(next);
+                      setFlows(
+                        updateArrayItem(doc.data_flows, idx, { ...f, from_component: e.target.value }),
+                      );
                     }}
                   >
                     <option value="">—</option>
@@ -261,13 +252,14 @@ export function WizardPage() {
                   </Select>
                 </div>
                 <div className="sm:col-span-3">
-                  <Label>Para</Label>
+                  <Label htmlFor={`flow-${idx}-to`}>Para</Label>
                   <Select
+                    id={`flow-${idx}-to`}
                     value={f.to_component}
                     onChange={(e) => {
-                      const next = [...doc.data_flows];
-                      next[idx] = { ...f, to_component: e.target.value };
-                      setFlows(next);
+                      setFlows(
+                        updateArrayItem(doc.data_flows, idx, { ...f, to_component: e.target.value }),
+                      );
                     }}
                   >
                     <option value="">—</option>
@@ -279,13 +271,12 @@ export function WizardPage() {
                   </Select>
                 </div>
                 <div className="sm:col-span-2">
-                  <Label>Nome (opcional)</Label>
+                  <Label htmlFor={`flow-${idx}-name`}>Nome (opcional)</Label>
                   <Input
+                    id={`flow-${idx}-name`}
                     value={f.name ?? ""}
                     onChange={(e) => {
-                      const next = [...doc.data_flows];
-                      next[idx] = { ...f, name: e.target.value || null };
-                      setFlows(next);
+                      setFlows(updateArrayItem(doc.data_flows, idx, { ...f, name: e.target.value || null }));
                     }}
                   />
                 </div>
@@ -293,9 +284,7 @@ export function WizardPage() {
                   <Button
                     variant="ghost"
                     className="w-full text-red-600"
-                    onClick={() =>
-                      setFlows(doc.data_flows.filter((_, j) => j !== idx))
-                    }
+                    onClick={() => setFlows(removeArrayItem(doc.data_flows, idx))}
                   >
                     Remover
                   </Button>

@@ -29,6 +29,9 @@ export function AppLayout() {
               <NavLink to="/export" className={navClass}>
                 Exportar
               </NavLink>
+              <NavLink to="/diff" className={navClass}>
+                Diff
+              </NavLink>
             </nav>
           )}
           <div className="flex items-center gap-2">

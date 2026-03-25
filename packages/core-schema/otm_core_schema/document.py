@@ -12,9 +12,9 @@ from otm_core_schema.enums import (
     EvidenceKind,
     IndustrySector,
     MitigationStatus,
-    ThreatModelMethodology,
     StrideCategory,
     SystemType,
+    ThreatModelMethodology,
     TreatmentStatus,
 )
 from otm_core_schema.version import CANONICAL_SCHEMA_VERSION
@@ -25,6 +25,86 @@ _ID_PATTERN = r"^[a-zA-Z][a-zA-Z0-9_-]*$"
 def _unique_ids(name: str, ids: list[str]) -> None:
     if len(ids) != len(set(ids)):
         raise ValueError(f"duplicate id in {name}")
+
+
+def _validate_component_refs(
+    components: list[Component],
+    *,
+    boundary_ids: set[str],
+    asset_ids: set[str],
+) -> None:
+    for c in components:
+        if c.in_trust_boundary is not None and c.in_trust_boundary not in boundary_ids:
+            raise ValueError(
+                f"component '{c.id}' references unknown trust boundary '{c.in_trust_boundary}'"
+            )
+        for aid in c.asset_ids:
+            if aid not in asset_ids:
+                raise ValueError(f"component '{c.id}' references unknown asset '{aid}'")
+
+
+def _validate_asset_refs(assets: list[Asset], *, comp_ids: set[str]) -> None:
+    for a in assets:
+        for cid in a.related_component_ids:
+            if cid not in comp_ids:
+                raise ValueError(f"asset '{a.id}' references unknown component '{cid}'")
+
+
+def _validate_data_flow_refs(data_flows: list[DataFlow], *, comp_ids: set[str]) -> None:
+    for df in data_flows:
+        if df.from_component not in comp_ids:
+            raise ValueError(f"data_flow '{df.id}' from_component '{df.from_component}' not found")
+        if df.to_component not in comp_ids:
+            raise ValueError(f"data_flow '{df.id}' to_component '{df.to_component}' not found")
+
+
+def _validate_trust_boundary_refs(
+    trust_boundaries: list[TrustBoundary],
+    *,
+    comp_ids: set[str],
+) -> None:
+    for tb in trust_boundaries:
+        for mid in tb.member_component_ids:
+            if mid not in comp_ids:
+                raise ValueError(f"trust_boundary '{tb.id}' references unknown component '{mid}'")
+
+
+def _validate_mitigation_refs(mitigations: list[Mitigation], *, threat_ids: set[str]) -> None:
+    for m in mitigations:
+        for tid in m.threat_ids:
+            if tid not in threat_ids:
+                raise ValueError(f"mitigation '{m.id}' references unknown threat '{tid}'")
+
+
+def _validate_threat_refs(
+    threats: list[Threat],
+    *,
+    comp_ids: set[str],
+    flow_ids: set[str],
+    asset_ids: set[str],
+    evidence_ids: set[str],
+) -> None:
+    for t in threats:
+        if t.target_component_id is not None and t.target_component_id not in comp_ids:
+            raise ValueError(f"threat '{t.id}' target_component_id unknown")
+        if t.target_data_flow_id is not None and t.target_data_flow_id not in flow_ids:
+            raise ValueError(f"threat '{t.id}' target_data_flow_id unknown")
+        if t.target_asset_id is not None and t.target_asset_id not in asset_ids:
+            raise ValueError(f"threat '{t.id}' target_asset_id unknown")
+        for eid in t.evidence_suggestion_ids:
+            if eid not in evidence_ids:
+                raise ValueError(f"threat '{t.id}' references unknown evidence_suggestion '{eid}'")
+
+
+def _validate_evidence_refs(
+    evidence_suggestions: list[EvidenceSuggestion],
+    *,
+    threat_ids: set[str],
+) -> None:
+    for ev in evidence_suggestions:
+        for tid in ev.related_threat_ids:
+            if tid not in threat_ids:
+                raise ValueError(f"evidence_suggestion '{ev.id}' references unknown threat '{tid}'")
 
 
 class Metadata(BaseModel):
@@ -70,10 +150,7 @@ class ModelInfo(BaseModel):
     )
     methodology: ThreatModelMethodology = Field(
         default=ThreatModelMethodology.STRIDE,
-        description=(
-            "Metodologia principal escolhida para análise. "
-            "Default do sistema: STRIDE."
-        ),
+        description=("Metodologia principal escolhida para análise. Default do sistema: STRIDE."),
     )
 
 
@@ -282,67 +359,37 @@ class ThreatModelDocument(BaseModel):
 
     @model_validator(mode="after")
     def validate_references(self) -> ThreatModelDocument:
-        comp_ids = {c.id for c in self.components}
-        boundary_ids = {b.id for b in self.trust_boundaries}
-        flow_ids = {f.id for f in self.data_flows}
-        asset_ids = {a.id for a in self.assets}
-        threat_ids = {t.id for t in self.threats}
-        evidence_ids = {e.id for e in self.evidence_suggestions}
-
-        for c in self.components:
-            if c.in_trust_boundary is not None and c.in_trust_boundary not in boundary_ids:
-                raise ValueError(
-                    f"component '{c.id}' references unknown trust boundary '{c.in_trust_boundary}'"
-                )
-            for aid in c.asset_ids:
-                if aid not in asset_ids:
-                    raise ValueError(f"component '{c.id}' references unknown asset '{aid}'")
-
-        for a in self.assets:
-            for cid in a.related_component_ids:
-                if cid not in comp_ids:
-                    raise ValueError(f"asset '{a.id}' references unknown component '{cid}'")
-
-        for df in self.data_flows:
-            if df.from_component not in comp_ids:
-                raise ValueError(
-                    f"data_flow '{df.id}' from_component '{df.from_component}' not found"
-                )
-            if df.to_component not in comp_ids:
-                raise ValueError(
-                    f"data_flow '{df.id}' to_component '{df.to_component}' not found"
-                )
-
-        for tb in self.trust_boundaries:
-            for mid in tb.member_component_ids:
-                if mid not in comp_ids:
-                    raise ValueError(
-                        f"trust_boundary '{tb.id}' references unknown component '{mid}'"
-                    )
-
-        for m in self.mitigations:
-            for tid in m.threat_ids:
-                if tid not in threat_ids:
-                    raise ValueError(f"mitigation '{m.id}' references unknown threat '{tid}'")
-
-        for t in self.threats:
-            if t.target_component_id is not None and t.target_component_id not in comp_ids:
-                raise ValueError(f"threat '{t.id}' target_component_id unknown")
-            if t.target_data_flow_id is not None and t.target_data_flow_id not in flow_ids:
-                raise ValueError(f"threat '{t.id}' target_data_flow_id unknown")
-            if t.target_asset_id is not None and t.target_asset_id not in asset_ids:
-                raise ValueError(f"threat '{t.id}' target_asset_id unknown")
-            for eid in t.evidence_suggestion_ids:
-                if eid not in evidence_ids:
-                    raise ValueError(
-                        f"threat '{t.id}' references unknown evidence_suggestion '{eid}'"
-                    )
-
-        for ev in self.evidence_suggestions:
-            for tid in ev.related_threat_ids:
-                if tid not in threat_ids:
-                    raise ValueError(
-                        f"evidence_suggestion '{ev.id}' references unknown threat '{tid}'"
-                    )
-
+        ids = self._collect_reference_ids()
+        self._run_reference_validations(ids)
         return self
+
+    def _collect_reference_ids(self) -> dict[str, set[str]]:
+        """Coleta IDs para validação cruzada de referências internas."""
+        return {
+            "components": {c.id for c in self.components},
+            "trust_boundaries": {b.id for b in self.trust_boundaries},
+            "data_flows": {f.id for f in self.data_flows},
+            "assets": {a.id for a in self.assets},
+            "threats": {t.id for t in self.threats},
+            "evidence_suggestions": {e.id for e in self.evidence_suggestions},
+        }
+
+    def _run_reference_validations(self, ids: dict[str, set[str]]) -> None:
+        """Executa validações de referências usando o conjunto de IDs coletados."""
+        _validate_component_refs(
+            self.components,
+            boundary_ids=ids["trust_boundaries"],
+            asset_ids=ids["assets"],
+        )
+        _validate_asset_refs(self.assets, comp_ids=ids["components"])
+        _validate_data_flow_refs(self.data_flows, comp_ids=ids["components"])
+        _validate_trust_boundary_refs(self.trust_boundaries, comp_ids=ids["components"])
+        _validate_mitigation_refs(self.mitigations, threat_ids=ids["threats"])
+        _validate_threat_refs(
+            self.threats,
+            comp_ids=ids["components"],
+            flow_ids=ids["data_flows"],
+            asset_ids=ids["assets"],
+            evidence_ids=ids["evidence_suggestions"],
+        )
+        _validate_evidence_refs(self.evidence_suggestions, threat_ids=ids["threats"])

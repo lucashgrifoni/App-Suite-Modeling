@@ -51,7 +51,7 @@ def title_for_component_threat(component: Component, stride: StrideCategory) -> 
     return f"[{stride.value}] {component.name}"
 
 
-def description_for_component_threat(component: Component, stride: StrideCategory) -> str:
+def description_for_component_threat(component: Component) -> str:
     tech = f" ({component.technology})" if component.technology else ""
     return (
         f"Ameaça genérica STRIDE para o componente '{component.name}'{tech} "

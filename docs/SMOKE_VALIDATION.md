@@ -19,6 +19,15 @@ Validação funcional mínima para garantir prontidão de release incremental.
 python -m pytest tests/test_smoke_release_candidate.py
 ```
 
+### E2E smoke mínimo da UI (headless)
+
+```bash
+cd apps/web
+npm ci
+npx playwright install chromium
+npm run e2e:smoke
+```
+
 ### Build da UI
 
 Linux/macOS:
@@ -50,3 +59,12 @@ npm run ci:build:portable
 - Todos os smoke tests passam.
 - Build UI validado em pelo menos um caminho oficial por ambiente.
 - Sem regressão em contratos de análise.
+- E2E smoke mínimo da UI passa no caminho feliz.
+
+## Checklist curto de validação (inovação)
+
+- [ ] `diff` / `compare` devolvem insights e `explanations` sem erro.
+- [ ] `imports` devolvem `inferences` + `explanations` no mesmo lote.
+- [ ] `backlog` gera itens com `explanations` e ranking estável.
+- [ ] `analyze --methodology plot4ai` devolve `methodology_insights` e `ai_system_context`.
+- [ ] `otm analyze --explain` e `otm explain` mantêm saída curta e útil.

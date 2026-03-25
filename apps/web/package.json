@@ -5,12 +5,15 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "node ./node_modules/vite/bin/vite.js build",
     "build:portable": "node ./node_modules/vite/bin/vite.js build",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "node ./node_modules/typescript/bin/tsc --noEmit",
     "typecheck:portable": "node ./node_modules/typescript/bin/tsc --noEmit",
     "ci:build": "npm run typecheck && npm run build",
     "ci:build:portable": "npm run typecheck:portable && npm run build:portable",
+    "e2e:smoke": "node ./node_modules/@playwright/test/cli.js test e2e/smoke.spec.ts --project=chromium",
+    "e2e:smoke:portable": "node ./node_modules/@playwright/test/cli.js test e2e/smoke.spec.ts --project=chromium",
+    "e2e:smoke:headed": "node ./node_modules/@playwright/test/cli.js test e2e/smoke.spec.ts --project=chromium --headed",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -20,6 +23,7 @@
     "reactflow": "^11.11.4"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.2",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",

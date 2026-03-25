@@ -1,12 +1,18 @@
 import { apiFetch } from "./client";
 import type {
   AnalysisResult,
+  ArtifactImportKind,
+  ArtifactImportResponse,
   ExportFormat,
   MethodologyRecommendation,
+  RemediationBacklogResponse,
   TemplateListItem,
+  ThreatModelComparisonResult,
+  ThreatModelDiff,
   ValidateResponse,
 } from "../types/api";
 import type { OtmDocument } from "../types/document";
+import type { MethodologyId } from "../types/methodology";
 
 export async function health(): Promise<{ status: string }> {
   return apiFetch("/health");
@@ -37,19 +43,47 @@ export async function validateDocument(
   });
 }
 
+export async function diffDocuments(
+  baseline: OtmDocument,
+  revised: OtmDocument,
+): Promise<ThreatModelDiff> {
+  return apiFetch("/v1/models/diff", {
+    method: "POST",
+    json: {
+      baseline,
+      revised,
+    },
+  });
+}
+
+export async function compareThreatModels(
+  baseline: OtmDocument,
+  revised: OtmDocument,
+  options?: {
+    runAnalysis?: boolean;
+    packId?: string | null;
+    baselineAnalysis?: AnalysisResult | null;
+    revisedAnalysis?: AnalysisResult | null;
+  },
+): Promise<ThreatModelComparisonResult> {
+  return apiFetch("/v1/models/compare", {
+    method: "POST",
+    json: {
+      baseline,
+      revised,
+      run_analysis: options?.runAnalysis ?? false,
+      pack_id: options?.packId ?? null,
+      baseline_analysis: options?.baselineAnalysis ?? null,
+      revised_analysis: options?.revisedAnalysis ?? null,
+    },
+  });
+}
+
 export async function analyzeDocument(
   document: OtmDocument,
   options?: {
     packId?: string | null;
-    methodology?:
-      | "stride"
-      | "linddun"
-      | "nist_data_centric"
-      | "octave_allegro"
-      | "cia_die"
-      | "pasta"
-      | "plot4ai"
-      | null;
+    methodology?: MethodologyId | null;
     autoRecommendMethodology?: boolean;
   },
 ): Promise<AnalysisResult> {
@@ -87,5 +121,31 @@ export async function exportArtifacts(body: {
       pack_id: body.pack_id ?? null,
       analysis: body.analysis ?? null,
     },
+  });
+}
+
+export async function fetchRemediationBacklog(args: {
+  document: OtmDocument;
+  analysis: AnalysisResult;
+}): Promise<RemediationBacklogResponse> {
+  return apiFetch("/v1/remediation/backlog", {
+    method: "POST",
+    json: {
+      document: args.document,
+      analysis: args.analysis,
+      run_analysis: false,
+    },
+  });
+}
+
+export async function importArtifact(
+  kind: ArtifactImportKind,
+  file: File,
+): Promise<ArtifactImportResponse> {
+  const fd = new FormData();
+  fd.append("file", file);
+  return apiFetch(`/v1/imports/${encodeURIComponent(kind)}`, {
+    method: "POST",
+    body: fd,
   });
 }

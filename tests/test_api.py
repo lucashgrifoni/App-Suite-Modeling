@@ -11,7 +11,6 @@ from otm_industry_packs.loader import list_template_ids
 
 pytest.importorskip("fastapi")
 from fastapi.testclient import TestClient  # noqa: E402
-
 from otm_api.main import app  # noqa: E402
 
 _ROOT = Path(__file__).resolve().parents[1]
@@ -36,6 +35,9 @@ def test_openapi_available(client: TestClient) -> None:
     assert spec["info"]["title"] == "App Suite Modeling API"
     paths = spec["paths"]
     assert "/v1/models" in paths
+    assert "/v1/models/diff" in paths
+    assert "/v1/models/compare" in paths
+    assert "/v1/analyses/diff" in paths
     assert "/v1/templates" in paths
 
 
@@ -45,6 +47,43 @@ def test_create_model(client: TestClient) -> None:
     data = r.json()
     assert "document" in data
     assert data["document"]["metadata"]["title"]
+
+
+def test_models_compare_ok(client: TestClient) -> None:
+    doc = load_document_from_yaml_path(_MINIMAL)
+    d = doc.model_dump(mode="json", by_alias=True)
+    r = client.post(
+        "/v1/models/compare",
+        json={"baseline": d, "revised": d},
+    )
+    assert r.status_code == 200
+    body = r.json()
+    assert body["summary"]["has_structural_changes"] is False
+    assert "structural" in body
+    assert "key_insights" in body
+
+
+def test_analyses_diff_ok(client: TestClient) -> None:
+    doc = load_document_from_yaml_path(_MINIMAL)
+    b = client.post("/v1/models/analyze", json={"document": doc.model_dump(mode="json", by_alias=True)}).json()
+    r = client.post("/v1/models/analyze", json={"document": doc.model_dump(mode="json", by_alias=True)}).json()
+    out = client.post("/v1/analyses/diff", json={"baseline_analysis": b, "revised_analysis": r})
+    assert out.status_code == 200
+    assert out.json()["methodology_before"] == out.json()["methodology_after"]
+
+
+def test_models_diff_ok(client: TestClient) -> None:
+    doc = load_document_from_yaml_path(_MINIMAL)
+    payload = {
+        "baseline": doc.model_dump(mode="json", by_alias=True),
+        "revised": doc.model_dump(mode="json", by_alias=True),
+    }
+    r = client.post("/v1/models/diff", json=payload)
+    assert r.status_code == 200
+    body = r.json()
+    assert body["baseline_title"] == doc.metadata.title
+    assert body["revised_title"] == doc.metadata.title
+    assert "summary_line" in body
 
 
 def test_validate_ok(client: TestClient) -> None:
@@ -63,6 +102,18 @@ def test_validate_invalid_document(client: TestClient) -> None:
     assert r.status_code == 422
     detail = r.json()["detail"]
     assert detail["code"] == "DOCUMENT_VALIDATION_ERROR"
+    assert set(detail.keys()) == {"code", "message", "errors"}
+
+
+def test_validate_missing_body_field_uses_request_validation_handler(client: TestClient) -> None:
+    """Corpo que falha na validação Pydantic do FastAPI (campos em falta no envelope)."""
+    r = client.post("/v1/models/validate", json={})
+    assert r.status_code == 422
+    body = r.json()
+    assert body["code"] == "REQUEST_VALIDATION_ERROR"
+    assert body["message"]
+    assert body["status"] == 422
+    assert isinstance(body["errors"], list) and body["errors"]
 
 
 def test_analyze_minimal(client: TestClient) -> None:
@@ -90,6 +141,7 @@ def test_analyze_with_explicit_methodology(client: TestClient) -> None:
     out = r.json()
     assert out["methodology"] == "cia_die"
     assert "methodology_recommendation_reason" in out
+    assert "explanations" in out
 
 
 def test_recommend_methodology_endpoint(client: TestClient) -> None:
@@ -103,6 +155,8 @@ def test_recommend_methodology_endpoint(client: TestClient) -> None:
     payload = r.json()
     assert payload["methodology"] == "linddun"
     assert payload["reason"]
+    assert payload.get("explanations")
+    assert payload["explanations"][0]["type"] == "methodology_recommendation"
 
 
 def test_analyze_with_auto_methodology(client: TestClient) -> None:
@@ -120,6 +174,7 @@ def test_analyze_with_auto_methodology(client: TestClient) -> None:
     payload = r.json()
     assert payload["methodology"] == "linddun"
     assert payload["methodology_recommendation_reason"]
+    assert payload.get("explanations")
 
 
 def test_recommend_methodology_plot4ai(client: TestClient) -> None:
@@ -204,6 +259,57 @@ def test_export_bundle_runs_analysis(client: TestClient) -> None:
     assert bundle["document"] and bundle["analysis"]
 
 
+def test_analyze_unknown_pack_detail_shape(client: TestClient) -> None:
+    doc = load_document_from_yaml_path(_MINIMAL)
+    r = client.post(
+        "/v1/models/analyze",
+        json={
+            "document": doc.model_dump(mode="json", by_alias=True),
+            "pack_id": "pack_que_nao_existe_xxx",
+        },
+    )
+    assert r.status_code == 404
+    detail = r.json()["detail"]
+    assert detail["code"] == "PACK_NOT_FOUND"
+    assert isinstance(detail["message"], str) and detail["message"]
+    assert set(detail.keys()) == {"code", "message"}
+
+
+def test_export_unknown_pack_detail_shape(client: TestClient) -> None:
+    doc = load_document_from_yaml_path(_MINIMAL)
+    r = client.post(
+        "/v1/exports",
+        json={
+            "document": doc.model_dump(mode="json", by_alias=True),
+            "formats": ["bundle_json"],
+            "pack_id": "pack_que_nao_existe_xxx",
+        },
+    )
+    assert r.status_code == 404
+    detail = r.json()["detail"]
+    assert detail["code"] == "PACK_NOT_FOUND"
+    assert isinstance(detail["message"], str) and detail["message"]
+    assert set(detail.keys()) == {"code", "message"}
+
+
+def test_export_invalid_analysis_detail_shape(client: TestClient) -> None:
+    doc = load_document_from_yaml_path(_MINIMAL)
+    r = client.post(
+        "/v1/exports",
+        json={
+            "document": doc.model_dump(mode="json", by_alias=True),
+            "formats": ["analysis_json"],
+            "analysis": {"invalid": True},
+        },
+    )
+    assert r.status_code == 422
+    detail = r.json()["detail"]
+    assert detail["code"] == "ANALYSIS_VALIDATION_ERROR"
+    assert isinstance(detail["message"], str) and detail["message"]
+    assert isinstance(detail["errors"], list) and detail["errors"]
+    assert set(detail.keys()) == {"code", "message", "errors"}
+
+
 def test_analyze_contract_keys_stable(client: TestClient) -> None:
     doc = load_document_from_yaml_path(_MINIMAL)
     r = client.post(
@@ -224,6 +330,8 @@ def test_analyze_contract_keys_stable(client: TestClient) -> None:
         "summary",
         "industry_pack_id",
         "pack_control_hints",
+        "explanations",
+        "ai_system_context",
     }
     assert expected_top.issubset(set(out.keys()))
     summary_expected = {
@@ -281,3 +389,5 @@ def test_analyze_plot4ai_contains_specialized_insights(client: TestClient) -> No
     assert out["methodology"] == "plot4ai"
     assert out["methodology_insights"] is not None
     assert out["methodology_insights"]["profile"]
+    assert out.get("ai_system_context") is not None
+    assert out["ai_system_context"]["pattern_tags"]

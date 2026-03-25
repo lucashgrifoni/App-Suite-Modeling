@@ -47,6 +47,16 @@ export function HomePage() {
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Card
+          title="Importar artefacto"
+          subtitle="OpenAPI, Terraform ou Kubernetes — rascunho com inferências explícitas (revisar antes da análise)."
+        >
+          <Link to="/import">
+            <Button variant="secondary" className="w-full sm:w-auto">
+              Importar
+            </Button>
+          </Link>
+        </Card>
+        <Card
           title="Começar em branco"
           subtitle="Modelo mínimo válido. Ideal para aprender ou desenhar do zero."
         >

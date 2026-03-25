@@ -29,6 +29,39 @@ def _rule_matches_component(rule: AdditionalThreatRule, comp: Component) -> bool
     return comp.kind in rule.target_component_kinds
 
 
+def _clamp_li(value: int) -> int:
+    return min(5, max(1, value))
+
+
+def _base_li_from_rule(rule: AdditionalThreatRule) -> tuple[int, int]:
+    return _clamp_li(3 + rule.likelihood_delta), _clamp_li(3 + rule.impact_delta)
+
+
+def _build_pack_heuristic(
+    *,
+    pack: PackDefinition,
+    rule: AdditionalThreatRule,
+    component_id: str,
+    hid: str,
+    skipped_as_duplicate: bool,
+) -> HeuristicThreat:
+    base_l, base_i = _base_li_from_rule(rule)
+    bl, bi = apply_pack_to_li(base_l, base_i, pack)
+    risk = build_risk_assessment(bl, bi)
+    desc = rule.description or (
+        f"Ameaça contextual do setor ({pack.name}). Rever control_hints do pack."
+    )
+    return HeuristicThreat(
+        id=hid,
+        title=f"[pack:{pack.id}] {rule.title}",
+        description=desc,
+        stride=rule.stride,
+        target_component_id=component_id,
+        risk=risk,
+        skipped_as_duplicate=skipped_as_duplicate,
+    )
+
+
 def iter_pack_heuristic_threats(
     doc: ThreatModelDocument,
     pack: PackDefinition,
@@ -40,7 +73,7 @@ def iter_pack_heuristic_threats(
     """
     out: list[HeuristicThreat] = []
     skipped = 0
-    pack_emitted: set[tuple[str, str, str]] = set()
+    emitted_pack_keys: set[tuple[str, str, str]] = set()
 
     for comp in doc.components:
         for rule in pack.additional_threats:
@@ -49,44 +82,31 @@ def iter_pack_heuristic_threats(
             stride_key = rule.stride.value
             doc_style_key = (comp.id, None, stride_key)
             pack_unique = (comp.id, rule.id, stride_key)
-            if pack_unique in pack_emitted:
+            if pack_unique in emitted_pack_keys:
                 continue
             hid = f"pack_{pack.id}_{rule.id}_{comp.id}"
 
-            base_l = min(5, max(1, 3 + rule.likelihood_delta))
-            base_i = min(5, max(1, 3 + rule.impact_delta))
-            bl, bi = apply_pack_to_li(base_l, base_i, pack)
-            risk = build_risk_assessment(bl, bi)
-
-            desc = rule.description or (
-                f"Ameaça contextual do setor ({pack.name}). Rever control_hints do pack."
-            )
-
             if doc_style_key in covered_keys:
                 out.append(
-                    HeuristicThreat(
-                        id=hid,
-                        title=f"[pack:{pack.id}] {rule.title}",
-                        description=desc,
-                        stride=rule.stride,
-                        target_component_id=comp.id,
-                        risk=risk,
+                    _build_pack_heuristic(
+                        pack=pack,
+                        rule=rule,
+                        component_id=comp.id,
+                        hid=hid,
                         skipped_as_duplicate=True,
                     )
                 )
                 skipped += 1
                 continue
 
-            pack_emitted.add(pack_unique)
+            emitted_pack_keys.add(pack_unique)
             covered_keys.add(doc_style_key)
             out.append(
-                HeuristicThreat(
-                    id=hid,
-                    title=f"[pack:{pack.id}] {rule.title}",
-                    description=desc,
-                    stride=rule.stride,
-                    target_component_id=comp.id,
-                    risk=risk,
+                _build_pack_heuristic(
+                    pack=pack,
+                    rule=rule,
+                    component_id=comp.id,
+                    hid=hid,
                     skipped_as_duplicate=False,
                 )
             )

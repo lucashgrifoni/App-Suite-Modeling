@@ -1,0 +1,132 @@
+model:
+  schema_version: "1.0.0"
+  system_type: web_application
+  industry_sector: finance
+
+metadata:
+  title: "Teste Financas - carteira digital simplificada"
+  summary: "Fixture para validar saldo, transferencias, webhook e auditoria minima."
+  owner: "validation-team"
+  tags:
+    - test-app
+    - finance
+    - stride
+
+trust_boundaries:
+  - id: internet
+    name: "Internet"
+  - id: app_zone
+    name: "Aplicacao"
+    member_component_ids:
+      - web_app
+      - auth_service
+      - ledger_service
+  - id: data_zone
+    name: "Dados internos"
+    member_component_ids:
+      - finance_db
+      - audit_log
+  - id: external
+    name: "Integracoes externas"
+    member_component_ids:
+      - payment_webhook_provider
+
+components:
+  - id: end_user
+    name: "Usuario"
+    kind: user
+    in_trust_boundary: internet
+  - id: admin_user
+    name: "Administrador"
+    kind: user
+    in_trust_boundary: internet
+  - id: web_app
+    name: "Finance Web App"
+    kind: process
+    technology: "Python HTTP app"
+    in_trust_boundary: app_zone
+  - id: auth_service
+    name: "Auth Service"
+    kind: process
+    technology: "Session Token"
+    in_trust_boundary: app_zone
+  - id: ledger_service
+    name: "Ledger Service"
+    kind: process
+    technology: "In-memory ledger"
+    in_trust_boundary: app_zone
+  - id: finance_db
+    name: "Finance DB"
+    kind: datastore
+    technology: "SQLite-like"
+    in_trust_boundary: data_zone
+  - id: audit_log
+    name: "Audit Trail"
+    kind: datastore
+    technology: "Append-only log"
+    in_trust_boundary: data_zone
+  - id: payment_webhook_provider
+    name: "Payment Provider Webhook"
+    kind: external_entity
+    in_trust_boundary: external
+
+data_flows:
+  - id: login_flow
+    from_component: end_user
+    to_component: auth_service
+    protocol: "HTTPS"
+    authenticated: false
+    encrypted: true
+  - id: user_app_flow
+    from_component: end_user
+    to_component: web_app
+    protocol: "HTTPS"
+    authenticated: true
+    encrypted: true
+  - id: app_ledger_flow
+    from_component: web_app
+    to_component: ledger_service
+    protocol: "internal"
+    authenticated: true
+  - id: ledger_db_flow
+    from_component: ledger_service
+    to_component: finance_db
+    protocol: "TCP"
+    encrypted: true
+  - id: ledger_audit_flow
+    from_component: ledger_service
+    to_component: audit_log
+    protocol: "internal"
+  - id: webhook_flow
+    from_component: payment_webhook_provider
+    to_component: ledger_service
+    protocol: "HTTPS"
+    authenticated: true
+    encrypted: true
+
+assets:
+  - id: account_balance
+    name: "Saldos de conta"
+    asset_kind: data
+    sensitivity: "restricted"
+    related_component_ids:
+      - ledger_service
+      - finance_db
+  - id: transactions
+    name: "Historico de transacoes"
+    asset_kind: data
+    sensitivity: "confidential"
+    related_component_ids:
+      - finance_db
+      - audit_log
+  - id: pii_finance
+    name: "Dados financeiros e identificadores"
+    asset_kind: data
+    sensitivity: "restricted"
+    related_component_ids:
+      - web_app
+      - finance_db
+
+threats: []
+mitigations: []
+evidence_suggestions: []

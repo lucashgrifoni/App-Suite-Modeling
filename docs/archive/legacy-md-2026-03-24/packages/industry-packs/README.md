@@ -4,4 +4,4 @@
 - **Dados:** `otm_industry_packs/data/packs/*.yaml`, `data/templates/*.otm.yaml`.
 - **Consumo:** motor (`analyze` com `pack=`) e CLI (`--pack`, `init -t`).
 
-Documentação: [`docs/TEMPLATES_AND_PACKS.md`](../../docs/TEMPLATES_AND_PACKS.md).
+Documentação: [`docs/TEMPLATES_AND_PACKS.md`](../../../../TEMPLATES_AND_PACKS.md).

@@ -6,11 +6,10 @@ from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
+from otm_api.main import app as api_app
 from otm_cli.cli import app
 from otm_core_schema import Metadata, load_document_from_yaml_path
 from typer.testing import CliRunner
-
-from otm_api.main import app as api_app
 
 _ROOT = Path(__file__).resolve().parents[1]
 _MINIMAL = _ROOT / "examples" / "minimal.otm.yaml"
@@ -37,10 +36,13 @@ def test_smoke_api_basic_flow(client: TestClient) -> None:
     assert client.get("/health").status_code == 200
     assert client.post("/v1/models/validate", json={"document": doc}).status_code == 200
     assert client.post("/v1/models/analyze", json={"document": doc}).status_code == 200
-    assert client.post(
-        "/v1/exports",
-        json={"document": doc, "formats": ["analysis_markdown"]},
-    ).status_code == 200
+    assert (
+        client.post(
+            "/v1/exports",
+            json={"document": doc, "formats": ["analysis_markdown"]},
+        ).status_code
+        == 200
+    )
 
 
 @pytest.mark.parametrize(

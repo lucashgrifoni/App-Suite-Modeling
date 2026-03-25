@@ -14,6 +14,10 @@ def _boundary_of(component_id: str, by_id: Mapping[str, Component]) -> str | Non
     return comp.in_trust_boundary if comp else None
 
 
+def _flow_display_id(flow_id: str | None, flow_name: str | None) -> str:
+    return flow_id or flow_name or "?"
+
+
 def analyze_trust_boundary_crossings(doc: ThreatModelDocument) -> list[TrustBoundaryFinding]:
     """Identifica fluxos que atravessam fronteiras distintas (ponto de análise STRIDE)."""
     by_id = {c.id: c for c in doc.components}
@@ -29,8 +33,8 @@ def analyze_trust_boundary_crossings(doc: ThreatModelDocument) -> list[TrustBoun
                 TrustBoundaryFinding(
                     code="CROSS_BOUNDARY_FLOW",
                     message=(
-                        f"Fluxo '{flow.id or flow.name or '?'}' liga fronteira "
-                        f"'{fb}' → '{tb}'."
+                        f"Fluxo '{_flow_display_id(flow.id, flow.name)}' "
+                        f"liga fronteira '{fb}' → '{tb}'."
                     ),
                     data_flow_id=flow.id,
                     from_boundary_id=fb,

@@ -1,4 +1,8 @@
-"""JSON combinado documento + análise (um ficheiro para CI/CD e integrações)."""
+"""
+JSON combinado documento + análise (um ficheiro para CI/CD e integrações).
+
+Contrato de chaves e paridade objeto/string: `tests/test_exporters.py` (`bundle`).
+"""
 
 from __future__ import annotations
 
@@ -18,12 +22,23 @@ def export_bundle_json(
     analysis: dict[str, Any] | None = None,
     indent: int = 2,
 ) -> str:
-    """Payload genérico com chaves `document` e `analysis` (valores opcionais)."""
+    """Payload genérico; na string JSON as chaves aparecem nesta ordem: `document`, `analysis`."""
     payload: dict[str, Any] = {
         "document": document,
         "analysis": analysis,
     }
     return json.dumps(payload, indent=indent, ensure_ascii=False)
+
+
+def export_threat_model_bundle_obj(
+    doc: ThreatModelDocument,
+    result: AnalysisResult | None = None,
+) -> dict[str, Any]:
+    """Bundle com chaves nesta ordem: `document`, `analysis` (ver `test_exporters`)."""
+    return {
+        "document": export_document_json_obj(doc),
+        "analysis": export_analysis_json_obj(result) if result is not None else None,
+    }
 
 
 def export_threat_model_bundle_json(
@@ -33,8 +48,8 @@ def export_threat_model_bundle_json(
     indent: int = 2,
 ) -> str:
     """Documento canónico + resultado de análise num único JSON."""
-    return export_bundle_json(
-        document=export_document_json_obj(doc),
-        analysis=export_analysis_json_obj(result) if result is not None else None,
+    return json.dumps(
+        export_threat_model_bundle_obj(doc, result),
         indent=indent,
+        ensure_ascii=False,
     )

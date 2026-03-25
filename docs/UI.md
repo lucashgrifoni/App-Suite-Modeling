@@ -24,7 +24,9 @@ A **validação**, o **motor STRIDE** e os **mapeamentos de framework** executam
    - metadados visuais discretos: categoria, best for e maturidade;
    - recomendação via API (`POST /v1/models/recommend-methodology`);
    - motivo da recomendação exibido com possibilidade de override manual.
-   - blocos de insights metodológicos (quando retornados pela API).
+   - blocos de insights metodológicos (quando retornados pela API);
+   - explicabilidade em blocos expansíveis curtos (sem poluir a tela);
+   - para `plot4ai`, cartão compacto com camadas IA detectadas e ações prioritárias.
 5. **Exportar** — POST `/v1/exports`; descarregar ficheiros gerados.
 
 ## Desenvolvimento
@@ -57,6 +59,24 @@ node ./node_modules/vite/bin/vite.js build
 
 Impacto:
 - Código da UI pode estar saudável mesmo quando `npm run build` falha por resolução de path do wrapper.
+
+## Guia robusto para Windows (paths e build)
+
+Recomendação de ambiente:
+- Preferir caminho sem `&` para o workspace quando possível.
+- Exemplo preferido: `C:\workspace\app-suite-modeling`
+
+Quando usar build portátil:
+- Se `npm run build` ou `npm run typecheck` falhar com path truncado em `node_modules`.
+- Use `npm run ci:build:portable` como caminho oficial.
+
+Caminho recomendado para release validation em Windows:
+
+```bash
+cd apps/web
+npm ci
+npm run ci:build:portable
+```
 
 ## Extensões futuras
 

@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
-import { analyzeDocument, recommendMethodology } from "../api/otmApi";
+import { analyzeDocument, fetchRemediationBacklog, recommendMethodology } from "../api/otmApi";
 import { ApiError } from "../api/client";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
@@ -9,77 +9,16 @@ import { Label } from "../components/ui/Label";
 import { Select } from "../components/ui/Select";
 import { Badge } from "../components/ui/Badge";
 import { Alert } from "../components/ui/Alert";
+import { METHODOLOGY_META } from "../constants/methodologyMeta";
+import { FRAMEWORK_LABELS } from "../constants/frameworkLabels";
 import { useSession } from "../context/SessionContext";
-import type { HeuristicThreat, MethodologyRecommendation } from "../types/api";
-
-const FRAMEWORK_LABELS: Record<string, string> = {
-  owasp_tm: "OWASP TM",
-  owasp_asvs: "OWASP ASVS",
-  nist_csf: "NIST CSF",
-  iso_27001: "ISO 27001",
-};
-
-type MethodologyId =
-  | "stride"
-  | "linddun"
-  | "nist_data_centric"
-  | "octave_allegro"
-  | "cia_die"
-  | "pasta"
-  | "plot4ai";
-
-const METHODOLOGY_META: Record<
-  MethodologyId,
-  {
-    hint: string;
-    bestFor: string;
-    maturity: "Mature" | "Evolving" | "Specialized" | "Experimental";
-    category: string;
-  }
-> = {
-  stride: {
-    hint: "Default técnico e mais maduro para web/API/cloud.",
-    bestFor: "Web, API, cloud-native",
-    maturity: "Mature",
-    category: "General security",
-  },
-  linddun: {
-    hint: "Privacidade: PII, consentimento, minimização e conformidade.",
-    bestFor: "LGPD/GDPR e dados pessoais",
-    maturity: "Evolving",
-    category: "Privacy",
-  },
-  nist_data_centric: {
-    hint: "Proteção de dados críticos e caminhos sensíveis.",
-    bestFor: "Dados críticos/classificados",
-    maturity: "Evolving",
-    category: "Data-centric",
-  },
-  octave_allegro: {
-    hint: "Risco de negócio orientado a ativos.",
-    bestFor: "Ativos e risco organizacional",
-    maturity: "Evolving",
-    category: "Business risk",
-  },
-  cia_die: {
-    hint: "Análise rápida e comunicação executiva.",
-    bestFor: "Workshops rápidos",
-    maturity: "Evolving",
-    category: "Executive",
-  },
-  pasta: {
-    hint: "Análise avançada risk-centric (ataque, vulnerabilidade, impacto).",
-    bestFor: "Contextos enterprise avançados",
-    maturity: "Specialized",
-    category: "Advanced risk",
-  },
-  plot4ai: {
-    hint: "Ameaças de IA/LLM (prompt, RAG, agentes, inferência).",
-    bestFor: "Sistemas AI/LLM",
-    maturity: "Specialized",
-    category: "AI/LLM",
-  },
-};
+import { filterActiveThreats, listFrameworksFromAnalysisThreats } from "../utils/analysisFilters";
+import type {
+  HeuristicThreat,
+  MethodologyRecommendation,
+  RemediationBacklogResponse,
+} from "../types/api";
+import type { MethodologyId } from "../types/methodology";
 
 export function AnalysisPage() {
   const { document, analysis, setAnalysis } = useSession();
@@ -93,32 +32,35 @@ export function AnalysisPage() {
   const [recommendation, setRecommendation] = useState<MethodologyRecommendation | null>(null);
   const [minScore, setMinScore] = useState(0);
   const [frameworkFilter, setFrameworkFilter] = useState<string>("");
+  const [explanationCategoryFilter, setExplanationCategoryFilter] = useState<string>("");
+  const [backlog, setBacklog] = useState<RemediationBacklogResponse | null>(null);
+  const [backlogLoading, setBacklogLoading] = useState(false);
 
   const doc = document;
 
   const frameworks = useMemo(() => {
     if (!analysis) return [];
-    const s = new Set<string>();
-    for (const h of analysis.heuristic_threats) {
-      if (h.skipped_as_duplicate) continue;
-      for (const r of h.framework_refs ?? []) s.add(r.framework);
-    }
-    return [...s].sort((a, b) => a.localeCompare(b));
+    return listFrameworksFromAnalysisThreats(analysis.heuristic_threats);
   }, [analysis]);
 
   const filtered: HeuristicThreat[] = useMemo(() => {
     if (!analysis) return [];
-    return analysis.heuristic_threats.filter((h) => {
-      if (h.skipped_as_duplicate) return false;
-      const score = h.risk.score ?? 0;
-      if (score < minScore) return false;
-      if (frameworkFilter) {
-        const has = (h.framework_refs ?? []).some((r) => r.framework === frameworkFilter);
-        if (has === false) return false;
-      }
-      return true;
+    return filterActiveThreats(analysis.heuristic_threats, {
+      minScore,
+      frameworkFilter,
     });
   }, [analysis, minScore, frameworkFilter]);
+
+  const explanationCategories = useMemo(() => {
+    const values = (analysis?.explanations ?? []).map((e) => e.category).filter(Boolean);
+    return Array.from(new Set(values)).sort((a, b) => a.localeCompare(b));
+  }, [analysis]);
+
+  const visibleExplanations = useMemo(() => {
+    const all = analysis?.explanations ?? [];
+    if (!explanationCategoryFilter) return all;
+    return all.filter((e) => e.category === explanationCategoryFilter);
+  }, [analysis, explanationCategoryFilter]);
 
   if (!doc) return <Navigate to="/" replace />;
 
@@ -136,6 +78,20 @@ export function AnalysisPage() {
       setError(e instanceof ApiError ? e.message : "Falha na análise.");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function loadBacklog() {
+    if (!doc || !analysis) return;
+    setError(null);
+    setBacklogLoading(true);
+    try {
+      const b = await fetchRemediationBacklog({ document: doc, analysis });
+      setBacklog(b);
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : "Falha ao gerar backlog.");
+    } finally {
+      setBacklogLoading(false);
     }
   }
 
@@ -226,6 +182,16 @@ export function AnalysisPage() {
               Recomendação: {recommendation.methodology}
             </p>
             <p className="mt-1">{recommendation.reason}</p>
+            {recommendation.explanations && recommendation.explanations.length > 0 ? (
+              <details className="mt-2 text-xs text-sky-950">
+                <summary className="cursor-pointer font-medium text-sky-900">Contexto da recomendação</summary>
+                <ul className="mt-1 list-inside list-disc text-sky-900/90">
+                  {recommendation.explanations.slice(0, 4).map((e) => (
+                    <li key={e.id}>{e.message}</li>
+                  ))}
+                </ul>
+              </details>
+            ) : null}
           </div>
         )}
       </Card>
@@ -254,11 +220,144 @@ export function AnalysisPage() {
             <Stat label="Motor" value={analysis.engine_version} small />
             <Stat label="Metodologia" value={analysis.methodology} small />
           </div>
+          {analysis.methodology === "plot4ai" && analysis.ai_system_context ? (
+            <Card
+              title="PLOT4ai — sistema com IA"
+              subtitle="Deteção heurística a partir do modelo; não substitui revisão de arquitectura."
+            >
+              <p className="text-sm text-slate-800">{analysis.ai_system_context.synopsis}</p>
+              {analysis.ai_system_context.pattern_tags.length > 0 ? (
+                <p className="mt-2 text-xs text-slate-600">
+                  <span className="font-medium text-slate-700">Padrões:</span>{" "}
+                  {analysis.ai_system_context.pattern_tags.join(", ")}
+                </p>
+              ) : null}
+              {analysis.ai_system_context.primary_risk_surfaces.length > 0 ? (
+                <div className="mt-3">
+                  <p className="text-xs font-medium text-slate-800">Superfícies de risco</p>
+                  <ul className="mt-1 list-inside list-disc text-xs text-slate-700">
+                    {analysis.ai_system_context.primary_risk_surfaces.slice(0, 4).map((s) => (
+                      <li key={s}>{s}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+              {analysis.ai_system_context.prioritized_recommendations.length > 0 ? (
+                <details className="mt-3 text-xs text-slate-700">
+                  <summary className="cursor-pointer font-medium text-slate-800">
+                    Acções prioritárias (IA)
+                  </summary>
+                  <ul className="mt-1 list-inside list-disc">
+                    {analysis.ai_system_context.prioritized_recommendations.slice(0, 5).map((r) => (
+                      <li key={r}>{r}</li>
+                    ))}
+                  </ul>
+                </details>
+              ) : null}
+            </Card>
+          ) : null}
           {analysis.methodology_recommendation_reason && (
             <Alert variant="info">
               Recomendação aplicada: {analysis.methodology_recommendation_reason}
             </Alert>
           )}
+          {analysis.explanations && analysis.explanations.length > 0 ? (
+            <details className="rounded-lg border border-slate-200 bg-slate-50/80 p-3 text-sm text-slate-800">
+              <summary className="cursor-pointer font-medium text-slate-900">Explicabilidade do resultado</summary>
+              <p className="mt-2 text-xs text-slate-600">
+                Motivos estruturados gerados pelo motor (máx. 8 linhas; o JSON completo tem o resto).
+              </p>
+              <div className="mt-2 max-w-xs">
+                <Label htmlFor="expCategory">Categoria</Label>
+                <Select
+                  id="expCategory"
+                  value={explanationCategoryFilter}
+                  onChange={(e) => setExplanationCategoryFilter(e.target.value)}
+                >
+                  <option value="">Todas</option>
+                  {explanationCategories.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+              <ul className="mt-2 space-y-1.5 text-xs text-slate-700">
+                {visibleExplanations.slice(0, 8).map((e) => (
+                  <li key={e.id}>
+                    <span className="font-medium text-slate-800">{e.subject}:</span> {e.message}
+                  </li>
+                ))}
+              </ul>
+              {visibleExplanations.length === 0 ? (
+                <p className="mt-2 text-xs text-slate-500">Sem explicações para esta categoria.</p>
+              ) : null}
+            </details>
+          ) : null}
+
+          <Card
+            title="Backlog de remediação (sugerido)"
+            subtitle="Priorização heurística com racional — não é gestor de tarefas."
+          >
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                variant="secondary"
+                onClick={() => void loadBacklog()}
+                disabled={backlogLoading}
+              >
+                {backlogLoading ? "A gerar…" : "Gerar vista de backlog"}
+              </Button>
+            </div>
+            {backlog && (
+              <div className="mt-4 space-y-4 text-sm text-slate-700">
+                <p className="text-slate-600">{backlog.executive_summary}</p>
+                {backlog.synergy_notes.length > 0 && (
+                  <div>
+                    <p className="font-medium text-slate-800">Agrupamentos / sinergia</p>
+                    <ul className="mt-1 list-inside list-disc text-xs text-slate-600">
+                      {backlog.synergy_notes.slice(0, 4).map((n) => (
+                        <li key={n}>{n}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                <div>
+                  <p className="font-medium text-slate-800">Top acções</p>
+                  <ul className="mt-1 space-y-2">
+                    {backlog.top_5_action_ids.map((id) => {
+                      const it = backlog.items.find((x) => x.id === id);
+                      if (!it) return null;
+                      return (
+                        <li key={id} className="rounded border border-slate-100 bg-slate-50 px-2 py-1.5">
+                          <span className="font-medium text-slate-900">{it.title}</span>
+                          <span className="text-slate-500">
+                            {" "}
+                            · {it.priority_label} · esforço {it.effort_estimate}
+                          </span>
+                          {it.explanations?.[0] ? (
+                            <p className="mt-1 text-[11px] leading-snug text-slate-600">
+                              {it.explanations[0].message}
+                            </p>
+                          ) : null}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+                {backlog.quick_win_ids.length > 0 && (
+                  <div>
+                    <p className="font-medium text-slate-800">Quick wins</p>
+                    <ul className="mt-1 list-inside list-disc text-xs text-slate-600">
+                      {backlog.quick_win_ids.slice(0, 6).map((id) => {
+                        const it = backlog.items.find((x) => x.id === id);
+                        return <li key={id}>{it?.title ?? id}</li>;
+                      })}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+          </Card>
           {analysis.methodology_insights?.blocks?.length ? (
             <Card
               title="Insights da metodologia"

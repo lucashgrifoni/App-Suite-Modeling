@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Literal
 
 from otm_core_schema import FrameworkRef, RiskAssessment, StrideCategory, ThreatModelMethodology
+from otm_explainability import ExplanationRecord
 from pydantic import BaseModel, Field
 
 
@@ -84,6 +85,41 @@ class MethodologyInsights(BaseModel):
     blocks: list[MethodologyInsightBlock] = Field(default_factory=list)
 
 
+class AiLayerAssessment(BaseModel):
+    """Uma camada de análise AI (PLOT4ai) com evidência limitada ao texto do documento."""
+
+    layer_id: str = Field(..., description="Identificador estável (ex.: retrieval_grounding).")
+    label: str
+    status: Literal["no_signal", "weak", "moderate", "strong"] = "no_signal"
+    evidence: list[str] = Field(
+        default_factory=list,
+        description="Factos curtos extraídos do modelo — não prova arquitectónica completa.",
+    )
+
+
+class AiSystemContextSummary(BaseModel):
+    """
+    Síntese especializada quando `methodology=plot4ai`.
+
+    Complementa `methodology_insights` com camadas, agrupamento de heurísticas e acções.
+    """
+
+    schema_version: str = "1.0"
+    synopsis: str = Field(..., description="Resumo honesto do contexto IA inferido.")
+    pattern_tags: list[str] = Field(
+        default_factory=list,
+        description="Etiquetas heurísticas (llm_core, rag, vector_store, …).",
+    )
+    layers: list[AiLayerAssessment] = Field(default_factory=list)
+    primary_risk_surfaces: list[str] = Field(default_factory=list)
+    prioritized_recommendations: list[str] = Field(default_factory=list)
+    sensitive_data_notes: list[str] = Field(default_factory=list)
+    heuristic_ids_by_layer: dict[str, list[str]] = Field(
+        default_factory=dict,
+        description="Agrupa `plot4ai_*` heuristics por layer_id.",
+    )
+
+
 class AnalysisResult(BaseModel):
     """
     Saída única do motor de análise.
@@ -103,4 +139,12 @@ class AnalysisResult(BaseModel):
     pack_control_hints: list[str] = Field(
         default_factory=list,
         description="Sugestões de controlo do pack (relatório / backlog).",
+    )
+    explanations: list[ExplanationRecord] = Field(
+        default_factory=list,
+        description="Explicabilidade estruturada (metodologia, achados, risco, fronteiras).",
+    )
+    ai_system_context: AiSystemContextSummary | None = Field(
+        default=None,
+        description="Visão PLOT4ai: camadas, superfícies de risco e agrupamento de achados `plot4ai_*`.",
     )

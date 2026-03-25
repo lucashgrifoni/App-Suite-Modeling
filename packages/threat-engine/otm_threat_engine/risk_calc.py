@@ -39,9 +39,7 @@ def likelihood_impact_for_component(
         if asset is None:
             continue
         sens = (asset.sensitivity or "").lower()
-        if sens in ("confidential", "restricted", "secret"):
-            impact = min(5, impact + 1)
-        elif sens == "internal":
+        if sens in ("confidential", "restricted", "secret", "internal"):
             impact = min(5, impact + 1)
 
     return likelihood, impact

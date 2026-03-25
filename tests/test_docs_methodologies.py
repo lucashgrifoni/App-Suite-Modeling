@@ -2,7 +2,6 @@
 
 from pathlib import Path
 
-
 _ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -23,8 +22,8 @@ def test_readme_mentions_stride_as_default_and_incremental_engines() -> None:
 def test_multi_engine_doc_has_comparison_matrix() -> None:
     text = _read("docs/MULTI_ENGINE_ARCHITECTURE.md")
     assert (
-        "| metodologia | objetivo | quando usar | complexidade | maturidade | recomendação automática | perfil ideal |"
-        in text
+        "| metodologia | objetivo | quando usar | complexidade | maturidade | "
+        "recomendação automática | perfil ideal |" in text
     )
     assert "linddun" in text
     assert "nist data-centric" in text
@@ -70,4 +69,3 @@ def test_branding_docs_exist_and_use_app_suite_modeling() -> None:
     assert "tokens de design" in branding
     assert "sistema de logo" in branding
     assert "branding.md" in docs_index
-

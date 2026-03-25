@@ -50,9 +50,7 @@ export function ReviewPage() {
       </div>
 
       {meta && (
-        <p className="text-sm text-emerald-800" role="status">
-          {meta}
-        </p>
+        <output className="text-sm text-emerald-800">{meta}</output>
       )}
       {err && <Alert>{err}</Alert>}
 

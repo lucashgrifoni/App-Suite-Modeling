@@ -2,6 +2,7 @@
 
 from pathlib import Path
 
+from otm_core_schema import load_document_from_yaml_path
 from otm_core_schema.enums import StrideCategory
 from otm_framework_mappings import (
     FrameworkCatalog,
@@ -10,7 +11,6 @@ from otm_framework_mappings import (
     load_packaged_stride_map,
 )
 from otm_threat_engine import analyze_document, merge_heuristic_threats
-from otm_core_schema import load_document_from_yaml_path
 
 _ROOT = Path(__file__).resolve().parents[1]
 _MINIMAL = _ROOT / "examples" / "minimal.otm.yaml"

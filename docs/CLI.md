@@ -31,6 +31,8 @@ O executável é **`otm`** (ou `python -m otm_cli.cli`).
 | `otm analyze ... --methodology <id>` | Seleciona engine/metodologia (`stride`, `linddun`, `nist_data_centric`, `octave_allegro`, `cia_die`, `pasta`, `plot4ai`). |
 | `otm analyze ... --auto-methodology` | Aplica recomendação automática de metodologia pelo contexto do documento. |
 | `otm analyze ... --json-out resultado.json` | Grava o `AnalysisResult` completo (CI/CD). |
+| `otm analyze ... --explain` | Mostra um resumo curto de `explanations` no terminal. |
+| `otm explain <ficheiro.json> --from analysis\|compare` | Lê `explanations` de artefactos JSON sem despejar o payload completo. |
 | `otm recommend-methodology <arquivo>` | Sugere metodologia e explica o motivo. |
 | `otm report <arquivo>` | Markdown: modelo + análise (stdout ou `-o`). |
 | `otm diagram <arquivo>` | Mermaid flowchart (stdout ou `-o`). |
@@ -79,6 +81,8 @@ otm analyze modelo.otm.yaml --methodology plot4ai
 ```
 
 Em `--methodology pasta` e `--methodology plot4ai`, o JSON (`--json-out`) inclui `methodology_insights` com blocos especializados, sem quebrar o contrato base de análise.
+
+Para `plot4ai`, a saída também pode incluir `ai_system_context` (camadas detectadas, superfícies de risco, recomendações e agrupamento de heurísticas por camada).
 
 ## Saída e erros
 

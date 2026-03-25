@@ -26,8 +26,8 @@ def problem_detail(
     return body
 
 
-async def request_validation_handler(
-    request: Request,
+def request_validation_handler(
+    _request: Request,
     exc: RequestValidationError,
 ) -> JSONResponse:
     return JSONResponse(

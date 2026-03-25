@@ -57,6 +57,49 @@ data_flows:
         load_document_from_yaml(raw)
 
 
+def test_invalid_flow_reference_error_message_is_clear() -> None:
+    raw = """
+model:
+  schema_version: "1.0.0"
+metadata:
+  title: "x"
+components:
+  - id: a
+    name: "A"
+    kind: process
+data_flows:
+  - id: f
+    from_component: a
+    to_component: missing
+"""
+    with pytest.raises(ValueError, match=r"data_flow 'f' to_component 'missing' not found"):
+        load_document_from_yaml(raw)
+
+
+def test_invalid_component_trust_boundary_reference_message_is_clear() -> None:
+    raw = """
+model:
+  schema_version: "1.0.0"
+metadata:
+  title: "x"
+components:
+  - id: a
+    name: "A"
+    kind: process
+    in_trust_boundary: tb_missing
+data_flows: []
+trust_boundaries: []
+assets: []
+threats: []
+mitigations: []
+evidence_suggestions: []
+"""
+    with pytest.raises(
+        ValueError,
+        match=r"component 'a' references unknown trust boundary 'tb_missing'",
+    ):
+        load_document_from_yaml(raw)
+
 def test_methodology_default_is_stride() -> None:
     doc = load_document_from_yaml_path(_EXAMPLE_MIN)
     assert doc.model_info.methodology == ThreatModelMethodology.STRIDE

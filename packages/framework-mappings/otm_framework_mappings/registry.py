@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import importlib.resources
+from collections.abc import Iterable
 from functools import lru_cache
 from pathlib import Path
-from typing import Iterable
 
 import yaml
 from otm_core_schema import FrameworkRef, StrideCategory

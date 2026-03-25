@@ -7,6 +7,14 @@ from otm_core_schema import ThreatModelDocument
 from otm_threat_engine.result import StructuralFinding
 
 
+def _message_component_without_trust_boundary(missing_ids: list[str]) -> str:
+    shown = ", ".join(missing_ids[:10])
+    suffix = "…" if len(missing_ids) > 10 else ""
+    return (
+        "Existem componentes sem fronteira de confiança atribuída: " f"{shown}{suffix}"
+    )
+
+
 def collect_structural_findings(doc: ThreatModelDocument) -> list[StructuralFinding]:
     findings: list[StructuralFinding] = []
 
@@ -26,11 +34,7 @@ def collect_structural_findings(doc: ThreatModelDocument) -> list[StructuralFind
                 StructuralFinding(
                     code="COMPONENT_WITHOUT_TRUST_BOUNDARY",
                     severity="info",
-                    message=(
-                        "Existem componentes sem fronteira de confiança atribuída: "
-                        + ", ".join(missing[:10])
-                        + ("…" if len(missing) > 10 else "")
-                    ),
+                    message=_message_component_without_trust_boundary(missing),
                 )
             )
 

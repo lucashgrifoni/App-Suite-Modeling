@@ -39,8 +39,8 @@ interface SessionState {
 
 const SessionContext = createContext<SessionState | null>(null);
 
-export function SessionProvider({ children }: { children: ReactNode }) {
-  const [document, setDocumentState] = useState<OtmDocument | null>(() => {
+export function SessionProvider({ children }: Readonly<{ children: ReactNode }>) {
+  const [document, setDocument] = useState<OtmDocument | null>(() => {
     try {
       const s = sessionStorage.getItem(DOC_KEY);
       return s ? normalizeDoc(JSON.parse(s)) : null;
@@ -48,7 +48,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       return null;
     }
   });
-  const [analysis, setAnalysisState] = useState<AnalysisResult | null>(() => {
+  const [analysis, setAnalysis] = useState<AnalysisResult | null>(() => {
     try {
       const s = sessionStorage.getItem(ANALYSIS_KEY);
       return s ? (JSON.parse(s) as AnalysisResult) : null;
@@ -67,25 +67,31 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     else sessionStorage.removeItem(ANALYSIS_KEY);
   }, [analysis]);
 
-  const setDocument = useCallback((d: OtmDocument | null) => {
-    setDocumentState(d ? normalizeDoc(d) : null);
-    if (!d) setAnalysisState(null);
+  const setDocumentValue = useCallback((d: OtmDocument | null) => {
+    setDocument(d ? normalizeDoc(d) : null);
+    if (!d) setAnalysis(null);
   }, []);
 
-  const setAnalysis = useCallback((a: AnalysisResult | null) => {
-    setAnalysisState(a);
+  const setAnalysisValue = useCallback((a: AnalysisResult | null) => {
+    setAnalysis(a);
   }, []);
 
   const reset = useCallback(() => {
-    setDocumentState(null);
-    setAnalysisState(null);
+    setDocument(null);
+    setAnalysis(null);
     sessionStorage.removeItem(DOC_KEY);
     sessionStorage.removeItem(ANALYSIS_KEY);
   }, []);
 
   const value = useMemo(
-    () => ({ document, analysis, setDocument, setAnalysis, reset }),
-    [document, analysis, setDocument, setAnalysis, reset],
+    () => ({
+      document,
+      analysis,
+      setDocument: setDocumentValue,
+      setAnalysis: setAnalysisValue,
+      reset,
+    }),
+    [document, analysis, setDocumentValue, setAnalysisValue, reset],
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

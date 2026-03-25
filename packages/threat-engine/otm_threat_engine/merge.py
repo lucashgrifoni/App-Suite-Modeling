@@ -9,6 +9,22 @@ from otm_core_schema import Threat, ThreatModelDocument, TreatmentStatus
 from otm_threat_engine.result import HeuristicThreat
 
 
+def _canonical_threat_from_heuristic(h: HeuristicThreat) -> Threat:
+    return Threat(
+        id=h.id,
+        title=h.title,
+        description=h.description,
+        stride=h.stride,
+        target_component_id=h.target_component_id,
+        target_data_flow_id=h.target_data_flow_id,
+        target_asset_id=h.target_asset_id,
+        risk=h.risk,
+        treatment_status=TreatmentStatus.NEW,
+        framework_refs=[*h.framework_refs],
+        metadata={"source": "otm_threat_engine", "engine_heuristic": True},
+    )
+
+
 def merge_heuristic_threats(
     doc: ThreatModelDocument,
     threats: list[HeuristicThreat],
@@ -29,21 +45,7 @@ def merge_heuristic_threats(
             continue
         if h.id in existing_ids:
             continue
-        out.threats.append(
-            Threat(
-                id=h.id,
-                title=h.title,
-                description=h.description,
-                stride=h.stride,
-                target_component_id=h.target_component_id,
-                target_data_flow_id=h.target_data_flow_id,
-                target_asset_id=h.target_asset_id,
-                risk=h.risk,
-                treatment_status=TreatmentStatus.NEW,
-                framework_refs=[*h.framework_refs],
-                metadata={"source": "otm_threat_engine", "engine_heuristic": True},
-            )
-        )
+        out.threats.append(_canonical_threat_from_heuristic(h))
         existing_ids.add(h.id)
 
     return out

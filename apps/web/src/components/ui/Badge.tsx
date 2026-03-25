@@ -1,10 +1,9 @@
-export function Badge({
-  children,
-  tone = "neutral",
-}: {
+type BadgeProps = {
   children: React.ReactNode;
   tone?: "neutral" | "warn" | "ok" | "accent";
-}) {
+};
+
+export function Badge({ children, tone = "neutral" }: Readonly<BadgeProps>) {
   const tones = {
     neutral: "bg-slate-100 text-slate-700",
     warn: "bg-amber-50 text-amber-900",

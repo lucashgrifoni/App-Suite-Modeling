@@ -4,6 +4,10 @@
 
 Transformar o **modelo canónico** (`ThreatModelDocument`) e, opcionalmente, o **resultado da análise** (`AnalysisResult`) em formatos estáveis para pipelines, revisão humana e diagramas — **sem** depender de CLI, HTTP ou UI.
 
+## Contratos e regressão
+
+Snapshots, ordem de chaves em JSON/Markdown, erros da API relacionados e gate global: [**CONTRACT_AND_SNAPSHOTS.md**](CONTRACT_AND_SNAPSHOTS.md).
+
 ## Arquitetura
 
 | Camada | Conteúdo |
