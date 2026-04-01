@@ -33,8 +33,7 @@
 | Diff | `docs/screenshots/diff.png` | Side-by-side or summary of model diff |
 
 ```text
-<!-- Example embed after capture: -->
-<!-- ![Home](docs/screenshots/home.png) -->
+<!-- After capture, embed the Home screenshot using path docs/screenshots/home.png (no markdown link in this comment — avoids doc-link checks). -->
 ```
 
 ---
@@ -183,6 +182,20 @@ Interactive docs: **`/docs`** when the API is running. Full reference: [`docs/AP
 | `plot4ai` | AI/LLM systems (models, prompts, RAG, agents) |
 
 Methodology choice: manual selector, or **recommend** from document context. See [`docs/CHOOSE_METHODOLOGY.md`](docs/CHOOSE_METHODOLOGY.md) and [`docs/PLOT4AI_AI_SYSTEM.md`](docs/PLOT4AI_AI_SYSTEM.md).
+
+The **matriz oficial de metodologias** (goals, when to use, complexity, auto-recommendation) is in [`docs/MULTI_ENGINE_ARCHITECTURE.md`](docs/MULTI_ENGINE_ARCHITECTURE.md). **STRIDE** is the **default** general-purpose engine; you can refine threats **incrementally** as the canonical model evolves. **Branding oficial** (palette, tokens, logo): [`docs/BRANDING.md`](docs/BRANDING.md).
+
+### CLI
+
+Automation and CI: `otm` commands — see [CLI usage (essentials)](#cli-usage-essentials) and [`docs/CLI.md`](docs/CLI.md).
+
+### API
+
+Integrations and pipelines: REST — see [API overview](#api-overview) and [`docs/API.md`](docs/API.md).
+
+### UI
+
+Guided browser workflow — see [`docs/UI.md`](docs/UI.md).
 
 ---
 
