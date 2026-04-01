@@ -34,7 +34,7 @@ def request_validation_handler(
         status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
         content=problem_detail(
             code="REQUEST_VALIDATION_ERROR",
-            message="Corpo ou parâmetros inválidos.",
+            message="Invalid request body or parameters.",
             status_code=422,
             errors=exc.errors(),
         ),

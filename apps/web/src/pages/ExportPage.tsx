@@ -7,7 +7,11 @@ import { Card } from "../components/ui/Card";
 import { Label } from "../components/ui/Label";
 import { Checkbox } from "../components/ui/Checkbox";
 import { Alert } from "../components/ui/Alert";
+import { PageHeader } from "../components/patterns/PageHeader";
+import { WorkflowGuide } from "../components/onboarding/WorkflowGuide";
+import { ContextHint } from "../components/onboarding/ContextHint";
 import { useSession } from "../context/SessionContext";
+import { useToast } from "../context/ToastContext";
 import type { ExportFormat } from "../types/api";
 
 const FORMATS: { id: ExportFormat; label: string; hint: string }[] = [
@@ -31,6 +35,7 @@ function downloadArtifact(name: string, content: string, mime: string) {
 
 export function ExportPage() {
   const { document: otmDoc, analysis } = useSession();
+  const toast = useToast();
   const [selected, setSelected] = useState<Set<ExportFormat>>(
     () => new Set(["document_markdown", "analysis_markdown"]),
   );
@@ -54,7 +59,9 @@ export function ExportPage() {
     setError(null);
     setResult(null);
     if (selected.size === 0) {
-      setError("Escolha pelo menos um formato.");
+      const msg = "Escolha pelo menos um formato.";
+      setError(msg);
+      toast.warning(msg);
       return;
     }
     setLoading(true);
@@ -68,27 +75,44 @@ export function ExportPage() {
         analysis: needsAnalysis ? analysis : null,
       });
       setResult(artifacts);
+      toast.success("Artefactos prontos para descarga.");
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : "Exportação falhou.");
+      const msg = e instanceof ApiError ? e.message : "Exportação falhou.";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold text-slate-900">Exportar</h1>
-        <p className="mt-1 text-sm text-slate-600">
-          Gera ficheiros no browser. Formatos que incluem análise usam o último resultado em sessão;
-          se faltar, o servidor corre o motor automaticamente.
-        </p>
+    <div className="space-y-8">
+      <PageHeader
+        eyebrow="Entrega e evidências"
+        title="Exportar"
+        description={
+          <>
+            Gera ficheiros no browser. Formatos que incluem análise usam o último resultado em sessão;
+            se faltar, o servidor corre o motor automaticamente.
+          </>
+        }
+      />
+
+      <div className="space-y-2 rounded-otm-lg border border-otm-border/80 bg-otm-surface-1/50 px-4 py-3">
+        <WorkflowGuide variant="compact" />
+        <ContextHint>
+          Formatos com análise usam o último resultado em sessão; o <strong>diff</strong> compara JSON exportado com
+          outra revisão.
+        </ContextHint>
       </div>
 
-      <Card title="Formatos">
+      <Card title="Formatos" subtitle="Selecione o que precisa para relatório ou integração." variant="glass">
         <ul className="space-y-3">
           {FORMATS.map((f) => (
-            <li key={f.id} className="flex items-start gap-3">
+            <li
+              key={f.id}
+              className="flex items-start gap-3 rounded-otm-md border border-transparent px-2 py-2 transition hover:border-otm-border hover:bg-otm-surface-1/60"
+            >
               <Checkbox
                 id={f.id}
                 checked={selected.has(f.id)}
@@ -96,10 +120,10 @@ export function ExportPage() {
                 className="mt-1"
               />
               <div>
-                <Label htmlFor={f.id} className="!mb-0 cursor-pointer font-medium">
+                <Label htmlFor={f.id} className="!mb-0 cursor-pointer font-medium text-otm-text">
                   {f.label}
                 </Label>
-                <p className="text-xs text-slate-500">{f.hint}</p>
+                <p className="text-xs text-otm-text-muted">{f.hint}</p>
               </div>
             </li>
           ))}
@@ -112,11 +136,11 @@ export function ExportPage() {
       {error && <Alert>{error}</Alert>}
 
       {result && (
-        <Card title="Descarregar">
+        <Card title="Descarregar" subtitle="Ficheiros prontos para arquivo ou revisão." variant="elevated">
           <ul className="space-y-2">
             {Object.entries(result).map(([key, text]) => (
               <li key={key} className="flex flex-wrap items-center justify-between gap-2 text-sm">
-                <span className="font-mono text-slate-700">{key}</span>
+                <span className="font-mono text-otm-accent">{key}</span>
                 <Button
                   variant="secondary"
                   className="!py-1.5 !text-xs"
@@ -133,15 +157,15 @@ export function ExportPage() {
               </li>
             ))}
           </ul>
-          <p className="mt-3 text-xs text-slate-500">
+          <p className="mt-3 text-xs text-otm-text-muted">
             Também pode copiar do preview técnico abaixo.
           </p>
           {Object.entries(result).map(([key, text]) => (
-            <details key={`d-${key}`} className="mt-2">
-              <summary className="cursor-pointer text-sm font-medium text-slate-700">
+            <details key={`d-${key}`} className="mt-2 rounded-otm-md border border-otm-border bg-otm-surface-1/50 p-2">
+              <summary className="cursor-pointer text-sm font-medium text-otm-text">
                 {key}
               </summary>
-              <pre className="mt-2 max-h-48 overflow-auto rounded-lg bg-slate-900 p-2 text-xs text-slate-100">
+              <pre className="mt-2 max-h-48 overflow-auto rounded-otm-md bg-otm-green-950 p-3 text-xs text-otm-mint-300">
                 {text.slice(0, 8000)}
                 {text.length > 8000 ? "\n…" : ""}
               </pre>

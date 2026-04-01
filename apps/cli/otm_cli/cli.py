@@ -484,7 +484,7 @@ def cmd_recommend_methodology(
     rec = recommend_methodology(doc)
     console.print(
         Panel.fit(
-            f"Metodologia sugerida: [bold]{rec.methodology.value}[/bold]\n\nMotivo: {rec.reason}",
+            f"Suggested methodology: [bold]{rec.methodology.value}[/bold]\n\nReason: {rec.reason}",
             title="recommend-methodology",
             border_style="magenta",
         )
@@ -707,10 +707,10 @@ def cmd_validate(
 
     console.print(
         Panel.fit(
-            f"[green]Válido[/green]\n\n"
-            f"Título: [bold]{doc.metadata.title}[/bold]\n"
+            f"[green]Valid[/green]\n\n"
+            f"Title: [bold]{doc.metadata.title}[/bold]\n"
             f"Schema: {doc.model_info.schema_version}\n"
-            f"Componentes: {len(doc.components)} · Fluxos: {len(doc.data_flows)}",
+            f"Components: {len(doc.components)} · Flows: {len(doc.data_flows)}",
             title="validate",
             border_style="green",
         )
@@ -794,36 +794,36 @@ def cmd_analyze(
             f"{framework_display_name(k)}: {v}"
             for k, v in sorted(s.framework_ref_counts_by_catalog.items())
         ]
-        fw_line = "Refs por framework: " + " · ".join(bits) + "\n"
+        fw_line = "Framework refs: " + " · ".join(bits) + "\n"
     console.print(
         Panel.fit(
             f"[bold]{result.document_title}[/bold]\n\n"
             f"{pack_line}"
             f"{fw_line}"
-            f"Avisos estruturais: {s.structural_findings}\n"
-            f"Metodologia: {result.methodology.value}\n"
-            f"Fluxos entre fronteiras: {s.trust_boundary_findings}\n"
-            f"Heurísticas base: {s.heuristic_threats_generated} novas · "
-            f"{s.heuristic_threats_skipped_duplicate} já cobertas\n"
-            f"Maior score (L×I): {s.max_risk_score!s}\n"
-            f"Motor: {result.engine_version}",
+            f"Structural warnings: {s.structural_findings}\n"
+            f"Methodology: {result.methodology.value}\n"
+            f"Cross-boundary flows: {s.trust_boundary_findings}\n"
+            f"Base heuristics: {s.heuristic_threats_generated} new · "
+            f"{s.heuristic_threats_skipped_duplicate} already covered\n"
+            f"Highest score (L×I): {s.max_risk_score!s}\n"
+            f"Engine: {result.engine_version}",
             title="analyze",
             border_style="cyan",
         )
     )
     if result.methodology_recommendation_reason:
         console.print(
-            f"[dim]Recomendação automática:[/dim] {result.methodology_recommendation_reason}"
+            f"[dim]Auto recommendation:[/dim] {result.methodology_recommendation_reason}"
         )
     if result.methodology == ThreatModelMethodology.PLOT4AI and result.ai_system_context:
         ctx = result.ai_system_context
         tags = ", ".join(ctx.pattern_tags[:6]) if ctx.pattern_tags else "—"
-        console.print(f"[dim]PLOT4ai (IA):[/dim] padrões ~ [{tags}]")
+        console.print(f"[dim]PLOT4ai (AI):[/dim] patterns ~ [{tags}]")
         if ctx.primary_risk_surfaces:
-            console.print(f"[dim]  Superfície:[/dim] {ctx.primary_risk_surfaces[0][:160]}")
+            console.print(f"[dim]  Surface:[/dim] {ctx.primary_risk_surfaces[0][:160]}")
 
     if explain and result.explanations:
-        console.print("\n[bold]Explicabilidade[/bold] (primeiras 15 entradas)")
+        console.print("\n[bold]Explainability[/bold] (first 15 entries)")
         for ex in result.explanations[:15]:
             cat = getattr(ex.category, "value", ex.category)
             console.print(f"  [cyan]{cat}[/cyan] · {ex.subject} — {ex.message}")

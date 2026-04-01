@@ -22,31 +22,31 @@ def error_detail(
 
 
 def raise_document_validation_error(exc: PydanticValidationError) -> HTTPException:
-    """Erro 422 padronizado para payload de documento canônico inválido."""
+    """422 when the canonical document payload is invalid."""
     return HTTPException(
         status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
         detail=error_detail(
             code="DOCUMENT_VALIDATION_ERROR",
-            message="O documento não cumpre o schema canónico.",
+            message="The document does not satisfy the canonical schema.",
             errors=exc.errors(),
         ),
     )
 
 
 def raise_analysis_validation_error(exc: PydanticValidationError) -> HTTPException:
-    """Erro 422 padronizado quando `analysis` não valida como AnalysisResult."""
+    """422 when `analysis` is not a valid AnalysisResult."""
     return HTTPException(
         status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
         detail=error_detail(
             code="ANALYSIS_VALIDATION_ERROR",
-            message="O campo analysis não é um AnalysisResult válido.",
+            message="The analysis field is not a valid AnalysisResult.",
             errors=exc.errors(),
         ),
     )
 
 
 def raise_pack_not_found(exc: FileNotFoundError) -> HTTPException:
-    """Erro 404 quando o industry pack pedido não existe."""
+    """404 when the requested industry pack does not exist."""
     return HTTPException(
         status_code=status.HTTP_404_NOT_FOUND,
         detail=error_detail(code="PACK_NOT_FOUND", message=str(exc)),
@@ -54,7 +54,7 @@ def raise_pack_not_found(exc: FileNotFoundError) -> HTTPException:
 
 
 def raise_template_not_found(exc: FileNotFoundError) -> HTTPException:
-    """Erro 404 quando o template pedido não existe no catálogo embutido."""
+    """404 when the template does not exist in the embedded catalog."""
     return HTTPException(
         status_code=status.HTTP_404_NOT_FOUND,
         detail=error_detail(code="TEMPLATE_NOT_FOUND", message=str(exc)),
@@ -62,12 +62,12 @@ def raise_template_not_found(exc: FileNotFoundError) -> HTTPException:
 
 
 def raise_template_invalid(exc: PydanticValidationError) -> HTTPException:
-    """Erro 422 quando o YAML do template não produz documento canónico válido."""
+    """422 when template YAML does not yield a valid canonical document."""
     return HTTPException(
         status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
         detail=error_detail(
             code="TEMPLATE_INVALID",
-            message="O template não produz um documento canónico válido.",
+            message="The template does not produce a valid canonical document.",
             errors=exc.errors(),
         ),
     )

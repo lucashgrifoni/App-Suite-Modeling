@@ -1,4 +1,4 @@
-"""Backlog de remediação acionável a partir de modelo + análise."""
+"""Actionable remediation backlog from model + analysis."""
 
 from __future__ import annotations
 
@@ -16,15 +16,15 @@ from otm_api.routers._errors import (
 from otm_api.schemas.bodies import RemediationBacklogRequest
 from otm_api.services.remediation import build_remediation_backlog_response
 
-router = APIRouter(prefix="/remediation", tags=["Remediação"])
+router = APIRouter(prefix="/remediation", tags=["Remediation"])
 
 
 @router.post(
     "/backlog",
-    summary="Gerar backlog de remediação",
+    summary="Generate remediation backlog",
     description=(
-        "Corpo: `document` canónico; `analysis` opcional (`AnalysisResult`). "
-        "Se `analysis` for omitida, use `run_analysis: true` para executar o motor."
+        "Body: canonical `document`; optional `analysis` (`AnalysisResult`). "
+        "If `analysis` is omitted, set `run_analysis: true` to run the engine."
     ),
 )
 def post_remediation_backlog(
@@ -32,11 +32,11 @@ def post_remediation_backlog(
     export_format: Literal["json", "markdown"] = Query(
         default="json",
         alias="format",
-        description="json = objeto completo; markdown = relatório legível.",
+        description="json = full object; markdown = human-readable report.",
     ),
     group_by: str | None = Query(
         default=None,
-        description="Para Markdown: root-cause | control | category.",
+        description="For Markdown: root-cause | control | category.",
     ),
 ) -> Any:
     doc = document_from_payload_or_422(body.document)

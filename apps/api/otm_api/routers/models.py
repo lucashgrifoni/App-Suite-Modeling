@@ -25,15 +25,15 @@ from otm_api.services.analysis import run_analysis
 from otm_api.services.compare import comparison_from_validated_documents
 from otm_api.services.documents import create_blank_document
 
-router = APIRouter(prefix="/models", tags=["Modelos"])
+router = APIRouter(prefix="/models", tags=["Models"])
 
 
 @router.post(
     "",
     status_code=status.HTTP_201_CREATED,
-    summary="Criar modelo em branco",
+    summary="Create blank model",
     description=(
-        "Devolve um `ThreatModelDocument` mínimo válido (equivalente a `otm init` sem template)."
+        "Returns a minimal valid `ThreatModelDocument` (same as `otm init` without a template)."
     ),
 )
 def create_model() -> CreateModelResponse:
@@ -43,8 +43,8 @@ def create_model() -> CreateModelResponse:
 
 @router.post(
     "/validate",
-    summary="Validar modelo",
-    description="Valida o payload contra o schema canónico; não persiste dados.",
+    summary="Validate model",
+    description="Validates the payload against the canonical schema; does not persist data.",
 )
 def validate_model(body: DocumentBody) -> ValidateResponse:
     doc = document_from_payload_or_422(body.document)
@@ -58,12 +58,12 @@ def validate_model(body: DocumentBody) -> ValidateResponse:
 
 @router.post(
     "/diff",
-    summary="Diff entre versões do modelo",
+    summary="Diff model versions",
     description=(
-        "Compara duas versões canónicas (baseline vs revisão) e devolve diff estruturado. "
-        "Implementação em `otm_core_schema.diff_documents` — mesma semântica que `otm diff` na CLI."
+        "Compares two canonical versions (baseline vs revised) and returns structured diff. "
+        "Implemented in `otm_core_schema.diff_documents` — same semantics as `otm diff` in the CLI."
     ),
-    response_description="Objeto `ThreatModelDiff` serializado em JSON.",
+    response_description="Serialized `ThreatModelDiff` JSON object.",
 )
 def diff_model_versions(body: DiffBody) -> dict[str, Any]:
     baseline = document_from_payload_or_422(body.baseline)
@@ -74,12 +74,12 @@ def diff_model_versions(body: DiffBody) -> dict[str, Any]:
 
 @router.post(
     "/compare",
-    summary="Comparar modelos (estrutura e opcionalmente análise)",
+    summary="Compare models (structure and optional analysis)",
     description=(
-        "Devolve `ThreatModelComparisonResult`: diff canónico, agregados, insights e, se fornecido "
-        "`baseline_analysis`/`revised_analysis` ou `run_analysis=true`, delta de risco/heurísticas."
+        "Returns `ThreatModelComparisonResult`: canonical diff, aggregates, insights and, when "
+        "`baseline_analysis`/`revised_analysis` or `run_analysis=true` is provided, risk/heuristic delta."
     ),
-    response_description="JSON do resultado unificado de comparação.",
+    response_description="JSON of the unified comparison result.",
 )
 def compare_models(body: CompareBody) -> dict[str, Any]:
     b_doc = document_from_payload_or_422(body.baseline)
@@ -102,8 +102,8 @@ def compare_models(body: CompareBody) -> dict[str, Any]:
 
 @router.post(
     "/recommend-methodology",
-    summary="Recomendar metodologia/engine",
-    description="Sugere a metodologia com base no contexto do documento.",
+    summary="Recommend methodology / engine",
+    description="Suggests a methodology based on document context.",
 )
 def recommend_methodology_for_model(body: DocumentBody) -> RecommendMethodologyResponse:
     doc = document_from_payload_or_422(body.document)
@@ -117,9 +117,9 @@ def recommend_methodology_for_model(body: DocumentBody) -> RecommendMethodologyR
 
 @router.post(
     "/analyze",
-    summary="Analisar modelo",
-    description="Executa o motor STRIDE, fronteiras e risco; pack opcional.",
-    response_description="Estrutura `AnalysisResult` serializada em JSON.",
+    summary="Analyze model",
+    description="Runs the STRIDE engine, trust boundaries, and risk; optional industry pack.",
+    response_description="Serialized `AnalysisResult` JSON.",
 )
 def analyze_model(body: AnalyzeBody) -> dict[str, Any]:
     doc = document_from_payload_or_422(body.document)

@@ -1,4 +1,4 @@
-"""Rotas HTTP — importação assistida de artefactos (rascunho canónico)."""
+"""HTTP routes — assisted artifact import (canonical draft)."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from otm_api.services.imports import (
     import_terraform_bytes,
 )
 
-router = APIRouter(prefix="/imports", tags=["Importação assistida"])
+router = APIRouter(prefix="/imports", tags=["Assisted import"])
 
 _MAX_BYTES = 2 * 1024 * 1024
 
@@ -41,7 +41,7 @@ async def _read_limited(file: UploadFile) -> tuple[bytes, str]:
     if len(data) > _MAX_BYTES:
         raise HTTPException(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            detail="Artefacto excede limite de 2 MiB (MVP).",
+            detail="Artifact exceeds 2 MiB limit (MVP).",
         )
     name = file.filename or "upload"
     return data, name
@@ -49,10 +49,10 @@ async def _read_limited(file: UploadFile) -> tuple[bytes, str]:
 
 @router.post(
     "/openapi",
-    summary="Rascunho a partir de OpenAPI/Swagger",
+    summary="Draft from OpenAPI/Swagger",
     description=(
-        "Corpo: `multipart/form-data` com campo `file` (YAML/JSON). "
-        "Devolve rascunho canónico e inferências."
+        "Body: `multipart/form-data` with field `file` (YAML/JSON). "
+        "Returns canonical draft and inferences."
     ),
 )
 async def import_openapi_route(file: UploadFile = File(...)) -> ArtifactImportResponse:
@@ -65,10 +65,10 @@ async def import_openapi_route(file: UploadFile = File(...)) -> ArtifactImportRe
 
 @router.post(
     "/terraform",
-    summary="Rascunho a partir de Terraform (.tf)",
+    summary="Draft from Terraform (.tf)",
     description=(
-        "Um único ficheiro `.tf` ou texto HCL agregado. "
-        "Para pastas, prefira a CLI: `otm import terraform`."
+        "A single `.tf` file or aggregated HCL text. "
+        "For directories, prefer the CLI: `otm import terraform`."
     ),
 )
 async def import_terraform_route(file: UploadFile = File(...)) -> ArtifactImportResponse:
@@ -81,8 +81,8 @@ async def import_terraform_route(file: UploadFile = File(...)) -> ArtifactImport
 
 @router.post(
     "/kubernetes",
-    summary="Rascunho a partir de manifests Kubernetes",
-    description="YAML multi-documento (vários recursos separados por `---`).",
+    summary="Draft from Kubernetes manifests",
+    description="Multi-document YAML (multiple resources separated by `---`).",
 )
 async def import_kubernetes_route(file: UploadFile = File(...)) -> ArtifactImportResponse:
     try:

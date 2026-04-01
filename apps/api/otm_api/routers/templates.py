@@ -14,8 +14,8 @@ router = APIRouter(prefix="/templates", tags=["Templates"])
 @router.get(
     "",
     response_model=list[TemplateListItem],
-    summary="Listar templates",
-    description="Templates embutidos no pacote `otm_industry_packs` (IDs usados em `otm init -t`).",
+    summary="List templates",
+    description="Built-in templates from `otm_industry_packs` (IDs used with `otm init -t`).",
 )
 def get_templates() -> list[TemplateListItem]:
     return list_templates()
@@ -25,11 +25,11 @@ def get_templates() -> list[TemplateListItem]:
     "/{template_id}/instantiate",
     response_model=CreateModelResponse,
     status_code=status.HTTP_201_CREATED,
-    summary="Gerar modelo a partir de template",
-    description="Carrega o YAML do template e devolve o documento canónico validado.",
+    summary="Instantiate model from template",
+    description="Loads template YAML and returns the validated canonical document.",
 )
 def instantiate_template(
-    template_id: str = Path(..., description="ID do template (ex.: saas-web)."),
+    template_id: str = Path(..., description="Template ID (e.g. saas-web)."),
 ) -> CreateModelResponse:
     try:
         doc = document_from_template(template_id)

@@ -7,7 +7,12 @@ import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { Label } from "../components/ui/Label";
 import { Select } from "../components/ui/Select";
+import { PageHeader } from "../components/patterns/PageHeader";
+import { FileDropZone } from "../components/patterns/FileDropZone";
+import { WorkflowGuide } from "../components/onboarding/WorkflowGuide";
+import { ContextHint } from "../components/onboarding/ContextHint";
 import { useSession } from "../context/SessionContext";
+import { useToast } from "../context/ToastContext";
 import type { ArtifactImportKind, ArtifactInference, ExplanationRecord } from "../types/api";
 
 const KINDS: { value: ArtifactImportKind; label: string; accept: string }[] = [
@@ -25,6 +30,7 @@ function confidenceLabel(c: ArtifactInference["confidence"]): string {
 export function ImportPage() {
   const navigate = useNavigate();
   const { setDocument } = useSession();
+  const toast = useToast();
   const [kind, setKind] = useState<ArtifactImportKind>("openapi");
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
@@ -36,7 +42,9 @@ export function ImportPage() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!file) {
-      setError("Escolha um ficheiro.");
+      const msg = "Escolha um ficheiro.";
+      setError(msg);
+      toast.warning(msg);
       return;
     }
     setError(null);
@@ -50,8 +58,11 @@ export function ImportPage() {
       setInferences(res.inferences);
       setUnknowns(res.unknowns);
       setStructuredExplanations(res.explanations ?? null);
+      toast.success("Rascunho importado. Revise inferências antes da análise.");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Falha no envio ao servidor.");
+      const msg = err instanceof ApiError ? err.message : "Falha no envio ao servidor.";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -60,25 +71,35 @@ export function ImportPage() {
   const meta = KINDS.find((k) => k.value === kind);
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Importar artefacto</h1>
-        <p className="mt-2 max-w-xl text-slate-600">
-          Gera um <strong>rascunho</strong> canónico com inferências explícitas. Não substitui revisão nem
-          análise de ameaças.
-        </p>
+    <div className="space-y-8">
+      <PageHeader
+        eyebrow="Ingestão segura"
+        title="Importar artefacto"
+        description={
+          <>
+            Gera um <strong className="text-otm-text">rascunho</strong> canónico com inferências explícitas. Não
+            substitui revisão nem análise de ameaças.
+          </>
+        }
+      />
+
+      <div className="space-y-2 rounded-otm-lg border border-otm-border/80 bg-otm-surface-1/50 px-4 py-3">
+        <WorkflowGuide variant="compact" />
+        <ContextHint>
+          Depois do rascunho, use o <strong>assistente</strong> para ajustar IDs e fluxos antes do motor.
+        </ContextHint>
       </div>
 
       <Alert variant="info">
         O resultado inclui componentes e fluxos prováveis. Confira a lista de inferências antes de ir a{" "}
-        <Link to="/analysis" className="font-medium text-sky-700 hover:underline">
+        <Link to="/analysis" className="font-medium text-otm-accent underline-offset-4 hover:underline">
           análise
         </Link>
         .
       </Alert>
 
-      <Card title="Envio" subtitle="O ficheiro é processado no servidor; nada é persistido na API (MVP).">
-        <form onSubmit={onSubmit} className="space-y-4">
+      <Card title="Envio" subtitle="O ficheiro é processado no servidor; nada é persistido na API (MVP)." variant="glass">
+        <form onSubmit={onSubmit} className="space-y-4" aria-busy={loading}>
           <div>
             <Label htmlFor="kind">Tipo de artefacto</Label>
             <Select
@@ -94,16 +115,31 @@ export function ImportPage() {
               ))}
             </Select>
           </div>
-          <div>
-            <Label htmlFor="file">Ficheiro</Label>
-            <input
-              id="file"
-              type="file"
-              accept={meta?.accept}
-              className="mt-1 block w-full text-sm text-slate-600 file:mr-3 file:rounded file:border file:border-slate-200 file:bg-white file:px-3 file:py-1.5 file:text-sm"
-              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-            />
-          </div>
+
+          <FileDropZone
+            disabled={loading}
+            onFile={(f) => setFile(f)}
+            description={`Tipos aceites: ${meta?.accept ?? "—"}`}
+          >
+            <div className="mt-4">
+              <Label htmlFor="file" className="sr-only">
+                Ficheiro
+              </Label>
+              <input
+                id="file"
+                type="file"
+                accept={meta?.accept}
+                className="mx-auto block w-full max-w-sm text-sm text-otm-text-muted file:mr-3 file:rounded-otm-md file:border file:border-otm-border file:bg-otm-surface-2 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-otm-text"
+                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+              />
+              {file ? (
+                <p className="mt-2 text-xs text-otm-accent">
+                  Selecionado: <span className="font-mono">{file.name}</span>
+                </p>
+              ) : null}
+            </div>
+          </FileDropZone>
+
           <div className="flex flex-wrap gap-2">
             <Button type="submit" disabled={loading}>
               {loading ? "A importar…" : "Gerar rascunho"}
@@ -118,19 +154,19 @@ export function ImportPage() {
       {error && <Alert>{error}</Alert>}
 
       {inferences && inferences.length > 0 && (
-        <Card title="Inferências" subtitle="Transparência — cada linha explica o raciocínio do assistente.">
-          <ul className="list-inside list-disc space-y-2 text-sm text-slate-700">
+        <Card title="Inferências" subtitle="Transparência — cada linha explica o raciocínio do assistente." variant="elevated">
+          <ul className="list-inside list-disc space-y-2 text-sm text-otm-text-muted">
             {inferences.map((i) => (
               <li key={i.id}>
-                <span className="text-slate-500">[{confidenceLabel(i.confidence)}]</span> {i.message}
+                <span className="text-otm-text-subtle">[{confidenceLabel(i.confidence)}]</span> {i.message}
               </li>
             ))}
           </ul>
           {structuredExplanations && structuredExplanations.length > 0 ? (
-            <details className="mt-4 rounded border border-slate-100 bg-slate-50 p-3 text-xs text-slate-700">
-              <summary className="cursor-pointer font-medium text-slate-900">Mesmo conteúdo (contrato JSON)</summary>
-              <p className="mt-2 text-slate-600">
-                Útil para relatórios e API: campo <code className="rounded bg-white px-1">explanations</code>{" "}
+            <details className="mt-4 rounded-otm-md border border-otm-border bg-otm-surface-1 p-3 text-xs text-otm-text-muted">
+              <summary className="cursor-pointer font-medium text-otm-text">Mesmo conteúdo (contrato JSON)</summary>
+              <p className="mt-2">
+                Útil para relatórios e API: campo <code className="rounded bg-otm-surface-3 px-1 text-otm-accent">explanations</code>{" "}
                 espelha as inferências com tipo e categoria.
               </p>
             </details>
@@ -139,8 +175,8 @@ export function ImportPage() {
       )}
 
       {unknowns && unknowns.length > 0 && (
-        <Card title="Não inferido" subtitle="Limitações explícitas deste lote.">
-          <ul className="list-inside list-disc space-y-1 text-sm text-amber-900">
+        <Card title="Não inferido" subtitle="Limitações explícitas deste lote." variant="glass">
+          <ul className="list-inside list-disc space-y-1 text-sm text-amber-100">
             {unknowns.map((u) => (
               <li key={u}>{u}</li>
             ))}

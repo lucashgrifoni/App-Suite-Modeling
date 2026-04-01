@@ -31,6 +31,8 @@ Guia completo: [**`docs/MONOREPO.md`**](docs/MONOREPO.md). Resumo:
 
 Consulte [**`docs/README.md`**](docs/README.md) para o fluxo completo de início.
 
+**Setup automatizado (Windows e Linux):** na raiz do repo, `python scripts/setup_dev.py` (venv + pip + `npm install` na UI); depois `python scripts/run_dev.py` para subir API e UI em paralelo. Detalhes e atalhos `.sh` / `.ps1` em [`docs/README.md`](docs/README.md).
+
 Contratos de saída, códigos de erro da API, snapshots e gate de regressão: [**`docs/CONTRACT_AND_SNAPSHOTS.md`**](docs/CONTRACT_AND_SNAPSHOTS.md).
 
 ### CLI

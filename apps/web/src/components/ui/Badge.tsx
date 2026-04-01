@@ -1,14 +1,16 @@
+import type { ReactNode } from "react";
+
 type BadgeProps = {
-  children: React.ReactNode;
+  children: ReactNode;
   tone?: "neutral" | "warn" | "ok" | "accent";
 };
 
 export function Badge({ children, tone = "neutral" }: Readonly<BadgeProps>) {
   const tones = {
-    neutral: "bg-slate-100 text-slate-700",
-    warn: "bg-amber-50 text-amber-900",
-    ok: "bg-emerald-50 text-emerald-900",
-    accent: "bg-sky-50 text-sky-900",
+    neutral: "border border-otm-border bg-otm-surface-3 text-otm-text-muted",
+    warn: "border border-amber-500/30 bg-amber-500/10 text-amber-100",
+    ok: "border border-emerald-500/30 bg-emerald-500/10 text-emerald-100",
+    accent: "border border-otm-border-strong bg-otm-primary-subtle text-otm-accent",
   };
   return (
     <span

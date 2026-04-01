@@ -12,16 +12,15 @@ from otm_api.routers._errors import (
 from otm_api.schemas.bodies import ExportBody, ExportResponse
 from otm_api.services.exports import build_exports
 
-router = APIRouter(prefix="/exports", tags=["Exportação"])
+router = APIRouter(prefix="/exports", tags=["Export"])
 
 
 @router.post(
     "",
-    summary="Exportar resultados",
+    summary="Export artifacts",
     description=(
-        "Gera um ou mais artefactos (JSON, Markdown, Mermaid, bundle). "
-        "Se pedir formatos que dependem de análise e não enviar `analysis`, "
-        "o motor corre automaticamente."
+        "Produces one or more artifacts (JSON, Markdown, Mermaid, bundle). "
+        "If a format requires analysis and `analysis` is omitted, the engine runs automatically."
     ),
 )
 def export_artifacts(body: ExportBody) -> ExportResponse:

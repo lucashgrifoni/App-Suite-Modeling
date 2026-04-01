@@ -58,6 +58,7 @@ pythonpath = [
   "packages/industry-packs",
   "packages/artifact-import",
   "apps/api",
+  "scripts",
 ]
 
 [tool.ruff]

@@ -24,7 +24,7 @@ def test_validate_ok(runner: CliRunner) -> None:
     r = runner.invoke(app, ["validate", str(_MINIMAL)])
     assert r.exit_code == 0
     out = r.stdout + (r.stderr or "")
-    assert "Válido" in out
+    assert "Valid" in out
 
 
 def test_diff_same_file_reports_no_structural_change(runner: CliRunner) -> None:
@@ -99,7 +99,7 @@ def test_analyze_with_methodology_option(runner: CliRunner) -> None:
     r = runner.invoke(app, ["analyze", str(_MINIMAL), "--methodology", "nist_data_centric"])
     assert r.exit_code == 0
     out = (r.stdout or "") + (r.stderr or "")
-    assert "Metodologia: nist_data_centric" in out
+    assert "Methodology: nist_data_centric" in out
 
 
 def test_analyze_json_out_contract_stable(tmp_path: Path, runner: CliRunner) -> None:
@@ -140,7 +140,7 @@ def test_recommend_methodology_ok(runner: CliRunner) -> None:
     r = runner.invoke(app, ["recommend-methodology", str(_MINIMAL)])
     assert r.exit_code == 0
     combined = (r.stdout or "") + (r.stderr or "")
-    assert "Metodologia sugerida" in combined
+    assert "Suggested methodology" in combined
 
 
 def test_explain_command_reads_analysis_json(tmp_path: Path, runner: CliRunner) -> None:

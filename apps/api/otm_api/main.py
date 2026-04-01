@@ -15,24 +15,24 @@ from otm_api.routers import analyses, exports, imports, models, remediation, sys
 
 app = FastAPI(
     title="App Suite Modeling API",
-    version="0.2.0",
+    version="0.1.0",
     description=(
-        "Exposição HTTP do threat modeling as code: validação, análise, templates e exportação. "
-        "Rotas versionadas em `/v1`. Ver `docs/API.md` no repositório."
+        "HTTP API for threat modeling as code: validation, analysis, templates, and exports. "
+        "Versioned routes under `/v1`. See `docs/API.md` in the repository."
     ),
     openapi_tags=[
-        {"name": "Sistema", "description": "Saúde do serviço."},
-        {"name": "Modelos", "description": "Criação, validação, análise e comparação do documento canónico."},
-        {"name": "Análises", "description": "Diff entre resultados de motor (`AnalysisResult`)."},
-        {"name": "Templates", "description": "Modelos iniciais embutidos."},
-        {"name": "Exportação", "description": "JSON, Markdown, Mermaid e bundles."},
+        {"name": "System", "description": "Service health."},
+        {"name": "Models", "description": "Create, validate, analyze, and compare the canonical document."},
+        {"name": "Analyses", "description": "Diff between engine results (`AnalysisResult`)."},
+        {"name": "Templates", "description": "Built-in starter templates."},
+        {"name": "Export", "description": "JSON, Markdown, Mermaid, and bundles."},
         {
-            "name": "Importação assistida",
-            "description": "Rascunho canónico a partir de OpenAPI, Terraform ou Kubernetes (sem análise final).",
+            "name": "Assisted import",
+            "description": "Canonical draft from OpenAPI, Terraform, or Kubernetes (no final analysis).",
         },
         {
-            "name": "Remediação",
-            "description": "Backlog acionável a partir de `AnalysisResult` (priorização heurística, não Jira).",
+            "name": "Remediation",
+            "description": "Actionable backlog from `AnalysisResult` (heuristic prioritization, not Jira).",
         },
     ],
 )
@@ -49,6 +49,25 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.get(
+    "/",
+    summary="API entry",
+    tags=["System"],
+    description="Links to interactive docs and health. Open `/docs` for Swagger UI.",
+)
+def root() -> dict[str, str]:
+    return {
+        "service": "App Suite Modeling API",
+        "version": app.version,
+        "docs": "/docs",
+        "redoc": "/redoc",
+        "openapi": "/openapi.json",
+        "health": "/health",
+        "api_v1": "/v1",
+    }
+
 
 app.include_router(system.router)
 

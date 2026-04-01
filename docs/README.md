@@ -35,6 +35,26 @@ python -m venv .venv
 pip install -e ".[dev,cli,api]"
 ```
 
+**Setup automatizado (recomendado):** um único fluxo para **Windows e Linux/Ubuntu** — cria `.venv`, instala o pacote em modo editável (`dev`, `cli`, `api`) e corre `npm install` em `apps/web`.
+
+Na **raiz do repositório**:
+
+```bash
+python scripts/setup_dev.py
+```
+
+Opções: `python scripts/setup_dev.py --skip-npm` (só Python) ou `--recreate-venv` (recriar o venv).
+
+Atalhos:
+
+| SO | Setup | API + UI juntos |
+|----|--------|------------------|
+| Qualquer | `python scripts/setup_dev.py` | `python scripts/run_dev.py` |
+| Linux/macOS | `./scripts/setup_dev.sh` | `./scripts/run_dev.sh` |
+| Windows (PowerShell) | `.\scripts\setup_dev.ps1` | `.\scripts\run_dev.ps1` |
+
+`run_dev.py` inicia **uvicorn** na porta 8000 e **Vite** na 5173; use Ctrl+C para parar os dois. Exige `setup_dev` já executado e `npm` no PATH.
+
 ### 2) Primeiro arquivo `.otm.yaml`
 
 Opção pronta:

@@ -2,23 +2,217 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --asm-bg: #f4f7fb;
-  --asm-surface: #ffffff;
-  --asm-text: #0b1220;
-  --asm-text-muted: #475569;
-  --asm-primary: #1e40ff;
-  --asm-primary-strong: #0b2a8f;
-  --asm-border: #d7e1ee;
-  --asm-success: #00a36a;
-  --asm-warning: #f59e0b;
-  --asm-danger: #ef4444;
+/* Official palette base: #6AE899 #56FF95 #7DFABE #76DB9B #30B27F */
+:root,
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --otm-green-950: #050807;
+  --otm-green-900: #0a100d;
+  --otm-green-850: #0e1512;
+  --otm-green-800: #121a17;
+  --otm-green-750: #16201c;
+  --otm-green-700: #1a2621;
+  --otm-green-650: #1f2d27;
+
+  --otm-primary: #30b27f;
+  --otm-primary-hover: #3dd492;
+  --otm-primary-active: #269466;
+  --otm-primary-subtle: rgba(48, 178, 127, 0.14);
+  --otm-primary-muted: rgba(48, 178, 127, 0.08);
+
+  --otm-mint-400: #6ae899;
+  --otm-accent: #56ff95;
+  --otm-mint-300: #7dfabe;
+  --otm-mint-500: #76db9b;
+
+  --otm-success: #56ff95;
+  --otm-success-subtle: rgba(86, 255, 149, 0.12);
+  --otm-warning: #fbbf24;
+  --otm-warning-subtle: rgba(251, 191, 36, 0.12);
+  --otm-danger: #f87171;
+  --otm-danger-subtle: rgba(248, 113, 113, 0.12);
+  --otm-info: #38bdf8;
+  --otm-info-subtle: rgba(56, 189, 248, 0.1);
+
+  --otm-text: #e8f5ef;
+  --otm-text-muted: #93b0a3;
+  --otm-text-subtle: #5f7a6d;
+
+  --otm-surface-base: var(--otm-green-900);
+  --otm-surface-1: var(--otm-green-850);
+  --otm-surface-2: var(--otm-green-800);
+  --otm-surface-3: var(--otm-green-750);
+  --otm-surface-glass: rgba(22, 32, 28, 0.72);
+
+  --otm-border: rgba(125, 250, 190, 0.1);
+  --otm-border-strong: rgba(125, 250, 190, 0.18);
+  --otm-ring: rgba(86, 255, 149, 0.45);
+  --otm-glow: 0 0 24px rgba(86, 255, 149, 0.12);
+
+  --otm-gradient-hero: radial-gradient(
+      120% 80% at 20% 0%,
+      rgba(48, 178, 127, 0.22) 0%,
+      transparent 55%
+    ),
+    radial-gradient(80% 60% at 90% 10%, rgba(86, 255, 149, 0.08) 0%, transparent 45%),
+    linear-gradient(180deg, var(--otm-green-900) 0%, var(--otm-green-950) 100%);
+
+  --otm-gradient-accent: linear-gradient(135deg, var(--otm-primary) 0%, var(--otm-accent) 100%);
+  --otm-gradient-shine: linear-gradient(
+    105deg,
+    transparent 0%,
+    rgba(125, 250, 190, 0.06) 45%,
+    rgba(86, 255, 149, 0.12) 50%,
+    rgba(125, 250, 190, 0.06) 55%,
+    transparent 100%
+  );
+
+  --otm-blur-glass: 16px;
+  --otm-radius-sm: 0.5rem;
+  --otm-radius-md: 0.75rem;
+  --otm-radius-lg: 1rem;
+  --otm-radius-xl: 1.25rem;
+
+  --otm-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --otm-shadow-md: 0 8px 24px rgba(0, 0, 0, 0.45), 0 0 0 1px var(--otm-border);
+  --otm-shadow-lg: 0 24px 48px rgba(0, 0, 0, 0.55), 0 0 0 1px var(--otm-border-strong);
+  --otm-shadow-glow: 0 0 0 1px rgba(125, 250, 190, 0.15), 0 12px 40px rgba(48, 178, 127, 0.15);
+
+  /* Legacy bridge (components antigos) */
+  --asm-bg: var(--otm-surface-base);
+  --asm-surface: var(--otm-surface-2);
+  --asm-text: var(--otm-text);
+  --asm-text-muted: var(--otm-text-muted);
+  --asm-primary: var(--otm-primary);
+  --asm-primary-strong: var(--otm-primary-active);
+  --asm-border: var(--otm-border);
+  --asm-success: var(--otm-success);
+  --asm-warning: var(--otm-warning);
+  --asm-danger: var(--otm-danger);
 }
 
-body {
-  margin: 0;
-  font-family: "DM Sans", system-ui, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  background: var(--asm-bg);
-  color: var(--asm-text);
+[data-theme="light"] {
+  color-scheme: light;
+
+  --otm-text: #0b1220;
+  --otm-text-muted: #475569;
+  --otm-text-subtle: #64748b;
+
+  --otm-surface-base: #f4f7f5;
+  --otm-surface-1: #ffffff;
+  --otm-surface-2: #f8faf9;
+  --otm-surface-3: #eef4f1;
+  --otm-surface-glass: rgba(255, 255, 255, 0.85);
+
+  --otm-border: rgba(15, 60, 40, 0.12);
+  --otm-border-strong: rgba(15, 60, 40, 0.2);
+  --otm-ring: rgba(48, 178, 127, 0.45);
+  --otm-glow: 0 0 20px rgba(48, 178, 127, 0.15);
+
+  --otm-primary-subtle: rgba(48, 178, 127, 0.12);
+  --otm-primary-muted: rgba(48, 178, 127, 0.06);
+
+  --otm-gradient-hero: radial-gradient(
+      100% 80% at 15% 0%,
+      rgba(48, 178, 127, 0.18) 0%,
+      transparent 50%
+    ),
+    linear-gradient(180deg, #f4f7f5 0%, #eef4f1 100%);
+
+  --otm-shadow-md: 0 8px 24px rgba(15, 23, 42, 0.08), 0 0 0 1px var(--otm-border);
+  --otm-shadow-lg: 0 20px 40px rgba(15, 23, 42, 0.1), 0 0 0 1px var(--otm-border);
+
+  --asm-bg: var(--otm-surface-base);
+  --asm-surface: var(--otm-surface-1);
+  --asm-text: var(--otm-text);
+  --asm-text-muted: var(--otm-text-muted);
+}
+
+@layer base {
+  html {
+    @apply antialiased;
+  }
+
+  body {
+    margin: 0;
+    font-family: "DM Sans", system-ui, sans-serif;
+    background: var(--otm-gradient-hero);
+    background-color: var(--otm-surface-base);
+    color: var(--otm-text);
+    min-height: 100vh;
+  }
+
+  ::selection {
+    background: rgba(86, 255, 149, 0.25);
+    color: var(--otm-text);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--otm-ring);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer utilities {
+  .otm-text-gradient {
+    background: var(--otm-gradient-accent);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .otm-glass {
+    background: var(--otm-surface-glass);
+    backdrop-filter: blur(var(--otm-blur-glass));
+    -webkit-backdrop-filter: blur(var(--otm-blur-glass));
+    border: 1px solid var(--otm-border);
+  }
+
+  .otm-card-lift {
+    transform: translateZ(0);
+    transition:
+      transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
+      box-shadow 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .otm-card-lift:hover {
+    transform: translateY(-2px) rotateX(2deg);
+    box-shadow: var(--otm-shadow-glow);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .otm-card-lift:hover {
+      transform: none;
+    }
+  }
+
+  .otm-perspective {
+    perspective: 1200px;
+  }
+
+  .otm-tilt-hover {
+    transform-style: preserve-3d;
+    transition: transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .otm-tilt-hover:hover {
+    transform: rotateY(-2deg) rotateX(3deg) translateZ(0);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .otm-tilt-hover:hover {
+      transform: none;
+    }
+  }
 }

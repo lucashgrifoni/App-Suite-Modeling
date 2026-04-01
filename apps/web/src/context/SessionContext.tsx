@@ -2,7 +2,6 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -27,6 +26,24 @@ function normalizeDoc(raw: unknown): OtmDocument | null {
     mitigations: d.mitigations ?? [],
     evidence_suggestions: d.evidence_suggestions ?? [],
   };
+}
+
+function persistDocument(doc: OtmDocument | null) {
+  try {
+    if (doc) sessionStorage.setItem(DOC_KEY, JSON.stringify(doc));
+    else sessionStorage.removeItem(DOC_KEY);
+  } catch {
+    /* quota / private mode */
+  }
+}
+
+function persistAnalysis(a: AnalysisResult | null) {
+  try {
+    if (a) sessionStorage.setItem(ANALYSIS_KEY, JSON.stringify(a));
+    else sessionStorage.removeItem(ANALYSIS_KEY);
+  } catch {
+    /* ignore */
+  }
 }
 
 interface SessionState {
@@ -57,30 +74,26 @@ export function SessionProvider({ children }: Readonly<{ children: ReactNode }>)
     }
   });
 
-  useEffect(() => {
-    if (document) sessionStorage.setItem(DOC_KEY, JSON.stringify(document));
-    else sessionStorage.removeItem(DOC_KEY);
-  }, [document]);
-
-  useEffect(() => {
-    if (analysis) sessionStorage.setItem(ANALYSIS_KEY, JSON.stringify(analysis));
-    else sessionStorage.removeItem(ANALYSIS_KEY);
-  }, [analysis]);
-
   const setDocumentValue = useCallback((d: OtmDocument | null) => {
-    setDocument(d ? normalizeDoc(d) : null);
-    if (!d) setAnalysis(null);
+    const normalized = d ? normalizeDoc(d) : null;
+    setDocument(normalized);
+    persistDocument(normalized);
+    if (!d) {
+      setAnalysis(null);
+      persistAnalysis(null);
+    }
   }, []);
 
   const setAnalysisValue = useCallback((a: AnalysisResult | null) => {
     setAnalysis(a);
+    persistAnalysis(a);
   }, []);
 
   const reset = useCallback(() => {
     setDocument(null);
     setAnalysis(null);
-    sessionStorage.removeItem(DOC_KEY);
-    sessionStorage.removeItem(ANALYSIS_KEY);
+    persistDocument(null);
+    persistAnalysis(null);
   }, []);
 
   const value = useMemo(

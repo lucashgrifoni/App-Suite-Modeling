@@ -8,9 +8,14 @@ import { Input } from "../components/ui/Input";
 import { Label } from "../components/ui/Label";
 import { Select } from "../components/ui/Select";
 import { Alert } from "../components/ui/Alert";
+import { PageHeader } from "../components/patterns/PageHeader";
+import { WorkflowGuide } from "../components/onboarding/WorkflowGuide";
+import { HelpCallout } from "../components/onboarding/HelpCallout";
+import { Stepper } from "../components/patterns/Stepper";
+import { Panel } from "../components/patterns/Panel";
 import { useSession } from "../context/SessionContext";
+import { useToast } from "../context/ToastContext";
 import { removeArrayItem, updateArrayItem } from "../utils/collections";
-import { stepPillClass } from "../utils/wizardStepPill";
 import {
   COMPONENT_KINDS,
   SYSTEM_TYPES,
@@ -27,6 +32,7 @@ const STEPS = [
 
 export function WizardPage() {
   const { document, setDocument } = useSession();
+  const toast = useToast();
   const [step, setStep] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [validating, setValidating] = useState(false);
@@ -68,44 +74,53 @@ export function WizardPage() {
       await validateDocument(doc);
       setStep((s) => Math.min(s + 1, STEPS.length - 1));
     } catch (e) {
-      setError(
+      const msg =
         e instanceof ApiError
           ? e.message
-          : "O modelo não passou na validação. Corrija os campos obrigatórios.",
-      );
+          : "O modelo não passou na validação. Corrija os campos obrigatórios.";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setValidating(false);
     }
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold text-slate-900">Assistente</h1>
-        <p className="mt-1 text-sm text-slate-600">
-          Quatro passos curtos. Os IDs devem ser únicos (letras, números, <code className="text-xs">_</code>{" "}
-          e <code className="text-xs">-</code>).
-        </p>
+    <div className="space-y-8">
+      <PageHeader
+        eyebrow="Assistente guiado"
+        title="Assistente"
+        description={
+          <>
+            Quatro passos curtos. Os IDs devem ser únicos (letras, números,{" "}
+            <code className="rounded bg-otm-surface-3 px-1 text-xs text-otm-accent">_</code> e{" "}
+            <code className="rounded bg-otm-surface-3 px-1 text-xs text-otm-accent">-</code>).
+          </>
+        }
+      />
+
+      <div className="space-y-3">
+        <WorkflowGuide variant="compact" />
+        <HelpCallout title="Próximo passo natural" tone="tip">
+          Conclua os passos e valide — depois abra o <strong className="text-otm-text">diagrama</strong> e a{" "}
+          <strong className="text-otm-text">análise</strong> quando o modelo estiver coerente.
+        </HelpCallout>
       </div>
 
-      <ol className="flex flex-wrap gap-2">
-        {STEPS.map((s, i) => (
-          <li key={s.id}>
-            <button
-              type="button"
-              onClick={() => (i <= step ? setStep(s.id) : undefined)}
-              className={`rounded-full px-3 py-1 text-xs font-medium ${stepPillClass(step, i)}`}
-            >
-              {i + 1}. {s.label}
-            </button>
-          </li>
-        ))}
-      </ol>
+      <Panel>
+        <Stepper
+          steps={STEPS}
+          currentIndex={step}
+          onStepClick={(i) => {
+            if (i <= step) setStep(STEPS[i].id);
+          }}
+        />
+      </Panel>
 
       {error && <Alert>{error}</Alert>}
 
       {step === 0 && (
-        <Card title="Contexto do sistema">
+        <Card title="Contexto do sistema" variant="glass">
           <div className="space-y-4">
             <div>
               <Label htmlFor="title">Título do modelo</Label>
@@ -142,12 +157,16 @@ export function WizardPage() {
       )}
 
       {step === 1 && (
-        <Card title="Componentes" subtitle="Elementos do diagrama (processos, dados, utilizadores…).">
+        <Card
+          title="Componentes"
+          subtitle="Elementos do diagrama (processos, dados, utilizadores…)."
+          variant="glass"
+        >
           <div className="space-y-3">
             {doc.components.map((c, idx) => (
               <div
                 key={`comp-${c.id}-${c.name}`}
-                className="grid gap-2 rounded-lg border border-slate-100 p-3 sm:grid-cols-12 sm:items-end"
+                className="grid gap-2 rounded-otm-md border border-otm-border bg-otm-surface-1/80 p-3 sm:grid-cols-12 sm:items-end"
               >
                 <div className="sm:col-span-3">
                   <Label htmlFor={`comp-${idx}-id`}>ID</Label>
@@ -188,7 +207,7 @@ export function WizardPage() {
                 <div className="sm:col-span-2">
                   <Button
                     variant="ghost"
-                    className="w-full text-red-600"
+                    className="w-full text-red-300"
                     onClick={() => setComponents(removeArrayItem(doc.components, idx))}
                   >
                     Remover
@@ -215,12 +234,13 @@ export function WizardPage() {
         <Card
           title="Fluxos de dados"
           subtitle="Ligações entre componentes (origem e destino = IDs dos componentes)."
+          variant="glass"
         >
           <div className="space-y-3">
             {doc.data_flows.map((f, idx) => (
               <div
                 key={`flow-${f.id}-${f.from_component}-${f.to_component}`}
-                className="grid gap-2 rounded-lg border border-slate-100 p-3 sm:grid-cols-12 sm:items-end"
+                className="grid gap-2 rounded-otm-md border border-otm-border bg-otm-surface-1/80 p-3 sm:grid-cols-12 sm:items-end"
               >
                 <div className="sm:col-span-2">
                   <Label htmlFor={`flow-${idx}-id`}>ID fluxo</Label>
@@ -283,7 +303,7 @@ export function WizardPage() {
                 <div className="sm:col-span-2">
                   <Button
                     variant="ghost"
-                    className="w-full text-red-600"
+                    className="w-full text-red-300"
                     onClick={() => setFlows(removeArrayItem(doc.data_flows, idx))}
                   >
                     Remover
@@ -312,12 +332,12 @@ export function WizardPage() {
       )}
 
       {step === 3 && (
-        <Card title="Pronto para rever">
-          <p className="text-sm text-slate-600">
+        <Card title="Pronto para rever" variant="elevated">
+          <p className="text-sm text-otm-text-muted">
             Valide no servidor e avance para a vista de componentes e fluxos. Pode voltar a qualquer
             passo para ajustar.
           </p>
-          <ul className="mt-3 list-inside list-disc text-sm text-slate-600">
+          <ul className="mt-3 list-inside list-disc text-sm text-otm-text-muted">
             <li>{doc.components.length} componentes</li>
             <li>{doc.data_flows.length} fluxos</li>
           </ul>

@@ -6,7 +6,7 @@ export function Label({ className = "", htmlFor, ...props }: Readonly<LabelProps
   return (
     <label
       htmlFor={htmlFor}
-      className={`mb-1 block text-sm font-medium text-slate-700 ${className}`}
+      className={`mb-1 block text-sm font-medium text-otm-text-muted ${className}`}
       {...props}
     />
   );
