@@ -1,0 +1,136 @@
+# Fixture de calibração PLOT4ai — pipeline de inferência com provider externo (otm-ai-005)
+model:
+  schema_version: "1.0.0"
+  system_type: batch_data_pipeline
+  industry_sector: generic
+  methodology: plot4ai
+
+metadata:
+  title: "Document Classification Inference Pipeline"
+  summary: >-
+    Pipeline batch: upload → preprocess → inference orchestrator → external model provider.
+    classification_prompt_or_payload e classification_output; provider_call_metadata em audit-log.
+  tags:
+    - ai
+    - inference
+    - pipeline
+    - document-processing
+    - external-provider
+    - classification
+
+business_context:
+  description: "Classificação automática com rastreabilidade e dependência de fornecedor."
+  regulatory_context: "ISO 27001; NIST CSF."
+
+trust_boundaries:
+  - id: upload-boundary
+    name: "Entrada de documentos"
+  - id: internal-processing-boundary
+    name: "Processamento interno"
+    member_component_ids:
+      - upload-api
+      - preprocessor
+      - inference-orchestrator
+      - result-store
+      - workflow-system
+      - audit-log
+  - id: external-model-provider-boundary
+    name: "Fornecedor do modelo"
+    member_component_ids:
+      - external-model-provider
+
+assets:
+  - id: uploaded-documents
+    name: "Documentos carregados"
+    asset_kind: data
+    sensitivity: confidential
+  - id: classification-results
+    name: "Resultados de classificação (output do modelo)"
+    asset_kind: data
+    sensitivity: internal
+  - id: processing-metadata
+    name: "Metadados de processamento"
+    asset_kind: data
+    sensitivity: confidential
+
+components:
+  - id: upload-api
+    name: "Document upload API"
+    kind: process
+    in_trust_boundary: internal-processing-boundary
+    asset_ids:
+      - uploaded-documents
+  - id: preprocessor
+    name: "Document preprocessing service"
+    kind: process
+    description: "Extração de conteúdo antes da inferência"
+    in_trust_boundary: internal-processing-boundary
+  - id: inference-orchestrator
+    name: "AI inference orchestrator"
+    kind: process
+    in_trust_boundary: internal-processing-boundary
+    asset_ids:
+      - classification-results
+      - processing-metadata
+  - id: external-model-provider
+    name: "External hosted classification model"
+    kind: external_entity
+    description: "Third-party inference endpoint"
+    in_trust_boundary: external-model-provider-boundary
+  - id: result-store
+    name: "Classification result datastore"
+    kind: datastore
+    in_trust_boundary: internal-processing-boundary
+    asset_ids:
+      - classification-results
+  - id: workflow-system
+    name: "Downstream workflow system"
+    kind: process
+    in_trust_boundary: internal-processing-boundary
+  - id: audit-log
+    name: "Audit log with provider_call_metadata"
+    kind: datastore
+    in_trust_boundary: internal-processing-boundary
+    asset_ids:
+      - processing-metadata
+
+data_flows:
+  - id: p1
+    name: "raw_document"
+    from_component: upload-api
+    to_component: preprocessor
+    protocol: "internal"
+  - id: p2
+    name: "extracted_document_content"
+    from_component: preprocessor
+    to_component: inference-orchestrator
+    protocol: "internal"
+  - id: p3
+    name: "classification_prompt_or_payload"
+    from_component: inference-orchestrator
+    to_component: external-model-provider
+    protocol: "HTTPS"
+  - id: p4
+    name: "classification_output"
+    from_component: external-model-provider
+    to_component: inference-orchestrator
+    protocol: "HTTPS"
+  - id: p5
+    name: "classification_result"
+    from_component: inference-orchestrator
+    to_component: result-store
+    protocol: "TLS"
+  - id: p6
+    name: "downstream_workflow_trigger"
+    from_component: result-store
+    to_component: workflow-system
+    protocol: "TLS"
+  - id: p7
+    name: "provider_call_metadata"
+    from_component: inference-orchestrator
+    to_component: audit-log
+    protocol: "TLS"
+
+threats: []
+mitigations: []
+evidence_suggestions: []

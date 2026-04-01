@@ -1,0 +1,78 @@
+/**
+ * Forma JSON enviada à API (aliases do schema: `model`, `metadata`, etc.).
+ * A UI só monta/edit estas estruturas; validação e motor ficam no backend.
+ */
+
+export interface OtmModelInfo {
+  schema_version: string;
+  system_type: string;
+  industry_sector: string;
+  methodology?:
+    | "stride"
+    | "linddun"
+    | "nist_data_centric"
+    | "octave_allegro"
+    | "cia_die"
+    | "pasta"
+    | "plot4ai";
+}
+
+export interface OtmMetadata {
+  title: string;
+  summary?: string | null;
+  owner?: string | null;
+  document_version?: string | null;
+  tags?: string[];
+}
+
+export interface OtmComponent {
+  id: string;
+  name: string;
+  kind: string;
+  description?: string | null;
+  technology?: string | null;
+  in_trust_boundary?: string | null;
+}
+
+export interface OtmDataFlow {
+  id: string;
+  name?: string | null;
+  from_component: string;
+  to_component: string;
+  encrypted?: boolean | null;
+}
+
+export interface OtmTrustBoundary {
+  id: string;
+  name: string;
+}
+
+export interface OtmDocument {
+  model: OtmModelInfo;
+  metadata: OtmMetadata;
+  components: OtmComponent[];
+  data_flows: OtmDataFlow[];
+  trust_boundaries: OtmTrustBoundary[];
+  assets: unknown[];
+  threats: unknown[];
+  mitigations: unknown[];
+  evidence_suggestions: unknown[];
+}
+
+export const COMPONENT_KINDS = [
+  { value: "process", label: "Processo" },
+  { value: "datastore", label: "Armazém de dados" },
+  { value: "external_entity", label: "Entidade externa" },
+  { value: "user", label: "Utilizador" },
+  { value: "gateway", label: "Gateway" },
+  { value: "queue", label: "Fila" },
+  { value: "other", label: "Outro" },
+] as const;
+
+export const SYSTEM_TYPES = [
+  { value: "web_application", label: "Aplicação web" },
+  { value: "api_backend", label: "API / backend" },
+  { value: "mobile_application", label: "Mobile" },
+  { value: "hybrid", label: "Híbrido" },
+  { value: "other", label: "Outro" },
+] as const;

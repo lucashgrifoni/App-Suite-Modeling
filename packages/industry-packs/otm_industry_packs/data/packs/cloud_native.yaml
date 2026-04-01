@@ -1,0 +1,23 @@
+id: cloud_native
+name: "Cloud-native / Kubernetes"
+sector: cloud_native
+description: "Orquestração, imagens, segredos e políticas de rede."
+risk_tuning:
+  likelihood_multiplier: 1.08
+  impact_multiplier: 1.06
+additional_threats:
+  - id: workload_repudiation
+    title: "Repúdio de operações de orquestração ou rollout"
+    stride: repudiation
+    target_component_kinds: [process]
+    likelihood_delta: 1
+    impact_delta: 0
+  - id: registry_spoof
+    title: "Spoofing de identidade em registo de artefactos"
+    stride: spoofing
+    target_component_kinds: [datastore]
+    likelihood_delta: 0
+    impact_delta: 1
+control_hints:
+  - "Políticas de rede (NetworkPolicy) e admissão de imagens"
+  - "Secrets externos (CSI) e rotação de credenciais"

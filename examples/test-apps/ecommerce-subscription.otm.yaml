@@ -1,0 +1,139 @@
+model:
+  schema_version: "1.0.0"
+  system_type: web_application
+  industry_sector: retail
+
+metadata:
+  title: "Teste E-commerce - checkout com assinatura"
+  summary: "Fixture para billing, cupom, entitlement e webhook de pagamento."
+  owner: "validation-team"
+  tags:
+    - test-app
+    - ecommerce
+    - entitlement
+
+trust_boundaries:
+  - id: internet
+    name: "Internet"
+  - id: app_core
+    name: "Aplicacao ecommerce"
+    member_component_ids:
+      - storefront
+      - checkout_service
+      - subscription_service
+      - entitlement_service
+  - id: app_data
+    name: "Dados internos"
+    member_component_ids:
+      - commerce_db
+      - coupon_store
+  - id: payment_ext
+    name: "Pagamentos externos"
+    member_component_ids:
+      - payment_gateway
+
+components:
+  - id: customer
+    name: "Cliente"
+    kind: user
+    in_trust_boundary: internet
+  - id: admin
+    name: "Administrador"
+    kind: user
+    in_trust_boundary: internet
+  - id: storefront
+    name: "Storefront"
+    kind: process
+    technology: "Python app"
+    in_trust_boundary: app_core
+  - id: checkout_service
+    name: "Checkout Service"
+    kind: process
+    in_trust_boundary: app_core
+  - id: subscription_service
+    name: "Subscription Service"
+    kind: process
+    in_trust_boundary: app_core
+  - id: entitlement_service
+    name: "Entitlement Service"
+    kind: process
+    in_trust_boundary: app_core
+  - id: commerce_db
+    name: "Commerce DB"
+    kind: datastore
+    technology: "SQL"
+    in_trust_boundary: app_data
+  - id: coupon_store
+    name: "Coupon Store"
+    kind: datastore
+    technology: "KV store"
+    in_trust_boundary: app_data
+  - id: payment_gateway
+    name: "Gateway de pagamento mockado"
+    kind: external_entity
+    in_trust_boundary: payment_ext
+
+data_flows:
+  - id: user_storefront
+    from_component: customer
+    to_component: storefront
+    protocol: "HTTPS"
+    encrypted: true
+  - id: cart_checkout
+    from_component: storefront
+    to_component: checkout_service
+    protocol: "internal"
+    authenticated: true
+  - id: checkout_db
+    from_component: checkout_service
+    to_component: commerce_db
+    protocol: "TCP"
+    encrypted: true
+  - id: checkout_coupon
+    from_component: checkout_service
+    to_component: coupon_store
+    protocol: "internal"
+    authenticated: true
+  - id: checkout_gateway
+    from_component: checkout_service
+    to_component: payment_gateway
+    protocol: "HTTPS"
+    encrypted: true
+  - id: gateway_webhook
+    from_component: payment_gateway
+    to_component: subscription_service
+    protocol: "HTTPS"
+    authenticated: true
+    encrypted: true
+  - id: sub_entitlement
+    from_component: subscription_service
+    to_component: entitlement_service
+    protocol: "internal"
+    authenticated: true
+
+assets:
+  - id: billing_data
+    name: "Dados de cobranca"
+    asset_kind: data
+    sensitivity: "restricted"
+    related_component_ids:
+      - checkout_service
+      - commerce_db
+  - id: coupon_rules
+    name: "Regras e codigos de cupom"
+    asset_kind: data
+    sensitivity: "confidential"
+    related_component_ids:
+      - checkout_service
+      - coupon_store
+  - id: premium_entitlement
+    name: "Estado de acesso premium"
+    asset_kind: data
+    sensitivity: "restricted"
+    related_component_ids:
+      - entitlement_service
+      - commerce_db
+
+threats: []
+mitigations: []
+evidence_suggestions: []

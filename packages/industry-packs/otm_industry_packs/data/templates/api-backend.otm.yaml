@@ -1,0 +1,73 @@
+# Template: API backend + fila + worker
+model:
+  schema_version: "1.0.0"
+  system_type: api_backend
+  industry_sector: generic
+
+metadata:
+  title: "API com processamento assíncrono"
+  summary: "Clientes, API, fila, worker e armazenamento."
+  tags:
+    - template
+    - api
+
+trust_boundaries:
+  - id: untrusted
+    name: "Rede não confiável"
+  - id: trusted
+    name: "Zona interna"
+    member_component_ids:
+      - api
+      - queue
+      - worker
+      - db
+
+components:
+  - id: partner
+    name: "Cliente / integração"
+    kind: external_entity
+    in_trust_boundary: untrusted
+  - id: api
+    name: "API"
+    kind: process
+    technology: "REST/gRPC"
+    in_trust_boundary: trusted
+  - id: queue
+    name: "Fila"
+    kind: queue
+    technology: "Kafka/SQS"
+    in_trust_boundary: trusted
+  - id: worker
+    name: "Worker"
+    kind: process
+    in_trust_boundary: trusted
+  - id: db
+    name: "Dados"
+    kind: datastore
+    in_trust_boundary: trusted
+
+data_flows:
+  - id: in
+    from_component: partner
+    to_component: api
+    protocol: "HTTPS"
+    encrypted: true
+    authenticated: true
+  - id: to_q
+    from_component: api
+    to_component: queue
+    protocol: "internal"
+  - id: w_pull
+    from_component: queue
+    to_component: worker
+    protocol: "internal"
+  - id: w_db
+    from_component: worker
+    to_component: db
+    protocol: "TCP"
+    encrypted: true
+
+assets: []
+threats: []
+mitigations: []
+evidence_suggestions: []

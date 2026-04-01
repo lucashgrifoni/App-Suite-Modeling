@@ -1,0 +1,1137 @@
+{
+  "document": {
+    "model": {
+      "schema_version": "1.0.0",
+      "system_type": "web_application",
+      "industry_sector": "saas"
+    },
+    "metadata": {
+      "title": "Exemplo — API de pedidos",
+      "summary": "Serviço REST com fila e banco.",
+      "owner": "equipe-plataforma",
+      "tags": [
+        "exemplo"
+      ]
+    },
+    "assets": [],
+    "components": [
+      {
+        "id": "user",
+        "name": "Usuário",
+        "kind": "user",
+        "in_trust_boundary": "internet",
+        "asset_ids": [],
+        "metadata": {}
+      },
+      {
+        "id": "api",
+        "name": "API",
+        "kind": "process",
+        "technology": "REST",
+        "in_trust_boundary": "vpc",
+        "asset_ids": [],
+        "metadata": {}
+      },
+      {
+        "id": "worker",
+        "name": "Worker",
+        "kind": "process",
+        "in_trust_boundary": "vpc",
+        "asset_ids": [],
+        "metadata": {}
+      },
+      {
+        "id": "db",
+        "name": "Pedidos",
+        "kind": "datastore",
+        "technology": "PostgreSQL",
+        "in_trust_boundary": "vpc",
+        "asset_ids": [],
+        "metadata": {}
+      }
+    ],
+    "data_flows": [
+      {
+        "id": "http_in",
+        "name": "HTTPS",
+        "from_component": "user",
+        "to_component": "api",
+        "protocol": "HTTPS",
+        "authenticated": true,
+        "encrypted": true,
+        "metadata": {}
+      },
+      {
+        "id": "to_worker",
+        "from_component": "api",
+        "to_component": "worker",
+        "protocol": "internal",
+        "metadata": {}
+      },
+      {
+        "id": "to_db",
+        "from_component": "worker",
+        "to_component": "db",
+        "protocol": "TCP",
+        "metadata": {}
+      }
+    ],
+    "trust_boundaries": [
+      {
+        "id": "internet",
+        "name": "Internet",
+        "member_component_ids": []
+      },
+      {
+        "id": "vpc",
+        "name": "Conta cloud / VPC",
+        "member_component_ids": [
+          "api",
+          "worker",
+          "db"
+        ]
+      }
+    ],
+    "threats": [],
+    "mitigations": [],
+    "evidence_suggestions": []
+  },
+  "analysis": {
+    "engine_version": "0.1.0",
+    "document_title": "Exemplo — API de pedidos",
+    "structural_findings": [],
+    "trust_boundary_findings": [
+      {
+        "code": "CROSS_BOUNDARY_FLOW",
+        "message": "Fluxo 'http_in' liga fronteira 'internet' → 'vpc'.",
+        "data_flow_id": "http_in",
+        "from_boundary_id": "internet",
+        "to_boundary_id": "vpc"
+      }
+    ],
+    "heuristic_threats": [
+      {
+        "id": "eng_user_spoofing",
+        "title": "[spoofing] Usuário",
+        "description": "Ameaça genérica STRIDE para o componente 'Usuário' como user. Rever controlos específicos do contexto.",
+        "stride": "spoofing",
+        "target_component_id": "user",
+        "target_data_flow_id": null,
+        "target_asset_id": null,
+        "risk": {
+          "likelihood": 4,
+          "impact": 3,
+          "score": 12.0
+        },
+        "skipped_as_duplicate": false,
+        "framework_refs": [
+          {
+            "framework": "owasp_tm",
+            "control_id": "STRIDE-S",
+            "notes": "Tratar falsificação de identidade na matriz STRIDE e no diagrama (OWASP Threat Modeling Cheat Sheet)."
+          },
+          {
+            "framework": "owasp_asvs",
+            "control_id": "V2.2.1",
+            "notes": "Verificação de identidade reforçada (MFA onde aplicável) — ASVS V2 Authentication."
+          },
+          {
+            "framework": "owasp_asvs",
+            "control_id": "V3.2.1",
+            "notes": "Gestão de sessão e vinculação a utilizador — ASVS V3."
+          },
+          {
+            "framework": "nist_csf",
+            "control_id": "PR.AA-01",
+            "notes": "Identidades e credenciais são geridos por pessoal autorizado (NIST CSF 2.0 PR.AA)."
+          },
+          {
+            "framework": "nist_csf",
+            "control_id": "PR.AA-05",
+            "notes": "Acesso a ativos é limitado a pessoas, processos e dispositivos autorizados."
+          },
+          {
+            "framework": "iso_27001",
+            "control_id": "A.8.5",
+            "notes": "Autenticação segura (ISO/IEC 27001:2022 A.8.5)."
+          },
+          {
+            "framework": "iso_27001",
+            "control_id": "A.5.16",
+            "notes": "Gestão de identidades (A.5.16)."
+          }
+        ]
+      },
+      {
+        "id": "eng_user_repudiation",
+        "title": "[repudiation] Usuário",
+        "description": "Ameaça genérica STRIDE para o componente 'Usuário' como user. Rever controlos específicos do contexto.",
+        "stride": "repudiation",
+        "target_component_id": "user",
+        "target_data_flow_id": null,
+        "target_asset_id": null,
+        "risk": {
+          "likelihood": 3,
+          "impact": 3,
+          "score": 9.0
+        },
+        "skipped_as_duplicate": false,
+        "framework_refs": [
+          {
+            "framework": "owasp_tm",
+            "control_id": "STRIDE-R",
+            "notes": "Avaliar se atores podem negar ações; ligar a logging e auditoria."
+          },
+          {
+            "framework": "owasp_asvs",
+            "control_id": "V7.1.1",
+            "notes": "Registo de eventos de segurança — ASVS V7 Error Handling and Logging."
+          },
+          {
+            "framework": "nist_csf",
+            "control_id": "PR.PS-04",
+            "notes": "Registos de atividades são criados e mantidos (NIST CSF 2.0 PR.PS)."
+          },
+          {
+            "framework": "nist_csf",
+            "control_id": "DE.CM-03",
+            "notes": "Atividades de pessoal são monitorizadas para comportamento anómalo (DE.CM)."
+          },
+          {
+            "framework": "iso_27001",
+            "control_id": "A.8.17",
+            "notes": "Registo de eventos (A.8.17)."
+          },
+          {
+            "framework": "iso_27001",
+            "control_id": "A.8.15",
+            "notes": "Registo de acessos (A.8.15)."
+          }
+        ]
+      },
+      {
+        "id": "eng_api_spoofing",
+        "title": "[spoofing] API",
+        "description": "Ameaça genérica STRIDE para o componente 'API' (REST) como process. Rever controlos específicos do contexto.",
+        "stride": "spoofing",
+        "target_component_id": "api",
+        "target_data_flow_id": null,
+        "target_asset_id": null,
+        "risk": {
+          "likelihood": 4,
+          "impact": 3,
+          "score": 12.0
+        },
+        "skipped_as_duplicate": false,
+        "framework_refs": [
+          {
+            "framework": "owasp_tm",
+            "control_id": "STRIDE-S",
+            "notes": "Tratar falsificação de identidade na matriz STRIDE e no diagrama (OWASP Threat Modeling Cheat Sheet)."
+          },
+          {
+            "framework": "owasp_asvs",
+            "control_id": "V2.2.1",
+            "notes": "Verificação de identidade reforçada (MFA onde aplicável) — ASVS V2 Authentication."
+          },
+          {
+            "framework": "owasp_asvs",
+            "control_id": "V3.2.1",
+            "notes": "Gestão de sessão e vinculação a utilizador — ASVS V3."
+          },
+          {
+            "framework": "nist_csf",
+            "control_id": "PR.AA-01",
+            "notes": "Identidades e credenciais são geridos por pessoal autorizado (NIST CSF 2.0 PR.AA)."
+          },
+          {
+            "framework": "nist_csf",
+            "control_id": "PR.AA-05",
+            "notes": "Acesso a ativos é limitado a pessoas, processos e dispositivos autorizados."
+          },
+          {
+            "framework": "iso_27001",
+            "control_id": "A.8.5",
+            "notes": "Autenticação segura (ISO/IEC 27001:2022 A.8.5)."
+          },
+          {
+            "framework": "iso_27001",
+            "control_id": "A.5.16",
+            "notes": "Gestão de identidades (A.5.16)."
+          }
+        ]
+      },
+      {
+        "id": "eng_api_tampering",
+        "title": "[tampering] API",
+        "description": "Ameaça genérica STRIDE para o componente 'API' (REST) como process. Rever controlos específicos do contexto.",
+        "stride": "tampering",
+        "target_component_id": "api",
+        "target_data_flow_id": null,
+        "target_asset_id": null,
+        "risk": {
+          "likelihood": 3,
+          "impact": 3,
+          "score": 9.0
+        },
+        "skipped_as_duplicate": false,
+        "framework_refs": [
+          {
+            "framework": "owasp_tm",
+            "control_id": "STRIDE-T",
+            "notes": "Modelar alteração não autorizada de dados ou fluxos (STRIDE Tampering)."
+          },
+          {
+            "framework": "owasp_asvs",
+            "control_id": "V5.1.1",
+            "notes": "Validação de entrada e integridade — ASVS V5 Validation, Sanitization and Encoding."
+          },
+          {
+            "framework": "owasp_asvs",
+            "control_id": "V14.1.1",
+            "notes": "Ambiente de build e dependências — ASVS V14 Configuration."
+          },
+          {
+            "framework": "nist_csf",
+            "control_id": "PR.DS-06",
+            "notes": "Integridade de software e firmware (NIST CSF 2.0 PR.DS)."
+          },
+          {
+            "framework": "nist_csf",
+            "control_id": "PR.PS-01",
+            "notes": "Configuração e manutenção de componentes de infraestrutura (PR.PS)."
+          },
+          {
+            "framework": "iso_27001",
+            "control_id": "A.8.9",
+            "notes": "Gestão de configuração (A.8.9)."
+          },
+          {
+            "framework": "iso_27001",
+            "control_id": "A.8.12",
+            "notes": "Prevenção de fuga de dados (relevante a integridade em canais — A.8.12)."
+          }
+        ]
+      },
+      {
+        "id": "eng_api_information_disclosure",
+        "title": "[information_disclosure] API",
+        "description": "Ameaça genérica STRIDE para o componente 'API' (REST) como process. Rever controlos específicos do contexto.",
+        "stride": "information_disclosure",
+        "target_component_id": "api",
+        "target_data_flow_id": null,
+        "target_asset_id": null,
+        "risk": {
+          "likelihood": 3,
+          "impact": 3,
+          "score": 9.0
+        },
+        "skipped_as_duplicate": false,
+        "framework_refs": [
+          {
+            "framework": "owasp_tm",
+            "control_id": "STRIDE-I",
+            "notes": "Expor dados sensíveis no modelo e controlos de confidencialidade."
+          },
+          {
+            "framework": "owasp_asvs",
+            "control_id": "V8.3.1",
+            "notes": "Proteção de dados sensíveis em repouso — ASVS V8 Data Protection."
+          },
+          {
+            "framework": "owasp_asvs",
+            "control_id": "V9.1.1",
+            "notes": "Comunicações seguras com TLS — ASVS V9 Communication."
+          },
+          {
+            "framework": "nist_csf",
+            "control_id": "PR.DS-01",
+            "notes": "Dados em repouso são protegidos (PR.DS)."
+          },
+          {
+            "framework": "nist_csf",
+            "control_id": "PR.DS-02",
+            "notes": "Dados em trânsito são protegidos."
+          },
+          {
+            "framework": "iso_27001",
+            "control_id": "A.8.11",
+            "notes": "Criptografia (A.8.11)."
+          },
+          {
+            "framework": "iso_27001",
+            "control_id": "A.5.14",
+            "notes": "Transferência de informação (A.5.14)."
+          }
+        ]
+      },
+      {
+        "id": "eng_api_denial_of_service",
+        "title": "[denial_of_service] API",
+        "description": "Ameaça genérica STRIDE para o componente 'API' (REST) como process. Rever controlos específicos do contexto.",
+        "stride": "denial_of_service",
+        "target_component_id": "api",
+        "target_data_flow_id": null,
+        "target_asset_id": null,
+        "risk": {
+          "likelihood": 3,
+          "impact": 3,
+          "score": 9.0
+        },
+        "skipped_as_duplicate": false,
+        "framework_refs": [
+          {
+            "framework": "owasp_tm",
+            "control_id": "STRIDE-D",
+            "notes": "Disponibilidade e abuso de recursos no modelo de ameaças."
+          },
+          {
+            "framework": "owasp_asvs",
+            "control_id": "V11.1.1",
+            "notes": "Lógica de negócio e quotas — ASVS V11 Business Logic."
+          },
+          {
+            "framework": "nist_csf",
+            "control_id": "PR.IR-01",
+            "notes": "Resiliência de infraestruturas e recursos (NIST CSF 2.0 PR.IR)."
+          },
+          {
+            "framework": "iso_27001",
+            "control_id": "A.8.6",
+            "notes": "Gestão de capacidade (A.8.6)."
+          },
+          {
+            "framework": "iso_27001",
+            "control_id": "A.8.13",
+            "notes": "Redundância de recursos de processamento (A.8.13)."
+          }
+        ]
+      },
+      {
+        "id": "eng_api_elevation_of_privilege",
+        "title": "[elevation_of_privilege] API",
+        "description": "Ameaça genérica STRIDE para o componente 'API' (REST) como process. Rever controlos específicos do contexto.",
+        "stride": "elevation_of_privilege",
+        "target_component_id": "api",
+        "target_data_flow_id": null,
+        "target_asset_id": null,
+        "risk": {
+          "likelihood": 4,
+          "impact": 3,
+          "score": 12.0
+        },
+        "skipped_as_duplicate": false,
+        "framework_refs": [
+          {
+            "framework": "owasp_tm",
+            "control_id": "STRIDE-E",
+            "notes": "Rever superfícies de autorização e escalação no diagrama."
+          },
+          {
+            "framework": "owasp_asvs",
+            "control_id": "V4.1.1",
+            "notes": "Controlos de acesso — ASVS V4 Access Control."
+          },
+          {
+            "framework": "owasp_asvs",
+            "control_id": "V4.2.1",
+            "notes": "Operações com permissão explícita por política."
+          },
+          {
+            "framework": "nist_csf",
+            "control_id": "PR.AC-01",
+            "notes": "Identidades e credenciais são geridas, autenticadas e sujeitas a ciclo de vida (PR.AC)."
+          },
+          {
+            "framework": "nist_csf",
+            "control_id": "PR.AC-04",
+            "notes": "Permissões de acesso são geridas, incorporando princípio do menor privilégio."
+          },
+          {
+            "framework": "iso_27001",
+            "control_id": "A.8.2",
+            "notes": "Direitos de acesso privilegiado (A.8.2)."
+          },
+          {
+            "framework": "iso_27001",
+            "control_id": "A.8.3",
+            "notes": "Restrição de acesso à informação (A.8.3)."
+          }
+        ]
+      },
+      {
+        "id": "eng_worker_spoofing",
+        "title": "[spoofing] Worker",
+        "description": "Ameaça genérica STRIDE para o componente 'Worker' como process. Rever controlos específicos do contexto.",
+        "stride": "spoofing",
+        "target_component_id": "worker",
+        "target_data_flow_id": null,
+        "target_asset_id": null,
+        "risk": {
+          "likelihood": 4,
+          "impact": 3,
+          "score": 12.0
+        },
+        "skipped_as_duplicate": false,
+        "framework_refs": [
+          {
+            "framework": "owasp_tm",
+            "control_id": "STRIDE-S",
+            "notes": "Tratar falsificação de identidade na matriz STRIDE e no diagrama (OWASP Threat Modeling Cheat Sheet)."
+          },
+          {
+            "framework": "owasp_asvs",
+            "control_id": "V2.2.1",
+            "notes": "Verificação de identidade reforçada (MFA onde aplicável) — ASVS V2 Authentication."
+          },
+          {
+            "framework": "owasp_asvs",
+            "control_id": "V3.2.1",
+            "notes": "Gestão de sessão e vinculação a utilizador — ASVS V3."
+          },
+          {
+            "framework": "nist_csf",
+            "control_id": "PR.AA-01",
+            "notes": "Identidades e credenciais são geridos por pessoal autorizado (NIST CSF 2.0 PR.AA)."
+          },
+          {
+            "framework": "nist_csf",
+            "control_id": "PR.AA-05",
+            "notes": "Acesso a ativos é limitado a pessoas, processos e dispositivos autorizados."
+          },
+          {
+            "framework": "iso_27001",
+            "control_id": "A.8.5",
+            "notes": "Autenticação segura (ISO/IEC 27001:2022 A.8.5)."
+          },
+          {
+            "framework": "iso_27001",
+            "control_id": "A.5.16",
+            "notes": "Gestão de identidades (A.5.16)."
+          }
+        ]
+      },
+      {
+        "id": "eng_worker_tampering",
+        "title": "[tampering] Worker",
+        "description": "Ameaça genérica STRIDE para o componente 'Worker' como process. Rever controlos específicos do contexto.",
+        "stride": "tampering",
+        "target_component_id": "worker",
+        "target_data_flow_id": null,
+        "target_asset_id": null,
+        "risk": {
+          "likelihood": 3,
+          "impact": 3,
+          "score": 9.0
+        },
+        "skipped_as_duplicate": false,
+        "framework_refs": [
+          {
+            "framework": "owasp_tm",
+            "control_id": "STRIDE-T",
+            "notes": "Modelar alteração não autorizada de dados ou fluxos (STRIDE Tampering)."
+          },
+          {
+            "framework": "owasp_asvs",
+            "control_id": "V5.1.1",
+            "notes": "Validação de entrada e integridade — ASVS V5 Validation, Sanitization and Encoding."
+          },
+          {
+            "framework": "owasp_asvs",
+            "control_id": "V14.1.1",
+            "notes": "Ambiente de build e dependências — ASVS V14 Configuration."
+          },
+          {
+            "framework": "nist_csf",
+            "control_id": "PR.DS-06",
+            "notes": "Integridade de software e firmware (NIST CSF 2.0 PR.DS)."
+          },
+          {
+            "framework": "nist_csf",
+            "control_id": "PR.PS-01",
+            "notes": "Configuração e manutenção de componentes de infraestrutura (PR.PS)."
+          },
+          {
+            "framework": "iso_27001",
+            "control_id": "A.8.9",
+            "notes": "Gestão de configuração (A.8.9)."
+          },
+          {
+            "framework": "iso_27001",
+            "control_id": "A.8.12",
+            "notes": "Prevenção de fuga de dados (relevante a integridade em canais — A.8.12)."
+          }
+        ]
+      },
+      {
+        "id": "eng_worker_information_disclosure",
+        "title": "[information_disclosure] Worker",
+        "description": "Ameaça genérica STRIDE para o componente 'Worker' como process. Rever controlos específicos do contexto.",
+        "stride": "information_disclosure",
+        "target_component_id": "worker",
+        "target_data_flow_id": null,
+        "target_asset_id": null,
+        "risk": {
+          "likelihood": 3,
+          "impact": 3,
+          "score": 9.0
+        },
+        "skipped_as_duplicate": false,
+        "framework_refs": [
+          {
+            "framework": "owasp_tm",
+            "control_id": "STRIDE-I",
+            "notes": "Expor dados sensíveis no modelo e controlos de confidencialidade."
+          },
+          {
+            "framework": "owasp_asvs",
+            "control_id": "V8.3.1",
+            "notes": "Proteção de dados sensíveis em repouso — ASVS V8 Data Protection."
+          },
+          {
+            "framework": "owasp_asvs",
+            "control_id": "V9.1.1",
+            "notes": "Comunicações seguras com TLS — ASVS V9 Communication."
+          },
+          {
+            "framework": "nist_csf",
+            "control_id": "PR.DS-01",
+            "notes": "Dados em repouso são protegidos (PR.DS)."
+          },
+          {
+            "framework": "nist_csf",
+            "control_id": "PR.DS-02",
+            "notes": "Dados em trânsito são protegidos."
+          },
+          {
+            "framework": "iso_27001",
+            "control_id": "A.8.11",
+            "notes": "Criptografia (A.8.11)."
+          },
+          {
+            "framework": "iso_27001",
+            "control_id": "A.5.14",
+            "notes": "Transferência de informação (A.5.14)."
+          }
+        ]
+      },
+      {
+        "id": "eng_worker_denial_of_service",
+        "title": "[denial_of_service] Worker",
+        "description": "Ameaça genérica STRIDE para o componente 'Worker' como process. Rever controlos específicos do contexto.",
+        "stride": "denial_of_service",
+        "target_component_id": "worker",
+        "target_data_flow_id": null,
+        "target_asset_id": null,
+        "risk": {
+          "likelihood": 3,
+          "impact": 3,
+          "score": 9.0
+        },
+        "skipped_as_duplicate": false,
+        "framework_refs": [
+          {
+            "framework": "owasp_tm",
+            "control_id": "STRIDE-D",
+            "notes": "Disponibilidade e abuso de recursos no modelo de ameaças."
+          },
+          {
+            "framework": "owasp_asvs",
+            "control_id": "V11.1.1",
+            "notes": "Lógica de negócio e quotas — ASVS V11 Business Logic."
+          },
+          {
+            "framework": "nist_csf",
+            "control_id": "PR.IR-01",
+            "notes": "Resiliência de infraestruturas e recursos (NIST CSF 2.0 PR.IR)."
+          },
+          {
+            "framework": "iso_27001",
+            "control_id": "A.8.6",
+            "notes": "Gestão de capacidade (A.8.6)."
+          },
+          {
+            "framework": "iso_27001",
+            "control_id": "A.8.13",
+            "notes": "Redundância de recursos de processamento (A.8.13)."
+          }
+        ]
+      },
+      {
+        "id": "eng_worker_elevation_of_privilege",
+        "title": "[elevation_of_privilege] Worker",
+        "description": "Ameaça genérica STRIDE para o componente 'Worker' como process. Rever controlos específicos do contexto.",
+        "stride": "elevation_of_privilege",
+        "target_component_id": "worker",
+        "target_data_flow_id": null,
+        "target_asset_id": null,
+        "risk": {
+          "likelihood": 4,
+          "impact": 3,
+          "score": 12.0
+        },
+        "skipped_as_duplicate": false,
+        "framework_refs": [
+          {
+            "framework": "owasp_tm",
+            "control_id": "STRIDE-E",
+            "notes": "Rever superfícies de autorização e escalação no diagrama."
+          },
+          {
+            "framework": "owasp_asvs",
+            "control_id": "V4.1.1",
+            "notes": "Controlos de acesso — ASVS V4 Access Control."
+          },
+          {
+            "framework": "owasp_asvs",
+            "control_id": "V4.2.1",
+            "notes": "Operações com permissão explícita por política."
+          },
+          {
+            "framework": "nist_csf",
+            "control_id": "PR.AC-01",
+            "notes": "Identidades e credenciais são geridas, autenticadas e sujeitas a ciclo de vida (PR.AC)."
+          },
+          {
+            "framework": "nist_csf",
+            "control_id": "PR.AC-04",
+            "notes": "Permissões de acesso são geridas, incorporando princípio do menor privilégio."
+          },
+          {
+            "framework": "iso_27001",
+            "control_id": "A.8.2",
+            "notes": "Direitos de acesso privilegiado (A.8.2)."
+          },
+          {
+            "framework": "iso_27001",
+            "control_id": "A.8.3",
+            "notes": "Restrição de acesso à informação (A.8.3)."
+          }
+        ]
+      },
+      {
+        "id": "eng_db_tampering",
+        "title": "[tampering] Pedidos",
+        "description": "Ameaça genérica STRIDE para o componente 'Pedidos' (PostgreSQL) como datastore. Rever controlos específicos do contexto.",
+        "stride": "tampering",
+        "target_component_id": "db",
+        "target_data_flow_id": null,
+        "target_asset_id": null,
+        "risk": {
+          "likelihood": 3,
+          "impact": 4,
+          "score": 12.0
+        },
+        "skipped_as_duplicate": false,
+        "framework_refs": [
+          {
+            "framework": "owasp_tm",
+            "control_id": "STRIDE-T",
+            "notes": "Modelar alteração não autorizada de dados ou fluxos (STRIDE Tampering)."
+          },
+          {
+            "framework": "owasp_asvs",
+            "control_id": "V5.1.1",
+            "notes": "Validação de entrada e integridade — ASVS V5 Validation, Sanitization and Encoding."
+          },
+          {
+            "framework": "owasp_asvs",
+            "control_id": "V14.1.1",
+            "notes": "Ambiente de build e dependências — ASVS V14 Configuration."
+          },
+          {
+            "framework": "nist_csf",
+            "control_id": "PR.DS-06",
+            "notes": "Integridade de software e firmware (NIST CSF 2.0 PR.DS)."
+          },
+          {
+            "framework": "nist_csf",
+            "control_id": "PR.PS-01",
+            "notes": "Configuração e manutenção de componentes de infraestrutura (PR.PS)."
+          },
+          {
+            "framework": "iso_27001",
+            "control_id": "A.8.9",
+            "notes": "Gestão de configuração (A.8.9)."
+          },
+          {
+            "framework": "iso_27001",
+            "control_id": "A.8.12",
+            "notes": "Prevenção de fuga de dados (relevante a integridade em canais — A.8.12)."
+          }
+        ]
+      },
+      {
+        "id": "eng_db_information_disclosure",
+        "title": "[information_disclosure] Pedidos",
+        "description": "Ameaça genérica STRIDE para o componente 'Pedidos' (PostgreSQL) como datastore. Rever controlos específicos do contexto.",
+        "stride": "information_disclosure",
+        "target_component_id": "db",
+        "target_data_flow_id": null,
+        "target_asset_id": null,
+        "risk": {
+          "likelihood": 3,
+          "impact": 4,
+          "score": 12.0
+        },
+        "skipped_as_duplicate": false,
+        "framework_refs": [
+          {
+            "framework": "owasp_tm",
+            "control_id": "STRIDE-I",
+            "notes": "Expor dados sensíveis no modelo e controlos de confidencialidade."
+          },
+          {
+            "framework": "owasp_asvs",
+            "control_id": "V8.3.1",
+            "notes": "Proteção de dados sensíveis em repouso — ASVS V8 Data Protection."
+          },
+          {
+            "framework": "owasp_asvs",
+            "control_id": "V9.1.1",
+            "notes": "Comunicações seguras com TLS — ASVS V9 Communication."
+          },
+          {
+            "framework": "nist_csf",
+            "control_id": "PR.DS-01",
+            "notes": "Dados em repouso são protegidos (PR.DS)."
+          },
+          {
+            "framework": "nist_csf",
+            "control_id": "PR.DS-02",
+            "notes": "Dados em trânsito são protegidos."
+          },
+          {
+            "framework": "iso_27001",
+            "control_id": "A.8.11",
+            "notes": "Criptografia (A.8.11)."
+          },
+          {
+            "framework": "iso_27001",
+            "control_id": "A.5.14",
+            "notes": "Transferência de informação (A.5.14)."
+          }
+        ]
+      },
+      {
+        "id": "eng_db_denial_of_service",
+        "title": "[denial_of_service] Pedidos",
+        "description": "Ameaça genérica STRIDE para o componente 'Pedidos' (PostgreSQL) como datastore. Rever controlos específicos do contexto.",
+        "stride": "denial_of_service",
+        "target_component_id": "db",
+        "target_data_flow_id": null,
+        "target_asset_id": null,
+        "risk": {
+          "likelihood": 3,
+          "impact": 4,
+          "score": 12.0
+        },
+        "skipped_as_duplicate": false,
+        "framework_refs": [
+          {
+            "framework": "owasp_tm",
+            "control_id": "STRIDE-D",
+            "notes": "Disponibilidade e abuso de recursos no modelo de ameaças."
+          },
+          {
+            "framework": "owasp_asvs",
+            "control_id": "V11.1.1",
+            "notes": "Lógica de negócio e quotas — ASVS V11 Business Logic."
+          },
+          {
+            "framework": "nist_csf",
+            "control_id": "PR.IR-01",
+            "notes": "Resiliência de infraestruturas e recursos (NIST CSF 2.0 PR.IR)."
+          },
+          {
+            "framework": "iso_27001",
+            "control_id": "A.8.6",
+            "notes": "Gestão de capacidade (A.8.6)."
+          },
+          {
+            "framework": "iso_27001",
+            "control_id": "A.8.13",
+            "notes": "Redundância de recursos de processamento (A.8.13)."
+          }
+        ]
+      },
+      {
+        "id": "eng_flow_http_in_tampering",
+        "title": "[tampering] Atravessa fronteira — http_in",
+        "description": "Fluxo entre zonas de confiança distintas; rever integridade e autenticação de extremidades.",
+        "stride": "tampering",
+        "target_component_id": null,
+        "target_data_flow_id": "http_in",
+        "target_asset_id": null,
+        "risk": {
+          "likelihood": 4,
+          "impact": 4,
+          "score": 16.0
+        },
+        "skipped_as_duplicate": false,
+        "framework_refs": [
+          {
+            "framework": "owasp_tm",
+            "control_id": "STRIDE-T",
+            "notes": "Modelar alteração não autorizada de dados ou fluxos (STRIDE Tampering)."
+          },
+          {
+            "framework": "owasp_asvs",
+            "control_id": "V5.1.1",
+            "notes": "Validação de entrada e integridade — ASVS V5 Validation, Sanitization and Encoding."
+          },
+          {
+            "framework": "owasp_asvs",
+            "control_id": "V14.1.1",
+            "notes": "Ambiente de build e dependências — ASVS V14 Configuration."
+          },
+          {
+            "framework": "nist_csf",
+            "control_id": "PR.DS-06",
+            "notes": "Integridade de software e firmware (NIST CSF 2.0 PR.DS)."
+          },
+          {
+            "framework": "nist_csf",
+            "control_id": "PR.PS-01",
+            "notes": "Configuração e manutenção de componentes de infraestrutura (PR.PS)."
+          },
+          {
+            "framework": "iso_27001",
+            "control_id": "A.8.9",
+            "notes": "Gestão de configuração (A.8.9)."
+          },
+          {
+            "framework": "iso_27001",
+            "control_id": "A.8.12",
+            "notes": "Prevenção de fuga de dados (relevante a integridade em canais — A.8.12)."
+          }
+        ]
+      },
+      {
+        "id": "eng_flow_to_worker_tampering",
+        "title": "[tampering] Canal do fluxo to_worker",
+        "description": "Propriedades de confidencialidade/integridade a rever no fluxo 'to_worker' (api → worker).",
+        "stride": "tampering",
+        "target_component_id": null,
+        "target_data_flow_id": "to_worker",
+        "target_asset_id": null,
+        "risk": {
+          "likelihood": 5,
+          "impact": 4,
+          "score": 20.0
+        },
+        "skipped_as_duplicate": false,
+        "framework_refs": [
+          {
+            "framework": "owasp_tm",
+            "control_id": "STRIDE-T",
+            "notes": "Modelar alteração não autorizada de dados ou fluxos (STRIDE Tampering)."
+          },
+          {
+            "framework": "owasp_asvs",
+            "control_id": "V5.1.1",
+            "notes": "Validação de entrada e integridade — ASVS V5 Validation, Sanitization and Encoding."
+          },
+          {
+            "framework": "owasp_asvs",
+            "control_id": "V14.1.1",
+            "notes": "Ambiente de build e dependências — ASVS V14 Configuration."
+          },
+          {
+            "framework": "nist_csf",
+            "control_id": "PR.DS-06",
+            "notes": "Integridade de software e firmware (NIST CSF 2.0 PR.DS)."
+          },
+          {
+            "framework": "nist_csf",
+            "control_id": "PR.PS-01",
+            "notes": "Configuração e manutenção de componentes de infraestrutura (PR.PS)."
+          },
+          {
+            "framework": "iso_27001",
+            "control_id": "A.8.9",
+            "notes": "Gestão de configuração (A.8.9)."
+          },
+          {
+            "framework": "iso_27001",
+            "control_id": "A.8.12",
+            "notes": "Prevenção de fuga de dados (relevante a integridade em canais — A.8.12)."
+          }
+        ]
+      },
+      {
+        "id": "eng_flow_to_worker_information_disclosure",
+        "title": "[information_disclosure] Canal do fluxo to_worker",
+        "description": "Propriedades de confidencialidade/integridade a rever no fluxo 'to_worker' (api → worker).",
+        "stride": "information_disclosure",
+        "target_component_id": null,
+        "target_data_flow_id": "to_worker",
+        "target_asset_id": null,
+        "risk": {
+          "likelihood": 5,
+          "impact": 4,
+          "score": 20.0
+        },
+        "skipped_as_duplicate": false,
+        "framework_refs": [
+          {
+            "framework": "owasp_tm",
+            "control_id": "STRIDE-I",
+            "notes": "Expor dados sensíveis no modelo e controlos de confidencialidade."
+          },
+          {
+            "framework": "owasp_asvs",
+            "control_id": "V8.3.1",
+            "notes": "Proteção de dados sensíveis em repouso — ASVS V8 Data Protection."
+          },
+          {
+            "framework": "owasp_asvs",
+            "control_id": "V9.1.1",
+            "notes": "Comunicações seguras com TLS — ASVS V9 Communication."
+          },
+          {
+            "framework": "nist_csf",
+            "control_id": "PR.DS-01",
+            "notes": "Dados em repouso são protegidos (PR.DS)."
+          },
+          {
+            "framework": "nist_csf",
+            "control_id": "PR.DS-02",
+            "notes": "Dados em trânsito são protegidos."
+          },
+          {
+            "framework": "iso_27001",
+            "control_id": "A.8.11",
+            "notes": "Criptografia (A.8.11)."
+          },
+          {
+            "framework": "iso_27001",
+            "control_id": "A.5.14",
+            "notes": "Transferência de informação (A.5.14)."
+          }
+        ]
+      },
+      {
+        "id": "eng_flow_to_db_tampering",
+        "title": "[tampering] Canal do fluxo to_db",
+        "description": "Propriedades de confidencialidade/integridade a rever no fluxo 'to_db' (worker → db).",
+        "stride": "tampering",
+        "target_component_id": null,
+        "target_data_flow_id": "to_db",
+        "target_asset_id": null,
+        "risk": {
+          "likelihood": 5,
+          "impact": 4,
+          "score": 20.0
+        },
+        "skipped_as_duplicate": false,
+        "framework_refs": [
+          {
+            "framework": "owasp_tm",
+            "control_id": "STRIDE-T",
+            "notes": "Modelar alteração não autorizada de dados ou fluxos (STRIDE Tampering)."
+          },
+          {
+            "framework": "owasp_asvs",
+            "control_id": "V5.1.1",
+            "notes": "Validação de entrada e integridade — ASVS V5 Validation, Sanitization and Encoding."
+          },
+          {
+            "framework": "owasp_asvs",
+            "control_id": "V14.1.1",
+            "notes": "Ambiente de build e dependências — ASVS V14 Configuration."
+          },
+          {
+            "framework": "nist_csf",
+            "control_id": "PR.DS-06",
+            "notes": "Integridade de software e firmware (NIST CSF 2.0 PR.DS)."
+          },
+          {
+            "framework": "nist_csf",
+            "control_id": "PR.PS-01",
+            "notes": "Configuração e manutenção de componentes de infraestrutura (PR.PS)."
+          },
+          {
+            "framework": "iso_27001",
+            "control_id": "A.8.9",
+            "notes": "Gestão de configuração (A.8.9)."
+          },
+          {
+            "framework": "iso_27001",
+            "control_id": "A.8.12",
+            "notes": "Prevenção de fuga de dados (relevante a integridade em canais — A.8.12)."
+          }
+        ]
+      },
+      {
+        "id": "eng_flow_to_db_information_disclosure",
+        "title": "[information_disclosure] Canal do fluxo to_db",
+        "description": "Propriedades de confidencialidade/integridade a rever no fluxo 'to_db' (worker → db).",
+        "stride": "information_disclosure",
+        "target_component_id": null,
+        "target_data_flow_id": "to_db",
+        "target_asset_id": null,
+        "risk": {
+          "likelihood": 5,
+          "impact": 4,
+          "score": 20.0
+        },
+        "skipped_as_duplicate": false,
+        "framework_refs": [
+          {
+            "framework": "owasp_tm",
+            "control_id": "STRIDE-I",
+            "notes": "Expor dados sensíveis no modelo e controlos de confidencialidade."
+          },
+          {
+            "framework": "owasp_asvs",
+            "control_id": "V8.3.1",
+            "notes": "Proteção de dados sensíveis em repouso — ASVS V8 Data Protection."
+          },
+          {
+            "framework": "owasp_asvs",
+            "control_id": "V9.1.1",
+            "notes": "Comunicações seguras com TLS — ASVS V9 Communication."
+          },
+          {
+            "framework": "nist_csf",
+            "control_id": "PR.DS-01",
+            "notes": "Dados em repouso são protegidos (PR.DS)."
+          },
+          {
+            "framework": "nist_csf",
+            "control_id": "PR.DS-02",
+            "notes": "Dados em trânsito são protegidos."
+          },
+          {
+            "framework": "iso_27001",
+            "control_id": "A.8.11",
+            "notes": "Criptografia (A.8.11)."
+          },
+          {
+            "framework": "iso_27001",
+            "control_id": "A.5.14",
+            "notes": "Transferência de informação (A.5.14)."
+          }
+        ]
+      }
+    ],
+    "summary": {
+      "structural_findings": 0,
+      "trust_boundary_findings": 1,
+      "heuristic_threats_generated": 20,
+      "heuristic_threats_skipped_duplicate": 0,
+      "pack_threats_generated": 0,
+      "pack_threats_skipped_duplicate": 0,
+      "max_risk_score": 20.0,
+      "framework_ref_counts_by_catalog": {
+        "iso_27001": 40,
+        "nist_csf": 37,
+        "owasp_asvs": 36,
+        "owasp_tm": 20
+      }
+    },
+    "industry_pack_id": null,
+    "pack_control_hints": []
+  }
+}

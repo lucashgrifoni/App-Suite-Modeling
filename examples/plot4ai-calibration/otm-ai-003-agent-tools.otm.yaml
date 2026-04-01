@@ -1,0 +1,151 @@
+# Fixture de calibração PLOT4ai — agente com tool-use interno (otm-ai-003)
+model:
+  schema_version: "1.0.0"
+  system_type: other
+  industry_sector: generic
+  methodology: plot4ai
+
+metadata:
+  title: "Operations Agent with Tool Use"
+  summary: >-
+    Agente de operações com LLM, agent orchestrator e tool-gateway para tickets, inventário e aprovações.
+    Integração com LLM provider externo; ferramentas internas apenas.
+  tags:
+    - ai
+    - llm
+    - agent
+    - tool-use
+    - operations
+
+business_context:
+  description: "Automação operacional com ênfase em execução segura de ações."
+  regulatory_context: "ISO 27001; SOC2 (referência)."
+
+trust_boundaries:
+  - id: operator-boundary
+    name: "Operadores"
+  - id: internal-agent-boundary
+    name: "Camada do agente"
+    member_component_ids:
+      - ops-console
+      - agent-api
+      - agent-orchestrator
+      - tool-gateway
+      - ticketing-tool
+      - inventory-tool
+      - approval-service
+      - audit-log
+  - id: privileged-tool-boundary
+    name: "Ferramentas privilegiadas"
+    description: "Ações em sistemas internos sob política"
+  - id: external-model-boundary
+    name: "Model provider externo"
+    member_component_ids:
+      - llm-provider
+
+assets:
+  - id: operational-tickets
+    name: "Tickets operacionais"
+    asset_kind: data
+    sensitivity: internal
+  - id: automation-actions
+    name: "Ações privilegiadas de automação"
+    asset_kind: service
+    sensitivity: restricted
+  - id: internal-system-data
+    name: "Dados operacionais internos"
+    asset_kind: data
+    sensitivity: confidential
+
+components:
+  - id: ops-console
+    name: "Ops console webapp"
+    kind: process
+    in_trust_boundary: internal-agent-boundary
+  - id: agent-api
+    name: "Agent API"
+    kind: gateway
+    in_trust_boundary: internal-agent-boundary
+  - id: agent-orchestrator
+    name: "AI agent orchestrator"
+    kind: process
+    description: "Orquestra tool_selection_prompt e chamadas ao modelo"
+    in_trust_boundary: internal-agent-boundary
+    asset_ids:
+      - automation-actions
+  - id: llm-provider
+    name: "External LLM API provider"
+    kind: external_entity
+    in_trust_boundary: external-model-boundary
+  - id: tool-gateway
+    name: "Tool action gateway"
+    kind: gateway
+    description: "Gateway para execução controlada de ferramentas"
+    in_trust_boundary: internal-agent-boundary
+  - id: ticketing-tool
+    name: "Internal ticketing tool"
+    kind: process
+    in_trust_boundary: privileged-tool-boundary
+    asset_ids:
+      - operational-tickets
+  - id: inventory-tool
+    name: "Internal inventory system"
+    kind: process
+    in_trust_boundary: privileged-tool-boundary
+    asset_ids:
+      - internal-system-data
+  - id: approval-service
+    name: "Human approval policy service"
+    kind: process
+    description: "Verificação de aprovação antes de ações sensíveis"
+    in_trust_boundary: internal-agent-boundary
+  - id: audit-log
+    name: "Audit log for agent actions"
+    kind: datastore
+    in_trust_boundary: internal-agent-boundary
+
+data_flows:
+  - id: c1
+    name: "operator_request"
+    from_component: ops-console
+    to_component: agent-api
+    protocol: "HTTPS"
+  - id: c2
+    name: "normalized_agent_task"
+    from_component: agent-api
+    to_component: agent-orchestrator
+    protocol: "internal"
+  - id: c3
+    name: "tool_selection_prompt"
+    from_component: agent-orchestrator
+    to_component: llm-provider
+    protocol: "HTTPS"
+  - id: c4
+    name: "requested_tool_action"
+    from_component: agent-orchestrator
+    to_component: tool-gateway
+    protocol: "TLS"
+  - id: c5
+    name: "action_approval_check"
+    from_component: tool-gateway
+    to_component: approval-service
+    protocol: "TLS"
+  - id: c6
+    name: "ticket_action"
+    from_component: tool-gateway
+    to_component: ticketing-tool
+    protocol: "TLS"
+  - id: c7
+    name: "inventory_lookup_or_update"
+    from_component: tool-gateway
+    to_component: inventory-tool
+    protocol: "TLS"
+  - id: c8
+    name: "agent_decision_and_action_log"
+    from_component: agent-api
+    to_component: audit-log
+    protocol: "TLS"
+
+threats: []
+mitigations: []
+evidence_suggestions: []

@@ -1,0 +1,114 @@
+# Fixture negativa "quase IA" — analytics/pipeline avançado sem GenAI/LLM.
+model:
+  schema_version: "1.0.0"
+  system_type: batch_data_pipeline
+  industry_sector: generic
+  methodology: stride
+
+metadata:
+  title: "Customer Analytics Automation Pipeline"
+  summary: >-
+    Pipeline de analytics com extração, regras determinísticas e scoring estatístico clássico.
+    Não há geração de texto probabilística, busca semântica, armazenamento vetorial nem fornecedor externo de texto.
+  tags:
+    - analytics
+    - automation
+    - data-pipeline
+    - rule-based
+    - no-genai
+
+business_context:
+  description: >-
+    Objetivo é classificar eventos para priorização operacional usando regras e thresholds.
+    Equipa de dados mantém tabelas de decisão versionadas e métricas de qualidade.
+  regulatory_context: "Controles internos de auditoria e retenção de dados."
+
+trust_boundaries:
+  - id: input-zone
+    name: "Zona de ingestão"
+  - id: processing-zone
+    name: "Processamento interno"
+    member_component_ids:
+      - ingestion-api
+      - feature-pipeline
+      - rules-scorer
+      - jobs-queue
+      - workers
+      - warehouse
+      - metrics-store
+
+assets:
+  - id: event-data
+    name: "Eventos operacionais"
+    asset_kind: data
+    sensitivity: internal
+  - id: scoring-rules
+    name: "Regras e thresholds"
+    asset_kind: data
+    sensitivity: confidential
+
+components:
+  - id: ingestion-api
+    name: "Ingestion API"
+    kind: process
+    in_trust_boundary: processing-zone
+  - id: feature-pipeline
+    name: "Feature pipeline"
+    kind: process
+    description: "Transformações determinísticas de dados e agregações."
+    in_trust_boundary: processing-zone
+  - id: rules-scorer
+    name: "Rules-based scorer"
+    kind: process
+    description: "Score por regras, sem texto generativo e sem serviço terceiro de classificação textual."
+    in_trust_boundary: processing-zone
+    asset_ids:
+      - scoring-rules
+  - id: jobs-queue
+    name: "Jobs queue"
+    kind: queue
+    in_trust_boundary: processing-zone
+  - id: workers
+    name: "Processing workers"
+    kind: process
+    in_trust_boundary: processing-zone
+  - id: warehouse
+    name: "Analytics warehouse"
+    kind: datastore
+    in_trust_boundary: processing-zone
+    asset_ids:
+      - event-data
+  - id: metrics-store
+    name: "Metrics and audit store"
+    kind: datastore
+    in_trust_boundary: processing-zone
+
+data_flows:
+  - id: f1
+    from_component: ingestion-api
+    to_component: feature-pipeline
+    protocol: "internal"
+  - id: f2
+    from_component: feature-pipeline
+    to_component: rules-scorer
+    protocol: "internal"
+  - id: f3
+    from_component: rules-scorer
+    to_component: jobs-queue
+    protocol: "TLS"
+  - id: f4
+    from_component: jobs-queue
+    to_component: workers
+    protocol: "TLS"
+  - id: f5
+    from_component: workers
+    to_component: warehouse
+    protocol: "TLS"
+  - id: f6
+    from_component: workers
+    to_component: metrics-store
+    protocol: "TLS"
+
+threats: []
+mitigations: []
+evidence_suggestions: []

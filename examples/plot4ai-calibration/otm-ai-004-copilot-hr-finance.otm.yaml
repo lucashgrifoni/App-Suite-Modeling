@@ -1,0 +1,141 @@
+# Fixture de calibração PLOT4ai — copiloto interno RH/Finanças (otm-ai-004)
+model:
+  schema_version: "1.0.0"
+  system_type: other
+  industry_sector: generic
+  methodology: plot4ai
+
+metadata:
+  title: "Internal Copilot for HR and Finance"
+  summary: >-
+    Copiloto LLM para RH e Finanças: hr_context_lookup, finance_context_lookup e
+    prompt_with_sensitive_context ao orchestrator; enriched_prompt_with_hr_finance_context ao provider.
+  tags:
+    - ai
+    - llm
+    - internal-copilot
+    - pii
+    - finance
+    - hr
+    - sensitive-data
+
+business_context:
+  description: "Produtividade com dados pessoais e financeiros; acesso controlado."
+  regulatory_context: "LGPD; ISO 27001; NIST CSF."
+
+trust_boundaries:
+  - id: employee-access-boundary
+    name: "Utilizadores internos"
+  - id: internal-sensitive-systems
+    name: "Sistemas sensíveis RH/Finanças"
+    member_component_ids:
+      - internal-portal
+      - copilot-api
+      - access-control-service
+      - prompt-orchestrator
+      - hr-system
+      - finance-system
+      - secure-log
+  - id: third-party-ai-boundary
+    name: "Provedor IA terceiro"
+    member_component_ids:
+      - llm-provider
+
+assets:
+  - id: employee-records
+    name: "Employee PII records"
+    asset_kind: data
+    sensitivity: restricted
+  - id: payroll-data
+    name: "Payroll and financial data"
+    asset_kind: data
+    sensitivity: restricted
+  - id: access-logs
+    name: "Access audit metadata"
+    asset_kind: data
+    sensitivity: confidential
+
+components:
+  - id: internal-portal
+    name: "Internal portal webapp"
+    kind: process
+    in_trust_boundary: internal-sensitive-systems
+  - id: copilot-api
+    name: "Copilot API"
+    kind: gateway
+    in_trust_boundary: internal-sensitive-systems
+    asset_ids:
+      - employee-records
+      - payroll-data
+  - id: access-control-service
+    name: "Identity and authorization"
+    kind: process
+    in_trust_boundary: internal-sensitive-systems
+  - id: prompt-orchestrator
+    name: "Prompt orchestrator"
+    kind: process
+    in_trust_boundary: internal-sensitive-systems
+  - id: hr-system
+    name: "HR system of record"
+    kind: process
+    in_trust_boundary: internal-sensitive-systems
+    asset_ids:
+      - employee-records
+  - id: finance-system
+    name: "Finance ERP connector"
+    kind: process
+    in_trust_boundary: internal-sensitive-systems
+    asset_ids:
+      - payroll-data
+  - id: llm-provider
+    name: "External generative model provider"
+    kind: external_entity
+    in_trust_boundary: third-party-ai-boundary
+  - id: secure-log
+    name: "Secure access logging"
+    kind: datastore
+    description: "access_and_response_metadata"
+    in_trust_boundary: internal-sensitive-systems
+    asset_ids:
+      - access-logs
+
+data_flows:
+  - id: f1
+    name: "user_prompt"
+    from_component: internal-portal
+    to_component: copilot-api
+    protocol: "HTTPS"
+  - id: f2
+    name: "authorization_check"
+    from_component: copilot-api
+    to_component: access-control-service
+    protocol: "TLS"
+  - id: f3
+    name: "hr_context_lookup"
+    from_component: copilot-api
+    to_component: hr-system
+    protocol: "TLS"
+  - id: f4
+    name: "finance_context_lookup"
+    from_component: copilot-api
+    to_component: finance-system
+    protocol: "TLS"
+  - id: f5
+    name: "prompt_with_sensitive_context"
+    from_component: copilot-api
+    to_component: prompt-orchestrator
+    protocol: "internal"
+  - id: f6
+    name: "enriched_prompt_with_hr_finance_context"
+    from_component: prompt-orchestrator
+    to_component: llm-provider
+    protocol: "HTTPS"
+  - id: f7
+    name: "access_and_response_metadata"
+    from_component: copilot-api
+    to_component: secure-log
+    protocol: "TLS"
+
+threats: []
+mitigations: []
+evidence_suggestions: []

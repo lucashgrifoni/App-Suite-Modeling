@@ -1,0 +1,8 @@
+flowchart LR
+    user["Usuário"]
+    api["API"]
+    worker["Worker"]
+    db["Pedidos"]
+    user -->|HTTPS| api
+    api -->|to_worker| worker
+    worker -->|to_db| db

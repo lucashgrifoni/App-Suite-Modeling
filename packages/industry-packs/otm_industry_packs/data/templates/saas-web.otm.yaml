@@ -1,0 +1,65 @@
+# Template: SaaS web (browser → API → dados)
+model:
+  schema_version: "1.0.0"
+  system_type: web_application
+  industry_sector: saas
+
+metadata:
+  title: "SaaS — aplicação web"
+  summary: "Utilizador, gateway/WAF, API e base de dados."
+  tags:
+    - template
+    - saas
+
+trust_boundaries:
+  - id: internet
+    name: "Internet"
+  - id: app_tier
+    name: "Conta / VPC aplicação"
+    member_component_ids:
+      - waf
+      - api
+      - db
+
+components:
+  - id: user
+    name: "Utilizador"
+    kind: user
+    in_trust_boundary: internet
+  - id: waf
+    name: "WAF / CDN"
+    kind: gateway
+    technology: "WAF"
+    in_trust_boundary: app_tier
+  - id: api
+    name: "API"
+    kind: process
+    technology: "REST"
+    in_trust_boundary: app_tier
+  - id: db
+    name: "Base de dados"
+    kind: datastore
+    technology: "PostgreSQL"
+    in_trust_boundary: app_tier
+
+data_flows:
+  - id: to_waf
+    from_component: user
+    to_component: waf
+    protocol: "HTTPS"
+    encrypted: true
+    authenticated: true
+  - id: waf_api
+    from_component: waf
+    to_component: api
+    protocol: "HTTPS"
+  - id: api_db
+    from_component: api
+    to_component: db
+    protocol: "TCP"
+    encrypted: true
+
+assets: []
+threats: []
+mitigations: []
+evidence_suggestions: []

@@ -1,0 +1,126 @@
+# Fixture de calibração PLOT4ai — LLM chat app simples (otm-ai-001)
+model:
+  schema_version: "1.0.0"
+  system_type: web_application
+  industry_sector: saas
+  methodology: plot4ai
+
+metadata:
+  title: "Customer Support LLM Chat"
+  summary: >-
+    Aplicação web de atendimento com chat baseado em LLM para FAQ e orientação de utilizadores.
+    Fluxo: frontend → API → prompt orchestrator → provedor LLM externo; histórico em session store.
+  tags:
+    - ai
+    - llm
+    - chatbot
+    - customer-support
+    - webapp
+
+business_context:
+  description: >
+    Domínio SaaS com preocupações de eficiência de suporte, privacidade de conversas e qualidade de resposta.
+    Dados de perfil podem entrar no contexto do prompt enviado ao provedor.
+  regulatory_context: "LGPD; ISO 27001 referidos como requisitos de programa."
+  business_goals:
+    - "Reduzir tempo de primeira resposta"
+    - "Manter histórico de conversação de forma controlada"
+
+trust_boundaries:
+  - id: internet
+    name: "Internet — utilizadores"
+  - id: external-ai-provider
+    name: "Provedor LLM externo (inferência)"
+    description: "Dependência de terceiro para inferência; dados cruzam fronteira."
+  - id: internal-app
+    name: "Aplicação interna"
+    member_component_ids:
+      - web-frontend
+      - api-backend
+      - prompt-orchestrator
+      - session-store
+
+assets:
+  - id: conversation-history
+    name: "Histórico de conversas (chat)"
+    asset_kind: data
+    sensitivity: confidential
+  - id: customer-profile
+    name: "Perfil de cliente com PII"
+    asset_kind: data
+    sensitivity: restricted
+
+components:
+  - id: web-frontend
+    name: "Web chat frontend"
+    kind: process
+    description: "Interface web do chat"
+    technology: "React SPA"
+    in_trust_boundary: internal-app
+  - id: api-backend
+    name: "API backend"
+    kind: process
+    description: "Backend exposto via HTTPS; normaliza user_message"
+    in_trust_boundary: internal-app
+    asset_ids:
+      - conversation-history
+      - customer-profile
+  - id: prompt-orchestrator
+    name: "Prompt orchestrator"
+    kind: process
+    description: "Monta prompts e contexto antes de chamar o LLM provider"
+    in_trust_boundary: internal-app
+    asset_ids:
+      - customer-profile
+  - id: llm-provider
+    name: "External LLM provider SaaS"
+    kind: external_entity
+    description: "Provedor externo hosted model (inferência)"
+    technology: "HTTPS inference API"
+    in_trust_boundary: external-ai-provider
+  - id: session-store
+    name: "Session and chat history store"
+    kind: datastore
+    description: "Armazena sessões e histórico TLS"
+    technology: "Redis"
+    in_trust_boundary: internal-app
+    asset_ids:
+      - conversation-history
+
+data_flows:
+  - id: fe-to-api
+    name: "user_message"
+    from_component: web-frontend
+    to_component: api-backend
+    protocol: "HTTPS"
+    encrypted: true
+  - id: api-to-orch
+    name: "normalized_prompt_input"
+    from_component: api-backend
+    to_component: prompt-orchestrator
+    protocol: "internal"
+  - id: orch-to-llm
+    name: "prompt_with_customer_context"
+    from_component: prompt-orchestrator
+    to_component: llm-provider
+    protocol: "HTTPS"
+    encrypted: true
+  - id: llm-to-orch
+    name: "model_response"
+    from_component: llm-provider
+    to_component: prompt-orchestrator
+    protocol: "HTTPS"
+  - id: api-to-session
+    name: "chat_history"
+    from_component: api-backend
+    to_component: session-store
+    protocol: "TLS"
+  - id: session-to-api
+    name: "prior_conversation_context"
+    from_component: session-store
+    to_component: api-backend
+    protocol: "TLS"
+
+threats: []
+mitigations: []
+evidence_suggestions: []

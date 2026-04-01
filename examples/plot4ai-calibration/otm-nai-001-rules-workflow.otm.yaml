@@ -1,0 +1,133 @@
+# Fixture negativa ambígua — automação e pipeline sem IA (otm-nai-001)
+# Objetivo: parecer “plataforma técnica” mas não activar heurísticas plot4ai_* nem recomendação PLOT4ai.
+model:
+  schema_version: "1.0.0"
+  system_type: other
+  industry_sector: generic
+  methodology: stride
+
+metadata:
+  title: "Operational rules workflow (deterministic)"
+  summary: >-
+    Motor de regras determinísticas, filas de trabalhos e coordenação de passos batch.
+    Fluxos validados por políticas fixas; sem geração de texto probabilística nem endpoints de conclusão alojados fora.
+  tags:
+    - operations
+    - workflow
+    - rules-engine
+    - batch
+    - automation
+    - no-ai
+
+business_context:
+  description: >
+    Orquestração operacional com filas e SLA; decisões via tabela de regras versionada.
+    Documentos processados por extração de texto clássica e classificação por critérios fixos (não-ML).
+  regulatory_context: "Requisitos internos de trilha de auditoria para mudanças de regra."
+
+trust_boundaries:
+  - id: dmz
+    name: "Perímetro DMZ"
+  - id: processing-zone
+    name: "Zona de processamento"
+    member_component_ids:
+      - web-console
+      - workflow-coordinator
+      - rules-engine
+      - job-queue
+      - workers-pool
+      - document-parser
+      - operational-db
+      - audit-store
+
+assets:
+  - id: work-items
+    name: "Itens de trabalho operacional"
+    asset_kind: data
+    sensitivity: internal
+  - id: rule-definitions
+    name: "Definições de regras versionadas"
+    asset_kind: data
+    sensitivity: confidential
+
+components:
+  - id: web-console
+    name: "Operations web console"
+    kind: process
+    description: "Interface para operadores iniciarem e acompanharem processos."
+    in_trust_boundary: processing-zone
+  - id: workflow-coordinator
+    name: "Workflow coordinator service"
+    kind: process
+    description: "Coordena passos, timeouts e hand-offs entre filas (sem chamadas a fornecedores de texto generativo)."
+    in_trust_boundary: processing-zone
+    asset_ids:
+      - work-items
+  - id: rules-engine
+    name: "Deterministic rules evaluation service"
+    kind: process
+    description: "Avalia regras booleanas e tabelas de decisão sobre payloads normalizados."
+    in_trust_boundary: processing-zone
+    asset_ids:
+      - rule-definitions
+  - id: job-queue
+    name: "Durable job queue"
+    kind: queue
+    technology: "Message broker"
+    in_trust_boundary: processing-zone
+  - id: workers-pool
+    name: "Stateless worker pool"
+    kind: process
+    description: "Consumidores de fila para tarefas idempotentes."
+    in_trust_boundary: processing-zone
+  - id: document-parser
+    name: "Classic document text extraction"
+    kind: process
+    description: "Extração de texto e metadados sem classificadores neurais."
+    in_trust_boundary: processing-zone
+  - id: operational-db
+    name: "Operational datastore"
+    kind: datastore
+    technology: "PostgreSQL"
+    in_trust_boundary: processing-zone
+    asset_ids:
+      - work-items
+  - id: audit-store
+    name: "Audit event store"
+    kind: datastore
+    description: "Registo append-only de transições de workflow."
+    in_trust_boundary: processing-zone
+
+data_flows:
+  - id: ui-to-coordinator
+    from_component: web-console
+    to_component: workflow-coordinator
+    protocol: "HTTPS"
+  - id: coordinator-rules
+    from_component: workflow-coordinator
+    to_component: rules-engine
+    protocol: "internal"
+  - id: coordinator-queue
+    from_component: workflow-coordinator
+    to_component: job-queue
+    protocol: "TLS"
+  - id: queue-workers
+    from_component: job-queue
+    to_component: workers-pool
+    protocol: "TLS"
+  - id: workers-parser
+    from_component: workers-pool
+    to_component: document-parser
+    protocol: "internal"
+  - id: workers-db
+    from_component: workers-pool
+    to_component: operational-db
+    protocol: "TLS"
+  - id: coordinator-audit
+    from_component: workflow-coordinator
+    to_component: audit-store
+    protocol: "TLS"
+
+threats: []
+mitigations: []
+evidence_suggestions: []

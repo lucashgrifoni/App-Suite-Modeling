@@ -1,0 +1,146 @@
+# Fixture de calibração PLOT4ai — RAG corporativo (otm-ai-002)
+model:
+  schema_version: "1.0.0"
+  system_type: hybrid
+  industry_sector: generic
+  methodology: plot4ai
+
+metadata:
+  title: "Enterprise Knowledge Assistant with RAG"
+  summary: >-
+    Assistente corporativo com recuperação de documentos internos via embeddings e vector database.
+    grounded_prompt_with_retrieved_context enviado ao LLM provider; pesquisa vector_search sobre índice.
+  tags:
+    - ai
+    - llm
+    - rag
+    - enterprise
+    - vector-db
+    - knowledge-assistant
+
+business_context:
+  description: >
+    Acesso a conhecimento interno com preocupações de proteção de documentos sensíveis e fiabilidade das respostas.
+  regulatory_context: "ISO 27001; NIST CSF como referência."
+
+trust_boundaries:
+  - id: employee-network
+    name: "Rede corporativa"
+  - id: internal-ai-services
+    name: "Serviços internos de IA (retrieval, embeddings, vector DB)"
+    member_component_ids:
+      - employee-portal
+      - rag-api
+      - retrieval-service
+      - embedding-service
+      - vector-db
+      - document-store
+      - audit-log
+  - id: third-party-model-provider
+    name: "Provedor de modelo terceiro"
+    member_component_ids:
+      - llm-provider
+
+assets:
+  - id: corporate-documents
+    name: "Documentos corporativos internos"
+    asset_kind: data
+    sensitivity: confidential
+  - id: embeddings-index
+    name: "Índice de embeddings"
+    asset_kind: data
+    sensitivity: restricted
+  - id: employee-queries
+    name: "Consultas de colaboradores"
+    asset_kind: data
+    sensitivity: internal
+
+components:
+  - id: employee-portal
+    name: "Employee portal webapp"
+    kind: process
+    in_trust_boundary: internal-ai-services
+  - id: rag-api
+    name: "RAG API gateway"
+    kind: gateway
+    description: "API que orquestra retrieval e chamada ao LLM"
+    in_trust_boundary: internal-ai-services
+  - id: retrieval-service
+    name: "AI retrieval service"
+    kind: process
+    description: "Serviço de retrieval sobre vector index"
+    in_trust_boundary: internal-ai-services
+    asset_ids:
+      - corporate-documents
+      - employee-queries
+  - id: embedding-service
+    name: "Embedding service"
+    kind: process
+    technology: "batch embeddings"
+    in_trust_boundary: internal-ai-services
+    asset_ids:
+      - embeddings-index
+  - id: vector-db
+    name: "Vector database"
+    kind: datastore
+    technology: "vector store ANN"
+    in_trust_boundary: internal-ai-services
+    asset_ids:
+      - embeddings-index
+  - id: document-store
+    name: "Document repository"
+    kind: datastore
+    in_trust_boundary: internal-ai-services
+    asset_ids:
+      - corporate-documents
+  - id: llm-provider
+    name: "Hosted LLM provider"
+    kind: external_entity
+    description: "External model provider inference"
+    in_trust_boundary: third-party-model-provider
+  - id: audit-log
+    name: "Audit log service"
+    kind: datastore
+    description: "Registo de query_and_response_metadata"
+    in_trust_boundary: internal-ai-services
+
+data_flows:
+  - id: portal-rag
+    name: "employee_query"
+    from_component: employee-portal
+    to_component: rag-api
+    protocol: "HTTPS"
+  - id: rag-retrieve
+    name: "query_for_context"
+    from_component: rag-api
+    to_component: retrieval-service
+    protocol: "internal"
+  - id: retrieve-vector
+    name: "vector_search_request"
+    from_component: retrieval-service
+    to_component: vector-db
+    protocol: "TLS"
+  - id: vector-back
+    name: "retrieved_chunks"
+    from_component: vector-db
+    to_component: retrieval-service
+    protocol: "TLS"
+  - id: retrieve-docs
+    name: "source_document_lookup"
+    from_component: retrieval-service
+    to_component: document-store
+    protocol: "TLS"
+  - id: rag-llm
+    name: "grounded_prompt_with_retrieved_context"
+    from_component: rag-api
+    to_component: llm-provider
+    protocol: "HTTPS"
+  - id: rag-audit
+    name: "query_and_response_metadata"
+    from_component: rag-api
+    to_component: audit-log
+    protocol: "TLS"
+
+threats: []
+mitigations: []
+evidence_suggestions: []

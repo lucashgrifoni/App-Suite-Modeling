@@ -1,0 +1,88 @@
+"""OTM Core Schema — modelo canônico versionado (fonte da verdade)."""
+
+from otm_core_schema.document import (
+    Asset,
+    BusinessContext,
+    Component,
+    DataFlow,
+    EvidenceSuggestion,
+    FrameworkRef,
+    Metadata,
+    Mitigation,
+    ModelInfo,
+    ResidualRiskSummary,
+    RiskAssessment,
+    Threat,
+    ThreatModelDocument,
+    TrustBoundary,
+)
+from otm_core_schema.enums import (
+    AssetKind,
+    ComponentKind,
+    EvidenceKind,
+    IndustrySector,
+    MitigationStatus,
+    StrideCategory,
+    SystemType,
+    ThreatModelMethodology,
+    TreatmentStatus,
+)
+from otm_core_schema.io import (
+    dump_document_to_json,
+    dump_document_to_yaml,
+    json_schema,
+    load_document_from_dict,
+    load_document_from_yaml,
+    load_document_from_yaml_path,
+)
+from otm_core_schema.diff_insights import structural_key_insights
+from otm_core_schema.diff import (
+    FieldChange,
+    IdListSectionDiff,
+    ModifiedEntity,
+    ThreatModelDiff,
+    diff_documents,
+)
+from otm_core_schema.starters import BLANK_DOCUMENT_YAML, create_blank_document
+from otm_core_schema.version import CANONICAL_SCHEMA_VERSION
+
+__all__ = [
+    "CANONICAL_SCHEMA_VERSION",
+    "Asset",
+    "AssetKind",
+    "BusinessContext",
+    "Component",
+    "ComponentKind",
+    "DataFlow",
+    "EvidenceKind",
+    "EvidenceSuggestion",
+    "FrameworkRef",
+    "IndustrySector",
+    "Metadata",
+    "Mitigation",
+    "MitigationStatus",
+    "ThreatModelMethodology",
+    "ModelInfo",
+    "ResidualRiskSummary",
+    "RiskAssessment",
+    "StrideCategory",
+    "SystemType",
+    "Threat",
+    "ThreatModelDocument",
+    "TreatmentStatus",
+    "TrustBoundary",
+    "dump_document_to_json",
+    "dump_document_to_yaml",
+    "json_schema",
+    "load_document_from_dict",
+    "load_document_from_yaml",
+    "load_document_from_yaml_path",
+    "BLANK_DOCUMENT_YAML",
+    "create_blank_document",
+    "diff_documents",
+    "FieldChange",
+    "IdListSectionDiff",
+    "ModifiedEntity",
+    "ThreatModelDiff",
+    "structural_key_insights",
+]

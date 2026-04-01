@@ -1,0 +1,23 @@
+id: saas
+name: "SaaS multi-tenant"
+sector: saas
+description: "Isolamento de inquilinos, APIs e dados partilhados na mesma plataforma."
+risk_tuning:
+  likelihood_multiplier: 1.05
+  impact_multiplier: 1.08
+additional_threats:
+  - id: tenant_isolation
+    title: "Repúdio de ações administrativas entre tenants"
+    stride: repudiation
+    target_component_kinds: [process]
+    likelihood_delta: 1
+    impact_delta: 0
+  - id: api_key_leak
+    title: "Spoofing contra repositório de segredos"
+    stride: spoofing
+    target_component_kinds: [datastore]
+    likelihood_delta: 0
+    impact_delta: 1
+control_hints:
+  - "Autorização por tenant em todas as rotas e consultas"
+  - "Segredos em cofre (vault) e rotação de chaves"

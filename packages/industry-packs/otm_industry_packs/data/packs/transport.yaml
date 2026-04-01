@@ -1,0 +1,23 @@
+id: transport
+name: "Transporte e mobilidade"
+sector: transport
+description: "Telemetria, segurança operacional e continuidade."
+risk_tuning:
+  likelihood_multiplier: 1.05
+  impact_multiplier: 1.12
+additional_threats:
+  - id: telemetry_repudiation
+    title: "Repúdio de eventos de telemetria ou auditoria"
+    stride: repudiation
+    target_component_kinds: [process]
+    likelihood_delta: 1
+    impact_delta: 0
+  - id: queue_safety
+    title: "Spoofing de mensagens em fila de eventos"
+    stride: spoofing
+    target_component_kinds: [queue]
+    likelihood_delta: 0
+    impact_delta: 1
+control_hints:
+  - "Assinatura de mensagens de telemetria e relógio de confiança"
+  - "Plano de continuidade para operações em tempo real"
