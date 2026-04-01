@@ -1,0 +1,20 @@
+{
+  "id": "ai-llm-chat",
+  "title": "Chat LLM simples",
+  "description": "UI → backend → orquestração de prompts → fornecedor de modelo.",
+  "suggested_pack": "saas",
+  "category": "ai_llm",
+  "category_label": "AI & LLM",
+  "tags": [
+    "llm",
+    "chat",
+    "genai"
+  ],
+  "complexity": "medium",
+  "best_for": "Assistência conversacional com modelo alojado externamente.",
+  "suggested_methodology": "plot4ai",
+  "recommendation_hints": [
+    "prompt_injection",
+    "data_exfil_via_model"
+  ]
+}

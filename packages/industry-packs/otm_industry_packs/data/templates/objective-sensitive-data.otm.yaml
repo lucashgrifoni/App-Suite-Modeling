@@ -1,0 +1,64 @@
+model:
+  schema_version: 1.0.0
+  methodology: linddun
+  system_type: hybrid
+  industry_sector: generic
+metadata:
+  title: 'Foco: dados sensíveis'
+  summary: Ativos de dados, processamento e arquivo com controlos.
+  tags:
+  - template
+  - objective
+  - sensitive
+business_context:
+  description: LINDDUN/NIST data-centric como guia; mapear ciclo de vida dos dados.
+  assumptions:
+  - Classificação de dados definida pelo negócio.
+trust_boundaries:
+- id: internet
+  name: Internet
+- id: app_tier
+  name: Conta / VPC aplicação
+  member_component_ids:
+  - proc
+  - vault
+components:
+- id: user
+  name: Utilizador
+  kind: user
+  in_trust_boundary: internet
+- id: proc
+  name: Processamento
+  kind: process
+  asset_ids:
+  - asset_pii
+  in_trust_boundary: app_tier
+- id: vault
+  name: Arquivo protegido
+  kind: datastore
+  asset_ids:
+  - asset_pii
+  in_trust_boundary: app_tier
+data_flows:
+- id: u_p
+  from_component: user
+  to_component: proc
+  protocol: HTTPS
+  encrypted: true
+  authenticated: true
+- id: p_v
+  from_component: proc
+  to_component: vault
+  protocol: TCP
+  encrypted: true
+assets:
+- id: asset_pii
+  name: Conjunto de dados pessoais
+  asset_kind: data
+  sensitivity: confidential
+  related_component_ids:
+  - proc
+  - vault
+threats: []
+mitigations: []
+evidence_suggestions: []

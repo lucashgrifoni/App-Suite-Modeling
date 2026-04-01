@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="t d">
+  <title id="t">App Suite Modeling</title>
+  <desc id="d">Threat modeling as code for AppSec and DevSecOps</desc>
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0d1a14"/>
+      <stop offset="100%" style="stop-color:#0a1410"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect x="48" y="48" width="1104" height="534" rx="24" fill="none" stroke="rgba(86,255,149,0.25)" stroke-width="2"/>
+  <text x="600" y="260" text-anchor="middle" fill="#56ff95" font-family="system-ui,Segoe UI,sans-serif" font-size="52" font-weight="700">App Suite Modeling</text>
+  <text x="600" y="330" text-anchor="middle" fill="#a8c4b8" font-family="system-ui,Segoe UI,sans-serif" font-size="26" font-weight="500">Threat modeling as code</text>
+  <text x="600" y="380" text-anchor="middle" fill="#6b8a7a" font-family="system-ui,Segoe UI,sans-serif" font-size="20">Canonical model � Multi-methodology � CLI + API � PLOT4ai</text>
+</svg>

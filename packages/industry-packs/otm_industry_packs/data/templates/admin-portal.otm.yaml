@@ -1,0 +1,72 @@
+model:
+  schema_version: 1.0.0
+  methodology: stride
+  system_type: web_application
+  industry_sector: generic
+metadata:
+  title: Portal admin
+  summary: Administrador, API com privilégios elevados e registo de auditoria.
+  tags:
+  - template
+  - admin
+business_context:
+  description: Ações sensíveis devem ser registadas e justificadas.
+  assumptions:
+  - Contas de admin separadas de utilizadores finais.
+trust_boundaries:
+- id: internet
+  name: Internet
+- id: app_tier
+  name: Conta / VPC aplicação
+  member_component_ids:
+  - admin_ui
+  - priv_api
+  - audit
+  - target
+components:
+- id: admin
+  name: Administrador
+  kind: user
+  in_trust_boundary: internet
+- id: admin_ui
+  name: UI admin
+  kind: process
+  in_trust_boundary: app_tier
+- id: priv_api
+  name: API privilegiada
+  kind: process
+  in_trust_boundary: app_tier
+- id: audit
+  name: Registo de auditoria
+  kind: datastore
+  technology: WORM/Log store
+  in_trust_boundary: app_tier
+- id: target
+  name: Sistema alvo
+  kind: process
+  in_trust_boundary: app_tier
+data_flows:
+- id: a_ui
+  from_component: admin
+  to_component: admin_ui
+  protocol: HTTPS
+  encrypted: true
+  authenticated: true
+- id: ui_p
+  from_component: admin_ui
+  to_component: priv_api
+  protocol: HTTPS
+- id: p_aud
+  from_component: priv_api
+  to_component: audit
+  protocol: TCP
+  encrypted: true
+- id: p_t
+  from_component: priv_api
+  to_component: target
+  protocol: TCP
+  encrypted: true
+assets: []
+threats: []
+mitigations: []
+evidence_suggestions: []

@@ -1,0 +1,20 @@
+{
+  "id": "ai-inference-pipeline",
+  "title": "Pipeline de inferência",
+  "description": "Upload/API → pré-processamento → fornecedor de modelo → armazenamento de resultados → workflow.",
+  "suggested_pack": "cloud_native",
+  "category": "ai_llm",
+  "category_label": "AI & LLM",
+  "tags": [
+    "inference",
+    "mlops",
+    "batch"
+  ],
+  "complexity": "high",
+  "best_for": "Fluxos de inferência com pré/pós-processamento e arquivo de resultados.",
+  "suggested_methodology": "plot4ai",
+  "recommendation_hints": [
+    "model_artifact_integrity",
+    "result_tampering"
+  ]
+}

@@ -31,10 +31,14 @@ from otm_exporters import (
 from otm_framework_mappings import framework_display_name
 from otm_industry_packs.loader import (
     list_pack_ids,
-    list_template_ids,
     load_pack,
     load_template_info,
     load_template_yaml,
+)
+from otm_industry_packs.template_query import (
+    filter_template_infos,
+    get_template_info,
+    load_all_template_infos,
 )
 from otm_threat_engine import AnalysisResult, analyze_document, build_remediation_backlog
 from otm_threat_engine.analysis_diff import diff_analysis_results
@@ -410,7 +414,7 @@ def cmd_init(
 ) -> None:
     """Cria um arquivo OTM mínimo ou a partir de um template embutido."""
     if list_templates:
-        _print_templates_list()
+        _print_templates_list_filtered()
         raise typer.Exit(0)
 
     if path.exists() and not force:
@@ -442,23 +446,90 @@ def cmd_init(
         )
 
 
-def _print_templates_list() -> None:
+def _print_templates_list_filtered(
+    category: str | None = None,
+    tag: str | None = None,
+    complexity: str | None = None,
+    q: str | None = None,
+) -> None:
+    infos = load_all_template_infos()
+    infos = filter_template_infos(
+        infos,
+        category=category,
+        tag=tag,
+        complexity=complexity,
+        q=q,
+    )
     console.print("[bold]Templates[/bold] (use: [cyan]otm init -t ID[/cyan]):")
-    for tid in list_template_ids():
-        info = load_template_info(tid)
-        if info:
-            line = f"  • [cyan]{tid}[/cyan] — {info.title}"
-            console.print(line)
-            if info.suggested_pack:
-                console.print(f"    pack sugerido: {info.suggested_pack}")
-        else:
-            console.print(f"  • [cyan]{tid}[/cyan]")
+    for info in infos:
+        line = f"  • [cyan]{info.id}[/cyan] — {info.title}"
+        console.print(line)
+        if info.suggested_pack:
+            console.print(f"    pack sugerido: {info.suggested_pack}")
+        if info.complexity:
+            console.print(f"    complexidade: {info.complexity}")
+        if info.category_label:
+            console.print(f"    categoria: {info.category_label}")
 
 
-@app.command("templates")
-def cmd_templates() -> None:
-    """Lista templates embutidos."""
-    _print_templates_list()
+templates_app = typer.Typer(
+    name="templates",
+    help="Catálogo de templates embutidos (lista, filtros, detalhe).",
+)
+
+
+@templates_app.callback(invoke_without_command=True)
+def templates_callback(ctx: typer.Context) -> None:
+    if ctx.invoked_subcommand is None:
+        _print_templates_list_filtered()
+
+
+@templates_app.command("list")
+def cmd_templates_list(
+    category: str | None = typer.Option(None, "--category", "-c", help="Filtra pela chave de categoria."),
+    tag: str | None = typer.Option(None, "--tag", help="Tag exata (case-insensitive)."),
+    complexity: str | None = typer.Option(
+        None,
+        "--complexity",
+        help="low | medium | high",
+    ),
+    q: str | None = typer.Option(None, "--query", "-q", help="Texto livre (id, título, descrição, tags)."),
+) -> None:
+    """Lista templates com filtros opcionais (sem filtros = catálogo completo)."""
+    _print_templates_list_filtered(category=category, tag=tag, complexity=complexity, q=q)
+
+
+@templates_app.command("show")
+def cmd_templates_show(
+    template_id: str = typer.Argument(..., help="ID do template (ex.: ai-rag-enterprise)."),
+) -> None:
+    """Mostra metadados de um template embutido."""
+    info = get_template_info(template_id)
+    if info is None:
+        console.print(f"[red]Template desconhecido:[/red] {template_id}")
+        raise typer.Exit(1)
+    lines = [
+        f"[bold]ID:[/bold] {info.id}",
+        f"[bold]Título:[/bold] {info.title}",
+        f"[bold]Descrição:[/bold] {info.description or '—'}",
+        f"[bold]Categoria:[/bold] {info.category_label} ({info.category})",
+    ]
+    if info.tags:
+        lines.append(f"[bold]Tags:[/bold] {', '.join(info.tags)}")
+    if info.complexity:
+        lines.append(f"[bold]Complexidade:[/bold] {info.complexity}")
+    if info.best_for:
+        lines.append(f"[bold]Melhor para:[/bold] {info.best_for}")
+    if info.suggested_pack:
+        lines.append(f"[bold]Pack sugerido:[/bold] {info.suggested_pack}")
+    if info.suggested_methodology:
+        lines.append(f"[bold]Metodologia sugerida:[/bold] {info.suggested_methodology}")
+    if info.recommendation_hints:
+        lines.append(f"[bold]Sinais (recomendação):[/bold] {', '.join(info.recommendation_hints)}")
+    console.print(Panel.fit("\n".join(lines), title=f"template [cyan]{info.id}[/cyan]", border_style="cyan"))
+
+
+app.add_typer(templates_app, name="templates")
 
 
 @app.command("packs")

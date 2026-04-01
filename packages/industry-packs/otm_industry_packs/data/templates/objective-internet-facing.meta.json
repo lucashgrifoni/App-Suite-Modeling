@@ -1,0 +1,19 @@
+{
+  "id": "objective-internet-facing",
+  "title": "Objetivo: aplicação exposta à Internet",
+  "description": "Aplicação com superfície externa relevante (HTTP/API).",
+  "suggested_pack": "saas",
+  "category": "objective",
+  "category_label": "Objective-based",
+  "tags": [
+    "internet",
+    "external_surface"
+  ],
+  "complexity": "low",
+  "best_for": "Começar por superfície e confiança perimetral.",
+  "suggested_methodology": "stride",
+  "recommendation_hints": [
+    "perimeter_hardening",
+    "waf_rules"
+  ]
+}

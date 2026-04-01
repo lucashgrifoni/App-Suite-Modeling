@@ -1,0 +1,20 @@
+{
+  "id": "microservices-messaging",
+  "title": "Microsserviços com mensageria",
+  "description": "API → serviços → fila/tópico → workers → DB/cache.",
+  "suggested_pack": "cloud_native",
+  "category": "applications",
+  "category_label": "Applications",
+  "tags": [
+    "microservices",
+    "queue",
+    "async"
+  ],
+  "complexity": "high",
+  "best_for": "Processamento assíncrono e desacoplamento entre serviços.",
+  "suggested_methodology": "stride",
+  "recommendation_hints": [
+    "message_broker_trust",
+    "idempotency"
+  ]
+}

@@ -1,0 +1,73 @@
+model:
+  schema_version: 1.0.0
+  methodology: stride
+  system_type: mobile_application
+  industry_sector: generic
+metadata:
+  title: Mobile + backend
+  summary: Cliente móvel, API, identidade e armazenamento.
+  tags:
+  - template
+  - mobile
+business_context:
+  description: Autenticação de utilizadores móveis e APIs de domínio.
+  assumptions:
+  - OAuth2/OIDC para sessão.
+  - Armazenamento de objetos ou SQL conforme o caso.
+trust_boundaries:
+- id: internet
+  name: Internet
+- id: app_tier
+  name: Conta / VPC aplicação
+  member_component_ids:
+  - api
+  - auth
+  - svc
+  - store
+components:
+- id: user
+  name: Utilizador móvel
+  kind: user
+  in_trust_boundary: internet
+- id: api
+  name: API mobile
+  kind: gateway
+  in_trust_boundary: app_tier
+- id: auth
+  name: Serviço de identidade
+  kind: process
+  technology: OIDC
+  in_trust_boundary: app_tier
+- id: svc
+  name: Serviço de domínio
+  kind: process
+  in_trust_boundary: app_tier
+- id: store
+  name: Armazenamento
+  kind: datastore
+  technology: S3/DB
+  in_trust_boundary: app_tier
+data_flows:
+- id: u_api
+  from_component: user
+  to_component: api
+  protocol: HTTPS
+  encrypted: true
+  authenticated: true
+- id: api_auth
+  from_component: api
+  to_component: auth
+  protocol: HTTPS
+- id: api_svc
+  from_component: api
+  to_component: svc
+  protocol: HTTPS
+- id: svc_st
+  from_component: svc
+  to_component: store
+  protocol: TCP
+  encrypted: true
+assets: []
+threats: []
+mitigations: []
+evidence_suggestions: []

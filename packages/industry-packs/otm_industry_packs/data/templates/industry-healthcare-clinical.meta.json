@@ -1,0 +1,20 @@
+{
+  "id": "industry-healthcare-clinical",
+  "title": "Saúde / acesso a dados clínicos",
+  "description": "Utilizador/profissional → portal → backend clínico → registos sensíveis → auditoria.",
+  "suggested_pack": "saas",
+  "category": "industry",
+  "category_label": "Industry",
+  "tags": [
+    "healthcare",
+    "phi",
+    "clinical"
+  ],
+  "complexity": "high",
+  "best_for": "Sistemas com PHI e requisitos de auditoria clínica.",
+  "suggested_methodology": "linddun",
+  "recommendation_hints": [
+    "break_glass_clinical",
+    "minimum_necessary"
+  ]
+}

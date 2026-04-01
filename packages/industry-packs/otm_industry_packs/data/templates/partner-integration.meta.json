@@ -1,0 +1,20 @@
+{
+  "id": "partner-integration",
+  "title": "Marketplace / integração com parceiro",
+  "description": "App interna → API de parceiro → transformação → reconciliação assíncrona.",
+  "suggested_pack": "saas",
+  "category": "integrations",
+  "category_label": "Integrations",
+  "tags": [
+    "partner",
+    "b2b",
+    "async"
+  ],
+  "complexity": "high",
+  "best_for": "Ecossistemas de parceiros com conciliação diferida.",
+  "suggested_methodology": "stride",
+  "recommendation_hints": [
+    "webhook_auth",
+    "id_mapping"
+  ]
+}

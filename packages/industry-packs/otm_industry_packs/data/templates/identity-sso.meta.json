@@ -1,0 +1,20 @@
+{
+  "id": "identity-sso",
+  "title": "SSO / OIDC / SAML",
+  "description": "Utilizador → aplicação → IdP → tokens/sessão → serviços a jusante.",
+  "suggested_pack": "saas",
+  "category": "identity_access",
+  "category_label": "Identity & Access",
+  "tags": [
+    "sso",
+    "oidc",
+    "saml"
+  ],
+  "complexity": "high",
+  "best_for": "Federar identidade e sessão com protocolos standard.",
+  "suggested_methodology": "stride",
+  "recommendation_hints": [
+    "token_lifetime",
+    "assertion_forgery"
+  ]
+}

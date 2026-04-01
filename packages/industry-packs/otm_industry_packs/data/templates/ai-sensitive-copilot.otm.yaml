@@ -1,0 +1,65 @@
+model:
+  schema_version: 1.0.0
+  methodology: plot4ai
+  system_type: web_application
+  industry_sector: generic
+metadata:
+  title: Copilot sensível
+  summary: Portal, sistemas de RH/Finanças e camada LLM com políticas estritas.
+  tags:
+  - template
+  - copilot
+  - sensitive
+business_context:
+  description: Combinação de PII e LLM — requer governança explícita.
+  assumptions:
+  - Apenas dados permitidos por função entram no contexto.
+trust_boundaries:
+- id: internet
+  name: Internet
+- id: app_tier
+  name: Conta / VPC aplicação
+  member_component_ids:
+  - user
+  - portal
+  - hr_fin
+  - orch
+components:
+- id: user
+  name: Colaborador
+  kind: user
+  in_trust_boundary: internet
+- id: portal
+  name: Portal interno
+  kind: process
+  in_trust_boundary: app_tier
+- id: hr_fin
+  name: Sistemas HR/Finanças
+  kind: datastore
+  technology: ERP/HRIS
+  in_trust_boundary: app_tier
+- id: orch
+  name: Orquestração LLM
+  kind: process
+  in_trust_boundary: app_tier
+data_flows:
+- id: u_p
+  from_component: user
+  to_component: portal
+  protocol: HTTPS
+  encrypted: true
+  authenticated: true
+- id: p_h
+  from_component: portal
+  to_component: hr_fin
+  protocol: TCP
+  encrypted: true
+  authenticated: true
+- id: p_o
+  from_component: portal
+  to_component: orch
+  protocol: HTTPS
+assets: []
+threats: []
+mitigations: []
+evidence_suggestions: []

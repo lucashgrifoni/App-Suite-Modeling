@@ -1,0 +1,71 @@
+model:
+  schema_version: 1.0.0
+  methodology: stride
+  system_type: web_application
+  industry_sector: retail
+metadata:
+  title: E-commerce
+  summary: Montra, carrinho, pagamento e persistência.
+  tags:
+  - template
+  - ecommerce
+business_context:
+  description: Fluxo de compra com stock e conciliação de pagamentos.
+  assumptions:
+  - PCI delegado ao PSP quando possível.
+trust_boundaries:
+- id: internet
+  name: Internet
+- id: app_tier
+  name: Conta / VPC aplicação
+  member_component_ids:
+  - shop
+  - cart
+  - pay
+  - db
+components:
+- id: user
+  name: Cliente
+  kind: user
+  in_trust_boundary: internet
+- id: shop
+  name: Montra web
+  kind: process
+  in_trust_boundary: app_tier
+- id: cart
+  name: Carrinho / encomenda
+  kind: process
+  in_trust_boundary: app_tier
+- id: pay
+  name: Pagamentos
+  kind: process
+  technology: PSP
+  in_trust_boundary: app_tier
+- id: db
+  name: Base de dados
+  kind: datastore
+  in_trust_boundary: app_tier
+data_flows:
+- id: u_s
+  from_component: user
+  to_component: shop
+  protocol: HTTPS
+  encrypted: true
+- id: s_c
+  from_component: shop
+  to_component: cart
+  protocol: HTTPS
+- id: c_p
+  from_component: cart
+  to_component: pay
+  protocol: HTTPS
+  encrypted: true
+- id: c_d
+  from_component: cart
+  to_component: db
+  protocol: TCP
+  encrypted: true
+assets: []
+threats: []
+mitigations: []
+evidence_suggestions: []

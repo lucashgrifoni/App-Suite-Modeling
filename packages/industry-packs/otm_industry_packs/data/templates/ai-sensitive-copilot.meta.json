@@ -1,0 +1,20 @@
+{
+  "id": "ai-sensitive-copilot",
+  "title": "Copilot interno com dados sensíveis",
+  "description": "Portal do colaborador → controlo de acesso → sistemas HR/Finanças → orquestração LLM.",
+  "suggested_pack": "saas",
+  "category": "ai_llm",
+  "category_label": "AI & LLM",
+  "tags": [
+    "copilot",
+    "hr",
+    "sensitive"
+  ],
+  "complexity": "high",
+  "best_for": "Assistência sobre dados internos altamente sensíveis.",
+  "suggested_methodology": "plot4ai",
+  "recommendation_hints": [
+    "dlp_overlay",
+    "role_based_rag"
+  ]
+}

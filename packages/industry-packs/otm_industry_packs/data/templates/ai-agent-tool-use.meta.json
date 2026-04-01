@@ -1,0 +1,20 @@
+{
+  "id": "ai-agent-tool-use",
+  "title": "Agente com tool use",
+  "description": "Operador/utilizador → orquestrador de agente → ferramentas → aprovação/auditoria.",
+  "suggested_pack": "saas",
+  "category": "ai_llm",
+  "category_label": "AI & LLM",
+  "tags": [
+    "agent",
+    "tools",
+    "governance"
+  ],
+  "complexity": "high",
+  "best_for": "Automação com chamadas a ferramentas e trilho de aprovação.",
+  "suggested_methodology": "plot4ai",
+  "recommendation_hints": [
+    "tool_authorization",
+    "human_in_the_loop"
+  ]
+}

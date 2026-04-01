@@ -129,6 +129,25 @@ def test_templates_command_ok(runner: CliRunner) -> None:
     assert "Templates" in combined
 
 
+def test_templates_list_filter(runner: CliRunner) -> None:
+    r = runner.invoke(app, ["templates", "list", "--category", "ai_llm"])
+    assert r.exit_code == 0
+    combined = (r.stdout or "") + (r.stderr or "")
+    assert "ai-llm-chat" in combined
+
+
+def test_templates_show_ok(runner: CliRunner) -> None:
+    r = runner.invoke(app, ["templates", "show", "api-public"])
+    assert r.exit_code == 0
+    combined = (r.stdout or "") + (r.stderr or "")
+    assert "api-public" in combined
+
+
+def test_templates_show_unknown_exits_1(runner: CliRunner) -> None:
+    r = runner.invoke(app, ["templates", "show", "nao_existe_xxx"])
+    assert r.exit_code == 1
+
+
 def test_packs_command_ok(runner: CliRunner) -> None:
     r = runner.invoke(app, ["packs"])
     assert r.exit_code == 0

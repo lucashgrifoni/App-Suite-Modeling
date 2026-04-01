@@ -1,0 +1,62 @@
+model:
+  schema_version: 1.0.0
+  methodology: stride
+  system_type: hybrid
+  industry_sector: generic
+metadata:
+  title: 'Foco: terceiros'
+  summary: Serviço interno e múltiplos fornecedores SaaS/API.
+  tags:
+  - template
+  - objective
+  - third_party
+business_context:
+  description: Identificar dependências N-tier e dados partilhados com vendors.
+  assumptions:
+  - Inventário de subprocessadores mantido.
+trust_boundaries:
+- id: internet
+  name: Internet
+- id: app_tier
+  name: Conta / VPC
+  member_component_ids:
+  - core
+components:
+- id: user
+  name: Cliente
+  kind: user
+  in_trust_boundary: internet
+- id: core
+  name: Serviço core
+  kind: process
+  in_trust_boundary: app_tier
+- id: v1
+  name: Fornecedor A
+  kind: external_entity
+  in_trust_boundary: internet
+- id: v2
+  name: Fornecedor B
+  kind: external_entity
+  in_trust_boundary: internet
+data_flows:
+- id: u_c
+  from_component: user
+  to_component: core
+  protocol: HTTPS
+  encrypted: true
+- id: c_v1
+  from_component: core
+  to_component: v1
+  protocol: HTTPS
+  encrypted: true
+  authenticated: true
+- id: c_v2
+  from_component: core
+  to_component: v2
+  protocol: HTTPS
+  encrypted: true
+  authenticated: true
+assets: []
+threats: []
+mitigations: []
+evidence_suggestions: []

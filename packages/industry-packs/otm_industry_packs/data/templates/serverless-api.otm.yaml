@@ -1,0 +1,73 @@
+model:
+  schema_version: 1.0.0
+  methodology: stride
+  system_type: api_backend
+  industry_sector: cloud_native
+metadata:
+  title: Serverless API
+  summary: Gateway, funções, segredos e base de dados gerida.
+  tags:
+  - template
+  - serverless
+business_context:
+  description: Modelo pay-per-use com permissões finas por função.
+  assumptions:
+  - Segredos em cofre gerido.
+  - Logging centralizado.
+trust_boundaries:
+- id: internet
+  name: Internet
+- id: app_tier
+  name: Conta / VPC aplicação
+  member_component_ids:
+  - apigw
+  - fn
+  - secrets
+  - db
+components:
+- id: user
+  name: Cliente
+  kind: user
+  in_trust_boundary: internet
+- id: apigw
+  name: API Gateway
+  kind: gateway
+  in_trust_boundary: app_tier
+- id: fn
+  name: Função
+  kind: process
+  technology: Lambda/Functions
+  in_trust_boundary: app_tier
+- id: secrets
+  name: Cofre de segredos
+  kind: datastore
+  technology: Secrets Manager
+  in_trust_boundary: app_tier
+- id: db
+  name: BD gerida
+  kind: datastore
+  technology: RDS/Dynamo
+  in_trust_boundary: app_tier
+data_flows:
+- id: u_gw
+  from_component: user
+  to_component: apigw
+  protocol: HTTPS
+  encrypted: true
+- id: gw_fn
+  from_component: apigw
+  to_component: fn
+  protocol: HTTPS
+- id: fn_sec
+  from_component: fn
+  to_component: secrets
+  protocol: HTTPS
+- id: fn_db
+  from_component: fn
+  to_component: db
+  protocol: TCP
+  encrypted: true
+assets: []
+threats: []
+mitigations: []
+evidence_suggestions: []

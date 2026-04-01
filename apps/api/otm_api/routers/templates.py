@@ -1,12 +1,17 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Path, status
+from fastapi import APIRouter, Path, Query, status
 from pydantic import ValidationError as PydanticValidationError
 
 from otm_api.routers._errors import raise_template_invalid, raise_template_not_found
 from otm_api.schemas.bodies import CreateModelResponse
 from otm_api.services.documents import document_from_template
-from otm_api.services.templates_catalog import TemplateListItem, list_templates
+from otm_api.services.templates_catalog import (
+    TemplateListItem,
+    get_template,
+    list_templates,
+    list_templates_filtered,
+)
 
 router = APIRouter(prefix="/templates", tags=["Templates"])
 
@@ -15,10 +20,49 @@ router = APIRouter(prefix="/templates", tags=["Templates"])
     "",
     response_model=list[TemplateListItem],
     summary="List templates",
-    description="Built-in templates from `otm_industry_packs` (IDs used with `otm init -t`).",
+    description=(
+        "Built-in templates from `otm_industry_packs` (IDs used with `otm init -t`). "
+        "Optional query filters combine with AND semantics."
+    ),
 )
-def get_templates() -> list[TemplateListItem]:
+def get_templates(
+    category: str | None = Query(
+        default=None,
+        description="Filtra pela chave `category` (ex.: applications, ai_llm).",
+    ),
+    tag: str | None = Query(default=None, description="Corresponde a uma tag (exata, case-insensitive)."),
+    complexity: str | None = Query(
+        default=None,
+        description="low | medium | high",
+    ),
+    q: str | None = Query(
+        default=None,
+        description="Texto livre em id, título, descrição, tags ou best_for.",
+    ),
+) -> list[TemplateListItem]:
+    if category or tag or complexity or q:
+        return list_templates_filtered(
+            category=category,
+            tag=tag,
+            complexity=complexity,
+            q=q,
+        )
     return list_templates()
+
+
+@router.get(
+    "/{template_id}",
+    response_model=TemplateListItem,
+    summary="Get template metadata",
+    description="Detalhe de um template embutido (metadados do manifest).",
+)
+def get_template_detail(
+    template_id: str = Path(..., description="Template ID (ex.: api-public)."),
+) -> TemplateListItem:
+    item = get_template(template_id)
+    if item is None:
+        raise raise_template_not_found(FileNotFoundError(f"Template desconhecido: {template_id!r}"))
+    return item
 
 
 @router.post(

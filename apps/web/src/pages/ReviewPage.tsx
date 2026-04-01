@@ -7,11 +7,12 @@ import { Card } from "../components/ui/Card";
 import { Badge } from "../components/ui/Badge";
 import { Alert } from "../components/ui/Alert";
 import { PageHeader } from "../components/patterns/PageHeader";
+import { ThreatModelDiagram } from "../components/diagram/ThreatModelDiagram";
 import { useSession } from "../context/SessionContext";
 import { useToast } from "../context/ToastContext";
 
 export function ReviewPage() {
-  const { document } = useSession();
+  const { document, setDocument } = useSession();
   const toast = useToast();
   const [showJson, setShowJson] = useState(false);
   const [meta, setMeta] = useState<string | null>(null);
@@ -41,7 +42,7 @@ export function ReviewPage() {
       <PageHeader
         eyebrow="Revisão estrutural"
         title="Diagrama lógico"
-        description="Vista em lista dos componentes e fluxos. O motor usa estes dados na análise."
+        description="Editor visual (React Flow) com edição activa por omissão: arraste nós, ligue componentes e use Delete. «Visualizar» desativa alterações estruturais. A lista abaixo reflecte o modelo em sessão."
         actions={
           <>
             <Button variant="secondary" onClick={() => void quickValidate()}>
@@ -56,6 +57,14 @@ export function ReviewPage() {
 
       {meta && <Alert variant="success">{meta}</Alert>}
       {err && <Alert>{err}</Alert>}
+
+      <Card
+        title="Diagrama interativo"
+        subtitle="Por omissão: Editar (arrastar, ligar, apagar, rótulos). Botão «Visualizar» = só leitura."
+        variant="glass"
+      >
+        <ThreatModelDiagram document={doc} setDocument={setDocument} />
+      </Card>
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card title="Componentes" subtitle={`${doc.components.length} itens`} variant="glass">

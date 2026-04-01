@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "open-threat-model"
-version = "0.1.0"
+version = "3.0.0"
 description = "Plataforma open source de Threat Modeling as Code (core, API, CLI, UI)."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -71,6 +71,7 @@ select = ["E", "F", "I", "UP"]
 
 [tool.ruff.lint.per-file-ignores]
 # Mensagens de inferência e docstrings PT-PT tendem a ultrapassar 100 carateres.
+"packages/industry-packs/otm_industry_packs/catalog/registry_data.py" = ["E501"]
 "packages/artifact-import/**" = ["E501"]
 "packages/threat-engine/otm_threat_engine/remediation/**" = ["E501"]
 "tests/test_artifact_import.py" = ["E501"]

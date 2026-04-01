@@ -1,0 +1,64 @@
+model:
+  schema_version: 1.0.0
+  methodology: plot4ai
+  system_type: hybrid
+  industry_sector: generic
+metadata:
+  title: Agente com ferramentas
+  summary: Orquestrador invoca ferramentas com registo e aprovação opcional.
+  tags:
+  - template
+  - agent
+business_context:
+  description: Cada tool é uma superfície de abuso potencial.
+  assumptions:
+  - Política de quais tools são automáticos vs manuais.
+trust_boundaries:
+- id: internet
+  name: Internet
+- id: app_tier
+  name: Conta / VPC aplicação
+  member_component_ids:
+  - user
+  - agent
+  - tools
+  - audit
+components:
+- id: user
+  name: Operador
+  kind: user
+  in_trust_boundary: internet
+- id: agent
+  name: Orquestrador de agente
+  kind: process
+  in_trust_boundary: app_tier
+- id: tools
+  name: Ferramentas (APIs)
+  kind: process
+  in_trust_boundary: app_tier
+- id: audit
+  name: Auditoria
+  kind: datastore
+  in_trust_boundary: app_tier
+data_flows:
+- id: u_a
+  from_component: user
+  to_component: agent
+  protocol: HTTPS
+  encrypted: true
+  authenticated: true
+- id: a_t
+  from_component: agent
+  to_component: tools
+  protocol: HTTPS
+  encrypted: true
+  authenticated: true
+- id: a_au
+  from_component: agent
+  to_component: audit
+  protocol: TCP
+  encrypted: true
+assets: []
+threats: []
+mitigations: []
+evidence_suggestions: []

@@ -1,0 +1,89 @@
+model:
+  schema_version: 1.0.0
+  methodology: stride
+  system_type: hybrid
+  industry_sector: generic
+metadata:
+  title: Microsserviços com mensageria
+  summary: Entrada API, fila e workers consumindo mensagens.
+  tags:
+  - template
+  - microservices
+  - queue
+business_context:
+  description: Carga síncrona na borda e trabalho assíncrono atrás de broker.
+  assumptions:
+  - Broker gerido (SQS/Kafka/RabbitMQ).
+  - Workers com política de retry.
+trust_boundaries:
+- id: internet
+  name: Internet
+- id: dmz
+  name: DMZ / edge
+  member_component_ids:
+  - edge_api
+- id: app_tier
+  name: Aplicação / dados
+  member_component_ids:
+  - queue
+  - worker
+  - cache
+  - db
+components:
+- id: user
+  name: Cliente
+  kind: user
+  in_trust_boundary: internet
+- id: edge_api
+  name: API de borda
+  kind: gateway
+  technology: Gateway
+  in_trust_boundary: dmz
+- id: queue
+  name: Fila / tópico
+  kind: queue
+  technology: Kafka
+  in_trust_boundary: app_tier
+- id: worker
+  name: Worker
+  kind: process
+  in_trust_boundary: app_tier
+- id: cache
+  name: Cache
+  kind: datastore
+  technology: Redis
+  in_trust_boundary: app_tier
+- id: db
+  name: Base de dados
+  kind: datastore
+  technology: PostgreSQL
+  in_trust_boundary: app_tier
+data_flows:
+- id: u_edge
+  from_component: user
+  to_component: edge_api
+  protocol: HTTPS
+  encrypted: true
+- id: edge_q
+  from_component: edge_api
+  to_component: queue
+  protocol: TCP
+  encrypted: true
+- id: q_w
+  from_component: queue
+  to_component: worker
+  protocol: TCP
+- id: w_db
+  from_component: worker
+  to_component: db
+  protocol: TCP
+  encrypted: true
+- id: w_c
+  from_component: worker
+  to_component: cache
+  protocol: TCP
+  encrypted: true
+assets: []
+threats: []
+mitigations: []
+evidence_suggestions: []

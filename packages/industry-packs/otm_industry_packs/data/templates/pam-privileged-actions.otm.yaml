@@ -1,0 +1,55 @@
+model:
+  schema_version: 1.0.0
+  methodology: stride
+  system_type: hybrid
+  industry_sector: generic
+metadata:
+  title: PAM e ações privilegiadas
+  summary: Operador solicita ação; aprovação; execução registada.
+  tags:
+  - template
+  - pam
+business_context:
+  description: Reduz superfície de contas permanentemente privilegiadas.
+  assumptions:
+  - Integração com IdP corporativo.
+trust_boundaries:
+- id: internet
+  name: Internet
+- id: app_tier
+  name: Conta / VPC aplicação
+  member_component_ids:
+  - op
+  - pam
+  - target
+components:
+- id: op
+  name: Operador
+  kind: user
+  in_trust_boundary: internet
+- id: pam
+  name: Gateway PAM
+  kind: process
+  technology: PAM
+  in_trust_boundary: app_tier
+- id: target
+  name: Sistema alvo
+  kind: process
+  in_trust_boundary: app_tier
+data_flows:
+- id: o_p
+  from_component: op
+  to_component: pam
+  protocol: HTTPS
+  encrypted: true
+  authenticated: true
+- id: p_t
+  from_component: pam
+  to_component: target
+  protocol: SSH/HTTPS
+  encrypted: true
+  authenticated: true
+assets: []
+threats: []
+mitigations: []
+evidence_suggestions: []

@@ -2,5 +2,12 @@
   "id": "saas-web",
   "title": "SaaS — aplicação web",
   "description": "Fluxo típico browser → WAF → API → base de dados.",
-  "suggested_pack": "saas"
+  "suggested_pack": "saas",
+  "category": "applications",
+  "category_label": "Applications",
+  "tags": ["saas", "web", "legacy-catalog"],
+  "complexity": "low",
+  "best_for": "Produto SaaS clássico com front web.",
+  "suggested_methodology": "stride",
+  "recommendation_hints": ["session_management", "tenant_isolation"]
 }

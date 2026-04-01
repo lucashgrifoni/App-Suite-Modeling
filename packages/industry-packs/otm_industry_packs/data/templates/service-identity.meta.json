@@ -1,0 +1,20 @@
+{
+  "id": "service-identity",
+  "title": "Machine-to-machine / identidade de serviço",
+  "description": "Serviço A → emissão de token → Serviço B → recurso protegido.",
+  "suggested_pack": "cloud_native",
+  "category": "identity_access",
+  "category_label": "Identity & Access",
+  "tags": [
+    "m2m",
+    "oauth_client",
+    "jwt"
+  ],
+  "complexity": "medium",
+  "best_for": "Chamadas serviço-a-serviço com credenciais de workload.",
+  "suggested_methodology": "stride",
+  "recommendation_hints": [
+    "workload_identity",
+    "token_audience"
+  ]
+}

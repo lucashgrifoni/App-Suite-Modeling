@@ -1,0 +1,74 @@
+model:
+  schema_version: 1.0.0
+  methodology: stride
+  system_type: web_application
+  industry_sector: generic
+metadata:
+  title: Upload e processamento
+  summary: Cliente envia ficheiro; validação; armazenamento; processamento.
+  tags:
+  - template
+  - upload
+business_context:
+  description: Definir limites de tamanho, tipo MIME e isolamento de malware.
+  assumptions:
+  - Armazenamento privado com políticas de retenção.
+trust_boundaries:
+- id: internet
+  name: Internet
+- id: dmz
+  name: DMZ / edge
+  member_component_ids:
+  - upload
+- id: app_tier
+  name: Aplicação / dados
+  member_component_ids:
+  - scan
+  - store
+  - proc
+components:
+- id: user
+  name: Utilizador
+  kind: user
+  in_trust_boundary: internet
+- id: upload
+  name: Endpoint de upload
+  kind: process
+  in_trust_boundary: dmz
+- id: scan
+  name: Scan / validação
+  kind: process
+  in_trust_boundary: app_tier
+- id: store
+  name: Armazenamento de objetos
+  kind: datastore
+  technology: S3/Blob
+  in_trust_boundary: app_tier
+- id: proc
+  name: Pipeline processamento
+  kind: process
+  in_trust_boundary: app_tier
+data_flows:
+- id: u_up
+  from_component: user
+  to_component: upload
+  protocol: HTTPS
+  encrypted: true
+  authenticated: true
+- id: up_sc
+  from_component: upload
+  to_component: scan
+  protocol: HTTPS
+- id: sc_st
+  from_component: scan
+  to_component: store
+  protocol: HTTPS
+  encrypted: true
+- id: st_pr
+  from_component: store
+  to_component: proc
+  protocol: HTTPS
+assets: []
+threats: []
+mitigations: []
+evidence_suggestions: []

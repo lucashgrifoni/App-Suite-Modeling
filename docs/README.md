@@ -144,4 +144,9 @@ Abra `http://localhost:5173`.
 | [VERSIONING_AND_TAGS.md](VERSIONING_AND_TAGS.md) | Convenção de versionamento e tags |
 | [EXPORTERS.md](EXPORTERS.md) | JSON, Markdown, Mermaid e bundle |
 | [TEMPLATES_AND_PACKS.md](TEMPLATES_AND_PACKS.md) | Templates iniciais e industry packs |
+| [TEMPLATE_CATALOG.md](TEMPLATE_CATALOG.md) | Catálogo embutido: categorias, API/UI/CLI, manutenção |
+| [PRODUCT_POSITIONING.md](PRODUCT_POSITIONING.md) | Posicionamento do produto (AppSec / DevSecOps, OSS) |
+| [SCREENSHOT_GUIDE.md](SCREENSHOT_GUIDE.md) | Guia para capturas da UI (README e materiais) |
+| [README_RELEASE_VALIDATION.md](README_RELEASE_VALIDATION.md) | Validação da rodada README / metadata |
+| [README_RELEASE_HANDOFF.md](README_RELEASE_HANDOFF.md) | Handoff README / publicação GitHub |
 | [adr/](adr/) | Architecture Decision Records |

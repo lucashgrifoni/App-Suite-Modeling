@@ -6,8 +6,9 @@
 
 - **O quê:** ficheiros `.otm.yaml` **válidos** que servem de ponto de partida (estrutura de componentes, fluxos, fronteiras).
 - **Onde:** `packages/industry-packs/otm_industry_packs/data/templates/<id>.otm.yaml`
-- **Manifesto opcional:** `<id>.meta.json` com título, descrição e `suggested_pack` (ID do pack recomendado na análise).
-- **CLI:** `otm init -t <id>`, `otm templates`, `otm init --list-templates`
+- **Manifesto opcional:** `<id>.meta.json` com título, descrição, `suggested_pack`, categoria, tags, complexidade, metodologia sugerida, etc.
+- **Fonte para novos templates:** `otm_industry_packs/catalog/registry_data.py` + `scripts/emit_template_catalog.py` (ver [TEMPLATE_CATALOG.md](TEMPLATE_CATALOG.md)).
+- **CLI:** `otm init -t <id>`, `otm templates`, `otm templates list`, `otm templates show <id>`, `otm init --list-templates`
 
 ### Industry packs
 
@@ -44,7 +45,13 @@ otm report modelo.otm.yaml --pack saas -o REL.md
 | `transport` | Transporte |
 | `cloud_native` | Cloud / Kubernetes |
 
-## Templates disponíveis (inicial)
+## Catálogo de templates
+
+O catálogo embutido inclui **dezenas** de cenários (aplicações, cloud, identidade, integrações, IA, setores, objetivos). Lista completa e filtros: **API** `GET /v1/templates`, **UI** página Templates, **CLI** `otm templates list`.
+
+Referência rápida: [TEMPLATE_CATALOG.md](TEMPLATE_CATALOG.md).
+
+## Templates legados (exemplos)
 
 | ID | Uso |
 |----|-----|

@@ -1,0 +1,20 @@
+{
+  "id": "cloud-native-full",
+  "title": "Cloud-native completo",
+  "description": "Ingress → workloads → serviços internos → cache → BD → observabilidade.",
+  "suggested_pack": "cloud_native",
+  "category": "cloud_infra",
+  "category_label": "Cloud & Infra",
+  "tags": [
+    "kubernetes",
+    "observability",
+    "mesh"
+  ],
+  "complexity": "high",
+  "best_for": "Arquiteturas K8s com observabilidade e serviços internos.",
+  "suggested_methodology": "stride",
+  "recommendation_hints": [
+    "service_mesh_policy",
+    "secrets_in_cluster"
+  ]
+}

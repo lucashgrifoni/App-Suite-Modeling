@@ -1,0 +1,20 @@
+{
+  "id": "payment-integration",
+  "title": "Pagamento / integração fintech",
+  "description": "Checkout → API de pagamento → tokenização/provedor → ledger/loja.",
+  "suggested_pack": "finance",
+  "category": "integrations",
+  "category_label": "Integrations",
+  "tags": [
+    "payment",
+    "pci",
+    "fintech"
+  ],
+  "complexity": "high",
+  "best_for": "Fluxos de cobrança com tokenização e conciliação.",
+  "suggested_methodology": "pasta",
+  "recommendation_hints": [
+    "pci_scope",
+    "webhook_settlement"
+  ]
+}

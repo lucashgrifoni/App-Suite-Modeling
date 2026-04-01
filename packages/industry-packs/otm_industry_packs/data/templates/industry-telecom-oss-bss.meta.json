@@ -1,0 +1,20 @@
+{
+  "id": "industry-telecom-oss-bss",
+  "title": "Telecom / integração OSS-BSS",
+  "description": "Portal/API → serviços de negócio → sistemas de assinante/faturação.",
+  "suggested_pack": "telecom",
+  "category": "industry",
+  "category_label": "Industry",
+  "tags": [
+    "telecom",
+    "bss",
+    "oss"
+  ],
+  "complexity": "high",
+  "best_for": "Operadores com stacks legadas OSS/BSS.",
+  "suggested_methodology": "stride",
+  "recommendation_hints": [
+    "number_portability",
+    "cdr_integrity"
+  ]
+}

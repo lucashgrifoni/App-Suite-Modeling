@@ -1,0 +1,20 @@
+{
+  "id": "industry-ecommerce",
+  "title": "E-commerce padrão",
+  "description": "Browser → loja → carrinho/encomenda → pagamento → base de dados.",
+  "suggested_pack": "saas",
+  "category": "industry",
+  "category_label": "Industry",
+  "tags": [
+    "retail",
+    "ecommerce",
+    "checkout"
+  ],
+  "complexity": "medium",
+  "best_for": "Lojas online B2C típicas.",
+  "suggested_methodology": "stride",
+  "recommendation_hints": [
+    "session_fixation",
+    "payment_fraud"
+  ]
+}

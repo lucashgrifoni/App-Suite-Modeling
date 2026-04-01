@@ -1,0 +1,20 @@
+{
+  "id": "industry-transport-logistics",
+  "title": "Transporte / logística",
+  "description": "Portal/app → dispatch/tracking → telemetria → integrações parceiros.",
+  "suggested_pack": "transport",
+  "category": "industry",
+  "category_label": "Industry",
+  "tags": [
+    "logistics",
+    "iot",
+    "tracking"
+  ],
+  "complexity": "medium",
+  "best_for": "Operações de frota, última milha e visibilidade.",
+  "suggested_methodology": "stride",
+  "recommendation_hints": [
+    "gps_spoofing",
+    "partner_api_abuse"
+  ]
+}

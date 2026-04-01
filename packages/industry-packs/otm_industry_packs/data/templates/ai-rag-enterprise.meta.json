@@ -1,0 +1,20 @@
+{
+  "id": "ai-rag-enterprise",
+  "title": "RAG corporativo",
+  "description": "UI → API de retrieval → vector DB → arquivo de documentos → fornecedor LLM.",
+  "suggested_pack": "saas",
+  "category": "ai_llm",
+  "category_label": "AI & LLM",
+  "tags": [
+    "rag",
+    "vector",
+    "enterprise"
+  ],
+  "complexity": "high",
+  "best_for": "Respostas fundamentadas em corpus interno com embeddings.",
+  "suggested_methodology": "plot4ai",
+  "recommendation_hints": [
+    "embedding_leakage",
+    "acl_on_chunks"
+  ]
+}

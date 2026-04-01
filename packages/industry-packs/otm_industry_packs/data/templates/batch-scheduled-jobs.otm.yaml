@@ -1,0 +1,63 @@
+model:
+  schema_version: 1.0.0
+  methodology: stride
+  system_type: batch_data_pipeline
+  industry_sector: generic
+metadata:
+  title: Jobs agendados
+  summary: Agendador dispara workers que leem/ escrevem dados e chamam APIs.
+  tags:
+  - template
+  - batch
+business_context:
+  description: Fluxos não interativos com janelas de processamento definidas.
+  assumptions:
+  - Idempotência nas saídas.
+trust_boundaries:
+- id: internet
+  name: Internet
+- id: app_tier
+  name: Processamento
+  member_component_ids:
+  - sched
+  - worker
+  - store
+components:
+- id: sched
+  name: Agendador
+  kind: process
+  technology: Cron/Cloud Scheduler
+  in_trust_boundary: app_tier
+- id: worker
+  name: Worker batch
+  kind: process
+  in_trust_boundary: app_tier
+- id: store
+  name: Armazenamento
+  kind: datastore
+  technology: Object/SQL
+  in_trust_boundary: app_tier
+- id: ext
+  name: API externa
+  kind: external_entity
+  in_trust_boundary: internet
+data_flows:
+- id: s_w
+  from_component: sched
+  to_component: worker
+  protocol: TCP
+- id: w_st
+  from_component: worker
+  to_component: store
+  protocol: TCP
+  encrypted: true
+- id: w_e
+  from_component: worker
+  to_component: ext
+  protocol: HTTPS
+  encrypted: true
+  authenticated: true
+assets: []
+threats: []
+mitigations: []
+evidence_suggestions: []

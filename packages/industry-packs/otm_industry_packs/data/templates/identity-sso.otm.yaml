@@ -1,0 +1,64 @@
+model:
+  schema_version: 1.0.0
+  methodology: stride
+  system_type: web_application
+  industry_sector: generic
+metadata:
+  title: Integração SSO
+  summary: Cliente, aplicação, IdP e consumo de tokens nos serviços.
+  tags:
+  - template
+  - sso
+business_context:
+  description: Fluxo de login federado e emissão de tokens para APIs.
+  assumptions:
+  - MFA no IdP quando aplicável.
+trust_boundaries:
+- id: internet
+  name: Internet
+- id: app_tier
+  name: Conta / VPC aplicação
+  member_component_ids:
+  - app
+  - idp
+  - api
+components:
+- id: user
+  name: Utilizador
+  kind: user
+  in_trust_boundary: internet
+- id: app
+  name: Aplicação
+  kind: process
+  in_trust_boundary: app_tier
+- id: idp
+  name: Identity Provider
+  kind: process
+  technology: OIDC/SAML
+  in_trust_boundary: app_tier
+- id: api
+  name: API a jusante
+  kind: process
+  in_trust_boundary: app_tier
+data_flows:
+- id: u_app
+  from_component: user
+  to_component: app
+  protocol: HTTPS
+  encrypted: true
+  authenticated: true
+- id: app_idp
+  from_component: app
+  to_component: idp
+  protocol: HTTPS
+  encrypted: true
+- id: app_api
+  from_component: app
+  to_component: api
+  protocol: HTTPS
+  encrypted: true
+  authenticated: true
+assets: []
+threats: []
+mitigations: []
+evidence_suggestions: []

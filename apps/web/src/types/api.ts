@@ -7,6 +7,13 @@ export interface TemplateListItem {
   title: string;
   description: string;
   suggested_pack: string | null;
+  category: string;
+  category_label: string;
+  tags: string[];
+  complexity: string | null;
+  best_for: string | null;
+  suggested_methodology: string | null;
+  recommendation_hints: string[];
 }
 
 export interface ValidateResponse {

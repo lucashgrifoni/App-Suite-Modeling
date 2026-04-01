@@ -1,0 +1,61 @@
+model:
+  schema_version: 1.0.0
+  methodology: plot4ai
+  system_type: web_application
+  industry_sector: generic
+metadata:
+  title: Chat LLM
+  summary: Interface, orquestrador e fornecedor de inferência.
+  tags:
+  - template
+  - llm
+  - genai
+business_context:
+  description: Classificar dados enviados ao modelo e reter logs conforme política.
+  assumptions:
+  - Sem dados sensíveis em prompts sem controlo.
+trust_boundaries:
+- id: internet
+  name: Internet
+- id: app_tier
+  name: Conta / VPC
+  member_component_ids:
+  - ui
+  - orch
+components:
+- id: user
+  name: Utilizador
+  kind: user
+  in_trust_boundary: internet
+- id: ui
+  name: UI chat
+  kind: process
+  in_trust_boundary: app_tier
+- id: orch
+  name: Orquestração de prompts
+  kind: process
+  in_trust_boundary: app_tier
+- id: provider
+  name: Fornecedor LLM
+  kind: external_entity
+  in_trust_boundary: internet
+data_flows:
+- id: u_ui
+  from_component: user
+  to_component: ui
+  protocol: HTTPS
+  encrypted: true
+- id: ui_o
+  from_component: ui
+  to_component: orch
+  protocol: HTTPS
+- id: o_p
+  from_component: orch
+  to_component: provider
+  protocol: HTTPS
+  encrypted: true
+  authenticated: true
+assets: []
+threats: []
+mitigations: []
+evidence_suggestions: []

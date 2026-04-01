@@ -1,0 +1,20 @@
+{
+  "id": "file-upload-processing",
+  "title": "Upload de ficheiros / processamento de documentos",
+  "description": "Upload → validação/scan → armazenamento → pipeline de processamento.",
+  "suggested_pack": "saas",
+  "category": "integrations",
+  "category_label": "Integrations",
+  "tags": [
+    "upload",
+    "malware_scan",
+    "documents"
+  ],
+  "complexity": "medium",
+  "best_for": "Conteúdos não confiáveis na entrada com pipeline de análise.",
+  "suggested_methodology": "stride",
+  "recommendation_hints": [
+    "content_disarm",
+    "virus_scan"
+  ]
+}

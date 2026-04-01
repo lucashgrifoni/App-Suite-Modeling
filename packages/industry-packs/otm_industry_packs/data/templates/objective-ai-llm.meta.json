@@ -1,0 +1,20 @@
+{
+  "id": "objective-ai-llm",
+  "title": "Objetivo: aplicação com IA/LLM",
+  "description": "Modelo generativo, RAG, agente ou fornecedor de IA externo.",
+  "suggested_pack": "saas",
+  "category": "objective",
+  "category_label": "Objective-based",
+  "tags": [
+    "ai",
+    "llm",
+    "genai"
+  ],
+  "complexity": "medium",
+  "best_for": "Ancorar análise em PLOT4ai e superfícies de prompt/tool.",
+  "suggested_methodology": "plot4ai",
+  "recommendation_hints": [
+    "plot4ai_layers",
+    "model_provider_trust"
+  ]
+}

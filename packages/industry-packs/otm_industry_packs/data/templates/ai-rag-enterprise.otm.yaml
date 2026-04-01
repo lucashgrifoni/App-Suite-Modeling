@@ -1,0 +1,82 @@
+model:
+  schema_version: 1.0.0
+  methodology: plot4ai
+  system_type: hybrid
+  industry_sector: generic
+metadata:
+  title: RAG corporativo
+  summary: Consulta, recuperação, base vetorial e geração.
+  tags:
+  - template
+  - rag
+business_context:
+  description: Controlar ACL por documento e evitar vazamento de contexto.
+  assumptions:
+  - Pipeline de indexação com classificação de sensibilidade.
+trust_boundaries:
+- id: internet
+  name: Internet
+- id: app_tier
+  name: Conta / VPC
+  member_component_ids:
+  - ui
+  - retrieval
+  - vdb
+  - docs
+components:
+- id: user
+  name: Utilizador
+  kind: user
+  in_trust_boundary: internet
+- id: ui
+  name: UI
+  kind: process
+  in_trust_boundary: app_tier
+- id: retrieval
+  name: API de retrieval
+  kind: process
+  in_trust_boundary: app_tier
+- id: vdb
+  name: Vector DB
+  kind: datastore
+  technology: pgvector
+  in_trust_boundary: app_tier
+- id: docs
+  name: Arquivo documental
+  kind: datastore
+  technology: Object/SQL
+  in_trust_boundary: app_tier
+- id: llm
+  name: Fornecedor LLM
+  kind: external_entity
+  in_trust_boundary: internet
+data_flows:
+- id: u_ui
+  from_component: user
+  to_component: ui
+  protocol: HTTPS
+  encrypted: true
+- id: ui_r
+  from_component: ui
+  to_component: retrieval
+  protocol: HTTPS
+- id: r_v
+  from_component: retrieval
+  to_component: vdb
+  protocol: TCP
+  encrypted: true
+- id: r_d
+  from_component: retrieval
+  to_component: docs
+  protocol: TCP
+  encrypted: true
+- id: r_l
+  from_component: retrieval
+  to_component: llm
+  protocol: HTTPS
+  encrypted: true
+  authenticated: true
+assets: []
+threats: []
+mitigations: []
+evidence_suggestions: []

@@ -1,0 +1,63 @@
+model:
+  schema_version: 1.0.0
+  methodology: stride
+  system_type: web_application
+  industry_sector: saas
+metadata:
+  title: SaaS multi-tenant
+  summary: Entrada tenant-aware, camada de aplicação e persistência isolada ou partilhada.
+  tags:
+  - template
+  - saas
+  - tenant
+business_context:
+  description: Modelo de isolamento (schema, BD ou conta) deve ser explícito.
+  assumptions:
+  - Política de dados por tenant documentada.
+trust_boundaries:
+- id: internet
+  name: Internet
+- id: app_tier
+  name: Conta / VPC aplicação
+  member_component_ids:
+  - edge
+  - app
+  - tenant_db
+components:
+- id: user
+  name: Utilizador do tenant
+  kind: user
+  in_trust_boundary: internet
+- id: edge
+  name: Entrada web/API
+  kind: gateway
+  in_trust_boundary: app_tier
+- id: app
+  name: Aplicação SaaS
+  kind: process
+  in_trust_boundary: app_tier
+- id: tenant_db
+  name: Persistência tenant
+  kind: datastore
+  technology: PostgreSQL
+  in_trust_boundary: app_tier
+data_flows:
+- id: u_e
+  from_component: user
+  to_component: edge
+  protocol: HTTPS
+  encrypted: true
+  authenticated: true
+- id: e_a
+  from_component: edge
+  to_component: app
+  protocol: HTTPS
+- id: a_d
+  from_component: app
+  to_component: tenant_db
+  protocol: TCP
+  encrypted: true
+assets: []
+threats: []
+mitigations: []
+evidence_suggestions: []

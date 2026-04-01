@@ -1,0 +1,55 @@
+model:
+  schema_version: 1.0.0
+  methodology: stride
+  system_type: hybrid
+  industry_sector: generic
+metadata:
+  title: 'Foco: admin privilegiado'
+  summary: Administrador, consola privilegiada e sistemas críticos.
+  tags:
+  - template
+  - objective
+  - admin
+business_context:
+  description: Mapear elevação de privilégio e segmentação.
+  assumptions:
+  - Contas admin rastreadas individualmente.
+trust_boundaries:
+- id: internet
+  name: Internet
+- id: app_tier
+  name: Conta / VPC aplicação
+  member_component_ids:
+  - admin
+  - jump
+  - crit
+components:
+- id: admin
+  name: Administrador
+  kind: user
+  in_trust_boundary: internet
+- id: jump
+  name: Jump host / PAM
+  kind: process
+  in_trust_boundary: app_tier
+- id: crit
+  name: Sistema crítico
+  kind: process
+  in_trust_boundary: app_tier
+data_flows:
+- id: a_j
+  from_component: admin
+  to_component: jump
+  protocol: HTTPS
+  encrypted: true
+  authenticated: true
+- id: j_c
+  from_component: jump
+  to_component: crit
+  protocol: SSH
+  encrypted: true
+  authenticated: true
+assets: []
+threats: []
+mitigations: []
+evidence_suggestions: []

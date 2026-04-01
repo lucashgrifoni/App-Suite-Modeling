@@ -1,0 +1,65 @@
+model:
+  schema_version: 1.0.0
+  methodology: stride
+  system_type: api_backend
+  industry_sector: generic
+metadata:
+  title: Identidade M2M
+  summary: Cliente de serviço obtém token e acede a recurso protegido.
+  tags:
+  - template
+  - m2m
+business_context:
+  description: Padrão OAuth client credentials ou SPIFFE.
+  assumptions:
+  - Rotação de segredos automatizada.
+trust_boundaries:
+- id: internet
+  name: Internet
+- id: app_tier
+  name: Conta / VPC aplicação
+  member_component_ids:
+  - svc_a
+  - sts
+  - svc_b
+  - resource
+components:
+- id: svc_a
+  name: Serviço A (cliente)
+  kind: process
+  in_trust_boundary: app_tier
+- id: sts
+  name: Emissor de tokens
+  kind: process
+  technology: STS/OAuth
+  in_trust_boundary: app_tier
+- id: svc_b
+  name: Serviço B (recurso)
+  kind: process
+  in_trust_boundary: app_tier
+- id: resource
+  name: Dados protegidos
+  kind: datastore
+  in_trust_boundary: app_tier
+data_flows:
+- id: a_sts
+  from_component: svc_a
+  to_component: sts
+  protocol: HTTPS
+  encrypted: true
+  authenticated: true
+- id: a_b
+  from_component: svc_a
+  to_component: svc_b
+  protocol: HTTPS
+  encrypted: true
+  authenticated: true
+- id: b_r
+  from_component: svc_b
+  to_component: resource
+  protocol: TCP
+  encrypted: true
+assets: []
+threats: []
+mitigations: []
+evidence_suggestions: []

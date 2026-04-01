@@ -1,0 +1,72 @@
+model:
+  schema_version: 1.0.0
+  methodology: stride
+  system_type: hybrid
+  industry_sector: generic
+metadata:
+  title: Integração com parceiro
+  summary: Gateway interno, adaptador e fila de reconciliação.
+  tags:
+  - template
+  - partner
+business_context:
+  description: Contratos e SLAs com parceiros devem estar explícitos.
+  assumptions:
+  - Idempotência nos callbacks.
+trust_boundaries:
+- id: internet
+  name: Internet
+- id: dmz
+  name: DMZ / edge
+  member_component_ids:
+  - gw
+- id: app_tier
+  name: Aplicação / dados
+  member_component_ids:
+  - adapter
+  - queue
+  - recon
+components:
+- id: internal
+  name: Cliente interno
+  kind: user
+  in_trust_boundary: internet
+- id: gw
+  name: Gateway interno
+  kind: gateway
+  in_trust_boundary: dmz
+- id: adapter
+  name: Adaptador parceiro
+  kind: process
+  in_trust_boundary: app_tier
+- id: queue
+  name: Fila reconciliação
+  kind: queue
+  in_trust_boundary: app_tier
+- id: recon
+  name: Serviço reconciliação
+  kind: process
+  in_trust_boundary: app_tier
+data_flows:
+- id: i_g
+  from_component: internal
+  to_component: gw
+  protocol: HTTPS
+  encrypted: true
+- id: g_a
+  from_component: gw
+  to_component: adapter
+  protocol: HTTPS
+- id: a_q
+  from_component: adapter
+  to_component: queue
+  protocol: TCP
+  encrypted: true
+- id: q_r
+  from_component: queue
+  to_component: recon
+  protocol: TCP
+assets: []
+threats: []
+mitigations: []
+evidence_suggestions: []

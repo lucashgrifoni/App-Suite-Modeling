@@ -1,0 +1,52 @@
+model:
+  schema_version: 1.0.0
+  methodology: stride
+  system_type: api_backend
+  industry_sector: generic
+metadata:
+  title: Consumidor API terceira
+  summary: Serviço interno chama fornecedor com cache e persistência.
+  tags:
+  - template
+  - integration
+business_context:
+  description: Mapear quotas, chaves e dados retidos localmente.
+  assumptions:
+  - Retry com backoff e idempotência.
+trust_boundaries:
+- id: internet
+  name: Internet
+- id: app_tier
+  name: Conta / VPC
+  member_component_ids:
+  - svc
+  - db
+components:
+- id: svc
+  name: Serviço interno
+  kind: process
+  in_trust_boundary: app_tier
+- id: provider
+  name: Fornecedor SaaS/API
+  kind: external_entity
+  in_trust_boundary: internet
+- id: db
+  name: Persistência local
+  kind: datastore
+  in_trust_boundary: app_tier
+data_flows:
+- id: s_p
+  from_component: svc
+  to_component: provider
+  protocol: HTTPS
+  encrypted: true
+  authenticated: true
+- id: s_d
+  from_component: svc
+  to_component: db
+  protocol: TCP
+  encrypted: true
+assets: []
+threats: []
+mitigations: []
+evidence_suggestions: []

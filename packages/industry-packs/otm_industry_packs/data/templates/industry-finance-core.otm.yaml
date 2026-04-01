@@ -1,0 +1,80 @@
+model:
+  schema_version: 1.0.0
+  methodology: pasta
+  system_type: api_backend
+  industry_sector: finance
+metadata:
+  title: Core transacional financeiro
+  summary: Autenticação forte, transação e ledger imutável.
+  tags:
+  - template
+  - finance
+business_context:
+  description: Controles SOX/GDPR conforme âmbito.
+  assumptions:
+  - Assinatura de eventos de ledger quando aplicável.
+trust_boundaries:
+- id: internet
+  name: Internet
+- id: app_tier
+  name: Conta / VPC aplicação
+  member_component_ids:
+  - gw
+  - auth
+  - txn
+  - ledger
+  - audit
+components:
+- id: client
+  name: Cliente
+  kind: user
+  in_trust_boundary: internet
+- id: gw
+  name: Gateway API
+  kind: gateway
+  in_trust_boundary: app_tier
+- id: auth
+  name: Autenticação
+  kind: process
+  in_trust_boundary: app_tier
+- id: txn
+  name: Serviço de transação
+  kind: process
+  in_trust_boundary: app_tier
+- id: ledger
+  name: Ledger
+  kind: datastore
+  technology: Imutável
+  in_trust_boundary: app_tier
+- id: audit
+  name: Auditoria
+  kind: datastore
+  in_trust_boundary: app_tier
+data_flows:
+- id: c_g
+  from_component: client
+  to_component: gw
+  protocol: HTTPS
+  encrypted: true
+- id: g_a
+  from_component: gw
+  to_component: auth
+  protocol: HTTPS
+- id: a_t
+  from_component: auth
+  to_component: txn
+  protocol: HTTPS
+- id: t_l
+  from_component: txn
+  to_component: ledger
+  protocol: TCP
+  encrypted: true
+- id: t_au
+  from_component: txn
+  to_component: audit
+  protocol: TCP
+  encrypted: true
+assets: []
+threats: []
+mitigations: []
+evidence_suggestions: []

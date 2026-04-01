@@ -2,5 +2,12 @@
   "id": "cloud-native",
   "title": "Cloud-native (Kubernetes)",
   "description": "Ingress, workload, cache e BD no cluster.",
-  "suggested_pack": "cloud_native"
+  "suggested_pack": "cloud_native",
+  "category": "cloud_infra",
+  "category_label": "Cloud & Infra",
+  "tags": ["kubernetes", "ingress", "legacy-catalog"],
+  "complexity": "high",
+  "best_for": "Workloads em cluster com cache e persistência.",
+  "suggested_methodology": "stride",
+  "recommendation_hints": ["network_policy", "secret_mounts"]
 }

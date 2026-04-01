@@ -1,0 +1,73 @@
+model:
+  schema_version: 1.0.0
+  methodology: stride
+  system_type: hybrid
+  industry_sector: cloud_native
+metadata:
+  title: Contentores geridos
+  summary: Entrada balanceada, aplicação em contentores e persistência.
+  tags:
+  - template
+  - containers
+business_context:
+  description: Sem K8s self-managed; foco em serviço de orquestração gerido.
+  assumptions:
+  - Imagens assinadas e varredura de vulnerabilidades.
+trust_boundaries:
+- id: internet
+  name: Internet
+- id: app_tier
+  name: Conta / VPC aplicação
+  member_component_ids:
+  - lb
+  - app
+  - cache
+  - db
+components:
+- id: user
+  name: Cliente
+  kind: user
+  in_trust_boundary: internet
+- id: lb
+  name: LB / WAF
+  kind: gateway
+  in_trust_boundary: app_tier
+- id: app
+  name: Serviço em contentor
+  kind: process
+  technology: Containers
+  in_trust_boundary: app_tier
+- id: cache
+  name: Cache
+  kind: datastore
+  technology: Redis
+  in_trust_boundary: app_tier
+- id: db
+  name: Base de dados
+  kind: datastore
+  technology: PostgreSQL
+  in_trust_boundary: app_tier
+data_flows:
+- id: u_lb
+  from_component: user
+  to_component: lb
+  protocol: HTTPS
+  encrypted: true
+- id: lb_app
+  from_component: lb
+  to_component: app
+  protocol: HTTPS
+- id: app_c
+  from_component: app
+  to_component: cache
+  protocol: TCP
+  encrypted: true
+- id: app_db
+  from_component: app
+  to_component: db
+  protocol: TCP
+  encrypted: true
+assets: []
+threats: []
+mitigations: []
+evidence_suggestions: []

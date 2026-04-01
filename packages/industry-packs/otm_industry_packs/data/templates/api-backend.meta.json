@@ -2,5 +2,12 @@
   "id": "api-backend",
   "title": "API + fila + worker",
   "description": "Integrações síncronas e processamento assíncrono.",
-  "suggested_pack": "saas"
+  "suggested_pack": "saas",
+  "category": "applications",
+  "category_label": "Applications",
+  "tags": ["api", "queue", "async", "legacy-catalog"],
+  "complexity": "medium",
+  "best_for": "Backends com fila e workers.",
+  "suggested_methodology": "stride",
+  "recommendation_hints": ["broker_auth", "poison_message"]
 }

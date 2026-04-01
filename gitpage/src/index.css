@@ -1,0 +1,42 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-midnight: #0c124c;
+  --color-mist: #d5d8dd;
+  --color-mint: #08b98b;
+  --color-slate: #5a6876;
+  --color-steel: #7c8394;
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply bg-midnight text-mist antialiased;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+}
+
+::selection {
+  @apply bg-mint/30 text-white;
+}
+
+/* Focus visible for a11y */
+:focus-visible {
+  @apply outline-mint outline-2 outline-offset-2;
+}
+
+@layer utilities {
+  .glass {
+    @apply border border-white/10 bg-white/[0.04] backdrop-blur-xl;
+  }
+  .glass-strong {
+    @apply border border-white/15 bg-white/[0.07] backdrop-blur-2xl;
+  }
+  .text-gradient-mint {
+    @apply bg-gradient-to-r from-mint via-emerald-300 to-mint bg-clip-text text-transparent;
+  }
+}

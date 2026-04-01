@@ -22,8 +22,25 @@ export async function createBlankModel(): Promise<{ document: OtmDocument }> {
   return apiFetch("/v1/models", { method: "POST" });
 }
 
-export async function listTemplates(): Promise<TemplateListItem[]> {
-  return apiFetch("/v1/templates");
+export type TemplateListQuery = {
+  category?: string;
+  tag?: string;
+  complexity?: string;
+  q?: string;
+};
+
+export async function listTemplates(params?: TemplateListQuery): Promise<TemplateListItem[]> {
+  const sp = new URLSearchParams();
+  if (params?.category) sp.set("category", params.category);
+  if (params?.tag) sp.set("tag", params.tag);
+  if (params?.complexity) sp.set("complexity", params.complexity);
+  if (params?.q) sp.set("q", params.q);
+  const qs = sp.toString();
+  return apiFetch(`/v1/templates${qs ? `?${qs}` : ""}`);
+}
+
+export async function getTemplate(templateId: string): Promise<TemplateListItem> {
+  return apiFetch(`/v1/templates/${encodeURIComponent(templateId)}`);
 }
 
 export async function instantiateTemplate(

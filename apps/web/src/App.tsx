@@ -1,6 +1,7 @@
 import { lazy, Suspense } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { SessionProvider } from "./context/SessionContext";
+import { AnalysisHistoryProvider } from "./context/AnalysisHistoryContext";
 import { AppLayout } from "./components/layout/AppLayout";
 import { RouteFallback } from "./components/layout/RouteFallback";
 
@@ -28,26 +29,32 @@ const ExportPage = lazy(() =>
 const DiffPage = lazy(() =>
   import("./pages/DiffPage").then((m) => ({ default: m.DiffPage })),
 );
+const HistoryPage = lazy(() =>
+  import("./pages/HistoryPage").then((m) => ({ default: m.HistoryPage })),
+);
 
 export default function App() {
   return (
     <BrowserRouter>
       <SessionProvider>
-        <Suspense fallback={<RouteFallback />}>
-          <Routes>
-            <Route element={<AppLayout />}>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/templates" element={<TemplatesPage />} />
-              <Route path="/import" element={<ImportPage />} />
-              <Route path="/wizard" element={<WizardPage />} />
-              <Route path="/review" element={<ReviewPage />} />
-              <Route path="/analysis" element={<AnalysisPage />} />
-              <Route path="/export" element={<ExportPage />} />
-              <Route path="/diff" element={<DiffPage />} />
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Route>
-          </Routes>
-        </Suspense>
+        <AnalysisHistoryProvider>
+          <Suspense fallback={<RouteFallback />}>
+            <Routes>
+              <Route element={<AppLayout />}>
+                <Route path="/" element={<HomePage />} />
+                <Route path="/templates" element={<TemplatesPage />} />
+                <Route path="/import" element={<ImportPage />} />
+                <Route path="/wizard" element={<WizardPage />} />
+                <Route path="/review" element={<ReviewPage />} />
+                <Route path="/analysis" element={<AnalysisPage />} />
+                <Route path="/export" element={<ExportPage />} />
+                <Route path="/diff" element={<DiffPage />} />
+                <Route path="/history" element={<HistoryPage />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Route>
+            </Routes>
+          </Suspense>
+        </AnalysisHistoryProvider>
       </SessionProvider>
     </BrowserRouter>
   );

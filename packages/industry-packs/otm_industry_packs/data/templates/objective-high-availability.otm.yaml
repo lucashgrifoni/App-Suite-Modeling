@@ -1,0 +1,75 @@
+model:
+  schema_version: 1.0.0
+  methodology: stride
+  system_type: hybrid
+  industry_sector: generic
+metadata:
+  title: 'Foco: alta disponibilidade'
+  summary: Tráfego, réplicas e armazenamento resiliente.
+  tags:
+  - template
+  - objective
+  - ha
+business_context:
+  description: Explicitar pontos únicos de falha e estratégia activo-activo.
+  assumptions:
+  - RTO/RPO definidos pelo negócio.
+trust_boundaries:
+- id: internet
+  name: Internet
+- id: app_tier
+  name: Conta / VPC aplicação
+  member_component_ids:
+  - lb
+  - svc_a
+  - svc_b
+  - db
+components:
+- id: user
+  name: Cliente
+  kind: user
+  in_trust_boundary: internet
+- id: lb
+  name: Balanceador global
+  kind: gateway
+  in_trust_boundary: app_tier
+- id: svc_a
+  name: Réplica A
+  kind: process
+  in_trust_boundary: app_tier
+- id: svc_b
+  name: Réplica B
+  kind: process
+  in_trust_boundary: app_tier
+- id: db
+  name: BD replicada
+  kind: datastore
+  in_trust_boundary: app_tier
+data_flows:
+- id: u_l
+  from_component: user
+  to_component: lb
+  protocol: HTTPS
+  encrypted: true
+- id: l_a
+  from_component: lb
+  to_component: svc_a
+  protocol: HTTPS
+- id: l_b
+  from_component: lb
+  to_component: svc_b
+  protocol: HTTPS
+- id: a_d
+  from_component: svc_a
+  to_component: db
+  protocol: TCP
+  encrypted: true
+- id: b_d
+  from_component: svc_b
+  to_component: db
+  protocol: TCP
+  encrypted: true
+assets: []
+threats: []
+mitigations: []
+evidence_suggestions: []

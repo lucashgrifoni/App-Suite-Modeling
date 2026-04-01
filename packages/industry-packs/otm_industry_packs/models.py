@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Literal
+
 from otm_core_schema.enums import ComponentKind, IndustrySector, StrideCategory
 from pydantic import BaseModel, Field
 
@@ -52,4 +54,33 @@ class TemplateInfo(BaseModel):
     suggested_pack: str | None = Field(
         default=None,
         description="ID do pack sugerido em analyze (opcional).",
+    )
+    # Catálogo (UI/API/CLI) — chave estável + etiqueta para apresentação
+    category: str = Field(
+        default="applications",
+        description=(
+            "Chave de agrupamento: applications, cloud_infra, identity_access, "
+            "integrations, ai_llm, industry, objective."
+        ),
+    )
+    category_label: str = Field(
+        default="Aplicações",
+        description="Rótulo curto para listagens (ex.: PT).",
+    )
+    tags: list[str] = Field(default_factory=list)
+    complexity: Literal["low", "medium", "high"] | None = Field(
+        default=None,
+        description="Complexidade sugerida do modelo inicial.",
+    )
+    best_for: str | None = Field(
+        default=None,
+        description="Uma linha: cenário ideal para este template.",
+    )
+    suggested_methodology: str | None = Field(
+        default=None,
+        description="Metodologia sugerida (stride, plot4ai, linddun, …) alinhada ao draft.",
+    )
+    recommendation_hints: list[str] = Field(
+        default_factory=list,
+        description="Sinais curtos para recomendação futura (sem lógica na UI).",
     )

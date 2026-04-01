@@ -1,0 +1,70 @@
+model:
+  schema_version: 1.0.0
+  methodology: plot4ai
+  system_type: batch_data_pipeline
+  industry_sector: generic
+metadata:
+  title: Pipeline de inferência
+  summary: Entrada, pré-processamento, modelo e arquivo de saídas.
+  tags:
+  - template
+  - inference
+business_context:
+  description: Rastreabilidade de inputs/outputs para auditoria de IA.
+  assumptions:
+  - Versão de modelo e dados de treino registadas.
+trust_boundaries:
+- id: internet
+  name: Internet
+- id: app_tier
+  name: Conta / VPC
+  member_component_ids:
+  - ingress
+  - pre
+  - out
+  - wf
+components:
+- id: ingress
+  name: Entrada (API/upload)
+  kind: gateway
+  in_trust_boundary: app_tier
+- id: pre
+  name: Pré-processamento
+  kind: process
+  in_trust_boundary: app_tier
+- id: model
+  name: Fornecedor de modelo
+  kind: external_entity
+  in_trust_boundary: internet
+- id: out
+  name: Arquivo de resultados
+  kind: datastore
+  in_trust_boundary: app_tier
+- id: wf
+  name: Workflow downstream
+  kind: process
+  in_trust_boundary: app_tier
+data_flows:
+- id: i_pr
+  from_component: ingress
+  to_component: pre
+  protocol: HTTPS
+- id: pr_m
+  from_component: pre
+  to_component: model
+  protocol: HTTPS
+  encrypted: true
+  authenticated: true
+- id: pr_o
+  from_component: pre
+  to_component: out
+  protocol: TCP
+  encrypted: true
+- id: o_w
+  from_component: out
+  to_component: wf
+  protocol: TCP
+assets: []
+threats: []
+mitigations: []
+evidence_suggestions: []

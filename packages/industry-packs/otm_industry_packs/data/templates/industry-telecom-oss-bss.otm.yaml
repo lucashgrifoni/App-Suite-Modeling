@@ -1,0 +1,70 @@
+model:
+  schema_version: 1.0.0
+  methodology: stride
+  system_type: hybrid
+  industry_sector: telecom
+metadata:
+  title: OSS-BSS telecom
+  summary: Canal digital, serviços de domínio e sistemas de registo.
+  tags:
+  - template
+  - telecom
+business_context:
+  description: Integrações com fornecedores de rede e billing.
+  assumptions:
+  - APIs com idempotência para provisão.
+trust_boundaries:
+- id: internet
+  name: Internet
+- id: app_tier
+  name: Conta / VPC aplicação
+  member_component_ids:
+  - portal
+  - bss
+  - oss
+  - subs
+components:
+- id: user
+  name: Cliente
+  kind: user
+  in_trust_boundary: internet
+- id: portal
+  name: Portal/API digital
+  kind: gateway
+  in_trust_boundary: app_tier
+- id: bss
+  name: Serviços BSS
+  kind: process
+  in_trust_boundary: app_tier
+- id: oss
+  name: Serviços OSS
+  kind: process
+  in_trust_boundary: app_tier
+- id: subs
+  name: Dados de assinante
+  kind: datastore
+  in_trust_boundary: app_tier
+data_flows:
+- id: u_p
+  from_component: user
+  to_component: portal
+  protocol: HTTPS
+  encrypted: true
+- id: p_b
+  from_component: portal
+  to_component: bss
+  protocol: HTTPS
+- id: b_o
+  from_component: bss
+  to_component: oss
+  protocol: TCP
+  encrypted: true
+- id: b_s
+  from_component: bss
+  to_component: subs
+  protocol: TCP
+  encrypted: true
+assets: []
+threats: []
+mitigations: []
+evidence_suggestions: []

@@ -10,8 +10,10 @@ import { Alert } from "../components/ui/Alert";
 import { PageHeader } from "../components/patterns/PageHeader";
 import { WorkflowGuide } from "../components/onboarding/WorkflowGuide";
 import { ContextHint } from "../components/onboarding/ContextHint";
+import { useAnalysisHistory } from "../context/AnalysisHistoryContext";
 import { useSession } from "../context/SessionContext";
 import { useToast } from "../context/ToastContext";
+import { downloadPdfBlob, generateReportPdfBlob } from "../lib/generateReportPdf";
 import type { ExportFormat } from "../types/api";
 
 const FORMATS: { id: ExportFormat; label: string; hint: string }[] = [
@@ -35,11 +37,13 @@ function downloadArtifact(name: string, content: string, mime: string) {
 
 export function ExportPage() {
   const { document: otmDoc, analysis } = useSession();
+  const { appendSnapshot } = useAnalysisHistory();
   const toast = useToast();
   const [selected, setSelected] = useState<Set<ExportFormat>>(
     () => new Set(["document_markdown", "analysis_markdown"]),
   );
   const [loading, setLoading] = useState(false);
+  const [pdfLoading, setPdfLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<Record<string, string> | null>(null);
 
@@ -75,6 +79,7 @@ export function ExportPage() {
         analysis: needsAnalysis ? analysis : null,
       });
       setResult(artifacts);
+      appendSnapshot("export");
       toast.success("Artefactos prontos para descarga.");
     } catch (e) {
       const msg = e instanceof ApiError ? e.message : "Exportação falhou.";
@@ -82,6 +87,27 @@ export function ExportPage() {
       toast.error(msg);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function runPdf() {
+    setError(null);
+    setPdfLoading(true);
+    try {
+      await new Promise<void>((r) => {
+        queueMicrotask(r);
+      });
+      const blob = await generateReportPdfBlob(model, analysis);
+      const safe = model.metadata.title.replace(/[^\w\-]+/g, "_").slice(0, 40);
+      downloadPdfBlob(blob, `otm-report-${safe}.pdf`);
+      appendSnapshot("export");
+      toast.success("PDF gerado.");
+    } catch {
+      const msg = "Falha ao gerar PDF.";
+      setError(msg);
+      toast.error(msg);
+    } finally {
+      setPdfLoading(false);
     }
   }
 
@@ -128,8 +154,26 @@ export function ExportPage() {
             </li>
           ))}
         </ul>
-        <Button className="mt-4" onClick={() => void runExport()} disabled={loading}>
+        <Button className="mt-4" onClick={() => void runExport()} disabled={loading || pdfLoading}>
           {loading ? "A gerar…" : "Gerar ficheiros"}
+        </Button>
+      </Card>
+
+      <Card
+        title="Relatório (PDF)"
+        subtitle="Gerado no browser (jsPDF) — modelo e análise em sessão, sem chamada extra de API."
+        variant="elevated"
+      >
+        <p className="text-sm text-otm-text-muted">
+          Inclui título, resumo, métricas e ameaças (amostra). Conteúdo em texto plano para leitura segura.
+        </p>
+        <Button
+          className="mt-4"
+          data-testid="export-pdf"
+          onClick={() => void runPdf()}
+          disabled={pdfLoading || loading}
+        >
+          {pdfLoading ? "A gerar PDF…" : "Gerar PDF"}
         </Button>
       </Card>
 

@@ -1,0 +1,20 @@
+{
+  "id": "data-pipeline-etl",
+  "title": "Pipeline de dados / ETL",
+  "description": "Ingestão → transformação → fila → armazém / data lake.",
+  "suggested_pack": "cloud_native",
+  "category": "cloud_infra",
+  "category_label": "Cloud & Infra",
+  "tags": [
+    "etl",
+    "data",
+    "warehouse"
+  ],
+  "complexity": "high",
+  "best_for": "Pipelines analíticos e integração de fontes múltiplas.",
+  "suggested_methodology": "nist_data_centric",
+  "recommendation_hints": [
+    "data_lineage",
+    "pii_in_pipeline"
+  ]
+}

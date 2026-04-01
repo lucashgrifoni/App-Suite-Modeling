@@ -1,0 +1,70 @@
+model:
+  schema_version: 1.0.0
+  methodology: stride
+  system_type: iot_system
+  industry_sector: transport
+metadata:
+  title: Logística e transporte
+  summary: Operadores, dispatch, telemetria e parceiros.
+  tags:
+  - template
+  - logistics
+business_context:
+  description: Dados de localização e estado de envio.
+  assumptions:
+  - Dispositivos com autenticação mútua quando possível.
+trust_boundaries:
+- id: internet
+  name: Internet
+- id: app_tier
+  name: Conta / VPC
+  member_component_ids:
+  - portal
+  - dispatch
+  - tel
+components:
+- id: user
+  name: Operador
+  kind: user
+  in_trust_boundary: internet
+- id: portal
+  name: Portal / app
+  kind: process
+  in_trust_boundary: app_tier
+- id: dispatch
+  name: Dispatch
+  kind: process
+  in_trust_boundary: app_tier
+- id: tel
+  name: Telemetria
+  kind: datastore
+  technology: TSDB
+  in_trust_boundary: app_tier
+- id: partner
+  name: Parceiro logístico
+  kind: external_entity
+  in_trust_boundary: internet
+data_flows:
+- id: u_po
+  from_component: user
+  to_component: portal
+  protocol: HTTPS
+  encrypted: true
+- id: p_d
+  from_component: portal
+  to_component: dispatch
+  protocol: HTTPS
+- id: d_t
+  from_component: dispatch
+  to_component: tel
+  protocol: TCP
+  encrypted: true
+- id: d_pa
+  from_component: dispatch
+  to_component: partner
+  protocol: HTTPS
+  encrypted: true
+assets: []
+threats: []
+mitigations: []
+evidence_suggestions: []

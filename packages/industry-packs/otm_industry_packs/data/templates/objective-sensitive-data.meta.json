@@ -1,0 +1,20 @@
+{
+  "id": "objective-sensitive-data",
+  "title": "Objetivo: processamento de dados sensíveis",
+  "description": "Dados pessoais, financeiros ou regulados em trânsito e em repouso.",
+  "suggested_pack": "saas",
+  "category": "objective",
+  "category_label": "Objective-based",
+  "tags": [
+    "pii",
+    "privacy",
+    "compliance"
+  ],
+  "complexity": "high",
+  "best_for": "Modelagem centrada em dados e privacidade.",
+  "suggested_methodology": "linddun",
+  "recommendation_hints": [
+    "data_minimization",
+    "retention_policy"
+  ]
+}

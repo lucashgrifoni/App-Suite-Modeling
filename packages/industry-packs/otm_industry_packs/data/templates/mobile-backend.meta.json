@@ -1,0 +1,20 @@
+{
+  "id": "mobile-backend",
+  "title": "Aplicação mobile + backend",
+  "description": "App mobile → API → auth → serviços backend → armazenamento.",
+  "suggested_pack": "saas",
+  "category": "applications",
+  "category_label": "Applications",
+  "tags": [
+    "mobile",
+    "oauth",
+    "api"
+  ],
+  "complexity": "medium",
+  "best_for": "Apps móveis com backend partilhado e tokens.",
+  "suggested_methodology": "stride",
+  "recommendation_hints": [
+    "device_attestation",
+    "token_storage"
+  ]
+}

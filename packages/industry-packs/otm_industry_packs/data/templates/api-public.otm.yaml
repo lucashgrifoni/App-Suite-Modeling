@@ -1,0 +1,66 @@
+model:
+  schema_version: 1.0.0
+  methodology: stride
+  system_type: api_backend
+  industry_sector: generic
+metadata:
+  title: API pública simples
+  summary: Cliente → gateway → API → base de dados.
+  tags:
+  - template
+  - api
+  - public
+business_context:
+  description: Superfície HTTP(S) exposta com autenticação de clientes e persistência.
+  assumptions:
+  - TLS terminado no gateway ou na API.
+  - Esquema de auth definido (API keys ou OAuth).
+trust_boundaries:
+- id: internet
+  name: Internet
+- id: app_tier
+  name: Conta / VPC aplicação
+  member_component_ids:
+  - waf
+  - api
+  - db
+components:
+- id: user
+  name: Cliente (browser/app)
+  kind: user
+  in_trust_boundary: internet
+- id: waf
+  name: API gateway / WAF
+  kind: gateway
+  technology: Gateway
+  in_trust_boundary: app_tier
+- id: api
+  name: Serviço de API
+  kind: process
+  technology: REST/GraphQL
+  in_trust_boundary: app_tier
+- id: db
+  name: Base de dados
+  kind: datastore
+  technology: PostgreSQL
+  in_trust_boundary: app_tier
+data_flows:
+- id: c_gw
+  from_component: user
+  to_component: waf
+  protocol: HTTPS
+  encrypted: true
+  authenticated: true
+- id: gw_api
+  from_component: waf
+  to_component: api
+  protocol: HTTPS
+- id: api_db
+  from_component: api
+  to_component: db
+  protocol: TCP
+  encrypted: true
+assets: []
+threats: []
+mitigations: []
+evidence_suggestions: []

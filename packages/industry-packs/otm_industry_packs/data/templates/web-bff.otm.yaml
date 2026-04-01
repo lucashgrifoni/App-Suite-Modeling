@@ -1,0 +1,65 @@
+model:
+  schema_version: 1.0.0
+  methodology: stride
+  system_type: web_application
+  industry_sector: saas
+metadata:
+  title: BFF + frontend web
+  summary: SPA, BFF e APIs internas.
+  tags:
+  - template
+  - bff
+  - web
+business_context:
+  description: Front estático/SSR fala com BFF que consolida chamadas internas.
+  assumptions:
+  - BFF na mesma zona de confiança que APIs internas.
+trust_boundaries:
+- id: internet
+  name: Internet
+- id: app_tier
+  name: Conta / VPC aplicação
+  member_component_ids:
+  - fe
+  - bff
+  - internal_api
+components:
+- id: user
+  name: Browser
+  kind: user
+  in_trust_boundary: internet
+- id: fe
+  name: Frontend (SPA/SSR)
+  kind: process
+  technology: React/Vue
+  in_trust_boundary: app_tier
+- id: bff
+  name: BFF
+  kind: process
+  technology: Node/Go
+  in_trust_boundary: app_tier
+- id: internal_api
+  name: APIs internas
+  kind: process
+  technology: REST/gRPC
+  in_trust_boundary: app_tier
+data_flows:
+- id: u_fe
+  from_component: user
+  to_component: fe
+  protocol: HTTPS
+  encrypted: true
+- id: fe_bff
+  from_component: fe
+  to_component: bff
+  protocol: HTTPS
+  encrypted: true
+  authenticated: true
+- id: bff_int
+  from_component: bff
+  to_component: internal_api
+  protocol: HTTPS
+assets: []
+threats: []
+mitigations: []
+evidence_suggestions: []

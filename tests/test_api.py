@@ -39,6 +39,7 @@ def test_openapi_available(client: TestClient) -> None:
     assert "/v1/models/compare" in paths
     assert "/v1/analyses/diff" in paths
     assert "/v1/templates" in paths
+    assert "/v1/templates/{template_id}" in paths
 
 
 def test_create_model(client: TestClient) -> None:

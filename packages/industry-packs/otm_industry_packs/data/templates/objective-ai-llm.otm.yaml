@@ -1,0 +1,61 @@
+model:
+  schema_version: 1.0.0
+  methodology: plot4ai
+  system_type: hybrid
+  industry_sector: generic
+metadata:
+  title: 'Foco: IA/LLM'
+  summary: Cliente, aplicação e fornecedor de modelo.
+  tags:
+  - template
+  - objective
+  - ai
+business_context:
+  description: Documentar fluxos de dados para o modelo e ferramentas.
+  assumptions:
+  - Política de retenção de prompts definida.
+trust_boundaries:
+- id: internet
+  name: Internet
+- id: app_tier
+  name: Conta / VPC
+  member_component_ids:
+  - app
+  - orch
+components:
+- id: user
+  name: Utilizador
+  kind: user
+  in_trust_boundary: internet
+- id: app
+  name: Aplicação
+  kind: process
+  in_trust_boundary: app_tier
+- id: orch
+  name: Orquestração IA
+  kind: process
+  in_trust_boundary: app_tier
+- id: llm
+  name: Fornecedor LLM
+  kind: external_entity
+  in_trust_boundary: internet
+data_flows:
+- id: u_a
+  from_component: user
+  to_component: app
+  protocol: HTTPS
+  encrypted: true
+- id: a_o
+  from_component: app
+  to_component: orch
+  protocol: HTTPS
+- id: o_l
+  from_component: orch
+  to_component: llm
+  protocol: HTTPS
+  encrypted: true
+  authenticated: true
+assets: []
+threats: []
+mitigations: []
+evidence_suggestions: []

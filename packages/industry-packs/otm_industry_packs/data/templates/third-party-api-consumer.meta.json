@@ -1,0 +1,20 @@
+{
+  "id": "third-party-api-consumer",
+  "title": "Consumidor de API terceira",
+  "description": "App/serviço → fornecedor externo → retries/rate limit → persistência.",
+  "suggested_pack": "saas",
+  "category": "integrations",
+  "category_label": "Integrations",
+  "tags": [
+    "integration",
+    "resilience",
+    "external_api"
+  ],
+  "complexity": "medium",
+  "best_for": "Dependência forte de APIs de fornecedor com políticas de uso.",
+  "suggested_methodology": "stride",
+  "recommendation_hints": [
+    "api_key_rotation",
+    "circuit_breaker"
+  ]
+}

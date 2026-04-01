@@ -1,0 +1,20 @@
+{
+  "id": "objective-privileged-admin",
+  "title": "Objetivo: fluxo administrativo privilegiado",
+  "description": "Contas e ações com privilégios elevados e impacto elevado.",
+  "suggested_pack": "saas",
+  "category": "objective",
+  "category_label": "Objective-based",
+  "tags": [
+    "admin",
+    "privileged",
+    "soc"
+  ],
+  "complexity": "high",
+  "best_for": "Revisão de contas privilegiadas e trilhos de aprovação.",
+  "suggested_methodology": "stride",
+  "recommendation_hints": [
+    "just_in_time_access",
+    "approval_workflow"
+  ]
+}

@@ -31,7 +31,8 @@ Documentação interativa: **`/docs`** (Swagger UI), **`/redoc`**.
 | `POST` | `/v1/analyses/diff` | Corpo `{ "baseline_analysis": {...}, "revised_analysis": {...} }` (dois `AnalysisResult`). Devolve `AnalysisDiff`. |
 | `POST` | `/v1/models/recommend-methodology` | Sugere engine/metodologia pelo contexto do documento. |
 | `POST` | `/v1/models/analyze` | Corre o motor; corpo: `document`, opcional `pack_id`, `methodology`, `auto_recommend_methodology`. |
-| `GET` | `/v1/templates` | Lista templates embutidos. |
+| `GET` | `/v1/templates` | Lista templates embutidos. Query opcional: `category`, `tag`, `complexity`, `q`. |
+| `GET` | `/v1/templates/{template_id}` | Metadados de um template (manifest). |
 | `POST` | `/v1/templates/{template_id}/instantiate` | Gera documento a partir do template. |
 | `POST` | `/v1/exports` | Gera artefactos (`formats[]`, opcional `analysis`, `pack_id`). |
 | `POST` | `/v1/imports/openapi` | `multipart/form-data` campo `file` (OpenAPI/Swagger YAML/JSON). Resposta: rascunho canónico + `inferences` / `unknowns` / `assumptions` (não é análise). |

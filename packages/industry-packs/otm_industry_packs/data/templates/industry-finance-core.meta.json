@@ -1,0 +1,20 @@
+{
+  "id": "industry-finance-core",
+  "title": "Finanças / fluxo transacional core",
+  "description": "Cliente → gateway → auth → serviço de transação → ledger → auditoria.",
+  "suggested_pack": "finance",
+  "category": "industry",
+  "category_label": "Industry",
+  "tags": [
+    "finance",
+    "ledger",
+    "core-banking"
+  ],
+  "complexity": "high",
+  "best_for": "Fluxos financeiros com livro razão e trilho de auditoria.",
+  "suggested_methodology": "pasta",
+  "recommendation_hints": [
+    "ledger_integrity",
+    "segregation_of_duties"
+  ]
+}

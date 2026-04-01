@@ -1,0 +1,51 @@
+model:
+  schema_version: 1.0.0
+  methodology: stride
+  system_type: web_application
+  industry_sector: generic
+metadata:
+  title: 'Foco: Internet-facing'
+  summary: Cliente externo, borda e serviços internos.
+  tags:
+  - template
+  - objective
+  - internet
+business_context:
+  description: Priorizar STRIDE na borda e autenticação de clientes.
+  assumptions:
+  - Modelo pode ser refinado com mais componentes.
+trust_boundaries:
+- id: internet
+  name: Internet
+- id: app_tier
+  name: Conta / VPC aplicação
+  member_component_ids:
+  - edge
+  - app
+components:
+- id: user
+  name: Cliente Internet
+  kind: user
+  in_trust_boundary: internet
+- id: edge
+  name: Borda (WAF/LB)
+  kind: gateway
+  in_trust_boundary: app_tier
+- id: app
+  name: Aplicação
+  kind: process
+  in_trust_boundary: app_tier
+data_flows:
+- id: u_e
+  from_component: user
+  to_component: edge
+  protocol: HTTPS
+  encrypted: true
+- id: e_a
+  from_component: edge
+  to_component: app
+  protocol: HTTPS
+assets: []
+threats: []
+mitigations: []
+evidence_suggestions: []

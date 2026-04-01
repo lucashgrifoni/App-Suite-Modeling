@@ -14,6 +14,7 @@ import { ExplanationsSection } from "../components/analysis/ExplanationsSection"
 import { RemediationBacklogCard } from "../components/analysis/RemediationBacklogCard";
 import { MethodologyInsightsSection } from "../components/analysis/MethodologyInsightsSection";
 import { ThreatsAnalysisCard } from "../components/analysis/ThreatsAnalysisCard";
+import { useAnalysisHistory } from "../context/AnalysisHistoryContext";
 import { useSession } from "../context/SessionContext";
 import { useToast } from "../context/ToastContext";
 import { filterActiveThreats, listFrameworksFromAnalysisThreats } from "../utils/analysisFilters";
@@ -26,6 +27,7 @@ import type { MethodologyId } from "../types/methodology";
 
 export function AnalysisPage() {
   const { document, analysis, setAnalysis } = useSession();
+  const { appendSnapshot } = useAnalysisHistory();
   const toast = useToast();
   const [packId, setPackId] = useState("");
   const [methodology, setMethodology] = useState<MethodologyId>(
@@ -84,6 +86,7 @@ export function AnalysisPage() {
         methodology,
       });
       setAnalysis(r);
+      appendSnapshot("analysis");
       toast.success("Análise gerada. Revise métricas e ameaças abaixo.");
     } catch (e) {
       const msg = e instanceof ApiError ? e.message : "Falha na análise.";

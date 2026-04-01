@@ -1,0 +1,20 @@
+{
+  "id": "objective-high-availability",
+  "title": "Objetivo: serviço crítico de alta disponibilidade",
+  "description": "Disponibilidade forte, redundância e continuidade operacional.",
+  "suggested_pack": "cloud_native",
+  "category": "objective",
+  "category_label": "Objective-based",
+  "tags": [
+    "ha",
+    "dr",
+    "sla"
+  ],
+  "complexity": "high",
+  "best_for": "SLA rígidos e cenários de desastre.",
+  "suggested_methodology": "stride",
+  "recommendation_hints": [
+    "blast_radius",
+    "failover_paths"
+  ]
+}

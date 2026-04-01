@@ -80,6 +80,9 @@ export function AppLayout() {
                 <NavLink to="/export" className={navLinkClass}>
                   Exportar
                 </NavLink>
+                <NavLink to="/history" className={navLinkClass}>
+                  Histórico
+                </NavLink>
                 <NavLink to="/diff" className={navLinkClass}>
                   Diff
                 </NavLink>

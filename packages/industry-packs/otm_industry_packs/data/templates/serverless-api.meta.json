@@ -1,0 +1,20 @@
+{
+  "id": "serverless-api",
+  "title": "Serverless API",
+  "description": "API Gateway → funções → BD gerida → segredos e logging.",
+  "suggested_pack": "cloud_native",
+  "category": "cloud_infra",
+  "category_label": "Cloud & Infra",
+  "tags": [
+    "serverless",
+    "faas",
+    "managed"
+  ],
+  "complexity": "medium",
+  "best_for": "APIs em funções com serviços geridos.",
+  "suggested_methodology": "stride",
+  "recommendation_hints": [
+    "cold_start_abuse",
+    "iam_execution_role"
+  ]
+}

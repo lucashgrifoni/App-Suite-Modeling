@@ -1,0 +1,20 @@
+{
+  "id": "api-public",
+  "title": "API pública simples",
+  "description": "Browser/mobile → API gateway → serviço → base de dados.",
+  "suggested_pack": "saas",
+  "category": "applications",
+  "category_label": "Applications",
+  "tags": [
+    "api",
+    "gateway",
+    "public"
+  ],
+  "complexity": "low",
+  "best_for": "APIs expostas com tráfego externo típico.",
+  "suggested_methodology": "stride",
+  "recommendation_hints": [
+    "external_api_surface",
+    "oauth_or_jwt_common"
+  ]
+}

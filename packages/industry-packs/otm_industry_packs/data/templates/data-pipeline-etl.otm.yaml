@@ -1,0 +1,64 @@
+model:
+  schema_version: 1.0.0
+  methodology: nist_data_centric
+  system_type: batch_data_pipeline
+  industry_sector: generic
+metadata:
+  title: Pipeline ETL
+  summary: Ingestão, transformação e destino analítico.
+  tags:
+  - template
+  - etl
+business_context:
+  description: Dados podem incluir PII — classificar antes de persistir.
+  assumptions:
+  - Catálogo de dados e políticas de retenção.
+trust_boundaries:
+- id: internet
+  name: Internet
+- id: app_tier
+  name: Conta / VPC aplicação
+  member_component_ids:
+  - ingest
+  - transform
+  - queue
+  - wh
+components:
+- id: ingest
+  name: Ingestão
+  kind: process
+  in_trust_boundary: app_tier
+- id: transform
+  name: Transformação
+  kind: process
+  in_trust_boundary: app_tier
+- id: queue
+  name: Fila / stream
+  kind: queue
+  technology: Kafka
+  in_trust_boundary: app_tier
+- id: wh
+  name: Armazém / lake
+  kind: datastore
+  technology: Snowflake/S3
+  in_trust_boundary: app_tier
+data_flows:
+- id: i_t
+  from_component: ingest
+  to_component: transform
+  protocol: TCP
+  encrypted: true
+- id: t_q
+  from_component: transform
+  to_component: queue
+  protocol: TCP
+  encrypted: true
+- id: q_w
+  from_component: queue
+  to_component: wh
+  protocol: TCP
+  encrypted: true
+assets: []
+threats: []
+mitigations: []
+evidence_suggestions: []

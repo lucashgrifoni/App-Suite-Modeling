@@ -1,0 +1,20 @@
+{
+  "id": "webhook-ingestion",
+  "title": "Webhook receiver / ingestão de eventos",
+  "description": "Terceiros → endpoint webhook → validação → fila → processamento.",
+  "suggested_pack": "cloud_native",
+  "category": "applications",
+  "category_label": "Applications",
+  "tags": [
+    "webhook",
+    "async",
+    "integration"
+  ],
+  "complexity": "medium",
+  "best_for": "Ingestão de eventos assíncronos de fornecedores externos.",
+  "suggested_methodology": "stride",
+  "recommendation_hints": [
+    "signature_validation",
+    "replay_protection"
+  ]
+}

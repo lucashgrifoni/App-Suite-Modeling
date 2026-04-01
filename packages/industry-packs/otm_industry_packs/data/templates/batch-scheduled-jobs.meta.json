@@ -1,0 +1,20 @@
+{
+  "id": "batch-scheduled-jobs",
+  "title": "Batch / jobs agendados",
+  "description": "Agendador → worker → armazenamento → API externa.",
+  "suggested_pack": "cloud_native",
+  "category": "cloud_infra",
+  "category_label": "Cloud & Infra",
+  "tags": [
+    "batch",
+    "scheduler",
+    "cron"
+  ],
+  "complexity": "medium",
+  "best_for": "Processamento periódico e integrações batch.",
+  "suggested_methodology": "stride",
+  "recommendation_hints": [
+    "scheduler_credentials",
+    "poison_batch"
+  ]
+}

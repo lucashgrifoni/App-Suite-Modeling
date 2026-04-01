@@ -1,0 +1,20 @@
+{
+  "id": "saas-multi-tenant",
+  "title": "Multi-tenant SaaS",
+  "description": "Utilizadores do tenant → web/API → isolamento → BD partilhada ou armazenamento dedicado.",
+  "suggested_pack": "saas",
+  "category": "applications",
+  "category_label": "Applications",
+  "tags": [
+    "saas",
+    "multi-tenant",
+    "isolation"
+  ],
+  "complexity": "high",
+  "best_for": "Produtos SaaS com isolamento lógico ou dedicado por tenant.",
+  "suggested_methodology": "stride",
+  "recommendation_hints": [
+    "tenant_id_propagation",
+    "noisy_neighbor"
+  ]
+}

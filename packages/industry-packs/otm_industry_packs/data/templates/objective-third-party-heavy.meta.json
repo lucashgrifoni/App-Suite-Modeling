@@ -1,0 +1,20 @@
+{
+  "id": "objective-third-party-heavy",
+  "title": "Objetivo: dependência forte de terceiros",
+  "description": "Muitos serviços externos críticos para a operação.",
+  "suggested_pack": "cloud_native",
+  "category": "objective",
+  "category_label": "Objective-based",
+  "tags": [
+    "third_party",
+    "supply_chain",
+    "saas"
+  ],
+  "complexity": "medium",
+  "best_for": "Mapear confiança em fornecedores e contratos.",
+  "suggested_methodology": "stride",
+  "recommendation_hints": [
+    "vendor_sla",
+    "subprocessor_list"
+  ]
+}

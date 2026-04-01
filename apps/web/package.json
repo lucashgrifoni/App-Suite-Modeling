@@ -1,7 +1,7 @@
 {
   "name": "otm-web",
   "private": true,
-  "version": "0.1.0",
+  "version": "3.0.0",
   "type": "module",
   "scripts": {
     "dev": "node ./node_modules/vite/bin/vite.js",
@@ -13,11 +13,13 @@
     "ci:build:portable": "npm run typecheck:portable && npm run build:portable",
     "e2e:smoke": "node ./node_modules/@playwright/test/cli.js test e2e/smoke.spec.ts --project=chromium",
     "e2e:complement": "node ./node_modules/@playwright/test/cli.js test e2e/release.spec.ts --project=chromium",
+    "e2e:phase4": "node ./node_modules/@playwright/test/cli.js test e2e/diagram.spec.ts e2e/pdf.spec.ts e2e/history.spec.ts --project=chromium",
     "e2e:smoke:portable": "node ./node_modules/@playwright/test/cli.js test e2e/smoke.spec.ts --project=chromium",
     "e2e:smoke:headed": "node ./node_modules/@playwright/test/cli.js test e2e/smoke.spec.ts --project=chromium --headed",
     "preview": "node ./node_modules/vite/bin/vite.js preview"
   },
   "dependencies": {
+    "jspdf": "^2.5.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.28.0",

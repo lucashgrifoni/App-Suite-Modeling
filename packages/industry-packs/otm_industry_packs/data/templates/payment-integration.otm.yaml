@@ -1,0 +1,74 @@
+model:
+  schema_version: 1.0.0
+  methodology: pasta
+  system_type: web_application
+  industry_sector: finance
+metadata:
+  title: Integração de pagamentos
+  summary: Checkout, gateway de pagamento e persistência de transações.
+  tags:
+  - template
+  - payment
+business_context:
+  description: Minimizar escopo PCI com tokenização no provedor.
+  assumptions:
+  - Dados de cartão não persistidos em texto claro.
+trust_boundaries:
+- id: internet
+  name: Internet
+- id: dmz
+  name: DMZ / edge
+  member_component_ids:
+  - checkout
+- id: app_tier
+  name: Aplicação / dados
+  member_component_ids:
+  - pay_api
+  - ledger
+  - vault
+components:
+- id: user
+  name: Cliente
+  kind: user
+  in_trust_boundary: internet
+- id: checkout
+  name: Checkout
+  kind: process
+  in_trust_boundary: dmz
+- id: pay_api
+  name: API de pagamento
+  kind: process
+  in_trust_boundary: app_tier
+- id: vault
+  name: Tokenização / cofre
+  kind: datastore
+  in_trust_boundary: app_tier
+- id: ledger
+  name: Ledger / transações
+  kind: datastore
+  technology: SQL
+  in_trust_boundary: app_tier
+data_flows:
+- id: u_co
+  from_component: user
+  to_component: checkout
+  protocol: HTTPS
+  encrypted: true
+- id: co_pa
+  from_component: checkout
+  to_component: pay_api
+  protocol: HTTPS
+  encrypted: true
+- id: pa_v
+  from_component: pay_api
+  to_component: vault
+  protocol: HTTPS
+- id: pa_l
+  from_component: pay_api
+  to_component: ledger
+  protocol: TCP
+  encrypted: true
+assets: []
+threats: []
+mitigations: []
+evidence_suggestions: []

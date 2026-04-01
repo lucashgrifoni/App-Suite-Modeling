@@ -1,0 +1,20 @@
+{
+  "id": "web-bff",
+  "title": "BFF + frontend web",
+  "description": "Browser → frontend → BFF → APIs internas.",
+  "suggested_pack": "saas",
+  "category": "applications",
+  "category_label": "Applications",
+  "tags": [
+    "bff",
+    "spa",
+    "web"
+  ],
+  "complexity": "medium",
+  "best_for": "SPAs com agregação server-side e APIs internas.",
+  "suggested_methodology": "stride",
+  "recommendation_hints": [
+    "session_bff",
+    "csrf_xss_surface"
+  ]
+}

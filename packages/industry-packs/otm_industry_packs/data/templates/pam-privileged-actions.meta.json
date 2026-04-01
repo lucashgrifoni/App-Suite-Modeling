@@ -1,0 +1,20 @@
+{
+  "id": "pam-privileged-actions",
+  "title": "PAM / ações privilegiadas",
+  "description": "Admin/operador → aprovação → gateway de ação → sistemas alvo.",
+  "suggested_pack": "saas",
+  "category": "identity_access",
+  "category_label": "Identity & Access",
+  "tags": [
+    "pam",
+    "approval",
+    "privileged"
+  ],
+  "complexity": "high",
+  "best_for": "Elevar privilégio com workflow e registo.",
+  "suggested_methodology": "stride",
+  "recommendation_hints": [
+    "session_recording",
+    "approval_chain"
+  ]
+}
