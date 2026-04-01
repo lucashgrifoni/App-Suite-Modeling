@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from otm_core_schema import Metadata, load_document_from_yaml_path
 from otm_core_schema.enums import ThreatModelMethodology
 from otm_threat_engine import analyze_document
-
-from pathlib import Path
 
 _ROOT = Path(__file__).resolve().parents[1]
 _MINIMAL = _ROOT / "examples" / "minimal.otm.yaml"

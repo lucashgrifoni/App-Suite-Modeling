@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from otm_core_schema import ThreatModelDocument, ThreatModelMethodology
-
 from otm_explainability import ExplanationRecord
 
 from otm_threat_engine.engine_support import recompute_summary_with_methodology

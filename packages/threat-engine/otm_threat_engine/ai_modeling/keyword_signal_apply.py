@@ -4,7 +4,8 @@ Aplicação de regras lexicais a `AiSignalBundle` — extraído para baixar comp
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Callable
+from collections.abc import Callable
+from typing import TYPE_CHECKING
 
 from otm_threat_engine.methodology_lenses.common import has_any, has_any_token, has_safe_ai_marker
 

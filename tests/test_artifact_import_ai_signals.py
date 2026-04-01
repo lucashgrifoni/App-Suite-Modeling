@@ -29,7 +29,8 @@ paths:
 """
     result = import_openapi_text(spec, filename="openapi.yaml")
     assert result.document.import_signals_corpus
-    assert "chat completion" in result.document.import_signals_corpus or "embed" in result.document.import_signals_corpus
+    corpus = result.document.import_signals_corpus
+    assert "chat completion" in corpus or "embed" in corpus
     sig = collect_ai_signals_from_document(result.document)
     assert sig.model_interaction
     assert sig.vector_embedding

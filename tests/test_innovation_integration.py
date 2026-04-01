@@ -50,7 +50,12 @@ def test_integration_fronts_plot4ai_explainability_backlog_diff_import() -> None
     assert backlog.items
     assert backlog.items[0].explanations
 
-    compare = compare_threat_models(base_doc, doc, baseline_analysis=analyze_document(base_doc), revised_analysis=analysis)
+    compare = compare_threat_models(
+        base_doc,
+        doc,
+        baseline_analysis=analyze_document(base_doc),
+        revised_analysis=analysis,
+    )
     assert compare.explanations
 
     md = export_analysis_markdown(analysis)

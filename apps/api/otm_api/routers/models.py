@@ -3,10 +3,9 @@ from __future__ import annotations
 from typing import Any
 
 from fastapi import APIRouter, status
-from pydantic import ValidationError as PydanticValidationError
-
 from otm_core_schema import diff_documents
 from otm_threat_engine import recommend_methodology
+from pydantic import ValidationError as PydanticValidationError
 
 from otm_api.routers._errors import (
     document_from_payload_or_422,

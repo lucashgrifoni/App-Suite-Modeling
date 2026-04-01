@@ -5,7 +5,6 @@ Explicabilidade curta específica de IA — anexada ao merge global da análise 
 from __future__ import annotations
 
 from otm_core_schema import ThreatModelDocument, ThreatModelMethodology
-
 from otm_explainability import ExplanationRecord, RelatedEntityRef
 
 from otm_threat_engine.ai_modeling.corpus import build_ai_calibration_corpus

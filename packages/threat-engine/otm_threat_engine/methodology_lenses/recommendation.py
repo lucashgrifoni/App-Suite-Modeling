@@ -137,7 +137,8 @@ def build_recommendation_rules(
             ThreatModelMethodology.PASTA,
             "Contexto de análise avançada orientada a ataque, vulnerabilidade ou cadeia de risco (PASTA).",
             [
-                "Termos como ataque, vulnerabilidade, kill chain ou risk-centric aparecem no contexto textual do modelo.",
+                "Termos como ataque, vulnerabilidade, kill chain ou risk-centric aparecem no "
+                "contexto textual do modelo.",
             ],
         ),
         (
@@ -156,7 +157,8 @@ def build_recommendation_rules(
                 ("pagamento", "payment", "saude", "health", "classificação de dados"),
             ),
             ThreatModelMethodology.NIST_DATA_CENTRIC,
-            "Setor ou texto focado em dados sensíveis (finanças, saúde, pagamentos) sugere visão centrada em dados (NIST).",
+            "Setor ou texto focado em dados sensíveis (finanças, saúde, pagamentos) sugere visão "
+            "centrada em dados (NIST).",
             [
                 f"Setor do modelo: {sector}.",
                 "Ou o texto menciona pagamentos, saúde ou classificação de dados.",

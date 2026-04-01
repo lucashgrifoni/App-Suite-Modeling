@@ -31,7 +31,16 @@ def export_comparison_markdown(result: ThreatModelComparisonResult) -> str:
         lines.append("")
     lines.extend(["", "### Agregado estrutural (IDs)", ""])
 
-    for name in ("components", "assets", "data_flows", "trust_boundaries", "threats", "mitigations", "evidence_suggestions"):
+    _agg_names = (
+        "components",
+        "assets",
+        "data_flows",
+        "trust_boundaries",
+        "threats",
+        "mitigations",
+        "evidence_suggestions",
+    )
+    for name in _agg_names:
         block = getattr(result.aggregate, name)
         if not any(block.get(k) for k in ("added", "removed", "changed")):
             continue
@@ -42,7 +51,8 @@ def export_comparison_markdown(result: ThreatModelComparisonResult) -> str:
         f"- Score máximo heurístico: {rd.analysis_max_score_baseline} → {rd.analysis_max_score_revised} "
         f"(Δ {rd.analysis_max_score_delta!s})"
     )
-    lines.append(f"- Residual no documento (YAML) alterado: {'sim' if rd.document_residual_aggregate_changed else 'não'}")
+    res_changed = "sim" if rd.document_residual_aggregate_changed else "não"
+    lines.append(f"- Residual no documento (YAML) alterado: {res_changed}")
     if rd.heuristic_increased_ids:
         lines.append(f"- Heurísticas com maior exposição ou novas: `{', '.join(rd.heuristic_increased_ids[:15])}`")
     if rd.heuristic_decreased_ids:

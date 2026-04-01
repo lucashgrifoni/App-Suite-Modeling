@@ -13,13 +13,13 @@ from pathlib import Path
 from typing import Annotated
 
 import typer
-from otm_core_schema.enums import ThreatModelMethodology
 from otm_core_schema import (
     BLANK_DOCUMENT_YAML,
     ThreatModelDocument,
     diff_documents,
     dump_document_to_yaml,
 )
+from otm_core_schema.enums import ThreatModelMethodology
 from otm_diagram_engine import export_flowchart_mermaid
 from otm_exporters import (
     export_comparison_markdown,
@@ -55,7 +55,8 @@ app = typer.Typer(
         "[bold]App Suite Modeling[/bold] — Threat Modeling as Code na linha de comando.\n\n"
         "Comandos principais: [cyan]init[/cyan], [cyan]import[/cyan], "
         "[cyan]validate[/cyan], [cyan]diff[/cyan], "
-        "[cyan]analyze[/cyan] ([cyan]--explain[/cyan]), [cyan]explain[/cyan], [cyan]backlog[/cyan], [cyan]report[/cyan], "
+        "[cyan]analyze[/cyan] ([cyan]--explain[/cyan]), [cyan]explain[/cyan], "
+        "[cyan]backlog[/cyan], [cyan]report[/cyan], "
         "[cyan]diagram[/cyan], [cyan]export[/cyan], "
         "[cyan]templates[/cyan], [cyan]packs[/cyan]."
     ),

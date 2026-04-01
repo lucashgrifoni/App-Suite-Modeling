@@ -1,5 +1,13 @@
 """OTM Core Schema — modelo canônico versionado (fonte da verdade)."""
 
+from otm_core_schema.diff import (
+    FieldChange,
+    IdListSectionDiff,
+    ModifiedEntity,
+    ThreatModelDiff,
+    diff_documents,
+)
+from otm_core_schema.diff_insights import structural_key_insights
 from otm_core_schema.document import (
     Asset,
     BusinessContext,
@@ -34,14 +42,6 @@ from otm_core_schema.io import (
     load_document_from_dict,
     load_document_from_yaml,
     load_document_from_yaml_path,
-)
-from otm_core_schema.diff_insights import structural_key_insights
-from otm_core_schema.diff import (
-    FieldChange,
-    IdListSectionDiff,
-    ModifiedEntity,
-    ThreatModelDiff,
-    diff_documents,
 )
 from otm_core_schema.starters import BLANK_DOCUMENT_YAML, create_blank_document
 from otm_core_schema.version import CANONICAL_SCHEMA_VERSION

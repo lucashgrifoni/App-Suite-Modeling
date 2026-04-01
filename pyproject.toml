@@ -60,7 +60,8 @@ pythonpath = [
 ]
 
 [tool.ruff]
-line-length = 100
+# 120 alinha melhor com strings PT/descrições OpenAPI e reduz ruído E501; CI e formatação usam o mesmo limite.
+line-length = 120
 target-version = "py311"
 
 [tool.ruff.lint]

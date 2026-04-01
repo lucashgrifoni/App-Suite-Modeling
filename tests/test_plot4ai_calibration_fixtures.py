@@ -8,10 +8,9 @@ import pytest
 from otm_core_schema import Metadata, load_document_from_yaml_path
 from otm_core_schema.enums import ThreatModelMethodology
 from otm_explainability import ExplanationType
-
 from otm_threat_engine import analyze_document, recommend_methodology
-from otm_threat_engine.methodology_lenses.common import has_any_token, has_safe_ai_marker
 from otm_threat_engine.ai_modeling.signals import collect_ai_signals_from_document
+from otm_threat_engine.methodology_lenses.common import has_any_token, has_safe_ai_marker
 
 _ROOT = Path(__file__).resolve().parents[1]
 _FIX = _ROOT / "examples" / "plot4ai-calibration"
@@ -93,7 +92,11 @@ def test_otm_ai_005_inference_pipeline_provider_and_json_contract() -> None:
     assert "plot4ai_third_party_model_dependency" in p
     assert "plot4ai_governance_pipeline" in p
     assert "plot4ai_observability_gap" not in p
-    prov_msg = [e.message for e in r.explanations if e.type == ExplanationType.AI_SPECIALIZED_RATIONALE and "fornecedor" in e.message.lower()]
+    prov_msg = [
+        e.message
+        for e in r.explanations
+        if e.type == ExplanationType.AI_SPECIALIZED_RATIONALE and "fornecedor" in e.message.lower()
+    ]
     assert prov_msg
 
 

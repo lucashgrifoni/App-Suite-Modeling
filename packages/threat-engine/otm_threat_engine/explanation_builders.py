@@ -15,7 +15,12 @@ from otm_explainability import (
 
 from otm_threat_engine.ai_modeling.explanations import append_plot4ai_merge_explanations
 from otm_threat_engine.engine_support import cross_boundary_flow_ids
-from otm_threat_engine.result import AnalysisResult, HeuristicThreat, StructuralFinding, TrustBoundaryFinding
+from otm_threat_engine.result import (
+    AnalysisResult,
+    HeuristicThreat,
+    StructuralFinding,
+    TrustBoundaryFinding,
+)
 
 
 def _comp_label(doc: ThreatModelDocument, cid: str | None) -> str | None:

@@ -34,9 +34,9 @@ def structural_key_insights(
     Não substitui análise heurística; contextualiza o diff estrutural.
     """
     insights: list[str] = []
-    b_comp = _comp_by_id(baseline)
+    _comp_by_id(baseline)
     r_comp = _comp_by_id(revised)
-    b_flow = _flow_by_id(baseline)
+    _flow_by_id(baseline)
     r_flow = _flow_by_id(revised)
     r_bn = _boundary_names(revised)
     b_bn = _boundary_names(baseline)

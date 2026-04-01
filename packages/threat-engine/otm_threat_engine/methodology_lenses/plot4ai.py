@@ -224,7 +224,10 @@ def _append_plot4ai_insights(
             "Camada: prompt e tratamento de entrada",
             _insight_items_yes_no(
                 signals.prompt_input,
-                ["Prompt injection e validação de instruções do utilizador", "Gestão de tamanho e sensibilidade do contexto"],
+                [
+                    "Prompt injection e validação de instruções do utilizador",
+                    "Gestão de tamanho e sensibilidade do contexto",
+                ],
                 "Sem sinal explícito de camada de prompt — rever se input passa pelo modelo.",
             ),
         ),

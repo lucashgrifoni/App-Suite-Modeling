@@ -4,10 +4,9 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
+from otm_core_schema.diff import FieldChange, IdListSectionDiff, ThreatModelDiff
 from otm_explainability import ExplanationRecord
 from pydantic import BaseModel, Field
-
-from otm_core_schema.diff import FieldChange, IdListSectionDiff, ThreatModelDiff
 
 
 class DiffAggregate(BaseModel):

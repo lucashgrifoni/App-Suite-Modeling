@@ -6,7 +6,6 @@ from typing import Any
 
 from otm_core_schema import ThreatModelDocument
 from otm_threat_engine import AnalysisResult
-
 from otm_threat_engine.analysis_diff import diff_analysis_results
 from otm_threat_engine.comparison_models import AnalysisDiff, ThreatModelComparisonResult
 from otm_threat_engine.threat_model_comparison import compare_threat_models

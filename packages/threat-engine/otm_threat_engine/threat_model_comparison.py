@@ -27,16 +27,36 @@ from otm_threat_engine.result import AnalysisResult
 
 def _agg_from_structural(d: ThreatModelDiff) -> DiffAggregate:
     return DiffAggregate(
-        components={"added": d.components.added, "removed": d.components.removed, "changed": [m.id for m in d.components.modified]},
-        assets={"added": d.assets.added, "removed": d.assets.removed, "changed": [m.id for m in d.assets.modified]},
-        data_flows={"added": d.data_flows.added, "removed": d.data_flows.removed, "changed": [m.id for m in d.data_flows.modified]},
+        components={
+            "added": d.components.added,
+            "removed": d.components.removed,
+            "changed": [m.id for m in d.components.modified],
+        },
+        assets={
+            "added": d.assets.added,
+            "removed": d.assets.removed,
+            "changed": [m.id for m in d.assets.modified],
+        },
+        data_flows={
+            "added": d.data_flows.added,
+            "removed": d.data_flows.removed,
+            "changed": [m.id for m in d.data_flows.modified],
+        },
         trust_boundaries={
             "added": d.trust_boundaries.added,
             "removed": d.trust_boundaries.removed,
             "changed": [m.id for m in d.trust_boundaries.modified],
         },
-        threats={"added": d.threats.added, "removed": d.threats.removed, "changed": [m.id for m in d.threats.modified]},
-        mitigations={"added": d.mitigations.added, "removed": d.mitigations.removed, "changed": [m.id for m in d.mitigations.modified]},
+        threats={
+            "added": d.threats.added,
+            "removed": d.threats.removed,
+            "changed": [m.id for m in d.threats.modified],
+        },
+        mitigations={
+            "added": d.mitigations.added,
+            "removed": d.mitigations.removed,
+            "changed": [m.id for m in d.mitigations.modified],
+        },
         evidence_suggestions={
             "added": d.evidence_suggestions.added,
             "removed": d.evidence_suggestions.removed,
@@ -81,7 +101,8 @@ def _analysis_insights(ad: AnalysisDiff) -> list[str]:
             f"(Δ {ad.max_risk_delta:+.1f})."
         )
     for h in ad.heuristic_threats.added[:10]:
-        insights.append(f"Heurística nova ativa: `{h.threat_id}`" + (f" (score {h.score_after})" if h.score_after is not None else "") + ".")
+        score_note = f" (score {h.score_after})" if h.score_after is not None else ""
+        insights.append(f"Heurística nova ativa: `{h.threat_id}`{score_note}.")
     for h in ad.heuristic_threats.removed[:10]:
         insights.append(
             f"Heurística ativa deixou de existir: `{h.threat_id}`"
@@ -111,13 +132,14 @@ def _analysis_insights(ad: AnalysisDiff) -> list[str]:
             + ("…" if len(ad.pack_control_hints.removed) > 5 else "")
         )
     if ad.pack_control_hints.added:
-        insights.append(
-            "Novas sugestões de controlo do pack: " + "; ".join(ad.pack_control_hints.added[:5]) + ("…" if len(ad.pack_control_hints.added) > 5 else "")
-        )
+        joined = "; ".join(ad.pack_control_hints.added[:5])
+        suffix = "…" if len(ad.pack_control_hints.added) > 5 else ""
+        insights.append("Novas sugestões de controlo do pack: " + joined + suffix)
     tb = ad.trust_boundary_findings
     if tb and (tb.added_keys or tb.removed_keys):
         insights.append(
-            f"Achados de cruzamento de fronteira: +{len(tb.added_keys)} novo(s), −{len(tb.removed_keys)} deixaram de aparecer."
+            f"Achados de cruzamento de fronteira: +{len(tb.added_keys)} novo(s), "
+            f"−{len(tb.removed_keys)} deixaram de aparecer."
         )
     seen: set[str] = set()
     out: list[str] = []
@@ -151,7 +173,8 @@ def compare_threat_models(
     """
     Compara dois modelos; se ambas as análises forem fornecidas, inclui diff de risco/heurísticas.
 
-    Matching: documento sempre por **id**. Heurísticas por **id**, com hints de assinatura em `analysis.signature_remap_hints`.
+    Matching: documento sempre por **id**. Heurísticas por **id**, com hints de assinatura em
+    `analysis.signature_remap_hints`.
     """
     structural = diff_documents(baseline, revised)
     aggregate = _agg_from_structural(structural)
@@ -176,11 +199,15 @@ def compare_threat_models(
         analysis_max_score_revised=analysis.max_risk_after if analysis else None,
         analysis_max_score_delta=analysis.max_risk_delta if analysis else None,
         heuristic_increased_ids=[
-            h.threat_id for h in (analysis.heuristic_threats.modified if analysis else []) if (h.score_delta or 0) > 0
+            h.threat_id
+            for h in (analysis.heuristic_threats.modified if analysis else [])
+            if (h.score_delta or 0) > 0
         ]
         + [h.threat_id for h in (analysis.heuristic_threats.added if analysis else [])],
         heuristic_decreased_ids=[
-            h.threat_id for h in (analysis.heuristic_threats.modified if analysis else []) if (h.score_delta or 0) < 0
+            h.threat_id
+            for h in (analysis.heuristic_threats.modified if analysis else [])
+            if (h.score_delta or 0) < 0
         ]
         + [h.threat_id for h in (analysis.heuristic_threats.removed if analysis else [])],
         document_residual_aggregate_changed=bool(structural.residual_risk_summary),
@@ -195,12 +222,15 @@ def compare_threat_models(
 
     rec = RecommendationDelta()
     if analysis:
+        mi = analysis.methodology_insights
+        blocks_added = list(mi.blocks_added if mi else [])
+        blocks_removed = list(mi.blocks_removed if mi else [])
         rec = RecommendationDelta(
             pack_hints_added=analysis.pack_control_hints.added,
             pack_hints_removed=analysis.pack_control_hints.removed,
             framework_catalog_deltas=list(analysis.framework_ref_counts),
-            methodology_insight_blocks_added=list(analysis.methodology_insights.blocks_added if analysis.methodology_insights else []),
-            methodology_insight_blocks_removed=list(analysis.methodology_insights.blocks_removed if analysis.methodology_insights else []),
+            methodology_insight_blocks_added=blocks_added,
+            methodology_insight_blocks_removed=blocks_removed,
         )
 
     key_insights = _merge_key_insights(s_insights, a_insights)

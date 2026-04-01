@@ -4,11 +4,14 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
 from otm_core_schema import DataFlow, Metadata, Threat, diff_documents, load_document_from_yaml_path
 from otm_core_schema.diff_insights import structural_key_insights
 from otm_core_schema.enums import StrideCategory, ThreatModelMethodology, TreatmentStatus
-from otm_threat_engine import AnalysisResult, analyze_document, diff_analysis_results, compare_threat_models
+from otm_threat_engine import (
+    analyze_document,
+    compare_threat_models,
+    diff_analysis_results,
+)
 
 _ROOT = Path(__file__).resolve().parents[1]
 _MINIMAL = _ROOT / "examples" / "minimal.otm.yaml"
