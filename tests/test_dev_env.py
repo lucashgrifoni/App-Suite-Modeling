@@ -7,7 +7,6 @@ import sys
 from pathlib import Path
 
 import pytest
-
 from dev_env import npm_on_path, repo_root, venv_python
 
 
