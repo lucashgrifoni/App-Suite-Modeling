@@ -17,6 +17,15 @@ import { useSession } from "../context/SessionContext";
 import { useToast } from "../context/ToastContext";
 import { removeArrayItem, updateArrayItem } from "../utils/collections";
 import {
+  getAdaptiveAnswer,
+  methodologyFocusHint,
+  promptsForProfile,
+  setAdaptiveAnswer,
+  type AdaptiveAnswer,
+  type AdaptivePrompt,
+} from "../constants/adaptiveWizard";
+import type { MethodologyId } from "../types/methodology";
+import {
   COMPONENT_KINDS,
   SYSTEM_TYPES,
   type OtmComponent,
@@ -42,8 +51,31 @@ export function WizardPage() {
     [document?.components],
   );
 
+  const templateProfile = useMemo(
+    () => (document?.model.template_semantic_profile ?? "").trim().toLowerCase(),
+    [document?.model.template_semantic_profile],
+  );
+  const adaptivePrompts = useMemo(() => promptsForProfile(templateProfile), [templateProfile]);
+
   if (!document) return <Navigate to="/" replace />;
   const doc = document;
+
+  const methodology: MethodologyId = doc.model.methodology ?? "stride";
+
+  function formatAnswer(a: AdaptiveAnswer | null): string {
+    if (a === "yes") return "Sim";
+    if (a === "no") return "Não";
+    if (a === "unk") return "Não sei";
+    return "—";
+  }
+
+  function wizardSummaryLines(prompts: AdaptivePrompt[]): string[] {
+    if (!templateProfile || !prompts.length) return [];
+    return prompts.map((p) => {
+      const v = getAdaptiveAnswer(doc.metadata.tags, templateProfile, p.id);
+      return `${p.label} → ${formatAnswer(v)}`;
+    });
+  }
 
   function updateMetadata(partial: Partial<typeof doc.metadata>) {
     setDocument({
@@ -152,6 +184,82 @@ export function WizardPage() {
                 ))}
               </Select>
             </div>
+            <div>
+              <Label htmlFor="methodology">Metodologia (alvo da análise)</Label>
+              <Select
+                id="methodology"
+                value={methodology}
+                onChange={(e) => updateModel({ methodology: e.target.value as MethodologyId })}
+              >
+                <option value="stride">STRIDE</option>
+                <option value="pasta">PASTA</option>
+                <option value="nist_data_centric">NIST Data-Centric</option>
+                <option value="linddun">LINDDUN</option>
+                <option value="octave_allegro">OCTAVE Allegro</option>
+                <option value="cia_die">CIA / CIA-DIE</option>
+                <option value="plot4ai">PLOT4ai</option>
+              </Select>
+              <p className="mt-1 text-xs text-otm-text-muted">{methodologyFocusHint(methodology)}</p>
+            </div>
+            <details className="rounded-otm-md border border-otm-border/80 bg-otm-surface-2/40 px-3 py-2 text-sm">
+              <summary className="cursor-pointer font-medium text-otm-text">Perfil semântico do template (opcional)</summary>
+              <p className="mt-2 text-xs text-otm-text-muted">
+                Preencha se usar um template da galeria ou quiser desbloquear perguntas adaptativas. Ex.:{" "}
+                <code className="text-otm-accent">internal_admin_portal</code>,{" "}
+                <code className="text-otm-accent">file_handling_application</code>,{" "}
+                <code className="text-otm-accent">api_backend_rest</code>.
+              </p>
+              <div className="mt-2">
+                <Label htmlFor="tprofile">template_semantic_profile</Label>
+                <Input
+                  id="tprofile"
+                  className="mt-1 font-mono text-sm"
+                  value={doc.model.template_semantic_profile ?? ""}
+                  onChange={(e) =>
+                    updateModel({
+                      template_semantic_profile: e.target.value.trim() || null,
+                    })
+                  }
+                  placeholder="ex.: api_backend_rest"
+                />
+              </div>
+            </details>
+            {templateProfile && adaptivePrompts.length > 0 ? (
+              <details className="rounded-otm-md border border-otm-mint-500/20 bg-emerald-950/10 px-3 py-2 text-sm" open>
+                <summary className="cursor-pointer font-medium text-emerald-100">
+                  Perguntas adaptativas ao contexto
+                </summary>
+                <p className="mt-2 text-xs text-otm-text-muted">
+                  Respostas são guardadas como etiquetas no modelo (export JSON inclui). Não substituem validação no
+                  servidor.
+                </p>
+                <ul className="mt-3 space-y-3">
+                  {adaptivePrompts.map((p) => (
+                    <li key={p.id} className="grid gap-1 sm:grid-cols-[1fr_auto] sm:items-center">
+                      <div>
+                        <p className="text-otm-text">{p.label}</p>
+                        {p.hint ? <p className="text-xs text-otm-text-muted">{p.hint}</p> : null}
+                      </div>
+                      <Select
+                        className="max-w-[140px] justify-self-end font-mono text-xs"
+                        value={getAdaptiveAnswer(doc.metadata.tags, templateProfile, p.id) ?? "unk"}
+                        onChange={(e) => {
+                          const v = e.target.value as AdaptiveAnswer | "unk";
+                          const ans: AdaptiveAnswer = v === "unk" ? "unk" : v;
+                          updateMetadata({
+                            tags: setAdaptiveAnswer(doc.metadata.tags, templateProfile, p.id, ans),
+                          });
+                        }}
+                      >
+                        <option value="unk">Não sei</option>
+                        <option value="yes">Sim</option>
+                        <option value="no">Não</option>
+                      </Select>
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            ) : null}
           </div>
         </Card>
       )}
@@ -340,7 +448,22 @@ export function WizardPage() {
           <ul className="mt-3 list-inside list-disc text-sm text-otm-text-muted">
             <li>{doc.components.length} componentes</li>
             <li>{doc.data_flows.length} fluxos</li>
+            <li>Metodologia alvo: {methodology}</li>
           </ul>
+          {wizardSummaryLines(adaptivePrompts).length > 0 ? (
+            <details className="mt-4 rounded-otm-md border border-otm-border/80 bg-otm-surface-2/50 px-3 py-2 text-sm">
+              <summary className="cursor-pointer font-medium text-otm-text">Resumo do contexto (assistente)</summary>
+              <p className="mt-2 text-xs text-otm-text-muted">
+                Estas respostas são enviadas ao motor como etiquetas <code className="text-otm-accent">wz:</code> e
+                influenciam ranking e anti-patterns de forma explicável.
+              </p>
+              <ul className="mt-2 list-inside list-disc space-y-1 text-xs text-otm-text-muted">
+                {wizardSummaryLines(adaptivePrompts).map((line) => (
+                  <li key={line}>{line}</li>
+                ))}
+              </ul>
+            </details>
+          ) : null}
         </Card>
       )}
 

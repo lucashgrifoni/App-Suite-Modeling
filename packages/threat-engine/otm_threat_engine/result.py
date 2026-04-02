@@ -10,6 +10,8 @@ from otm_core_schema.model_quality_precheck import ModelQualityPrecheck
 from otm_explainability import ExplanationRecord
 from pydantic import BaseModel, Field
 
+from otm_threat_engine.anti_pattern_library import AntiPatternHit
+
 
 class StructuralFinding(BaseModel):
     """Aviso ou achado de consistência (além da validação Pydantic do documento)."""
@@ -180,4 +182,12 @@ class AnalysisResult(BaseModel):
     methodology_completeness: MethodologyCompletenessInfo | None = Field(
         default=None,
         description="Adequação do contexto à metodologia (complete/partial/degraded).",
+    )
+    wizard_context_notes: list[str] = Field(
+        default_factory=list,
+        description="Notas explicáveis quando sinais `wz:` do assistente influenciam ranking/corpus.",
+    )
+    anti_pattern_hits: list[AntiPatternHit] = Field(
+        default_factory=list,
+        description="Anti-padrões de modelagem alinhados ao template_semantic_profile.",
     )

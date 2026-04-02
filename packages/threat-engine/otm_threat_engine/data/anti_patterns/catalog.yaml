@@ -1,0 +1,113 @@
+# Biblioteca de anti-padrões por contexto (template / semantic profile).
+# matching: perfil + palavras em falta no corpus agregado (heurística conservadora).
+
+patterns:
+  - id: ap_admin_missing_approval_signal
+    name: "Fluxo admin sem evidência de aprovação / segregação"
+    semantic_profiles:
+      - internal_admin_portal
+    missing_any_of:
+      - aprovação
+      - approval
+      - segregação
+      - segregation
+      - four-eyes
+    severity_hint: medium
+    expected_controls:
+      - "Workflow de aprovação para ações privilegiadas"
+
+  - id: ap_upload_quarantine_gap
+    name: "Upload sem evidência de quarentena ou revalidação"
+    semantic_profiles:
+      - file_handling_application
+    missing_any_of:
+      - quarentena
+      - quarantine
+      - revalidação
+      - sandbox
+      - antivirus
+    severity_hint: medium
+    expected_controls:
+      - "Quarentena antes de processamento assíncrono"
+
+  - id: ap_api_gateway_policy_gap
+    name: "API pública com gateway sem sinais de política/rate limit"
+    semantic_profiles:
+      - api_backend_rest
+    missing_any_of:
+      - rate limit
+      - ratelimit
+      - waf
+      - policy
+      - throttl
+    severity_hint: medium
+    expected_controls:
+      - "Política de perímetro e limitação de taxa no gateway"
+
+  - id: ap_ecommerce_payment_boundary
+    name: "E-commerce sem boundary ou PSP explícito no texto"
+    semantic_profiles:
+      - industry_ecommerce
+    missing_any_of:
+      - psp
+      - pagamento
+      - payment
+      - checkout
+      - terceiro
+      - third
+    severity_hint: high
+    expected_controls:
+      - "Boundary explícito para processamento de pagamento"
+
+  - id: ap_admin_audit_gap
+    name: "Portal admin sem menção explícita a auditoria imutável"
+    semantic_profiles:
+      - internal_admin_portal
+    missing_any_of:
+      - auditoria
+      - audit
+      - imutável
+      - immutable
+      - append-only
+    severity_hint: medium
+    expected_controls:
+      - "Registo de auditoria com retenção e integridade"
+
+  - id: ap_upload_boundary_gap
+    name: "Upload sem separação clara entre entrada e processamento"
+    semantic_profiles:
+      - file_handling_application
+    missing_any_of:
+      - dmz
+      - segmentação
+      - segment
+      - boundary
+    severity_hint: medium
+    expected_controls:
+      - "Segmentação entre edge de upload e pipeline interno"
+
+  - id: ap_api_ssrf_hint
+    name: "API com chamadas externas sem menção a allowlist/egress"
+    semantic_profiles:
+      - api_backend_rest
+    missing_any_of:
+      - allowlist
+      - egress
+      - ssrf
+      - outbound
+    severity_hint: medium
+    expected_controls:
+      - "Política de destinos externos (egress) e SSRF"
+
+  - id: ap_ecommerce_fraud
+    name: "E-commerce sem sinais de anti-fraude ou risco de encomenda"
+    semantic_profiles:
+      - industry_ecommerce
+    missing_any_of:
+      - fraude
+      - fraud
+      - chargeback
+      - risk
+    severity_hint: medium
+    expected_controls:
+      - "Controlos de fraude e revisão de encomendas"

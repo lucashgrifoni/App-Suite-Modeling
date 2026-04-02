@@ -84,6 +84,36 @@ export interface AiSystemContextSummary {
   heuristic_ids_by_layer: Record<string, string[]>;
 }
 
+export interface QualityCheckItem {
+  code: string;
+  passed: boolean;
+  message: string;
+}
+
+export interface ModelQualityPrecheck {
+  score_0_100: number;
+  band: "minimal" | "good" | "rich";
+  methodology_fit: "strong" | "partial" | "weak";
+  recommendation_confidence: "low" | "medium" | "high";
+  methodology_fit_matrix: Record<string, string>;
+  checks?: QualityCheckItem[];
+}
+
+export interface MethodologyCompletenessInfo {
+  state: "complete" | "partial" | "degraded";
+  reasons: string[];
+  note?: string | null;
+}
+
+export interface AntiPatternHit {
+  id: string;
+  name: string;
+  severity_hint: string;
+  message: string;
+  evidence: string[];
+  expected_controls: string[];
+}
+
 export interface AnalysisResult {
   engine_version: string;
   methodology:
@@ -106,6 +136,11 @@ export interface AnalysisResult {
   pack_control_hints: string[];
   explanations?: ExplanationRecord[];
   ai_system_context?: AiSystemContextSummary | null;
+  model_quality_precheck?: ModelQualityPrecheck | null;
+  methodology_completeness?: MethodologyCompletenessInfo | null;
+  /** Notas quando tags `wz:` do assistente influenciam o motor. */
+  wizard_context_notes?: string[];
+  anti_pattern_hits?: AntiPatternHit[];
 }
 
 export interface MethodologyRecommendation {

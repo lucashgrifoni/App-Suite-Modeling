@@ -156,6 +156,75 @@ function DiffRiskDeltaCard({
   );
 }
 
+function SemanticDiffSectionsBlock({ meta }: Readonly<{ meta: Record<string, unknown> }>) {
+  const raw = meta.semantic_diff_sections;
+  if (!raw || typeof raw !== "object") return null;
+  const sec = raw as { improved?: string[]; worsened?: string[]; risk_impact?: string[] };
+  const imp = sec.improved ?? [];
+  const wor = sec.worsened ?? [];
+  const risk = sec.risk_impact ?? [];
+  if (imp.length === 0 && wor.length === 0 && risk.length === 0) return null;
+  return (
+    <div className="grid gap-3 sm:grid-cols-3">
+      {imp.length ? (
+        <div className="rounded-otm-md border border-emerald-500/20 bg-emerald-950/15 p-3 text-xs text-otm-text-muted">
+          <p className="font-semibold text-emerald-100">Melhorou</p>
+          <ul className="mt-2 list-inside list-disc space-y-1">
+            {imp.map((x) => (
+              <li key={x}>{x}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+      {wor.length ? (
+        <div className="rounded-otm-md border border-amber-500/20 bg-amber-950/15 p-3 text-xs text-otm-text-muted">
+          <p className="font-semibold text-amber-100">Piorou / atenção</p>
+          <ul className="mt-2 list-inside list-disc space-y-1">
+            {wor.map((x) => (
+              <li key={x}>{x}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+      {risk.length ? (
+        <div className="rounded-otm-md border border-otm-border bg-otm-surface-1/80 p-3 text-xs text-otm-text-muted sm:col-span-3 lg:col-span-1">
+          <p className="font-semibold text-otm-text">Impacto de risco</p>
+          <ul className="mt-2 list-inside list-disc space-y-1">
+            {risk.map((x) => (
+              <li key={x}>{x}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function SemanticInsightsBlock({ meta }: Readonly<{ meta: Record<string, unknown> }>) {
+  const raw = meta.semantic_insights;
+  const insights = Array.isArray(raw) ? (raw as string[]) : [];
+  const ver = typeof meta.semantic_insights_version === "string" ? meta.semantic_insights_version : "";
+  const hasSections =
+    meta.semantic_diff_sections != null && typeof meta.semantic_diff_sections === "object";
+  if (insights.length === 0 && !hasSections) return null;
+  return (
+    <Card className="space-y-2 p-4" variant="elevated">
+      <h2 className="font-display text-sm font-semibold text-otm-text">Diff semântico</h2>
+      {ver ? (
+        <p className="text-[10px] uppercase tracking-wide text-otm-text-subtle">Versão {ver}</p>
+      ) : null}
+      <SemanticDiffSectionsBlock meta={meta} />
+      {insights.length > 0 ? (
+        <ul className="list-inside list-disc space-y-1.5 text-sm text-otm-text-muted">
+          {insights.map((line) => (
+            <li key={line}>{line}</li>
+          ))}
+        </ul>
+      ) : null}
+    </Card>
+  );
+}
+
 function ComparisonResultPanel({
   result,
   runAnalysis,
@@ -212,6 +281,8 @@ function ComparisonResultPanel({
       </Card>
 
       <DiffRiskDeltaCard rd={rd} runAnalysis={runAnalysis} />
+
+      <SemanticInsightsBlock meta={result.meta} />
 
       <Card className="space-y-2 p-4" variant="glass">
         <h2 className="font-display text-sm font-semibold text-otm-text">JSON completo</h2>

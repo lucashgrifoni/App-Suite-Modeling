@@ -379,6 +379,8 @@ def test_export_analysis_json_minimal_top_level_key_order_stable() -> None:
         "ai_system_context",
         "model_quality_precheck",
         "methodology_completeness",
+        "wizard_context_notes",
+        "anti_pattern_hits",
     ]
 
 

@@ -7,6 +7,8 @@ export interface OtmModelInfo {
   schema_version: string;
   system_type: string;
   industry_sector: string;
+  /** Perfil do template (e.g. `internal_admin_portal`) — usado pelo assistente adaptativo. */
+  template_semantic_profile?: string | null;
   methodology?:
     | "stride"
     | "linddun"
@@ -22,6 +24,7 @@ export interface OtmMetadata {
   summary?: string | null;
   owner?: string | null;
   document_version?: string | null;
+  /** Inclui tags `wz:...` do assistente adaptativo. */
   tags?: string[];
 }
 
@@ -45,6 +48,21 @@ export interface OtmDataFlow {
 export interface OtmTrustBoundary {
   id: string;
   name: string;
+  inference_note?: string | null;
+  user_validated?: boolean | null;
+  member_component_ids?: string[];
+  crossing_flow_ids?: string[];
+}
+
+export interface OtmAsset {
+  id: string;
+  name: string;
+  asset_kind?: string;
+  data_classification?: string | null;
+  business_criticality?: string | null;
+  sensitivity?: string | null;
+  related_component_ids?: string[];
+  related_data_flow_ids?: string[];
 }
 
 export interface OtmDocument {
@@ -53,7 +71,7 @@ export interface OtmDocument {
   components: OtmComponent[];
   data_flows: OtmDataFlow[];
   trust_boundaries: OtmTrustBoundary[];
-  assets: unknown[];
+  assets: OtmAsset[];
   threats: unknown[];
   mitigations: unknown[];
   evidence_suggestions: unknown[];

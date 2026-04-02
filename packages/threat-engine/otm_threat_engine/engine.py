@@ -23,6 +23,8 @@ from otm_threat_engine.engine_support import (
     existing_threat_keys,
     extend_with_pack_heuristics,
 )
+from otm_threat_engine.anti_pattern_library import detect_anti_patterns
+from otm_threat_engine.wizard_signals import apply_wizard_context_to_heuristics
 from otm_threat_engine.methodology_completeness import assess_methodology_completeness
 from otm_threat_engine.recommendation_gate import filter_pack_control_hints
 from otm_threat_engine.result import AnalysisResult, HeuristicThreat
@@ -195,6 +197,7 @@ class ThreatAnalysisEngine:
         )
         pack_hints = filter_pack_control_hints(doc, pack_hints)
         skipped += suppress_stride_genericity_noise(heuristics)
+        _, wizard_notes = apply_wizard_context_to_heuristics(doc, heuristics)
         summary = build_analysis_summary(
             structural_count=len(structural),
             trust_count=len(trust_findings),
@@ -214,6 +217,7 @@ class ThreatAnalysisEngine:
             summary=summary,
             industry_pack_id=pack.id if pack else None,
             pack_control_hints=pack_hints,
+            wizard_context_notes=wizard_notes,
         )
         return raw
 
@@ -243,6 +247,7 @@ class ThreatAnalysisEngine:
             update={
                 "model_quality_precheck": assess_model_precheck(doc),
                 "methodology_completeness": assess_methodology_completeness(doc, chosen),
+                "anti_pattern_hits": detect_anti_patterns(doc),
             }
         )
 

@@ -17,6 +17,21 @@ e versionamento semântico quando aplicável.
 
 <!-- Compare links: atualizar com URL do repositório remoto após primeiro push de tag. -->
 
+## [5.0.0] — 2026-04-03
+
+Release **v5.0** (cockpit de decisão na análise, sinais adaptativos do wizard, comparação semântica, anti-patterns, métricas de benchmark e varredura de repositório para importação de artefatos).
+
+### Added
+
+- UI: `DecisionCockpit`, `ModelQualityStrip`, constantes de wizard adaptativo (`adaptiveWizard`).
+- Engine: biblioteca de anti-patterns, métricas de benchmark, comparação semântica de threat models, sinais de wizard e dados de referência.
+- Importação: `repo_scan` para varredura de repositório (`packages/artifact-import`).
+- Documentação: `docs/ADVANCED_PRODUCT_ROUND.md`; testes e fixtures de benchmark e análise.
+
+### Changed
+
+- CLI, páginas de análise/diff/review/wizard, `SessionContext`, tipos de documento/API e motor de análise alinhados ao conjunto v5.0.
+
 ## [4.0.0] — 2026-04-02
 
 Release **v4.0** (pacote de qualidade de modelagem, relatórios premium, heurísticas compostas e completude metodológica).

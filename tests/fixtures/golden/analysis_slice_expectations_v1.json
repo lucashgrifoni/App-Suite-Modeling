@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "cases": {
+    "api-public-stride": {
+      "min_model_quality_score": 25,
+      "min_heuristic_threats": 3
+    }
+  }
+}

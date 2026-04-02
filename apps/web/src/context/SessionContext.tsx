@@ -18,6 +18,10 @@ function normalizeDoc(raw: unknown): OtmDocument | null {
   if (!d.model || !d.metadata) return null;
   return {
     ...d,
+    metadata: {
+      ...d.metadata,
+      tags: d.metadata.tags ?? [],
+    },
     components: d.components ?? [],
     data_flows: d.data_flows ?? [],
     trust_boundaries: d.trust_boundaries ?? [],

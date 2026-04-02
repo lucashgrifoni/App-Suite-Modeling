@@ -12,6 +12,7 @@ from otm_core_schema.document import ThreatModelDocument
 
 from otm_threat_engine.analysis_diff import diff_analysis_results
 from otm_threat_engine.comparison_explanations import build_comparison_explanations
+from otm_threat_engine.semantic_comparison import enrich_comparison_meta
 from otm_threat_engine.comparison_models import (
     AnalysisDiff,
     ComparisonSummary,
@@ -242,6 +243,16 @@ def compare_threat_models(
         methodology_in_model_changed=meth_model_changed,
     )
 
+    meta = {
+        "comparison_contract_version": "1.1",
+        **enrich_comparison_meta(
+            baseline,
+            revised,
+            baseline_analysis=baseline_analysis,
+            revised_analysis=revised_analysis,
+            aggregate=aggregate,
+        ),
+    }
     base = ThreatModelComparisonResult(
         summary=summary,
         aggregate=aggregate,
@@ -253,6 +264,6 @@ def compare_threat_models(
         threat_delta=threat_delta,
         recommendation_delta=rec,
         key_insights=key_insights,
-        meta={"comparison_contract_version": "1.1"},
+        meta=meta,
     )
     return base.model_copy(update={"explanations": build_comparison_explanations(base)})

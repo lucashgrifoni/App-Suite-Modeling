@@ -9,6 +9,8 @@ import { WorkflowGuide } from "../components/onboarding/WorkflowGuide";
 import { ContextHint } from "../components/onboarding/ContextHint";
 import { RunEngineCard } from "../components/analysis/RunEngineCard";
 import { AnalysisMetricsGrid } from "../components/analysis/AnalysisMetricsGrid";
+import { ModelQualityStrip } from "../components/analysis/ModelQualityStrip";
+import { DecisionCockpit } from "../components/analysis/DecisionCockpit";
 import { Plot4aiContextCard } from "../components/analysis/Plot4aiContextCard";
 import { ExplanationsSection } from "../components/analysis/ExplanationsSection";
 import { RemediationBacklogCard } from "../components/analysis/RemediationBacklogCard";
@@ -170,6 +172,8 @@ export function AnalysisPage() {
       {analysis && (
         <div className="space-y-8">
           <AnalysisMetricsGrid analysis={analysis} />
+          <ModelQualityStrip analysis={analysis} />
+          <DecisionCockpit analysis={analysis} />
           <Plot4aiContextCard analysis={analysis} />
           {analysis.methodology_recommendation_reason && (
             <Alert variant="info">

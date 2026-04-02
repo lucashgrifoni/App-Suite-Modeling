@@ -259,7 +259,7 @@ import_cmd = typer.Typer(
     name="import",
     help=(
         "Importação assistida: gera [bold]rascunho[/bold] canónico "
-        "a partir de artefactos (OpenAPI, Terraform, K8s)."
+        "a partir de artefactos (OpenAPI, Terraform, K8s) ou [cyan]repo[/cyan] (sinais Node/Express)."
     ),
     no_args_is_help=True,
 )
@@ -391,6 +391,29 @@ def cmd_import_k8s(
             output=explain_out,
         )
         console.print(f"[green]Inferências[/green] → {explain_out.resolve()}")
+
+
+@import_cmd.command("repo")
+def cmd_import_repo(
+    root: Annotated[Path, typer.Argument(help="Raiz do repositório (ex.: serviço Node/Express).")],
+    json_out: Annotated[
+        Path | None,
+        typer.Option("--json-out", help="Grava JSON com inferências e excerto de corpus."),
+    ] = None,
+) -> None:
+    """Varredura pragmática: rotas, upload, sessão, fetch externo, eval (sem precisão total)."""
+    from otm_artifact_import import scan_node_express_repo
+
+    if not root.is_dir():
+        console.print(f"[red]Não é directório:[/red] {root}")
+        raise typer.Exit(1)
+    payload = scan_node_express_repo(root)
+    if json_out:
+        _write_json_file(payload=payload, output=json_out)
+        console.print(f"[green]Scan repo[/green] → {json_out.resolve()}")
+    else:
+        txt = json.dumps(payload, indent=2, ensure_ascii=False)
+        console.print(Panel.fit(txt[:14000], title="repo-scan", border_style="cyan"))
 
 
 app.add_typer(import_cmd)
