@@ -1,8 +1,8 @@
 model:
   schema_version: 1.0.0
-  methodology: stride
   system_type: hybrid
   industry_sector: telecom
+  methodology: stride
 metadata:
   title: OSS-BSS telecom
   summary: Canal digital, serviços de domínio e sistemas de registo.
@@ -11,11 +11,119 @@ metadata:
   - telecom
 business_context:
   description: Integrações com fornecedores de rede e billing.
+  business_goals: []
+  business_objectives: []
+  security_objectives: []
+  stakeholders: []
   assumptions:
   - APIs com idempotência para provisão.
+  critical_integrations: []
+assets:
+- id: industry_telecom_oss_bss_otm_persisted_data
+  name: Dados persistidos do serviço
+  asset_kind: order_record
+  data_classification: confidential
+  business_criticality: high
+  related_component_ids:
+  - bss
+  - subs
+  related_data_flow_ids:
+  - b_s
+  metadata: {}
+- id: industry_telecom_oss_bss_otm_credentials_and_secrets
+  name: Credenciais, chaves e segredos operacionais
+  asset_kind: credential
+  sensitivity: confidential
+  business_criticality: high
+  related_component_ids:
+  - portal
+  - bss
+  related_data_flow_ids:
+  - u_p
+  - p_b
+  metadata: {}
+- id: industry_telecom_oss_bss_otm_operational_surface
+  name: Superfície operacional e integrações
+  asset_kind: service
+  business_criticality: medium
+  related_component_ids:
+  - oss
+  related_data_flow_ids:
+  - b_o
+  metadata: {}
+components:
+- id: user
+  name: Cliente
+  kind: user
+  in_trust_boundary: internet
+  asset_ids: []
+  metadata: {}
+- id: portal
+  name: Portal/API digital
+  kind: gateway
+  in_trust_boundary: app_tier
+  asset_ids:
+  - industry_telecom_oss_bss_otm_credentials_and_secrets
+  metadata: {}
+- id: bss
+  name: Serviços BSS
+  kind: process
+  in_trust_boundary: app_tier
+  asset_ids:
+  - industry_telecom_oss_bss_otm_credentials_and_secrets
+  metadata: {}
+- id: oss
+  name: Serviços OSS
+  kind: process
+  in_trust_boundary: app_tier
+  asset_ids:
+  - industry_telecom_oss_bss_otm_operational_surface
+  metadata: {}
+- id: subs
+  name: Dados de assinante
+  kind: datastore
+  in_trust_boundary: app_tier
+  asset_ids:
+  - industry_telecom_oss_bss_otm_persisted_data
+  metadata: {}
+data_flows:
+- id: u_p
+  from_component: user
+  to_component: portal
+  protocol: HTTPS
+  encrypted: true
+  data_types: []
+  semantic_class: generic
+  metadata: {}
+- id: p_b
+  from_component: portal
+  to_component: bss
+  protocol: HTTPS
+  data_types: []
+  semantic_class: generic
+  metadata: {}
+- id: b_o
+  from_component: bss
+  to_component: oss
+  protocol: TCP
+  encrypted: true
+  data_types: []
+  semantic_class: generic
+  metadata: {}
+- id: b_s
+  from_component: bss
+  to_component: subs
+  protocol: TCP
+  encrypted: true
+  data_types: []
+  semantic_class: generic
+  metadata: {}
 trust_boundaries:
 - id: internet
   name: Internet
+  member_component_ids: []
+  outside_component_ids: []
+  crossing_flow_ids: []
 - id: app_tier
   name: Conta / VPC aplicação
   member_component_ids:
@@ -23,48 +131,8 @@ trust_boundaries:
   - bss
   - oss
   - subs
-components:
-- id: user
-  name: Cliente
-  kind: user
-  in_trust_boundary: internet
-- id: portal
-  name: Portal/API digital
-  kind: gateway
-  in_trust_boundary: app_tier
-- id: bss
-  name: Serviços BSS
-  kind: process
-  in_trust_boundary: app_tier
-- id: oss
-  name: Serviços OSS
-  kind: process
-  in_trust_boundary: app_tier
-- id: subs
-  name: Dados de assinante
-  kind: datastore
-  in_trust_boundary: app_tier
-data_flows:
-- id: u_p
-  from_component: user
-  to_component: portal
-  protocol: HTTPS
-  encrypted: true
-- id: p_b
-  from_component: portal
-  to_component: bss
-  protocol: HTTPS
-- id: b_o
-  from_component: bss
-  to_component: oss
-  protocol: TCP
-  encrypted: true
-- id: b_s
-  from_component: bss
-  to_component: subs
-  protocol: TCP
-  encrypted: true
-assets: []
+  outside_component_ids: []
+  crossing_flow_ids: []
 threats: []
 mitigations: []
 evidence_suggestions: []

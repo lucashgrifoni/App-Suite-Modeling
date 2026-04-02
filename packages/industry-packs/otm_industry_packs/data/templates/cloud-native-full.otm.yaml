@@ -1,8 +1,8 @@
 model:
   schema_version: 1.0.0
-  methodology: stride
   system_type: hybrid
   industry_sector: cloud_native
+  methodology: stride
 metadata:
   title: Cloud-native completo
   summary: Ingress, workloads, cache, dados e telemetria.
@@ -11,15 +11,142 @@ metadata:
   - k8s
 business_context:
   description: Superfície de rede interna e externa com stack de observabilidade.
+  business_goals: []
+  business_objectives: []
+  security_objectives: []
+  stakeholders: []
   assumptions:
   - Prometheus/OTel para métricas e traces.
+  critical_integrations: []
+assets:
+- id: cloud_native_full_otm_persisted_data
+  name: Dados persistidos do serviço
+  asset_kind: order_record
+  data_classification: confidential
+  business_criticality: high
+  related_component_ids:
+  - svc
+  - cache
+  related_data_flow_ids:
+  - sv_c
+  metadata: {}
+- id: cloud_native_full_otm_credentials_and_secrets
+  name: Credenciais, chaves e segredos operacionais
+  asset_kind: credential
+  sensitivity: confidential
+  business_criticality: high
+  related_component_ids:
+  - ingress
+  - svc
+  related_data_flow_ids:
+  - u_in
+  - in_sv
+  metadata: {}
+- id: cloud_native_full_otm_operational_surface
+  name: Superfície operacional e integrações
+  asset_kind: service
+  business_criticality: medium
+  related_component_ids:
+  - db
+  related_data_flow_ids:
+  - sv_d
+  metadata: {}
+components:
+- id: user
+  name: Cliente
+  kind: user
+  in_trust_boundary: internet
+  asset_ids: []
+  metadata: {}
+- id: ingress
+  name: Ingress / gateway
+  kind: gateway
+  in_trust_boundary: dmz
+  asset_ids:
+  - cloud_native_full_otm_credentials_and_secrets
+  metadata: {}
+- id: svc
+  name: Workload principal
+  kind: process
+  technology: K8s
+  in_trust_boundary: app_tier
+  asset_ids:
+  - cloud_native_full_otm_credentials_and_secrets
+  metadata: {}
+- id: cache
+  name: Cache
+  kind: datastore
+  technology: Redis
+  in_trust_boundary: app_tier
+  asset_ids:
+  - cloud_native_full_otm_persisted_data
+  metadata: {}
+- id: db
+  name: Base de dados
+  kind: datastore
+  technology: PostgreSQL
+  in_trust_boundary: app_tier
+  asset_ids:
+  - cloud_native_full_otm_operational_surface
+  metadata: {}
+- id: obs
+  name: Stack observabilidade
+  kind: process
+  technology: OTel
+  in_trust_boundary: app_tier
+  asset_ids: []
+  metadata: {}
+data_flows:
+- id: u_in
+  from_component: user
+  to_component: ingress
+  protocol: HTTPS
+  encrypted: true
+  data_types: []
+  semantic_class: generic
+  metadata: {}
+- id: in_sv
+  from_component: ingress
+  to_component: svc
+  protocol: HTTPS
+  data_types: []
+  semantic_class: generic
+  metadata: {}
+- id: sv_c
+  from_component: svc
+  to_component: cache
+  protocol: TCP
+  encrypted: true
+  data_types: []
+  semantic_class: generic
+  metadata: {}
+- id: sv_d
+  from_component: svc
+  to_component: db
+  protocol: TCP
+  encrypted: true
+  data_types: []
+  semantic_class: generic
+  metadata: {}
+- id: sv_o
+  from_component: svc
+  to_component: obs
+  protocol: HTTPS
+  data_types: []
+  semantic_class: generic
+  metadata: {}
 trust_boundaries:
 - id: internet
   name: Internet
+  member_component_ids: []
+  outside_component_ids: []
+  crossing_flow_ids: []
 - id: dmz
   name: DMZ / edge
   member_component_ids:
   - ingress
+  outside_component_ids: []
+  crossing_flow_ids: []
 - id: app_tier
   name: Aplicação / dados
   member_component_ids:
@@ -27,60 +154,8 @@ trust_boundaries:
   - cache
   - db
   - obs
-components:
-- id: user
-  name: Cliente
-  kind: user
-  in_trust_boundary: internet
-- id: ingress
-  name: Ingress / gateway
-  kind: gateway
-  in_trust_boundary: dmz
-- id: svc
-  name: Workload principal
-  kind: process
-  technology: K8s
-  in_trust_boundary: app_tier
-- id: cache
-  name: Cache
-  kind: datastore
-  technology: Redis
-  in_trust_boundary: app_tier
-- id: db
-  name: Base de dados
-  kind: datastore
-  technology: PostgreSQL
-  in_trust_boundary: app_tier
-- id: obs
-  name: Stack observabilidade
-  kind: process
-  technology: OTel
-  in_trust_boundary: app_tier
-data_flows:
-- id: u_in
-  from_component: user
-  to_component: ingress
-  protocol: HTTPS
-  encrypted: true
-- id: in_sv
-  from_component: ingress
-  to_component: svc
-  protocol: HTTPS
-- id: sv_c
-  from_component: svc
-  to_component: cache
-  protocol: TCP
-  encrypted: true
-- id: sv_d
-  from_component: svc
-  to_component: db
-  protocol: TCP
-  encrypted: true
-- id: sv_o
-  from_component: svc
-  to_component: obs
-  protocol: HTTPS
-assets: []
+  outside_component_ids: []
+  crossing_flow_ids: []
 threats: []
 mitigations: []
 evidence_suggestions: []

@@ -1,8 +1,8 @@
 model:
   schema_version: 1.0.0
-  methodology: plot4ai
   system_type: hybrid
   industry_sector: generic
+  methodology: plot4ai
 metadata:
   title: 'Foco: IA/LLM'
   summary: Cliente, aplicação e fornecedor de modelo.
@@ -12,50 +12,111 @@ metadata:
   - ai
 business_context:
   description: Documentar fluxos de dados para o modelo e ferramentas.
+  business_goals: []
+  business_objectives: []
+  security_objectives: []
+  stakeholders: []
   assumptions:
   - Política de retenção de prompts definida.
-trust_boundaries:
-- id: internet
-  name: Internet
-- id: app_tier
-  name: Conta / VPC
-  member_component_ids:
+  critical_integrations: []
+assets:
+- id: objective_ai_llm_otm_application_state
+  name: Estado e dados processados pela aplicação
+  asset_kind: session
+  sensitivity: confidential
+  business_criticality: high
+  related_component_ids:
   - app
-  - orch
+  related_data_flow_ids:
+  - u_a
+  - a_o
+  metadata: {}
+- id: objective_ai_llm_otm_credentials_and_secrets
+  name: Credenciais, chaves e segredos operacionais
+  asset_kind: credential
+  sensitivity: confidential
+  business_criticality: high
+  related_component_ids:
+  - app
+  related_data_flow_ids:
+  - u_a
+  - a_o
+  metadata: {}
+- id: objective_ai_llm_otm_operational_surface
+  name: Superfície operacional e integrações
+  asset_kind: service
+  business_criticality: medium
+  related_component_ids:
+  - llm
+  related_data_flow_ids:
+  - o_l
+  metadata: {}
 components:
 - id: user
   name: Utilizador
   kind: user
   in_trust_boundary: internet
+  asset_ids: []
+  metadata: {}
 - id: app
   name: Aplicação
   kind: process
   in_trust_boundary: app_tier
+  asset_ids:
+  - objective_ai_llm_otm_application_state
+  - objective_ai_llm_otm_credentials_and_secrets
+  metadata: {}
 - id: orch
   name: Orquestração IA
   kind: process
   in_trust_boundary: app_tier
+  asset_ids: []
+  metadata: {}
 - id: llm
   name: Fornecedor LLM
   kind: external_entity
   in_trust_boundary: internet
+  asset_ids:
+  - objective_ai_llm_otm_operational_surface
+  metadata: {}
 data_flows:
 - id: u_a
   from_component: user
   to_component: app
   protocol: HTTPS
   encrypted: true
+  data_types: []
+  semantic_class: generic
+  metadata: {}
 - id: a_o
   from_component: app
   to_component: orch
   protocol: HTTPS
+  data_types: []
+  semantic_class: generic
+  metadata: {}
 - id: o_l
   from_component: orch
   to_component: llm
   protocol: HTTPS
-  encrypted: true
   authenticated: true
-assets: []
+  encrypted: true
+  data_types: []
+  semantic_class: generic
+  metadata: {}
+trust_boundaries:
+- id: internet
+  name: Internet
+  member_component_ids: []
+  outside_component_ids: []
+  crossing_flow_ids: []
+- id: app_tier
+  name: Conta / VPC
+  member_component_ids:
+  - app
+  - orch
+  outside_component_ids: []
+  crossing_flow_ids: []
 threats: []
 mitigations: []
 evidence_suggestions: []

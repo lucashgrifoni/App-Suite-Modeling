@@ -1,8 +1,8 @@
 model:
   schema_version: 1.0.0
-  methodology: stride
   system_type: hybrid
   industry_sector: generic
+  methodology: stride
 metadata:
   title: 'Foco: terceiros'
   summary: Serviço interno e múltiplos fornecedores SaaS/API.
@@ -12,51 +12,114 @@ metadata:
   - third_party
 business_context:
   description: Identificar dependências N-tier e dados partilhados com vendors.
+  business_goals: []
+  business_objectives: []
+  security_objectives: []
+  stakeholders: []
   assumptions:
   - Inventário de subprocessadores mantido.
-trust_boundaries:
-- id: internet
-  name: Internet
-- id: app_tier
-  name: Conta / VPC
-  member_component_ids:
+  critical_integrations: []
+assets:
+- id: objective_third_party_heavy_otm_application_state
+  name: Estado e dados processados pela aplicação
+  asset_kind: session
+  sensitivity: confidential
+  business_criticality: high
+  related_component_ids:
   - core
+  related_data_flow_ids:
+  - u_c
+  - c_v1
+  - c_v2
+  metadata: {}
+- id: objective_third_party_heavy_otm_credentials_and_secrets
+  name: Credenciais, chaves e segredos operacionais
+  asset_kind: credential
+  sensitivity: confidential
+  business_criticality: high
+  related_component_ids:
+  - core
+  related_data_flow_ids:
+  - u_c
+  - c_v1
+  - c_v2
+  metadata: {}
+- id: objective_third_party_heavy_otm_operational_surface
+  name: Superfície operacional e integrações
+  asset_kind: service
+  business_criticality: medium
+  related_component_ids:
+  - v1
+  related_data_flow_ids:
+  - c_v1
+  metadata: {}
 components:
 - id: user
   name: Cliente
   kind: user
   in_trust_boundary: internet
+  asset_ids: []
+  metadata: {}
 - id: core
   name: Serviço core
   kind: process
   in_trust_boundary: app_tier
+  asset_ids:
+  - objective_third_party_heavy_otm_application_state
+  - objective_third_party_heavy_otm_credentials_and_secrets
+  metadata: {}
 - id: v1
   name: Fornecedor A
   kind: external_entity
   in_trust_boundary: internet
+  asset_ids:
+  - objective_third_party_heavy_otm_operational_surface
+  metadata: {}
 - id: v2
   name: Fornecedor B
   kind: external_entity
   in_trust_boundary: internet
+  asset_ids: []
+  metadata: {}
 data_flows:
 - id: u_c
   from_component: user
   to_component: core
   protocol: HTTPS
   encrypted: true
+  data_types: []
+  semantic_class: generic
+  metadata: {}
 - id: c_v1
   from_component: core
   to_component: v1
   protocol: HTTPS
-  encrypted: true
   authenticated: true
+  encrypted: true
+  data_types: []
+  semantic_class: generic
+  metadata: {}
 - id: c_v2
   from_component: core
   to_component: v2
   protocol: HTTPS
-  encrypted: true
   authenticated: true
-assets: []
+  encrypted: true
+  data_types: []
+  semantic_class: generic
+  metadata: {}
+trust_boundaries:
+- id: internet
+  name: Internet
+  member_component_ids: []
+  outside_component_ids: []
+  crossing_flow_ids: []
+- id: app_tier
+  name: Conta / VPC
+  member_component_ids:
+  - core
+  outside_component_ids: []
+  crossing_flow_ids: []
 threats: []
 mitigations: []
 evidence_suggestions: []

@@ -8,7 +8,8 @@ Interface oficial em linha de comando — mesma base que a API (`ThreatModelDocu
 |--------|--------|--------|
 | Orquestração | `otm_cli/cli.py` | Comandos Typer, mensagens, ficheiros |
 | Carga / erros | `otm_cli/io_util.py` | `load_doc`, formatação de `ValidationError` |
-| Relatório MD | `otm_cli/reporting.py` | Documento + resultado do motor |
+| Relatório MD | `otm_cli/reporting.py` | Documento + resultado do motor (legado) |
+| Report premium | `otm_report_premium` | Payload + Markdown/HTML/PDF (níveis executive/standard/deep) |
 | Schema | `otm_core_schema` | Validação e serialização |
 | Motor | `otm_threat_engine` | `analyze_document` |
 | Export neutro | `otm_exporters`, `otm_diagram_engine` | JSON/MD/Mermaid sem lógica de negócio extra |
@@ -19,6 +20,8 @@ Interface oficial em linha de comando — mesma base que a API (`ThreatModelDocu
 pip install -e ".[cli]"
 ```
 
+Para **PDF premium**, instale também o extra `report` (`xhtml2pdf`): `pip install -e ".[cli,report]"`.
+
 O executável é **`otm`** (ou `python -m otm_cli.cli`).
 
 ## Comandos
@@ -27,6 +30,7 @@ O executável é **`otm`** (ou `python -m otm_cli.cli`).
 |---------|-----------|
 | `otm init [arquivo]` | Cria um `.otm.yaml` mínimo (default: `threatmodel.otm.yaml`). |
 | `otm validate <arquivo>` | Valida o schema; painel com resumo. |
+| `otm precheck <arquivo>` | Pré-check de completude (score, matriz de adequação metodológica) + completude da metodologia; não corre o motor. `--json-out` para CI. |
 | `otm analyze <arquivo>` | Corre o motor (STRIDE heurístico, fronteiras, L×I). |
 | `otm analyze ... --methodology <id>` | Seleciona engine/metodologia (`stride`, `linddun`, `nist_data_centric`, `octave_allegro`, `cia_die`, `pasta`, `plot4ai`). |
 | `otm analyze ... --auto-methodology` | Aplica recomendação automática de metodologia pelo contexto do documento. |
@@ -34,7 +38,10 @@ O executável é **`otm`** (ou `python -m otm_cli.cli`).
 | `otm analyze ... --explain` | Mostra um resumo curto de `explanations` no terminal. |
 | `otm explain <ficheiro.json> --from analysis\|compare` | Lê `explanations` de artefactos JSON sem despejar o payload completo. |
 | `otm recommend-methodology <arquivo>` | Sugere metodologia e explica o motivo. |
-| `otm report <arquivo>` | Markdown: modelo + análise (stdout ou `-o`). |
+| `otm report <arquivo>` | Markdown: modelo + análise (stdout ou `-o`) — relatório legado. |
+| `otm report <arquivo> --level executive\|standard\|deep` | Report premium (Markdown ou PDF com `-f markdown\|pdf`). Ver `docs/PREMIUM_REPORTS.md`. |
+| `otm report ... --analysis-json <ficheiro>` | Reutiliza `AnalysisResult` JSON. |
+| `otm report ... --baseline <ficheiro>` | Análise anterior para diff no report premium. |
 | `otm diagram <arquivo>` | Mermaid flowchart (stdout ou `-o`). |
 | `otm export <arquivo> -f yaml\|json\|md` | Modelo normalizado (default: stdout). |
 | `otm --version` | Versão. |

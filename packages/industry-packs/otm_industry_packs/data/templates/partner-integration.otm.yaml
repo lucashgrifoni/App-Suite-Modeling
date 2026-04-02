@@ -1,8 +1,8 @@
 model:
   schema_version: 1.0.0
-  methodology: stride
   system_type: hybrid
   industry_sector: generic
+  methodology: stride
 metadata:
   title: Integração com parceiro
   summary: Gateway interno, adaptador e fila de reconciliação.
@@ -11,62 +11,132 @@ metadata:
   - partner
 business_context:
   description: Contratos e SLAs com parceiros devem estar explícitos.
+  business_goals: []
+  business_objectives: []
+  security_objectives: []
+  stakeholders: []
   assumptions:
   - Idempotência nos callbacks.
-trust_boundaries:
-- id: internet
-  name: Internet
-- id: dmz
-  name: DMZ / edge
-  member_component_ids:
-  - gw
-- id: app_tier
-  name: Aplicação / dados
-  member_component_ids:
+  critical_integrations: []
+assets:
+- id: partner_integration_otm_application_state
+  name: Estado e dados processados pela aplicação
+  asset_kind: session
+  sensitivity: confidential
+  business_criticality: high
+  related_component_ids:
   - adapter
-  - queue
+  related_data_flow_ids:
+  - g_a
+  - a_q
+  metadata: {}
+- id: partner_integration_otm_credentials_and_secrets
+  name: Credenciais, chaves e segredos operacionais
+  asset_kind: credential
+  sensitivity: confidential
+  business_criticality: high
+  related_component_ids:
+  - gw
+  - adapter
+  related_data_flow_ids:
+  - i_g
+  - g_a
+  metadata: {}
+- id: partner_integration_otm_operational_surface
+  name: Superfície operacional e integrações
+  asset_kind: service
+  business_criticality: medium
+  related_component_ids:
   - recon
+  related_data_flow_ids:
+  - q_r
+  metadata: {}
 components:
 - id: internal
   name: Cliente interno
   kind: user
   in_trust_boundary: internet
+  asset_ids: []
+  metadata: {}
 - id: gw
   name: Gateway interno
   kind: gateway
   in_trust_boundary: dmz
+  asset_ids:
+  - partner_integration_otm_credentials_and_secrets
+  metadata: {}
 - id: adapter
   name: Adaptador parceiro
   kind: process
   in_trust_boundary: app_tier
+  asset_ids:
+  - partner_integration_otm_application_state
+  - partner_integration_otm_credentials_and_secrets
+  metadata: {}
 - id: queue
   name: Fila reconciliação
   kind: queue
   in_trust_boundary: app_tier
+  asset_ids: []
+  metadata: {}
 - id: recon
   name: Serviço reconciliação
   kind: process
   in_trust_boundary: app_tier
+  asset_ids:
+  - partner_integration_otm_operational_surface
+  metadata: {}
 data_flows:
 - id: i_g
   from_component: internal
   to_component: gw
   protocol: HTTPS
   encrypted: true
+  data_types: []
+  semantic_class: generic
+  metadata: {}
 - id: g_a
   from_component: gw
   to_component: adapter
   protocol: HTTPS
+  data_types: []
+  semantic_class: generic
+  metadata: {}
 - id: a_q
   from_component: adapter
   to_component: queue
   protocol: TCP
   encrypted: true
+  data_types: []
+  semantic_class: generic
+  metadata: {}
 - id: q_r
   from_component: queue
   to_component: recon
   protocol: TCP
-assets: []
+  data_types: []
+  semantic_class: generic
+  metadata: {}
+trust_boundaries:
+- id: internet
+  name: Internet
+  member_component_ids: []
+  outside_component_ids: []
+  crossing_flow_ids: []
+- id: dmz
+  name: DMZ / edge
+  member_component_ids:
+  - gw
+  outside_component_ids: []
+  crossing_flow_ids: []
+- id: app_tier
+  name: Aplicação / dados
+  member_component_ids:
+  - adapter
+  - queue
+  - recon
+  outside_component_ids: []
+  crossing_flow_ids: []
 threats: []
 mitigations: []
 evidence_suggestions: []

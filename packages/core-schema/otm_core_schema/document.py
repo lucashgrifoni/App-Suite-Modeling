@@ -9,7 +9,10 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 from otm_core_schema.enums import (
     AssetKind,
     ComponentKind,
+    CriticalityLevel,
+    DataClassificationLevel,
     EvidenceKind,
+    FlowSemanticClass,
     IndustrySector,
     MitigationStatus,
     StrideCategory,
@@ -43,11 +46,14 @@ def _validate_component_refs(
                 raise ValueError(f"component '{c.id}' references unknown asset '{aid}'")
 
 
-def _validate_asset_refs(assets: list[Asset], *, comp_ids: set[str]) -> None:
+def _validate_asset_refs(assets: list[Asset], *, comp_ids: set[str], flow_ids: set[str]) -> None:
     for a in assets:
         for cid in a.related_component_ids:
             if cid not in comp_ids:
                 raise ValueError(f"asset '{a.id}' references unknown component '{cid}'")
+        for fid in a.related_data_flow_ids:
+            if fid not in flow_ids:
+                raise ValueError(f"asset '{a.id}' references unknown data_flow '{fid}'")
 
 
 def _validate_data_flow_refs(data_flows: list[DataFlow], *, comp_ids: set[str]) -> None:
@@ -62,11 +68,18 @@ def _validate_trust_boundary_refs(
     trust_boundaries: list[TrustBoundary],
     *,
     comp_ids: set[str],
+    flow_ids: set[str],
 ) -> None:
     for tb in trust_boundaries:
         for mid in tb.member_component_ids:
             if mid not in comp_ids:
                 raise ValueError(f"trust_boundary '{tb.id}' references unknown component '{mid}'")
+        for fid in tb.crossing_flow_ids:
+            if fid not in flow_ids:
+                raise ValueError(f"trust_boundary '{tb.id}' references unknown data_flow '{fid}'")
+        for oid in tb.outside_component_ids:
+            if oid not in comp_ids:
+                raise ValueError(f"trust_boundary '{tb.id}' references unknown outside component '{oid}'")
 
 
 def _validate_mitigation_refs(mitigations: list[Mitigation], *, threat_ids: set[str]) -> None:
@@ -125,12 +138,36 @@ class BusinessContext(BaseModel):
 
     description: str | None = Field(default=None, description="Narrativa do sistema e escopo.")
     business_goals: list[str] = Field(default_factory=list)
+    business_objectives: list[str] = Field(
+        default_factory=list,
+        description="Objetivos de negócio explícitos (PASTA / risk-centric).",
+    )
+    security_objectives: list[str] = Field(
+        default_factory=list,
+        description="Objetivos de segurança declarados.",
+    )
     stakeholders: list[str] = Field(default_factory=list)
     regulatory_context: str | None = Field(
         default=None,
         description="Obrigações regulatórias relevantes (texto livre curto).",
     )
     assumptions: list[str] = Field(default_factory=list)
+    availability_requirements: str | None = Field(
+        default=None,
+        description="Requisitos de disponibilidade (texto curto).",
+    )
+    integrity_requirements: str | None = Field(
+        default=None,
+        description="Requisitos de integridade (texto curto).",
+    )
+    impact_if_compromised: str | None = Field(
+        default=None,
+        description="Impacto operacional se o sistema for comprometido.",
+    )
+    critical_integrations: list[str] = Field(
+        default_factory=list,
+        description="Integrações críticas (IDs ou nomes de sistemas externos).",
+    )
 
 
 class ModelInfo(BaseModel):
@@ -152,6 +189,12 @@ class ModelInfo(BaseModel):
         default=ThreatModelMethodology.STRIDE,
         description=("Metodologia principal escolhida para análise. Default do sistema: STRIDE."),
     )
+    template_semantic_profile: str | None = Field(
+        default=None,
+        description=(
+            "Perfil semântico do template/pack (ex.: api_backend_rest) — alinha heurísticas e benchmark."
+        ),
+    )
 
 
 class Asset(BaseModel):
@@ -163,11 +206,33 @@ class Asset(BaseModel):
     description: str | None = None
     sensitivity: str | None = Field(
         default=None,
-        description="Ex.: public, internal, confidential, restricted.",
+        description="Ex.: public, internal, confidential, restricted (texto livre legado).",
+    )
+    data_classification: DataClassificationLevel | None = Field(
+        default=None,
+        description="Classificação explícita para NIST data-centric e relatórios.",
+    )
+    data_nature: str | None = Field(
+        default=None,
+        description="Natureza: credentials, session_tokens, user_profile, orders, logs, uploaded_files, …",
+    )
+    business_criticality: CriticalityLevel | None = None
+    regulatory_relevance: str | None = Field(
+        default=None,
+        description="Notas curtas sobre regime (GDPR, PCI, etc.).",
+    )
+    owner: str | None = Field(default=None, description="Dono do ativo (equipa ou papel).")
+    location: str | None = Field(
+        default=None,
+        description="Localização lógica: região, cluster, vault, …",
     )
     related_component_ids: list[str] = Field(
         default_factory=list,
         description="Componentes que armazenam, processam ou expõem o ativo.",
+    )
+    related_data_flow_ids: list[str] = Field(
+        default_factory=list,
+        description="Fluxos onde o ativo transita de forma relevante.",
     )
     metadata: dict[str, Any] = Field(default_factory=dict)
 
@@ -189,6 +254,29 @@ class Component(BaseModel):
         default_factory=list,
         description="Ativos relevantes neste componente.",
     )
+    exposure_type: str | None = Field(
+        default=None,
+        description="Ex.: public_internet, internal_only, partner_network.",
+    )
+    responsibility: str | None = Field(
+        default=None,
+        description="Função no sistema: auth, admin_api, upload_handler, gateway, …",
+    )
+    privilege_level: str | None = Field(
+        default=None,
+        description="none | low | medium | high | admin",
+    )
+    handles_credentials: bool | None = None
+    handles_sensitive_data: bool | None = None
+    executes_code_or_commands: bool | None = None
+    serves_user_content: bool | None = None
+    has_direct_datastore_access: bool | None = None
+    supports_admin_operations: bool | None = None
+    supports_debug_features: bool | None = None
+    technology_role: str | None = Field(
+        default=None,
+        description="Papel técnico: bff, idp, waf, queue_worker, …",
+    )
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -201,6 +289,30 @@ class DataFlow(BaseModel):
     authenticated: bool | None = None
     encrypted: bool | None = None
     description: str | None = None
+    operation_type: str | None = Field(
+        default=None,
+        description="read | write | invoke | upload | redirect | fetch | …",
+    )
+    data_types: list[str] = Field(
+        default_factory=list,
+        description="Tipos de dado predominantes no fluxo.",
+    )
+    auth_required: bool | None = None
+    authorization_required: bool | None = None
+    public_exposure: bool | None = Field(
+        default=None,
+        description="True se o fluxo é exposto a redes não confiáveis.",
+    )
+    input_from_untrusted_source: bool | None = None
+    stores_sensitive_data: bool | None = None
+    affects_privileged_state: bool | None = None
+    supports_file_upload: bool | None = None
+    supports_redirect: bool | None = None
+    supports_external_fetch: bool | None = None
+    semantic_class: FlowSemanticClass = Field(
+        default=FlowSemanticClass.GENERIC,
+        description="Classe semântica para heurísticas compostas.",
+    )
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -208,9 +320,33 @@ class TrustBoundary(BaseModel):
     id: str = Field(..., pattern=_ID_PATTERN)
     name: str = Field(..., min_length=1)
     description: str | None = None
+    trust_level: str | None = Field(
+        default=None,
+        description="Nível de confiança do perímetro (texto curto ou etiqueta).",
+    )
+    inference_note: str | None = Field(
+        default=None,
+        description="Porque esta fronteira foi inferida ou sugerida.",
+    )
+    user_validated: bool | None = Field(
+        default=None,
+        description="True se o modelador confirmou explicitamente a fronteira.",
+    )
+    boundary_scenario: str | None = Field(
+        default=None,
+        description="Ex.: boundary_client_to_server, boundary_app_to_database.",
+    )
     member_component_ids: list[str] = Field(
         default_factory=list,
-        description="Componentes contidos na fronteira.",
+        description="Componentes contidos na fronteira (inside).",
+    )
+    outside_component_ids: list[str] = Field(
+        default_factory=list,
+        description="Componentes fora mas ligados (opcional; vizinhança).",
+    )
+    crossing_flow_ids: list[str] = Field(
+        default_factory=list,
+        description="Fluxos conhecidos que cruzam esta fronteira (referência explícita).",
     )
 
 
@@ -388,9 +524,17 @@ class ThreatModelDocument(BaseModel):
             boundary_ids=ids["trust_boundaries"],
             asset_ids=ids["assets"],
         )
-        _validate_asset_refs(self.assets, comp_ids=ids["components"])
+        _validate_asset_refs(
+            self.assets,
+            comp_ids=ids["components"],
+            flow_ids=ids["data_flows"],
+        )
         _validate_data_flow_refs(self.data_flows, comp_ids=ids["components"])
-        _validate_trust_boundary_refs(self.trust_boundaries, comp_ids=ids["components"])
+        _validate_trust_boundary_refs(
+            self.trust_boundaries,
+            comp_ids=ids["components"],
+            flow_ids=ids["data_flows"],
+        )
         _validate_mitigation_refs(self.mitigations, threat_ids=ids["threats"])
         _validate_threat_refs(
             self.threats,

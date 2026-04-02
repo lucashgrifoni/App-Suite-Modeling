@@ -24,7 +24,7 @@ def error_detail(
 def raise_document_validation_error(exc: PydanticValidationError) -> HTTPException:
     """422 when the canonical document payload is invalid."""
     return HTTPException(
-        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         detail=error_detail(
             code="DOCUMENT_VALIDATION_ERROR",
             message="The document does not satisfy the canonical schema.",
@@ -36,7 +36,7 @@ def raise_document_validation_error(exc: PydanticValidationError) -> HTTPExcepti
 def raise_analysis_validation_error(exc: PydanticValidationError) -> HTTPException:
     """422 when `analysis` is not a valid AnalysisResult."""
     return HTTPException(
-        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         detail=error_detail(
             code="ANALYSIS_VALIDATION_ERROR",
             message="The analysis field is not a valid AnalysisResult.",
@@ -64,7 +64,7 @@ def raise_template_not_found(exc: FileNotFoundError) -> HTTPException:
 def raise_template_invalid(exc: PydanticValidationError) -> HTTPException:
     """422 when template YAML does not yield a valid canonical document."""
     return HTTPException(
-        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         detail=error_detail(
             code="TEMPLATE_INVALID",
             message="The template does not produce a valid canonical document.",

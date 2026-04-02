@@ -35,11 +35,13 @@ def test_openapi_available(client: TestClient) -> None:
     assert spec["info"]["title"] == "App Suite Modeling API"
     paths = spec["paths"]
     assert "/v1/models" in paths
+    assert "/v1/models/precheck" in paths
     assert "/v1/models/diff" in paths
     assert "/v1/models/compare" in paths
     assert "/v1/analyses/diff" in paths
     assert "/v1/templates" in paths
     assert "/v1/templates/{template_id}" in paths
+    assert "/v1/reports/premium" in paths
 
 
 def test_create_model(client: TestClient) -> None:
@@ -62,6 +64,40 @@ def test_models_compare_ok(client: TestClient) -> None:
     assert body["summary"]["has_structural_changes"] is False
     assert "structural" in body
     assert "key_insights" in body
+
+
+def test_reports_premium_markdown(client: TestClient) -> None:
+    doc = load_document_from_yaml_path(_MINIMAL)
+    d = doc.model_dump(mode="json", by_alias=True)
+    ar = client.post("/v1/models/analyze", json={"document": d}).json()
+    r = client.post(
+        "/v1/reports/premium",
+        json={
+            "document": d,
+            "analysis": ar,
+            "level": "standard",
+            "output_format": "markdown",
+        },
+    )
+    assert r.status_code == 200
+    assert "Executive summary" in r.text
+
+
+def test_reports_premium_pdf(client: TestClient) -> None:
+    doc = load_document_from_yaml_path(_MINIMAL)
+    d = doc.model_dump(mode="json", by_alias=True)
+    ar = client.post("/v1/models/analyze", json={"document": d}).json()
+    r = client.post(
+        "/v1/reports/premium",
+        json={
+            "document": d,
+            "analysis": ar,
+            "level": "executive",
+            "output_format": "pdf",
+        },
+    )
+    assert r.status_code == 200
+    assert r.content[:4] == b"%PDF"
 
 
 def test_analyses_diff_ok(client: TestClient) -> None:
@@ -96,6 +132,21 @@ def test_validate_ok(client: TestClient) -> None:
     assert body["valid"] is True
     assert body["title"]
     assert body["component_count"] >= 0
+
+
+def test_models_precheck_ok(client: TestClient) -> None:
+    doc = load_document_from_yaml_path(_MINIMAL)
+    r = client.post(
+        "/v1/models/precheck",
+        json={"document": doc.model_dump(mode="json", by_alias=True)},
+    )
+    assert r.status_code == 200
+    body = r.json()
+    assert "precheck" in body
+    assert body["precheck"]["score_0_100"] >= 0
+    assert "methodology_fit_matrix" in body["precheck"]
+    assert "stride" in body["precheck"]["methodology_fit_matrix"]
+    assert "methodology_completeness" in body
 
 
 def test_validate_invalid_document(client: TestClient) -> None:

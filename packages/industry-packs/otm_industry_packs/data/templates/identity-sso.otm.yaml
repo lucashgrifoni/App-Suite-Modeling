@@ -1,8 +1,8 @@
 model:
   schema_version: 1.0.0
-  methodology: stride
   system_type: web_application
   industry_sector: generic
+  methodology: stride
 metadata:
   title: Integração SSO
   summary: Cliente, aplicação, IdP e consumo de tokens nos serviços.
@@ -11,54 +11,117 @@ metadata:
   - sso
 business_context:
   description: Fluxo de login federado e emissão de tokens para APIs.
+  business_goals: []
+  business_objectives: []
+  security_objectives: []
+  stakeholders: []
   assumptions:
   - MFA no IdP quando aplicável.
+  critical_integrations: []
+assets:
+- id: identity_sso_otm_application_state
+  name: Estado e dados processados pela aplicação
+  asset_kind: session
+  sensitivity: confidential
+  business_criticality: high
+  related_component_ids:
+  - app
+  related_data_flow_ids:
+  - u_app
+  - app_idp
+  - app_api
+  metadata: {}
+- id: identity_sso_otm_credentials_and_secrets
+  name: Credenciais, chaves e segredos operacionais
+  asset_kind: credential
+  sensitivity: confidential
+  business_criticality: high
+  related_component_ids:
+  - app
+  related_data_flow_ids:
+  - u_app
+  - app_idp
+  - app_api
+  metadata: {}
+- id: identity_sso_otm_operational_surface
+  name: Superfície operacional e integrações
+  asset_kind: service
+  business_criticality: medium
+  related_component_ids:
+  - api
+  related_data_flow_ids:
+  - app_api
+  metadata: {}
+components:
+- id: user
+  name: Utilizador
+  kind: user
+  in_trust_boundary: internet
+  asset_ids: []
+  metadata: {}
+- id: app
+  name: Aplicação
+  kind: process
+  in_trust_boundary: app_tier
+  asset_ids:
+  - identity_sso_otm_application_state
+  - identity_sso_otm_credentials_and_secrets
+  metadata: {}
+- id: idp
+  name: Identity Provider
+  kind: process
+  technology: OIDC/SAML
+  in_trust_boundary: app_tier
+  asset_ids: []
+  metadata: {}
+- id: api
+  name: API a jusante
+  kind: process
+  in_trust_boundary: app_tier
+  asset_ids:
+  - identity_sso_otm_operational_surface
+  metadata: {}
+data_flows:
+- id: u_app
+  from_component: user
+  to_component: app
+  protocol: HTTPS
+  authenticated: true
+  encrypted: true
+  data_types: []
+  semantic_class: generic
+  metadata: {}
+- id: app_idp
+  from_component: app
+  to_component: idp
+  protocol: HTTPS
+  encrypted: true
+  data_types: []
+  semantic_class: generic
+  metadata: {}
+- id: app_api
+  from_component: app
+  to_component: api
+  protocol: HTTPS
+  authenticated: true
+  encrypted: true
+  data_types: []
+  semantic_class: generic
+  metadata: {}
 trust_boundaries:
 - id: internet
   name: Internet
+  member_component_ids: []
+  outside_component_ids: []
+  crossing_flow_ids: []
 - id: app_tier
   name: Conta / VPC aplicação
   member_component_ids:
   - app
   - idp
   - api
-components:
-- id: user
-  name: Utilizador
-  kind: user
-  in_trust_boundary: internet
-- id: app
-  name: Aplicação
-  kind: process
-  in_trust_boundary: app_tier
-- id: idp
-  name: Identity Provider
-  kind: process
-  technology: OIDC/SAML
-  in_trust_boundary: app_tier
-- id: api
-  name: API a jusante
-  kind: process
-  in_trust_boundary: app_tier
-data_flows:
-- id: u_app
-  from_component: user
-  to_component: app
-  protocol: HTTPS
-  encrypted: true
-  authenticated: true
-- id: app_idp
-  from_component: app
-  to_component: idp
-  protocol: HTTPS
-  encrypted: true
-- id: app_api
-  from_component: app
-  to_component: api
-  protocol: HTTPS
-  encrypted: true
-  authenticated: true
-assets: []
+  outside_component_ids: []
+  crossing_flow_ids: []
 threats: []
 mitigations: []
 evidence_suggestions: []

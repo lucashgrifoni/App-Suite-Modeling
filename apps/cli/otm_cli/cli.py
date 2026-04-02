@@ -19,6 +19,7 @@ from otm_core_schema import (
     diff_documents,
     dump_document_to_yaml,
 )
+from otm_core_schema.model_quality_precheck import assess_model_precheck
 from otm_core_schema.enums import ThreatModelMethodology
 from otm_diagram_engine import export_flowchart_mermaid
 from otm_exporters import (
@@ -40,7 +41,16 @@ from otm_industry_packs.template_query import (
     get_template_info,
     load_all_template_infos,
 )
+from otm_report_premium import (
+    build_premium_report_payload,
+    html_to_pdf_bytes,
+    render_premium_html,
+    render_premium_markdown,
+)
+from otm_report_premium.enums import ReportFormat as PremiumReportFormat
+from otm_report_premium.enums import ReportLevel as PremiumReportLevel
 from otm_threat_engine import AnalysisResult, analyze_document, build_remediation_backlog
+from otm_threat_engine.methodology_completeness import assess_methodology_completeness
 from otm_threat_engine.analysis_diff import diff_analysis_results
 from otm_threat_engine.methodologies import recommend_methodology
 from otm_threat_engine.threat_model_comparison import compare_threat_models
@@ -58,7 +68,7 @@ app = typer.Typer(
     help=(
         "[bold]App Suite Modeling[/bold] — Threat Modeling as Code na linha de comando.\n\n"
         "Comandos principais: [cyan]init[/cyan], [cyan]import[/cyan], "
-        "[cyan]validate[/cyan], [cyan]diff[/cyan], "
+        "[cyan]validate[/cyan], [cyan]precheck[/cyan], [cyan]diff[/cyan], "
         "[cyan]analyze[/cyan] ([cyan]--explain[/cyan]), [cyan]explain[/cyan], "
         "[cyan]backlog[/cyan], [cyan]report[/cyan], "
         "[cyan]diagram[/cyan], [cyan]export[/cyan], "
@@ -132,6 +142,15 @@ def _emit_text(*, text: str, output: Path | None, ok_message: str) -> None:
         console.print(ok_message.format(path=output.resolve()))
     else:
         print(text, end="")
+
+
+def _emit_bytes(*, data: bytes, output: Path | None, ok_message: str) -> None:
+    if output:
+        output.write_bytes(data)
+        console.print(ok_message.format(path=output.resolve()))
+    else:
+        console.print("[red]Saída binária (PDF) requer --output.[/red]")
+        raise typer.Exit(1)
 
 
 def _write_json_file(*, payload: dict, output: Path) -> None:
@@ -788,6 +807,44 @@ def cmd_validate(
     )
 
 
+@app.command("precheck")
+def cmd_precheck(
+    path: Annotated[Path, typer.Argument(help="Arquivo .otm.yaml / .yml.")],
+    json_out: Path | None = typer.Option(
+        None,
+        "--json-out",
+        help="Grava pré-check + completude metodológica em JSON.",
+    ),
+    methodology: MethodologyOption | None = typer.Option(
+        None,
+        "--methodology",
+        "-m",
+        help="Metodologia para avaliar completeness (default: document.model.methodology).",
+    ),
+) -> None:
+    """Pré-check de completude do modelo (score, banda, matriz de adequação) sem correr o motor STRIDE."""
+    doc = _load_doc_or_exit(
+        path=path,
+        failed=f"pré-check do arquivo `{path}`.",
+        validation_next_step="execute `otm validate` e corrija os erros antes do pré-check.",
+        runtime_next_step="valide o caminho do arquivo e o formato YAML.",
+    )
+    chosen = doc.model_info.methodology
+    if methodology is not None:
+        chosen = ThreatModelMethodology(methodology.value)
+    pre = assess_model_precheck(doc)
+    mc = assess_methodology_completeness(doc, chosen)
+    payload = {
+        "precheck": pre.model_dump(mode="json"),
+        "methodology_completeness": mc.model_dump(mode="json"),
+    }
+    if json_out:
+        _write_json_file(payload=payload, output=json_out)
+        console.print(f"[green]Pré-check gravado em[/green] {json_out.resolve()}")
+    else:
+        console.print(Panel.fit(json.dumps(payload, indent=2, ensure_ascii=False), title="precheck", border_style="cyan"))
+
+
 @app.command("analyze")
 def cmd_analyze(
     path: Annotated[Path, typer.Argument(help="Arquivo .otm.yaml.")],
@@ -995,12 +1052,34 @@ def cmd_export(
     _emit_text(text=text, output=output, ok_message="[green]Exportado[/green] → {path}")
 
 
+def _load_analysis_result_json(path: Path) -> AnalysisResult:
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as e:
+        _print_cli_error(
+            failed=f"leitura de `{path}`.",
+            cause=str(e),
+            next_step="confirme que o ficheiro é JSON válido (`otm analyze --json-out`).",
+        )
+        raise typer.Exit(1) from e
+    try:
+        return AnalysisResult.model_validate(raw)
+    except ValidationError as e:
+        _print_cli_error(
+            failed=f"validação de AnalysisResult em `{path}`.",
+            cause="estrutura incompatível.",
+            next_step="regenere com `otm analyze --json-out`.",
+        )
+        console.print(f"[red]\n{format_validation_error(e)}[/red]")
+        raise typer.Exit(1) from e
+
+
 @app.command("report")
 def cmd_report(
     path: Annotated[Path, typer.Argument(help="Arquivo .otm.yaml.")],
     output: Annotated[
         Path | None,
-        typer.Option("--output", "-o", help="Grava o relatório (default: stdout)."),
+        typer.Option("--output", "-o", help="Grava o relatório (default: stdout para texto)."),
     ] = None,
     pack: str | None = typer.Option(
         None,
@@ -1008,8 +1087,41 @@ def cmd_report(
         "-p",
         help="Industry pack na análise.",
     ),
+    level: Annotated[
+        PremiumReportLevel | None,
+        typer.Option(
+            "--level",
+            "-l",
+            help=(
+                "Report premium: executive | standard | deep. "
+                "Se omitido, gera o relatório legado (modelo + análise em Markdown)."
+            ),
+        ),
+    ] = None,
+    report_format: Annotated[
+        PremiumReportFormat,
+        typer.Option(
+            "--format",
+            "-f",
+            help="Com --level: markdown (default) ou pdf.",
+        ),
+    ] = PremiumReportFormat.MARKDOWN,
+    analysis_json: Annotated[
+        Path | None,
+        typer.Option(
+            "--analysis-json",
+            help="Reutiliza `AnalysisResult` em JSON em vez de correr o motor.",
+        ),
+    ] = None,
+    baseline_json: Annotated[
+        Path | None,
+        typer.Option(
+            "--baseline",
+            help="JSON de análise anterior para secção baseline/diff no report premium.",
+        ),
+    ] = None,
 ) -> None:
-    """Gera relatório Markdown (modelo + análise do motor)."""
+    """Relatório legado (Markdown) ou report premium (níveis executive/standard/deep)."""
     doc = _load_doc_or_exit(
         path=path,
         failed=f"geração de relatório para `{path}`.",
@@ -1025,9 +1137,40 @@ def cmd_report(
             next_step="execute `otm packs` e tente novamente com um pack válido.",
         )
 
-    result = analyze_document(doc, pack=pack_def)
-    text = export_full_report_markdown(doc, result)
-    _emit_text(text=text, output=output, ok_message="[green]Relatório[/green] → {path}")
+    if analysis_json:
+        result = _load_analysis_result_json(analysis_json)
+    else:
+        result = analyze_document(doc, pack=pack_def)
+
+    if level is None:
+        text = export_full_report_markdown(doc, result)
+        _emit_text(text=text, output=output, ok_message="[green]Relatório[/green] → {path}")
+        return
+
+    baseline: AnalysisResult | None = None
+    if baseline_json:
+        baseline = _load_analysis_result_json(baseline_json)
+
+    payload = build_premium_report_payload(
+        doc,
+        result,
+        level=level,
+        baseline=baseline,
+        app_version=_installed_version(),
+    )
+    if report_format == PremiumReportFormat.MARKDOWN:
+        text = render_premium_markdown(payload)
+        _emit_text(text=text, output=output, ok_message="[green]Report premium (Markdown)[/green] → {path}")
+        return
+
+    html = render_premium_html(payload)
+    try:
+        pdf_bytes = html_to_pdf_bytes(html)
+    except ImportError as e:
+        console.print(f"[red]{e}[/red]")
+        raise typer.Exit(1) from e
+    default_out = output or Path("report-premium.pdf")
+    _emit_bytes(data=pdf_bytes, output=default_out, ok_message="[green]Report premium (PDF)[/green] → {path}")
 
 
 @app.command("diagram")

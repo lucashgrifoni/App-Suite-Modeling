@@ -1,8 +1,8 @@
 model:
   schema_version: 1.0.0
-  methodology: linddun
   system_type: web_application
   industry_sector: healthcare
+  methodology: linddun
 metadata:
   title: Dados clínicos
   summary: Portal clínico, serviços e arquivo de saúde com auditoria.
@@ -11,11 +11,119 @@ metadata:
   - healthcare
 business_context:
   description: HIPAA/GDPR conforme jurisdição; minimização de dados.
+  business_goals: []
+  business_objectives: []
+  security_objectives: []
+  stakeholders: []
   assumptions:
   - Acesso baseado em função clínica.
+  critical_integrations: []
+assets:
+- id: industry_healthcare_clinical_otm_persisted_data
+  name: Dados persistidos do serviço
+  asset_kind: order_record
+  data_classification: confidential
+  business_criticality: high
+  related_component_ids:
+  - clinical
+  - ehr
+  related_data_flow_ids:
+  - c_e
+  metadata: {}
+- id: industry_healthcare_clinical_otm_credentials_and_secrets
+  name: Credenciais, chaves e segredos operacionais
+  asset_kind: credential
+  sensitivity: confidential
+  business_criticality: high
+  related_component_ids:
+  - portal
+  related_data_flow_ids:
+  - u_po
+  - p_c
+  metadata: {}
+- id: industry_healthcare_clinical_otm_operational_surface
+  name: Superfície operacional e integrações
+  asset_kind: service
+  business_criticality: medium
+  related_component_ids:
+  - audit
+  related_data_flow_ids:
+  - c_a
+  metadata: {}
+components:
+- id: user
+  name: Profissional/paciente
+  kind: user
+  in_trust_boundary: internet
+  asset_ids: []
+  metadata: {}
+- id: portal
+  name: Portal clínico
+  kind: process
+  in_trust_boundary: app_tier
+  asset_ids:
+  - industry_healthcare_clinical_otm_credentials_and_secrets
+  metadata: {}
+- id: clinical
+  name: Serviço clínico
+  kind: process
+  in_trust_boundary: app_tier
+  asset_ids: []
+  metadata: {}
+- id: ehr
+  name: Registo eletrónico
+  kind: datastore
+  technology: EHR
+  in_trust_boundary: app_tier
+  asset_ids:
+  - industry_healthcare_clinical_otm_persisted_data
+  metadata: {}
+- id: audit
+  name: Auditoria de acesso
+  kind: datastore
+  in_trust_boundary: app_tier
+  asset_ids:
+  - industry_healthcare_clinical_otm_operational_surface
+  metadata: {}
+data_flows:
+- id: u_po
+  from_component: user
+  to_component: portal
+  protocol: HTTPS
+  authenticated: true
+  encrypted: true
+  data_types: []
+  semantic_class: generic
+  metadata: {}
+- id: p_c
+  from_component: portal
+  to_component: clinical
+  protocol: HTTPS
+  data_types: []
+  semantic_class: generic
+  metadata: {}
+- id: c_e
+  from_component: clinical
+  to_component: ehr
+  protocol: TCP
+  encrypted: true
+  data_types: []
+  semantic_class: generic
+  metadata: {}
+- id: c_a
+  from_component: clinical
+  to_component: audit
+  protocol: TCP
+  encrypted: true
+  data_types: []
+  semantic_class: generic
+  metadata: {}
 trust_boundaries:
 - id: internet
   name: Internet
+  member_component_ids: []
+  outside_component_ids: []
+  crossing_flow_ids: []
 - id: app_tier
   name: Conta / VPC aplicação
   member_component_ids:
@@ -23,50 +131,8 @@ trust_boundaries:
   - clinical
   - ehr
   - audit
-components:
-- id: user
-  name: Profissional/paciente
-  kind: user
-  in_trust_boundary: internet
-- id: portal
-  name: Portal clínico
-  kind: process
-  in_trust_boundary: app_tier
-- id: clinical
-  name: Serviço clínico
-  kind: process
-  in_trust_boundary: app_tier
-- id: ehr
-  name: Registo eletrónico
-  kind: datastore
-  technology: EHR
-  in_trust_boundary: app_tier
-- id: audit
-  name: Auditoria de acesso
-  kind: datastore
-  in_trust_boundary: app_tier
-data_flows:
-- id: u_po
-  from_component: user
-  to_component: portal
-  protocol: HTTPS
-  encrypted: true
-  authenticated: true
-- id: p_c
-  from_component: portal
-  to_component: clinical
-  protocol: HTTPS
-- id: c_e
-  from_component: clinical
-  to_component: ehr
-  protocol: TCP
-  encrypted: true
-- id: c_a
-  from_component: clinical
-  to_component: audit
-  protocol: TCP
-  encrypted: true
-assets: []
+  outside_component_ids: []
+  crossing_flow_ids: []
 threats: []
 mitigations: []
 evidence_suggestions: []

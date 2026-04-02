@@ -26,6 +26,7 @@ Documentação interativa: **`/docs`** (Swagger UI), **`/redoc`**.
 | `GET` | `/health` | Liveness. |
 | `POST` | `/v1/models` | Cria modelo mínimo válido (corpo vazio). |
 | `POST` | `/v1/models/validate` | Valida `document` JSON. |
+| `POST` | `/v1/models/precheck` | Pré-check de completude (`score_0_100`, `methodology_fit_matrix`, …) + `methodology_completeness`; corpo: `document`, opcional `methodology`. Não executa heurísticas STRIDE. |
 | `POST` | `/v1/models/diff` | Compara duas raízes canónicas: corpo `{ "baseline": {...}, "revised": {...} }` (mesmo formato que `document`). Devolve **apenas** `ThreatModelDiff` JSON (contrato estável). |
 | `POST` | `/v1/models/compare` | Comparação semântica completa: mesmo par de documentos + opcional `run_analysis`, `pack_id`, ou **par** `baseline_analysis` / `revised_analysis` (ambos ou nenhum). Resposta: `ThreatModelComparisonResult` (estrutura + agregados + insights + deltas). |
 | `POST` | `/v1/analyses/diff` | Corpo `{ "baseline_analysis": {...}, "revised_analysis": {...} }` (dois `AnalysisResult`). Devolve `AnalysisDiff`. |
@@ -39,6 +40,7 @@ Documentação interativa: **`/docs`** (Swagger UI), **`/redoc`**.
 | `POST` | `/v1/imports/terraform` | Um ficheiro `.tf`. |
 | `POST` | `/v1/imports/kubernetes` | YAML multi-manifests. |
 | `POST` | `/v1/remediation/backlog` | Corpo: `document` + `analysis` **ou** `run_analysis: true`. Query: `format` = json (default) ou markdown; `group_by` opcional. Ver `docs/REMEDIATION_BACKLOG.md`. |
+| `POST` | `/v1/reports/premium` | Report premium: `document`, `analysis` ou `run_analysis`, opcional `baseline_analysis`, `level` (executive/standard/deep), `output_format` (markdown/pdf). Ver `docs/PREMIUM_REPORTS.md`. |
 
 Ver também `docs/ARTIFACT_IMPORT.md`.
 

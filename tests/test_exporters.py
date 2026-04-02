@@ -118,9 +118,12 @@ def test_export_document_json_saas_business_context_key_order_stable() -> None:
     assert list(bc.keys()) == [
         "description",
         "business_goals",
+        "business_objectives",
+        "security_objectives",
         "stakeholders",
         "regulatory_context",
         "assumptions",
+        "critical_integrations",
     ]
 
 
@@ -134,6 +137,7 @@ def test_export_document_json_saas_asset_and_evidence_key_order_stable() -> None
         "description",
         "sensitivity",
         "related_component_ids",
+        "related_data_flow_ids",
         "metadata",
     ]
     assert list(obj["evidence_suggestions"][0].keys()) == [
@@ -183,6 +187,7 @@ def test_export_document_json_minimal_nested_entity_key_order_stable() -> None:
         "technology",
         "in_trust_boundary",
         "asset_ids",
+        "responsibility",
         "metadata",
     ]
     assert list(obj["data_flows"][0].keys()) == [
@@ -193,12 +198,37 @@ def test_export_document_json_minimal_nested_entity_key_order_stable() -> None:
         "protocol",
         "authenticated",
         "encrypted",
+        "data_types",
+        "public_exposure",
+        "semantic_class",
+        "metadata",
+    ]
+    assert list(obj["data_flows"][1].keys()) == [
+        "id",
+        "from_component",
+        "to_component",
+        "protocol",
+        "data_types",
+        "semantic_class",
+        "metadata",
+    ]
+    assert list(obj["data_flows"][2].keys()) == [
+        "id",
+        "from_component",
+        "to_component",
+        "protocol",
+        "data_types",
+        "stores_sensitive_data",
+        "semantic_class",
         "metadata",
     ]
     assert list(obj["trust_boundaries"][0].keys()) == [
         "id",
         "name",
+        "boundary_scenario",
         "member_component_ids",
+        "outside_component_ids",
+        "crossing_flow_ids",
     ]
 
 
@@ -222,7 +252,12 @@ def test_export_document_markdown_minimal_heading_order_stable() -> None:
     doc = load_document_from_yaml_path(_MINIMAL)
     md = export_document_markdown(doc)
     headings = [line.strip() for line in md.splitlines() if line.startswith("## ")]
-    assert headings == ["## Componentes", "## Fluxos de dados", "## Fronteiras de confiança"]
+    assert headings == [
+        "## Ativos",
+        "## Componentes",
+        "## Fluxos de dados",
+        "## Fronteiras de confiança",
+    ]
 
 
 def test_export_document_markdown_full_example_heading_order_stable() -> None:
@@ -342,6 +377,8 @@ def test_export_analysis_json_minimal_top_level_key_order_stable() -> None:
         "pack_control_hints",
         "explanations",
         "ai_system_context",
+        "model_quality_precheck",
+        "methodology_completeness",
     ]
 
 
@@ -401,6 +438,9 @@ def test_export_analysis_json_minimal_heuristic_and_boundary_finding_key_order_s
         "risk",
         "skipped_as_duplicate",
         "framework_refs",
+        "finding_family",
+        "heuristic_tier",
+        "signal_refs",
     ]
     assert list(h0["risk"].keys()) == ["likelihood", "impact", "score"]
     assert list(obj["trust_boundary_findings"][0].keys()) == [

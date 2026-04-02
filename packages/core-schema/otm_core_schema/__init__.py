@@ -27,13 +27,27 @@ from otm_core_schema.document import (
 from otm_core_schema.enums import (
     AssetKind,
     ComponentKind,
+    CriticalityLevel,
+    DataClassificationLevel,
     EvidenceKind,
+    FlowSemanticClass,
+    HeuristicTier,
     IndustrySector,
+    MethodologyCompletenessState,
     MitigationStatus,
     StrideCategory,
     SystemType,
     ThreatModelMethodology,
     TreatmentStatus,
+)
+from otm_core_schema.methodology_fit_matrix import (
+    build_methodology_fit_matrix,
+    fit_for_methodology,
+)
+from otm_core_schema.model_quality_precheck import (
+    ModelQualityPrecheck,
+    QualityCheckItem,
+    assess_model_precheck,
 )
 from otm_core_schema.io import (
     dump_document_to_json,
@@ -50,6 +64,16 @@ __all__ = [
     "CANONICAL_SCHEMA_VERSION",
     "Asset",
     "AssetKind",
+    "CriticalityLevel",
+    "DataClassificationLevel",
+    "FlowSemanticClass",
+    "HeuristicTier",
+    "MethodologyCompletenessState",
+    "ModelQualityPrecheck",
+    "QualityCheckItem",
+    "assess_model_precheck",
+    "build_methodology_fit_matrix",
+    "fit_for_methodology",
     "BusinessContext",
     "Component",
     "ComponentKind",

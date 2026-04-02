@@ -73,6 +73,15 @@ class CreateModelResponse(BaseModel):
     document: dict[str, Any] = Field(..., description="Modelo mínimo novo, pronto a editar.")
 
 
+class PrecheckBody(DocumentBody):
+    """Pré-check de completude sem executar o motor completo (rápido para UI)."""
+
+    methodology: ThreatModelMethodology | None = Field(
+        default=None,
+        description="Metodologia para `methodology_completeness`; default = `document.model.methodology`.",
+    )
+
+
 class AnalyzeBody(DocumentBody):
     pack_id: str | None = Field(
         default=None,
@@ -154,3 +163,31 @@ class ArtifactImportResponse(BaseModel):
     unknowns: list[str]
     assumptions: list[str]
     explanations: list[ExplanationRecord] = Field(default_factory=list)
+
+
+class PremiumReportBody(DocumentBody):
+    """Report premium — mesmo padrão de análise que `/remediation/backlog`."""
+
+    analysis: dict[str, Any] | None = Field(
+        default=None,
+        description="`AnalysisResult` em JSON; obrigatório se `run_analysis` é false.",
+    )
+    baseline_analysis: dict[str, Any] | None = Field(
+        default=None,
+        description="Análise anterior para secção baseline/diff (opcional).",
+    )
+    run_analysis: bool = Field(
+        default=False,
+        description="Se true e `analysis` ausente, executa o motor no documento.",
+    )
+    pack_id: str | None = Field(default=None, description="Pack quando `run_analysis` é usado.")
+    methodology: ThreatModelMethodology | None = Field(default=None)
+    auto_recommend_methodology: bool = Field(default=False)
+    level: Literal["executive", "standard", "deep"] = Field(
+        default="standard",
+        description="Profundidade do relatório.",
+    )
+    output_format: Literal["markdown", "pdf"] = Field(
+        default="markdown",
+        description="markdown = texto; pdf = binário application/pdf.",
+    )

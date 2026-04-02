@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from otm_core_schema import Asset, StrideCategory, ThreatModelDocument
+from otm_core_schema.enums import HeuristicTier
 from otm_industry_packs.models import PackDefinition
 
 from otm_threat_engine.pack_runtime import apply_pack_to_li
@@ -116,6 +117,7 @@ def _append_heuristic_threat(
             target_data_flow_id=target_data_flow_id,
             risk=build_risk_assessment(*risk_li),
             skipped_as_duplicate=skipped_as_duplicate,
+            heuristic_tier=HeuristicTier.GENERIC_STRIDE,
         )
     )
 

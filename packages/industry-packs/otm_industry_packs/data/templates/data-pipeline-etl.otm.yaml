@@ -1,8 +1,8 @@
 model:
   schema_version: 1.0.0
-  methodology: nist_data_centric
   system_type: batch_data_pipeline
   industry_sector: generic
+  methodology: nist_data_centric
 metadata:
   title: Pipeline ETL
   summary: Ingestão, transformação e destino analítico.
@@ -11,11 +11,106 @@ metadata:
   - etl
 business_context:
   description: Dados podem incluir PII — classificar antes de persistir.
+  business_goals: []
+  business_objectives: []
+  security_objectives: []
+  stakeholders: []
   assumptions:
   - Catálogo de dados e políticas de retenção.
+  critical_integrations: []
+assets:
+- id: data_pipeline_etl_otm_persisted_data
+  name: Dados persistidos do serviço
+  asset_kind: order_record
+  data_classification: confidential
+  business_criticality: high
+  related_component_ids:
+  - queue
+  - wh
+  related_data_flow_ids:
+  - q_w
+  metadata: {}
+- id: data_pipeline_etl_otm_credentials_and_secrets
+  name: Credenciais, chaves e segredos operacionais
+  asset_kind: credential
+  sensitivity: confidential
+  business_criticality: high
+  related_component_ids:
+  - ingest
+  related_data_flow_ids:
+  - i_t
+  metadata: {}
+- id: data_pipeline_etl_otm_operational_surface
+  name: Superfície operacional e integrações
+  asset_kind: service
+  business_criticality: medium
+  related_component_ids:
+  - transform
+  related_data_flow_ids:
+  - i_t
+  - t_q
+  metadata: {}
+components:
+- id: ingest
+  name: Ingestão
+  kind: process
+  in_trust_boundary: app_tier
+  asset_ids:
+  - data_pipeline_etl_otm_credentials_and_secrets
+  metadata: {}
+- id: transform
+  name: Transformação
+  kind: process
+  in_trust_boundary: app_tier
+  asset_ids:
+  - data_pipeline_etl_otm_operational_surface
+  metadata: {}
+- id: queue
+  name: Fila / stream
+  kind: queue
+  technology: Kafka
+  in_trust_boundary: app_tier
+  asset_ids: []
+  metadata: {}
+- id: wh
+  name: Armazém / lake
+  kind: datastore
+  technology: Snowflake/S3
+  in_trust_boundary: app_tier
+  asset_ids:
+  - data_pipeline_etl_otm_persisted_data
+  metadata: {}
+data_flows:
+- id: i_t
+  from_component: ingest
+  to_component: transform
+  protocol: TCP
+  encrypted: true
+  data_types: []
+  semantic_class: generic
+  metadata: {}
+- id: t_q
+  from_component: transform
+  to_component: queue
+  protocol: TCP
+  encrypted: true
+  data_types: []
+  semantic_class: generic
+  metadata: {}
+- id: q_w
+  from_component: queue
+  to_component: wh
+  protocol: TCP
+  encrypted: true
+  data_types: []
+  semantic_class: generic
+  metadata: {}
 trust_boundaries:
 - id: internet
   name: Internet
+  member_component_ids: []
+  outside_component_ids: []
+  crossing_flow_ids: []
 - id: app_tier
   name: Conta / VPC aplicação
   member_component_ids:
@@ -23,42 +118,8 @@ trust_boundaries:
   - transform
   - queue
   - wh
-components:
-- id: ingest
-  name: Ingestão
-  kind: process
-  in_trust_boundary: app_tier
-- id: transform
-  name: Transformação
-  kind: process
-  in_trust_boundary: app_tier
-- id: queue
-  name: Fila / stream
-  kind: queue
-  technology: Kafka
-  in_trust_boundary: app_tier
-- id: wh
-  name: Armazém / lake
-  kind: datastore
-  technology: Snowflake/S3
-  in_trust_boundary: app_tier
-data_flows:
-- id: i_t
-  from_component: ingest
-  to_component: transform
-  protocol: TCP
-  encrypted: true
-- id: t_q
-  from_component: transform
-  to_component: queue
-  protocol: TCP
-  encrypted: true
-- id: q_w
-  from_component: queue
-  to_component: wh
-  protocol: TCP
-  encrypted: true
-assets: []
+  outside_component_ids: []
+  crossing_flow_ids: []
 threats: []
 mitigations: []
 evidence_suggestions: []

@@ -1,8 +1,8 @@
 model:
   schema_version: 1.0.0
-  methodology: pasta
   system_type: api_backend
   industry_sector: finance
+  methodology: pasta
 metadata:
   title: Core transacional financeiro
   summary: Autenticação forte, transação e ledger imutável.
@@ -11,11 +11,133 @@ metadata:
   - finance
 business_context:
   description: Controles SOX/GDPR conforme âmbito.
+  business_goals: []
+  business_objectives: []
+  security_objectives: []
+  stakeholders: []
   assumptions:
   - Assinatura de eventos de ledger quando aplicável.
+  critical_integrations: []
+assets:
+- id: industry_finance_core_otm_persisted_data
+  name: Dados persistidos do serviço
+  asset_kind: order_record
+  data_classification: confidential
+  business_criticality: high
+  related_component_ids:
+  - txn
+  - ledger
+  related_data_flow_ids:
+  - t_l
+  metadata: {}
+- id: industry_finance_core_otm_credentials_and_secrets
+  name: Credenciais, chaves e segredos operacionais
+  asset_kind: credential
+  sensitivity: confidential
+  business_criticality: high
+  related_component_ids:
+  - gw
+  - auth
+  related_data_flow_ids:
+  - c_g
+  - g_a
+  metadata: {}
+- id: industry_finance_core_otm_operational_surface
+  name: Superfície operacional e integrações
+  asset_kind: service
+  business_criticality: medium
+  related_component_ids:
+  - audit
+  related_data_flow_ids:
+  - t_au
+  metadata: {}
+components:
+- id: client
+  name: Cliente
+  kind: user
+  in_trust_boundary: internet
+  asset_ids: []
+  metadata: {}
+- id: gw
+  name: Gateway API
+  kind: gateway
+  in_trust_boundary: app_tier
+  asset_ids:
+  - industry_finance_core_otm_credentials_and_secrets
+  metadata: {}
+- id: auth
+  name: Autenticação
+  kind: process
+  in_trust_boundary: app_tier
+  asset_ids:
+  - industry_finance_core_otm_credentials_and_secrets
+  metadata: {}
+- id: txn
+  name: Serviço de transação
+  kind: process
+  in_trust_boundary: app_tier
+  asset_ids: []
+  metadata: {}
+- id: ledger
+  name: Ledger
+  kind: datastore
+  technology: Imutável
+  in_trust_boundary: app_tier
+  asset_ids:
+  - industry_finance_core_otm_persisted_data
+  metadata: {}
+- id: audit
+  name: Auditoria
+  kind: datastore
+  in_trust_boundary: app_tier
+  asset_ids:
+  - industry_finance_core_otm_operational_surface
+  metadata: {}
+data_flows:
+- id: c_g
+  from_component: client
+  to_component: gw
+  protocol: HTTPS
+  encrypted: true
+  data_types: []
+  semantic_class: generic
+  metadata: {}
+- id: g_a
+  from_component: gw
+  to_component: auth
+  protocol: HTTPS
+  data_types: []
+  semantic_class: generic
+  metadata: {}
+- id: a_t
+  from_component: auth
+  to_component: txn
+  protocol: HTTPS
+  data_types: []
+  semantic_class: generic
+  metadata: {}
+- id: t_l
+  from_component: txn
+  to_component: ledger
+  protocol: TCP
+  encrypted: true
+  data_types: []
+  semantic_class: generic
+  metadata: {}
+- id: t_au
+  from_component: txn
+  to_component: audit
+  protocol: TCP
+  encrypted: true
+  data_types: []
+  semantic_class: generic
+  metadata: {}
 trust_boundaries:
 - id: internet
   name: Internet
+  member_component_ids: []
+  outside_component_ids: []
+  crossing_flow_ids: []
 - id: app_tier
   name: Conta / VPC aplicação
   member_component_ids:
@@ -24,57 +146,8 @@ trust_boundaries:
   - txn
   - ledger
   - audit
-components:
-- id: client
-  name: Cliente
-  kind: user
-  in_trust_boundary: internet
-- id: gw
-  name: Gateway API
-  kind: gateway
-  in_trust_boundary: app_tier
-- id: auth
-  name: Autenticação
-  kind: process
-  in_trust_boundary: app_tier
-- id: txn
-  name: Serviço de transação
-  kind: process
-  in_trust_boundary: app_tier
-- id: ledger
-  name: Ledger
-  kind: datastore
-  technology: Imutável
-  in_trust_boundary: app_tier
-- id: audit
-  name: Auditoria
-  kind: datastore
-  in_trust_boundary: app_tier
-data_flows:
-- id: c_g
-  from_component: client
-  to_component: gw
-  protocol: HTTPS
-  encrypted: true
-- id: g_a
-  from_component: gw
-  to_component: auth
-  protocol: HTTPS
-- id: a_t
-  from_component: auth
-  to_component: txn
-  protocol: HTTPS
-- id: t_l
-  from_component: txn
-  to_component: ledger
-  protocol: TCP
-  encrypted: true
-- id: t_au
-  from_component: txn
-  to_component: audit
-  protocol: TCP
-  encrypted: true
-assets: []
+  outside_component_ids: []
+  crossing_flow_ids: []
 threats: []
 mitigations: []
 evidence_suggestions: []

@@ -18,7 +18,7 @@ _EXAMPLE_SAAS = _ROOT / "examples" / "saas-ordering-v1.otm.yaml"
 def test_load_minimal_example() -> None:
     doc = load_document_from_yaml_path(_EXAMPLE_MIN)
     assert doc.metadata.title
-    assert doc.model_info.schema_version == "1.0.0"
+    assert doc.model_info.schema_version == "1.1.0"
     assert len(doc.components) == 4
 
 

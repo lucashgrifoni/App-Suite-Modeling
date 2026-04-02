@@ -1,8 +1,9 @@
 model:
   schema_version: 1.0.0
-  methodology: stride
   system_type: web_application
   industry_sector: generic
+  methodology: stride
+  template_semantic_profile: internal_admin_portal
 metadata:
   title: Portal admin
   summary: Administrador, API com privilégios elevados e registo de auditoria.
@@ -11,11 +12,119 @@ metadata:
   - admin
 business_context:
   description: Ações sensíveis devem ser registadas e justificadas.
+  business_goals: []
+  business_objectives: []
+  security_objectives: []
+  stakeholders: []
   assumptions:
   - Contas de admin separadas de utilizadores finais.
+  critical_integrations: []
+assets:
+- id: admin_portal_otm_persisted_data
+  name: Dados persistidos do serviço
+  asset_kind: order_record
+  data_classification: confidential
+  business_criticality: high
+  related_component_ids:
+  - priv_api
+  - audit
+  related_data_flow_ids:
+  - p_aud
+  metadata: {}
+- id: admin_portal_otm_credentials_and_secrets
+  name: Credenciais, chaves e segredos operacionais
+  asset_kind: credential
+  sensitivity: confidential
+  business_criticality: high
+  related_component_ids:
+  - admin_ui
+  related_data_flow_ids:
+  - a_ui
+  - ui_p
+  metadata: {}
+- id: admin_portal_otm_operational_surface
+  name: Superfície operacional e integrações
+  asset_kind: service
+  business_criticality: medium
+  related_component_ids:
+  - target
+  related_data_flow_ids:
+  - p_t
+  metadata: {}
+components:
+- id: admin
+  name: Administrador
+  kind: user
+  in_trust_boundary: internet
+  asset_ids: []
+  metadata: {}
+- id: admin_ui
+  name: UI admin
+  kind: process
+  in_trust_boundary: app_tier
+  asset_ids:
+  - admin_portal_otm_credentials_and_secrets
+  metadata: {}
+- id: priv_api
+  name: API privilegiada
+  kind: process
+  in_trust_boundary: app_tier
+  asset_ids: []
+  metadata: {}
+- id: audit
+  name: Registo de auditoria
+  kind: datastore
+  technology: WORM/Log store
+  in_trust_boundary: app_tier
+  asset_ids:
+  - admin_portal_otm_persisted_data
+  metadata: {}
+- id: target
+  name: Sistema alvo
+  kind: process
+  in_trust_boundary: app_tier
+  asset_ids:
+  - admin_portal_otm_operational_surface
+  metadata: {}
+data_flows:
+- id: a_ui
+  from_component: admin
+  to_component: admin_ui
+  protocol: HTTPS
+  authenticated: true
+  encrypted: true
+  data_types: []
+  semantic_class: generic
+  metadata: {}
+- id: ui_p
+  from_component: admin_ui
+  to_component: priv_api
+  protocol: HTTPS
+  data_types: []
+  semantic_class: generic
+  metadata: {}
+- id: p_aud
+  from_component: priv_api
+  to_component: audit
+  protocol: TCP
+  encrypted: true
+  data_types: []
+  semantic_class: generic
+  metadata: {}
+- id: p_t
+  from_component: priv_api
+  to_component: target
+  protocol: TCP
+  encrypted: true
+  data_types: []
+  semantic_class: generic
+  metadata: {}
 trust_boundaries:
 - id: internet
   name: Internet
+  member_component_ids: []
+  outside_component_ids: []
+  crossing_flow_ids: []
 - id: app_tier
   name: Conta / VPC aplicação
   member_component_ids:
@@ -23,50 +132,8 @@ trust_boundaries:
   - priv_api
   - audit
   - target
-components:
-- id: admin
-  name: Administrador
-  kind: user
-  in_trust_boundary: internet
-- id: admin_ui
-  name: UI admin
-  kind: process
-  in_trust_boundary: app_tier
-- id: priv_api
-  name: API privilegiada
-  kind: process
-  in_trust_boundary: app_tier
-- id: audit
-  name: Registo de auditoria
-  kind: datastore
-  technology: WORM/Log store
-  in_trust_boundary: app_tier
-- id: target
-  name: Sistema alvo
-  kind: process
-  in_trust_boundary: app_tier
-data_flows:
-- id: a_ui
-  from_component: admin
-  to_component: admin_ui
-  protocol: HTTPS
-  encrypted: true
-  authenticated: true
-- id: ui_p
-  from_component: admin_ui
-  to_component: priv_api
-  protocol: HTTPS
-- id: p_aud
-  from_component: priv_api
-  to_component: audit
-  protocol: TCP
-  encrypted: true
-- id: p_t
-  from_component: priv_api
-  to_component: target
-  protocol: TCP
-  encrypted: true
-assets: []
+  outside_component_ids: []
+  crossing_flow_ids: []
 threats: []
 mitigations: []
 evidence_suggestions: []

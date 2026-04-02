@@ -1,8 +1,8 @@
 model:
   schema_version: 1.0.0
-  methodology: plot4ai
   system_type: web_application
   industry_sector: generic
+  methodology: plot4ai
 metadata:
   title: Copilot sensível
   summary: Portal, sistemas de RH/Finanças e camada LLM com políticas estritas.
@@ -12,11 +12,107 @@ metadata:
   - sensitive
 business_context:
   description: Combinação de PII e LLM — requer governança explícita.
+  business_goals: []
+  business_objectives: []
+  security_objectives: []
+  stakeholders: []
   assumptions:
   - Apenas dados permitidos por função entram no contexto.
+  critical_integrations: []
+assets:
+- id: ai_sensitive_copilot_otm_persisted_data
+  name: Dados persistidos do serviço
+  asset_kind: order_record
+  data_classification: confidential
+  business_criticality: high
+  related_component_ids:
+  - portal
+  - hr_fin
+  related_data_flow_ids:
+  - p_h
+  metadata: {}
+- id: ai_sensitive_copilot_otm_credentials_and_secrets
+  name: Credenciais, chaves e segredos operacionais
+  asset_kind: credential
+  sensitivity: confidential
+  business_criticality: high
+  related_component_ids:
+  - portal
+  related_data_flow_ids:
+  - u_p
+  - p_h
+  - p_o
+  metadata: {}
+- id: ai_sensitive_copilot_otm_operational_surface
+  name: Superfície operacional e integrações
+  asset_kind: service
+  business_criticality: medium
+  related_component_ids:
+  - orch
+  related_data_flow_ids:
+  - p_o
+  metadata: {}
+components:
+- id: user
+  name: Colaborador
+  kind: user
+  in_trust_boundary: internet
+  asset_ids: []
+  metadata: {}
+- id: portal
+  name: Portal interno
+  kind: process
+  in_trust_boundary: app_tier
+  asset_ids:
+  - ai_sensitive_copilot_otm_credentials_and_secrets
+  metadata: {}
+- id: hr_fin
+  name: Sistemas HR/Finanças
+  kind: datastore
+  technology: ERP/HRIS
+  in_trust_boundary: app_tier
+  asset_ids:
+  - ai_sensitive_copilot_otm_persisted_data
+  metadata: {}
+- id: orch
+  name: Orquestração LLM
+  kind: process
+  in_trust_boundary: app_tier
+  asset_ids:
+  - ai_sensitive_copilot_otm_operational_surface
+  metadata: {}
+data_flows:
+- id: u_p
+  from_component: user
+  to_component: portal
+  protocol: HTTPS
+  authenticated: true
+  encrypted: true
+  data_types: []
+  semantic_class: generic
+  metadata: {}
+- id: p_h
+  from_component: portal
+  to_component: hr_fin
+  protocol: TCP
+  authenticated: true
+  encrypted: true
+  data_types: []
+  semantic_class: generic
+  metadata: {}
+- id: p_o
+  from_component: portal
+  to_component: orch
+  protocol: HTTPS
+  data_types: []
+  semantic_class: generic
+  metadata: {}
 trust_boundaries:
 - id: internet
   name: Internet
+  member_component_ids: []
+  outside_component_ids: []
+  crossing_flow_ids: []
 - id: app_tier
   name: Conta / VPC aplicação
   member_component_ids:
@@ -24,42 +120,8 @@ trust_boundaries:
   - portal
   - hr_fin
   - orch
-components:
-- id: user
-  name: Colaborador
-  kind: user
-  in_trust_boundary: internet
-- id: portal
-  name: Portal interno
-  kind: process
-  in_trust_boundary: app_tier
-- id: hr_fin
-  name: Sistemas HR/Finanças
-  kind: datastore
-  technology: ERP/HRIS
-  in_trust_boundary: app_tier
-- id: orch
-  name: Orquestração LLM
-  kind: process
-  in_trust_boundary: app_tier
-data_flows:
-- id: u_p
-  from_component: user
-  to_component: portal
-  protocol: HTTPS
-  encrypted: true
-  authenticated: true
-- id: p_h
-  from_component: portal
-  to_component: hr_fin
-  protocol: TCP
-  encrypted: true
-  authenticated: true
-- id: p_o
-  from_component: portal
-  to_component: orch
-  protocol: HTTPS
-assets: []
+  outside_component_ids: []
+  crossing_flow_ids: []
 threats: []
 mitigations: []
 evidence_suggestions: []

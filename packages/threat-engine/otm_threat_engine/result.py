@@ -5,6 +5,8 @@ from __future__ import annotations
 from typing import Literal
 
 from otm_core_schema import FrameworkRef, RiskAssessment, StrideCategory, ThreatModelMethodology
+from otm_core_schema.enums import HeuristicTier, MethodologyCompletenessState
+from otm_core_schema.model_quality_precheck import ModelQualityPrecheck
 from otm_explainability import ExplanationRecord
 from pydantic import BaseModel, Field
 
@@ -48,6 +50,18 @@ class HeuristicThreat(BaseModel):
     framework_refs: list[FrameworkRef] = Field(
         default_factory=list,
         description="Controles/normas associados (catálogo STRIDE → framework).",
+    )
+    finding_family: str | None = Field(
+        default=None,
+        description="Família de achado (ex.: access_control_broken, external_fetch_risk).",
+    )
+    heuristic_tier: HeuristicTier | None = Field(
+        default=None,
+        description="Proveniência: genérico, contextual ou padrão composto.",
+    )
+    signal_refs: list[str] = Field(
+        default_factory=list,
+        description="Sinais do modelo que dispararam a regra (IDs ou etiquetas).",
     )
 
 
@@ -94,6 +108,17 @@ class AiLayerAssessment(BaseModel):
     evidence: list[str] = Field(
         default_factory=list,
         description="Factos curtos extraídos do modelo — não prova arquitectónica completa.",
+    )
+
+
+class MethodologyCompletenessInfo(BaseModel):
+    """Estado explícito quando o contexto não cobre a metodologia escolhida."""
+
+    state: MethodologyCompletenessState
+    reasons: list[str] = Field(default_factory=list)
+    note: str | None = Field(
+        default=None,
+        description="Texto curto para relatório (ex.: fallback explícito).",
     )
 
 
@@ -147,4 +172,12 @@ class AnalysisResult(BaseModel):
     ai_system_context: AiSystemContextSummary | None = Field(
         default=None,
         description="Visão PLOT4ai: camadas, superfícies de risco e agrupamento de achados `plot4ai_*`.",
+    )
+    model_quality_precheck: ModelQualityPrecheck | None = Field(
+        default=None,
+        description="Pré-check de completude do modelo (sem substituir auditoria).",
+    )
+    methodology_completeness: MethodologyCompletenessInfo | None = Field(
+        default=None,
+        description="Adequação do contexto à metodologia (complete/partial/degraded).",
     )

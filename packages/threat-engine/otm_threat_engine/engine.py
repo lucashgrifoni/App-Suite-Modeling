@@ -10,6 +10,9 @@ from otm_industry_packs.models import PackDefinition
 from otm_threat_engine.business_abuse_heuristics import append_business_abuse_heuristics
 from otm_threat_engine.engine_finalize import finalize_analysis_with_methodology
 from otm_threat_engine.engine_methodology_runtime import resolve_methodology_selection
+from otm_core_schema.model_quality_precheck import assess_model_precheck
+
+from otm_threat_engine.composite_heuristics import append_composite_heuristics
 from otm_threat_engine.engine_stride_builder import (
     append_component_heuristics,
     append_flow_heuristics,
@@ -20,6 +23,8 @@ from otm_threat_engine.engine_support import (
     existing_threat_keys,
     extend_with_pack_heuristics,
 )
+from otm_threat_engine.methodology_completeness import assess_methodology_completeness
+from otm_threat_engine.recommendation_gate import filter_pack_control_hints
 from otm_threat_engine.result import AnalysisResult, HeuristicThreat
 from otm_threat_engine.structural import collect_structural_findings
 from otm_threat_engine.trust_insights import analyze_trust_boundary_crossings
@@ -175,6 +180,11 @@ class ThreatAnalysisEngine:
         )
         append_business_abuse_heuristics(doc=doc, heuristics=heuristics)
 
+        append_composite_heuristics(
+            doc,
+            heuristics,
+            existing_ids={h.id for h in heuristics},
+        )
         covered = _build_covered_threat_keys(doc=doc, heuristics=heuristics)
 
         pack_gen, pack_skip, pack_hints = extend_with_pack_heuristics(
@@ -183,6 +193,7 @@ class ThreatAnalysisEngine:
             covered=covered,
             pack=pack,
         )
+        pack_hints = filter_pack_control_hints(doc, pack_hints)
         skipped += suppress_stride_genericity_noise(heuristics)
         summary = build_analysis_summary(
             structural_count=len(structural),
@@ -221,12 +232,18 @@ class ThreatAnalysisEngine:
         )
 
         base = self._analyze_stride_core(doc, pack=pack)
-        return finalize_analysis_with_methodology(
+        final = finalize_analysis_with_methodology(
             doc=doc,
             base=base,
             methodology=chosen,
             recommendation_reason=rec_reason,
             methodology_explanations=meth_exps,
+        )
+        return final.model_copy(
+            update={
+                "model_quality_precheck": assess_model_precheck(doc),
+                "methodology_completeness": assess_methodology_completeness(doc, chosen),
+            }
         )
 
 

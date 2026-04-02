@@ -1,73 +1,129 @@
-# Template: API backend + fila + worker
 model:
-  schema_version: "1.0.0"
+  schema_version: 1.0.0
   system_type: api_backend
   industry_sector: generic
-
+  methodology: stride
 metadata:
-  title: "API com processamento assíncrono"
-  summary: "Clientes, API, fila, worker e armazenamento."
+  title: API com processamento assíncrono
+  summary: Clientes, API, fila, worker e armazenamento.
   tags:
-    - template
-    - api
-
-trust_boundaries:
-  - id: untrusted
-    name: "Rede não confiável"
-  - id: trusted
-    name: "Zona interna"
-    member_component_ids:
-      - api
-      - queue
-      - worker
-      - db
-
+  - template
+  - api
+assets:
+- id: api_backend_otm_persisted_data
+  name: Dados persistidos do serviço
+  asset_kind: order_record
+  data_classification: confidential
+  business_criticality: high
+  related_component_ids:
+  - worker
+  - db
+  related_data_flow_ids:
+  - w_db
+  metadata: {}
+- id: api_backend_otm_credentials_and_secrets
+  name: Credenciais, chaves e segredos operacionais
+  asset_kind: credential
+  sensitivity: confidential
+  business_criticality: high
+  related_component_ids:
+  - api
+  related_data_flow_ids:
+  - in
+  - to_q
+  metadata: {}
+- id: api_backend_otm_operational_surface
+  name: Superfície operacional e integrações
+  asset_kind: service
+  business_criticality: medium
+  related_component_ids:
+  - partner
+  related_data_flow_ids:
+  - in
+  metadata: {}
 components:
-  - id: partner
-    name: "Cliente / integração"
-    kind: external_entity
-    in_trust_boundary: untrusted
-  - id: api
-    name: "API"
-    kind: process
-    technology: "REST/gRPC"
-    in_trust_boundary: trusted
-  - id: queue
-    name: "Fila"
-    kind: queue
-    technology: "Kafka/SQS"
-    in_trust_boundary: trusted
-  - id: worker
-    name: "Worker"
-    kind: process
-    in_trust_boundary: trusted
-  - id: db
-    name: "Dados"
-    kind: datastore
-    in_trust_boundary: trusted
-
+- id: partner
+  name: Cliente / integração
+  kind: external_entity
+  in_trust_boundary: untrusted
+  asset_ids:
+  - api_backend_otm_operational_surface
+  metadata: {}
+- id: api
+  name: API
+  kind: process
+  technology: REST/gRPC
+  in_trust_boundary: trusted
+  asset_ids:
+  - api_backend_otm_credentials_and_secrets
+  metadata: {}
+- id: queue
+  name: Fila
+  kind: queue
+  technology: Kafka/SQS
+  in_trust_boundary: trusted
+  asset_ids: []
+  metadata: {}
+- id: worker
+  name: Worker
+  kind: process
+  in_trust_boundary: trusted
+  asset_ids: []
+  metadata: {}
+- id: db
+  name: Dados
+  kind: datastore
+  in_trust_boundary: trusted
+  asset_ids:
+  - api_backend_otm_persisted_data
+  metadata: {}
 data_flows:
-  - id: in
-    from_component: partner
-    to_component: api
-    protocol: "HTTPS"
-    encrypted: true
-    authenticated: true
-  - id: to_q
-    from_component: api
-    to_component: queue
-    protocol: "internal"
-  - id: w_pull
-    from_component: queue
-    to_component: worker
-    protocol: "internal"
-  - id: w_db
-    from_component: worker
-    to_component: db
-    protocol: "TCP"
-    encrypted: true
-
-assets: []
+- id: in
+  from_component: partner
+  to_component: api
+  protocol: HTTPS
+  authenticated: true
+  encrypted: true
+  data_types: []
+  semantic_class: generic
+  metadata: {}
+- id: to_q
+  from_component: api
+  to_component: queue
+  protocol: internal
+  data_types: []
+  semantic_class: generic
+  metadata: {}
+- id: w_pull
+  from_component: queue
+  to_component: worker
+  protocol: internal
+  data_types: []
+  semantic_class: generic
+  metadata: {}
+- id: w_db
+  from_component: worker
+  to_component: db
+  protocol: TCP
+  encrypted: true
+  data_types: []
+  semantic_class: generic
+  metadata: {}
+trust_boundaries:
+- id: untrusted
+  name: Rede não confiável
+  member_component_ids: []
+  outside_component_ids: []
+  crossing_flow_ids: []
+- id: trusted
+  name: Zona interna
+  member_component_ids:
+  - api
+  - queue
+  - worker
+  - db
+  outside_component_ids: []
+  crossing_flow_ids: []
 threats: []
 mitigations: []
 evidence_suggestions: []

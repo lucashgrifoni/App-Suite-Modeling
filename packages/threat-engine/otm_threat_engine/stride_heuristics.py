@@ -48,14 +48,22 @@ def strides_for_component(kind: ComponentKind) -> tuple[StrideCategory, ...]:
 
 
 def title_for_component_threat(component: Component, stride: StrideCategory) -> str:
+    role = (component.responsibility or component.technology_role or "").strip()
+    if role:
+        return f"[{stride.value}] {component.name} ({role})"
     return f"[{stride.value}] {component.name}"
 
 
 def description_for_component_threat(component: Component) -> str:
     tech = f" ({component.technology})" if component.technology else ""
+    extra = ""
+    if component.handles_credentials:
+        extra += " Componente indicado como manipulando credenciais — reforçar proteção de segredos e sessão."
+    if component.supports_admin_operations:
+        extra += " Superfície administrativa — priorizar controlos de autorização e auditoria."
     return (
-        f"Ameaça genérica STRIDE para o componente '{component.name}'{tech} "
-        f"como {component.kind.value}. Rever controlos específicos do contexto."
+        f"Ameaça STRIDE para '{component.name}'{tech} como {component.kind.value}.{extra} "
+        "Rever controlos específicos do contexto."
     )
 
 

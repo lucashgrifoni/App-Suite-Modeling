@@ -1,8 +1,8 @@
 model:
   schema_version: 1.0.0
-  methodology: plot4ai
   system_type: batch_data_pipeline
   industry_sector: generic
+  methodology: plot4ai
 metadata:
   title: Pipeline de inferência
   summary: Entrada, pré-processamento, modelo e arquivo de saídas.
@@ -11,11 +11,119 @@ metadata:
   - inference
 business_context:
   description: Rastreabilidade de inputs/outputs para auditoria de IA.
+  business_goals: []
+  business_objectives: []
+  security_objectives: []
+  stakeholders: []
   assumptions:
   - Versão de modelo e dados de treino registadas.
+  critical_integrations: []
+assets:
+- id: ai_inference_pipeline_otm_persisted_data
+  name: Dados persistidos do serviço
+  asset_kind: order_record
+  data_classification: confidential
+  business_criticality: high
+  related_component_ids:
+  - pre
+  - out
+  related_data_flow_ids:
+  - pr_o
+  - o_w
+  metadata: {}
+- id: ai_inference_pipeline_otm_credentials_and_secrets
+  name: Credenciais, chaves e segredos operacionais
+  asset_kind: credential
+  sensitivity: confidential
+  business_criticality: high
+  related_component_ids:
+  - ingress
+  - pre
+  related_data_flow_ids:
+  - i_pr
+  metadata: {}
+- id: ai_inference_pipeline_otm_operational_surface
+  name: Superfície operacional e integrações
+  asset_kind: service
+  business_criticality: medium
+  related_component_ids:
+  - model
+  related_data_flow_ids:
+  - pr_m
+  metadata: {}
+components:
+- id: ingress
+  name: Entrada (API/upload)
+  kind: gateway
+  in_trust_boundary: app_tier
+  asset_ids:
+  - ai_inference_pipeline_otm_credentials_and_secrets
+  metadata: {}
+- id: pre
+  name: Pré-processamento
+  kind: process
+  in_trust_boundary: app_tier
+  asset_ids:
+  - ai_inference_pipeline_otm_credentials_and_secrets
+  metadata: {}
+- id: model
+  name: Fornecedor de modelo
+  kind: external_entity
+  in_trust_boundary: internet
+  asset_ids:
+  - ai_inference_pipeline_otm_operational_surface
+  metadata: {}
+- id: out
+  name: Arquivo de resultados
+  kind: datastore
+  in_trust_boundary: app_tier
+  asset_ids:
+  - ai_inference_pipeline_otm_persisted_data
+  metadata: {}
+- id: wf
+  name: Workflow downstream
+  kind: process
+  in_trust_boundary: app_tier
+  asset_ids: []
+  metadata: {}
+data_flows:
+- id: i_pr
+  from_component: ingress
+  to_component: pre
+  protocol: HTTPS
+  data_types: []
+  semantic_class: generic
+  metadata: {}
+- id: pr_m
+  from_component: pre
+  to_component: model
+  protocol: HTTPS
+  authenticated: true
+  encrypted: true
+  data_types: []
+  semantic_class: generic
+  metadata: {}
+- id: pr_o
+  from_component: pre
+  to_component: out
+  protocol: TCP
+  encrypted: true
+  data_types: []
+  semantic_class: generic
+  metadata: {}
+- id: o_w
+  from_component: out
+  to_component: wf
+  protocol: TCP
+  data_types: []
+  semantic_class: generic
+  metadata: {}
 trust_boundaries:
 - id: internet
   name: Internet
+  member_component_ids: []
+  outside_component_ids: []
+  crossing_flow_ids: []
 - id: app_tier
   name: Conta / VPC
   member_component_ids:
@@ -23,48 +131,8 @@ trust_boundaries:
   - pre
   - out
   - wf
-components:
-- id: ingress
-  name: Entrada (API/upload)
-  kind: gateway
-  in_trust_boundary: app_tier
-- id: pre
-  name: Pré-processamento
-  kind: process
-  in_trust_boundary: app_tier
-- id: model
-  name: Fornecedor de modelo
-  kind: external_entity
-  in_trust_boundary: internet
-- id: out
-  name: Arquivo de resultados
-  kind: datastore
-  in_trust_boundary: app_tier
-- id: wf
-  name: Workflow downstream
-  kind: process
-  in_trust_boundary: app_tier
-data_flows:
-- id: i_pr
-  from_component: ingress
-  to_component: pre
-  protocol: HTTPS
-- id: pr_m
-  from_component: pre
-  to_component: model
-  protocol: HTTPS
-  encrypted: true
-  authenticated: true
-- id: pr_o
-  from_component: pre
-  to_component: out
-  protocol: TCP
-  encrypted: true
-- id: o_w
-  from_component: out
-  to_component: wf
-  protocol: TCP
-assets: []
+  outside_component_ids: []
+  crossing_flow_ids: []
 threats: []
 mitigations: []
 evidence_suggestions: []

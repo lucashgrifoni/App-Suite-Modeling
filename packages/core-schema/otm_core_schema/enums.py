@@ -65,7 +65,7 @@ class IndustrySector(StrEnum):
 
 
 class AssetKind(StrEnum):
-    """Classificação simples de ativo (sem duplicar GRC pesado)."""
+    """Classificação de ativo — valores estáveis para YAML/JSON."""
 
     DATA = "data"
     CREDENTIAL = "credential"
@@ -73,6 +73,69 @@ class AssetKind(StrEnum):
     SERVICE = "service"
     HARDWARE = "hardware"
     OTHER = "other"
+    # Extensões 1.1 — domínios comuns para análise rica
+    PII = "pii"
+    SESSION = "session"
+    FINANCIAL_RECORD = "financial_record"
+    ORDER_RECORD = "order_record"
+    AUDIT_LOG = "audit_log"
+    UPLOADED_CONTENT = "uploaded_content"
+    ADMIN_CAPABILITY = "admin_capability"
+    CONFIGURATION_SECRET = "configuration_secret"
+
+
+class CriticalityLevel(StrEnum):
+    """Criticidade de negócio (ativos / impacto)."""
+
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    CRITICAL = "critical"
+
+
+class DataClassificationLevel(StrEnum):
+    """Classificação de dados (NIST data-centric, relatórios)."""
+
+    PUBLIC = "public"
+    INTERNAL = "internal"
+    CONFIDENTIAL = "confidential"
+    RESTRICTED = "restricted"
+
+
+class FlowSemanticClass(StrEnum):
+    """Semântica do fluxo para heurísticas compostas."""
+
+    GENERIC = "generic"
+    AUTHENTICATION_FLOW = "authentication_flow"
+    REGISTRATION_FLOW = "registration_flow"
+    FILE_UPLOAD = "file_upload"
+    ADMIN_ACTION = "admin_action"
+    DATA_READ = "data_read"
+    EXTERNAL_FETCH = "external_fetch"
+    DEBUG_ACCESS = "debug_access"
+    PUBLIC_API_INGRESS = "public_api_ingress_flow"
+    GATEWAY_FORWARDING = "gateway_forwarding_flow"
+    STORAGE_PROCESSING = "storage_processing_flow"
+    PRIVILEGED_OPERATION = "privileged_operation_flow"
+    PAYMENT_FLOW = "payment_flow"
+    UPLOAD_VALIDATION = "upload_validation_flow"
+
+
+class MethodologyCompletenessState(StrEnum):
+    """Adequação do modelo ao contexto esperado pela metodologia."""
+
+    COMPLETE = "complete"
+    PARTIAL = "partial"
+    DEGRADED = "degraded"
+
+
+class HeuristicTier(StrEnum):
+    """Proveniência da heurística no motor."""
+
+    GENERIC_STRIDE = "generic_stride"
+    CONTEXTUAL = "contextual"
+    COMPOSITE_PATTERN = "composite_pattern"
+    STRUCTURAL = "structural"
 
 
 class TreatmentStatus(StrEnum):

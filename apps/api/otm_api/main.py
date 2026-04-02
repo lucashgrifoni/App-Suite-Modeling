@@ -11,7 +11,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 
 from otm_api.errors import request_validation_handler
-from otm_api.routers import analyses, exports, imports, models, remediation, system, templates
+from otm_api.routers import analyses, exports, imports, models, remediation, reports_premium, system, templates
 
 app = FastAPI(
     title="App Suite Modeling API",
@@ -33,6 +33,10 @@ app = FastAPI(
         {
             "name": "Remediation",
             "description": "Actionable backlog from `AnalysisResult` (heuristic prioritization, not Jira).",
+        },
+        {
+            "name": "Reports",
+            "description": "Premium executive/standard/deep reports (Markdown and PDF).",
         },
     ],
 )
@@ -78,4 +82,5 @@ v1.include_router(templates.router)
 v1.include_router(exports.router)
 v1.include_router(imports.router)
 v1.include_router(remediation.router)
+v1.include_router(reports_premium.router)
 app.include_router(v1)

@@ -1,8 +1,8 @@
 model:
   schema_version: 1.0.0
-  methodology: stride
   system_type: hybrid
   industry_sector: cloud_native
+  methodology: stride
 metadata:
   title: Contentores geridos
   summary: Entrada balanceada, aplicação em contentores e persistência.
@@ -11,11 +11,122 @@ metadata:
   - containers
 business_context:
   description: Sem K8s self-managed; foco em serviço de orquestração gerido.
+  business_goals: []
+  business_objectives: []
+  security_objectives: []
+  stakeholders: []
   assumptions:
   - Imagens assinadas e varredura de vulnerabilidades.
+  critical_integrations: []
+assets:
+- id: container_platform_otm_persisted_data
+  name: Dados persistidos do serviço
+  asset_kind: order_record
+  data_classification: confidential
+  business_criticality: high
+  related_component_ids:
+  - app
+  - cache
+  related_data_flow_ids:
+  - app_c
+  metadata: {}
+- id: container_platform_otm_credentials_and_secrets
+  name: Credenciais, chaves e segredos operacionais
+  asset_kind: credential
+  sensitivity: confidential
+  business_criticality: high
+  related_component_ids:
+  - lb
+  - app
+  related_data_flow_ids:
+  - u_lb
+  - lb_app
+  metadata: {}
+- id: container_platform_otm_operational_surface
+  name: Superfície operacional e integrações
+  asset_kind: service
+  business_criticality: medium
+  related_component_ids:
+  - db
+  related_data_flow_ids:
+  - app_db
+  metadata: {}
+components:
+- id: user
+  name: Cliente
+  kind: user
+  in_trust_boundary: internet
+  asset_ids: []
+  metadata: {}
+- id: lb
+  name: LB / WAF
+  kind: gateway
+  in_trust_boundary: app_tier
+  asset_ids:
+  - container_platform_otm_credentials_and_secrets
+  metadata: {}
+- id: app
+  name: Serviço em contentor
+  kind: process
+  technology: Containers
+  in_trust_boundary: app_tier
+  asset_ids:
+  - container_platform_otm_credentials_and_secrets
+  metadata: {}
+- id: cache
+  name: Cache
+  kind: datastore
+  technology: Redis
+  in_trust_boundary: app_tier
+  asset_ids:
+  - container_platform_otm_persisted_data
+  metadata: {}
+- id: db
+  name: Base de dados
+  kind: datastore
+  technology: PostgreSQL
+  in_trust_boundary: app_tier
+  asset_ids:
+  - container_platform_otm_operational_surface
+  metadata: {}
+data_flows:
+- id: u_lb
+  from_component: user
+  to_component: lb
+  protocol: HTTPS
+  encrypted: true
+  data_types: []
+  semantic_class: generic
+  metadata: {}
+- id: lb_app
+  from_component: lb
+  to_component: app
+  protocol: HTTPS
+  data_types: []
+  semantic_class: generic
+  metadata: {}
+- id: app_c
+  from_component: app
+  to_component: cache
+  protocol: TCP
+  encrypted: true
+  data_types: []
+  semantic_class: generic
+  metadata: {}
+- id: app_db
+  from_component: app
+  to_component: db
+  protocol: TCP
+  encrypted: true
+  data_types: []
+  semantic_class: generic
+  metadata: {}
 trust_boundaries:
 - id: internet
   name: Internet
+  member_component_ids: []
+  outside_component_ids: []
+  crossing_flow_ids: []
 - id: app_tier
   name: Conta / VPC aplicação
   member_component_ids:
@@ -23,51 +134,8 @@ trust_boundaries:
   - app
   - cache
   - db
-components:
-- id: user
-  name: Cliente
-  kind: user
-  in_trust_boundary: internet
-- id: lb
-  name: LB / WAF
-  kind: gateway
-  in_trust_boundary: app_tier
-- id: app
-  name: Serviço em contentor
-  kind: process
-  technology: Containers
-  in_trust_boundary: app_tier
-- id: cache
-  name: Cache
-  kind: datastore
-  technology: Redis
-  in_trust_boundary: app_tier
-- id: db
-  name: Base de dados
-  kind: datastore
-  technology: PostgreSQL
-  in_trust_boundary: app_tier
-data_flows:
-- id: u_lb
-  from_component: user
-  to_component: lb
-  protocol: HTTPS
-  encrypted: true
-- id: lb_app
-  from_component: lb
-  to_component: app
-  protocol: HTTPS
-- id: app_c
-  from_component: app
-  to_component: cache
-  protocol: TCP
-  encrypted: true
-- id: app_db
-  from_component: app
-  to_component: db
-  protocol: TCP
-  encrypted: true
-assets: []
+  outside_component_ids: []
+  crossing_flow_ids: []
 threats: []
 mitigations: []
 evidence_suggestions: []

@@ -1,8 +1,8 @@
 model:
   schema_version: 1.0.0
-  methodology: plot4ai
   system_type: hybrid
   industry_sector: generic
+  methodology: plot4ai
 metadata:
   title: RAG corporativo
   summary: Consulta, recuperação, base vetorial e geração.
@@ -11,11 +11,134 @@ metadata:
   - rag
 business_context:
   description: Controlar ACL por documento e evitar vazamento de contexto.
+  business_goals: []
+  business_objectives: []
+  security_objectives: []
+  stakeholders: []
   assumptions:
   - Pipeline de indexação com classificação de sensibilidade.
+  critical_integrations: []
+assets:
+- id: ai_rag_enterprise_otm_persisted_data
+  name: Dados persistidos do serviço
+  asset_kind: order_record
+  data_classification: confidential
+  business_criticality: high
+  related_component_ids:
+  - retrieval
+  - vdb
+  related_data_flow_ids:
+  - r_v
+  metadata: {}
+- id: ai_rag_enterprise_otm_credentials_and_secrets
+  name: Credenciais, chaves e segredos operacionais
+  asset_kind: credential
+  sensitivity: confidential
+  business_criticality: high
+  related_component_ids:
+  - ui
+  related_data_flow_ids:
+  - u_ui
+  - ui_r
+  metadata: {}
+- id: ai_rag_enterprise_otm_operational_surface
+  name: Superfície operacional e integrações
+  asset_kind: service
+  business_criticality: medium
+  related_component_ids:
+  - docs
+  related_data_flow_ids:
+  - r_d
+  metadata: {}
+components:
+- id: user
+  name: Utilizador
+  kind: user
+  in_trust_boundary: internet
+  asset_ids: []
+  metadata: {}
+- id: ui
+  name: UI
+  kind: process
+  in_trust_boundary: app_tier
+  asset_ids:
+  - ai_rag_enterprise_otm_credentials_and_secrets
+  metadata: {}
+- id: retrieval
+  name: API de retrieval
+  kind: process
+  in_trust_boundary: app_tier
+  asset_ids: []
+  metadata: {}
+- id: vdb
+  name: Vector DB
+  kind: datastore
+  technology: pgvector
+  in_trust_boundary: app_tier
+  asset_ids:
+  - ai_rag_enterprise_otm_persisted_data
+  metadata: {}
+- id: docs
+  name: Arquivo documental
+  kind: datastore
+  technology: Object/SQL
+  in_trust_boundary: app_tier
+  asset_ids:
+  - ai_rag_enterprise_otm_operational_surface
+  metadata: {}
+- id: llm
+  name: Fornecedor LLM
+  kind: external_entity
+  in_trust_boundary: internet
+  asset_ids: []
+  metadata: {}
+data_flows:
+- id: u_ui
+  from_component: user
+  to_component: ui
+  protocol: HTTPS
+  encrypted: true
+  data_types: []
+  semantic_class: generic
+  metadata: {}
+- id: ui_r
+  from_component: ui
+  to_component: retrieval
+  protocol: HTTPS
+  data_types: []
+  semantic_class: generic
+  metadata: {}
+- id: r_v
+  from_component: retrieval
+  to_component: vdb
+  protocol: TCP
+  encrypted: true
+  data_types: []
+  semantic_class: generic
+  metadata: {}
+- id: r_d
+  from_component: retrieval
+  to_component: docs
+  protocol: TCP
+  encrypted: true
+  data_types: []
+  semantic_class: generic
+  metadata: {}
+- id: r_l
+  from_component: retrieval
+  to_component: llm
+  protocol: HTTPS
+  authenticated: true
+  encrypted: true
+  data_types: []
+  semantic_class: generic
+  metadata: {}
 trust_boundaries:
 - id: internet
   name: Internet
+  member_component_ids: []
+  outside_component_ids: []
+  crossing_flow_ids: []
 - id: app_tier
   name: Conta / VPC
   member_component_ids:
@@ -23,60 +146,8 @@ trust_boundaries:
   - retrieval
   - vdb
   - docs
-components:
-- id: user
-  name: Utilizador
-  kind: user
-  in_trust_boundary: internet
-- id: ui
-  name: UI
-  kind: process
-  in_trust_boundary: app_tier
-- id: retrieval
-  name: API de retrieval
-  kind: process
-  in_trust_boundary: app_tier
-- id: vdb
-  name: Vector DB
-  kind: datastore
-  technology: pgvector
-  in_trust_boundary: app_tier
-- id: docs
-  name: Arquivo documental
-  kind: datastore
-  technology: Object/SQL
-  in_trust_boundary: app_tier
-- id: llm
-  name: Fornecedor LLM
-  kind: external_entity
-  in_trust_boundary: internet
-data_flows:
-- id: u_ui
-  from_component: user
-  to_component: ui
-  protocol: HTTPS
-  encrypted: true
-- id: ui_r
-  from_component: ui
-  to_component: retrieval
-  protocol: HTTPS
-- id: r_v
-  from_component: retrieval
-  to_component: vdb
-  protocol: TCP
-  encrypted: true
-- id: r_d
-  from_component: retrieval
-  to_component: docs
-  protocol: TCP
-  encrypted: true
-- id: r_l
-  from_component: retrieval
-  to_component: llm
-  protocol: HTTPS
-  encrypted: true
-  authenticated: true
-assets: []
+  outside_component_ids: []
+  crossing_flow_ids: []
 threats: []
 mitigations: []
 evidence_suggestions: []

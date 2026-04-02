@@ -1,8 +1,8 @@
 model:
   schema_version: 1.0.0
-  methodology: plot4ai
   system_type: hybrid
   industry_sector: generic
+  methodology: plot4ai
 metadata:
   title: Agente com ferramentas
   summary: Orquestrador invoca ferramentas com registo e aprovação opcional.
@@ -11,11 +11,107 @@ metadata:
   - agent
 business_context:
   description: Cada tool é uma superfície de abuso potencial.
+  business_goals: []
+  business_objectives: []
+  security_objectives: []
+  stakeholders: []
   assumptions:
   - Política de quais tools são automáticos vs manuais.
+  critical_integrations: []
+assets:
+- id: ai_agent_tool_use_otm_persisted_data
+  name: Dados persistidos do serviço
+  asset_kind: order_record
+  data_classification: confidential
+  business_criticality: high
+  related_component_ids:
+  - agent
+  - audit
+  related_data_flow_ids:
+  - a_au
+  metadata: {}
+- id: ai_agent_tool_use_otm_credentials_and_secrets
+  name: Credenciais, chaves e segredos operacionais
+  asset_kind: credential
+  sensitivity: confidential
+  business_criticality: high
+  related_component_ids:
+  - agent
+  related_data_flow_ids:
+  - u_a
+  - a_t
+  - a_au
+  metadata: {}
+- id: ai_agent_tool_use_otm_operational_surface
+  name: Superfície operacional e integrações
+  asset_kind: service
+  business_criticality: medium
+  related_component_ids:
+  - tools
+  related_data_flow_ids:
+  - a_t
+  metadata: {}
+components:
+- id: user
+  name: Operador
+  kind: user
+  in_trust_boundary: internet
+  asset_ids: []
+  metadata: {}
+- id: agent
+  name: Orquestrador de agente
+  kind: process
+  in_trust_boundary: app_tier
+  asset_ids:
+  - ai_agent_tool_use_otm_credentials_and_secrets
+  metadata: {}
+- id: tools
+  name: Ferramentas (APIs)
+  kind: process
+  in_trust_boundary: app_tier
+  asset_ids:
+  - ai_agent_tool_use_otm_operational_surface
+  metadata: {}
+- id: audit
+  name: Auditoria
+  kind: datastore
+  in_trust_boundary: app_tier
+  asset_ids:
+  - ai_agent_tool_use_otm_persisted_data
+  metadata: {}
+data_flows:
+- id: u_a
+  from_component: user
+  to_component: agent
+  protocol: HTTPS
+  authenticated: true
+  encrypted: true
+  data_types: []
+  semantic_class: generic
+  metadata: {}
+- id: a_t
+  from_component: agent
+  to_component: tools
+  protocol: HTTPS
+  authenticated: true
+  encrypted: true
+  data_types: []
+  semantic_class: generic
+  metadata: {}
+- id: a_au
+  from_component: agent
+  to_component: audit
+  protocol: TCP
+  encrypted: true
+  data_types: []
+  semantic_class: generic
+  metadata: {}
 trust_boundaries:
 - id: internet
   name: Internet
+  member_component_ids: []
+  outside_component_ids: []
+  crossing_flow_ids: []
 - id: app_tier
   name: Conta / VPC aplicação
   member_component_ids:
@@ -23,42 +119,8 @@ trust_boundaries:
   - agent
   - tools
   - audit
-components:
-- id: user
-  name: Operador
-  kind: user
-  in_trust_boundary: internet
-- id: agent
-  name: Orquestrador de agente
-  kind: process
-  in_trust_boundary: app_tier
-- id: tools
-  name: Ferramentas (APIs)
-  kind: process
-  in_trust_boundary: app_tier
-- id: audit
-  name: Auditoria
-  kind: datastore
-  in_trust_boundary: app_tier
-data_flows:
-- id: u_a
-  from_component: user
-  to_component: agent
-  protocol: HTTPS
-  encrypted: true
-  authenticated: true
-- id: a_t
-  from_component: agent
-  to_component: tools
-  protocol: HTTPS
-  encrypted: true
-  authenticated: true
-- id: a_au
-  from_component: agent
-  to_component: audit
-  protocol: TCP
-  encrypted: true
-assets: []
+  outside_component_ids: []
+  crossing_flow_ids: []
 threats: []
 mitigations: []
 evidence_suggestions: []

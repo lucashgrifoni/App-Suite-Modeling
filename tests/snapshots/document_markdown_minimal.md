@@ -4,9 +4,14 @@ Serviço REST com fila e banco.
 
 **Responsável:** equipe-plataforma
 
-- **Schema:** 1.0.0
+- **Schema:** 1.1.0
 - **Tipo de sistema:** web_application
 - **Setor:** saas
+
+## Ativos
+
+- **Registos de pedidos** (`orders_data`) — order_record
+- **Contexto de sessão utilizador** (`session_ctx`) — session
 
 ## Componentes
 

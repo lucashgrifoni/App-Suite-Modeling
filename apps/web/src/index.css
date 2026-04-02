@@ -197,6 +197,22 @@
     }
   }
 
+  /*
+   * Cartões com ações (ex.: lista de templates): sem translate/rotate no hover.
+   * Caso contrário o elemento move-se sob o cursor e o browser dispara
+   * mouseenter/mouseleave em ciclo — cursor a “piscar” e cliques a falharem.
+   */
+  .otm-card-lift.otm-card-stable-hover:hover {
+    transform: none;
+    box-shadow: var(--otm-shadow-glow);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .otm-card-lift.otm-card-stable-hover:hover {
+      box-shadow: var(--otm-shadow-lg);
+    }
+  }
+
   .otm-perspective {
     perspective: 1200px;
   }

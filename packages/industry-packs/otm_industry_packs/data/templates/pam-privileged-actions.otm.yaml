@@ -1,8 +1,8 @@
 model:
   schema_version: 1.0.0
-  methodology: stride
   system_type: hybrid
   industry_sector: generic
+  methodology: stride
 metadata:
   title: PAM e ações privilegiadas
   summary: Operador solicita ação; aprovação; execução registada.
@@ -11,45 +11,101 @@ metadata:
   - pam
 business_context:
   description: Reduz superfície de contas permanentemente privilegiadas.
+  business_goals: []
+  business_objectives: []
+  security_objectives: []
+  stakeholders: []
   assumptions:
   - Integração com IdP corporativo.
+  critical_integrations: []
+assets:
+- id: pam_privileged_actions_otm_application_state
+  name: Estado e dados processados pela aplicação
+  asset_kind: session
+  sensitivity: confidential
+  business_criticality: high
+  related_component_ids:
+  - pam
+  related_data_flow_ids:
+  - o_p
+  - p_t
+  metadata: {}
+- id: pam_privileged_actions_otm_credentials_and_secrets
+  name: Credenciais, chaves e segredos operacionais
+  asset_kind: credential
+  sensitivity: confidential
+  business_criticality: high
+  related_component_ids:
+  - pam
+  related_data_flow_ids:
+  - o_p
+  - p_t
+  metadata: {}
+- id: pam_privileged_actions_otm_operational_surface
+  name: Superfície operacional e integrações
+  asset_kind: service
+  business_criticality: medium
+  related_component_ids:
+  - target
+  related_data_flow_ids:
+  - p_t
+  metadata: {}
+components:
+- id: op
+  name: Operador
+  kind: user
+  in_trust_boundary: internet
+  asset_ids: []
+  metadata: {}
+- id: pam
+  name: Gateway PAM
+  kind: process
+  technology: PAM
+  in_trust_boundary: app_tier
+  asset_ids:
+  - pam_privileged_actions_otm_application_state
+  - pam_privileged_actions_otm_credentials_and_secrets
+  metadata: {}
+- id: target
+  name: Sistema alvo
+  kind: process
+  in_trust_boundary: app_tier
+  asset_ids:
+  - pam_privileged_actions_otm_operational_surface
+  metadata: {}
+data_flows:
+- id: o_p
+  from_component: op
+  to_component: pam
+  protocol: HTTPS
+  authenticated: true
+  encrypted: true
+  data_types: []
+  semantic_class: generic
+  metadata: {}
+- id: p_t
+  from_component: pam
+  to_component: target
+  protocol: SSH/HTTPS
+  authenticated: true
+  encrypted: true
+  data_types: []
+  semantic_class: generic
+  metadata: {}
 trust_boundaries:
 - id: internet
   name: Internet
+  member_component_ids: []
+  outside_component_ids: []
+  crossing_flow_ids: []
 - id: app_tier
   name: Conta / VPC aplicação
   member_component_ids:
   - op
   - pam
   - target
-components:
-- id: op
-  name: Operador
-  kind: user
-  in_trust_boundary: internet
-- id: pam
-  name: Gateway PAM
-  kind: process
-  technology: PAM
-  in_trust_boundary: app_tier
-- id: target
-  name: Sistema alvo
-  kind: process
-  in_trust_boundary: app_tier
-data_flows:
-- id: o_p
-  from_component: op
-  to_component: pam
-  protocol: HTTPS
-  encrypted: true
-  authenticated: true
-- id: p_t
-  from_component: pam
-  to_component: target
-  protocol: SSH/HTTPS
-  encrypted: true
-  authenticated: true
-assets: []
+  outside_component_ids: []
+  crossing_flow_ids: []
 threats: []
 mitigations: []
 evidence_suggestions: []

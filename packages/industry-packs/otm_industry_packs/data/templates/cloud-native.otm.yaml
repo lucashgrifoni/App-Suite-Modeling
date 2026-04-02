@@ -1,72 +1,130 @@
-# Template: Kubernetes / cloud-native
 model:
-  schema_version: "1.0.0"
+  schema_version: 1.0.0
   system_type: hybrid
   industry_sector: cloud_native
-
+  methodology: stride
 metadata:
-  title: "Serviço cloud-native"
-  summary: "Ingress, API em contentor, cache e base de dados."
+  title: Serviço cloud-native
+  summary: Ingress, API em contentor, cache e base de dados.
   tags:
-    - template
-    - kubernetes
-
-trust_boundaries:
-  - id: external
-    name: "Clientes externos"
-  - id: cluster
-    name: "Cluster Kubernetes"
-    member_component_ids:
-      - ingress
-      - api
-      - cache
-      - db
-
+  - template
+  - kubernetes
+assets:
+- id: cloud_native_otm_persisted_data
+  name: Dados persistidos do serviço
+  asset_kind: order_record
+  data_classification: confidential
+  business_criticality: high
+  related_component_ids:
+  - api
+  - cache
+  related_data_flow_ids:
+  - to_cache
+  metadata: {}
+- id: cloud_native_otm_credentials_and_secrets
+  name: Credenciais, chaves e segredos operacionais
+  asset_kind: credential
+  sensitivity: confidential
+  business_criticality: high
+  related_component_ids:
+  - ingress
+  - api
+  related_data_flow_ids:
+  - in
+  - to_api
+  metadata: {}
+- id: cloud_native_otm_operational_surface
+  name: Superfície operacional e integrações
+  asset_kind: service
+  business_criticality: medium
+  related_component_ids:
+  - db
+  related_data_flow_ids:
+  - to_db
+  metadata: {}
 components:
-  - id: client
-    name: "Cliente"
-    kind: external_entity
-    in_trust_boundary: external
-  - id: ingress
-    name: "Ingress / LB"
-    kind: gateway
-    technology: "Ingress controller"
-    in_trust_boundary: cluster
-  - id: api
-    name: "Workload API"
-    kind: process
-    technology: "Pods"
-    in_trust_boundary: cluster
-  - id: cache
-    name: "Redis"
-    kind: datastore
-    in_trust_boundary: cluster
-  - id: db
-    name: "PostgreSQL"
-    kind: datastore
-    in_trust_boundary: cluster
-
+- id: client
+  name: Cliente
+  kind: external_entity
+  in_trust_boundary: external
+  asset_ids: []
+  metadata: {}
+- id: ingress
+  name: Ingress / LB
+  kind: gateway
+  technology: Ingress controller
+  in_trust_boundary: cluster
+  asset_ids:
+  - cloud_native_otm_credentials_and_secrets
+  metadata: {}
+- id: api
+  name: Workload API
+  kind: process
+  technology: Pods
+  in_trust_boundary: cluster
+  asset_ids:
+  - cloud_native_otm_credentials_and_secrets
+  metadata: {}
+- id: cache
+  name: Redis
+  kind: datastore
+  in_trust_boundary: cluster
+  asset_ids:
+  - cloud_native_otm_persisted_data
+  metadata: {}
+- id: db
+  name: PostgreSQL
+  kind: datastore
+  in_trust_boundary: cluster
+  asset_ids:
+  - cloud_native_otm_operational_surface
+  metadata: {}
 data_flows:
-  - id: in
-    from_component: client
-    to_component: ingress
-    protocol: "HTTPS"
-    encrypted: true
-  - id: to_api
-    from_component: ingress
-    to_component: api
-    protocol: "HTTP"
-  - id: to_cache
-    from_component: api
-    to_component: cache
-    protocol: "TCP"
-  - id: to_db
-    from_component: api
-    to_component: db
-    protocol: "TCP"
-    encrypted: true
-
-assets: []
+- id: in
+  from_component: client
+  to_component: ingress
+  protocol: HTTPS
+  encrypted: true
+  data_types: []
+  semantic_class: generic
+  metadata: {}
+- id: to_api
+  from_component: ingress
+  to_component: api
+  protocol: HTTP
+  data_types: []
+  semantic_class: generic
+  metadata: {}
+- id: to_cache
+  from_component: api
+  to_component: cache
+  protocol: TCP
+  data_types: []
+  semantic_class: generic
+  metadata: {}
+- id: to_db
+  from_component: api
+  to_component: db
+  protocol: TCP
+  encrypted: true
+  data_types: []
+  semantic_class: generic
+  metadata: {}
+trust_boundaries:
+- id: external
+  name: Clientes externos
+  member_component_ids: []
+  outside_component_ids: []
+  crossing_flow_ids: []
+- id: cluster
+  name: Cluster Kubernetes
+  member_component_ids:
+  - ingress
+  - api
+  - cache
+  - db
+  outside_component_ids: []
+  crossing_flow_ids: []
 threats: []
 mitigations: []
 evidence_suggestions: []

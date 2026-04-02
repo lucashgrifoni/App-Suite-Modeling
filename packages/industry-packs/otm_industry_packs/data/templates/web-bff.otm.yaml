@@ -1,8 +1,8 @@
 model:
   schema_version: 1.0.0
-  methodology: stride
   system_type: web_application
   industry_sector: saas
+  methodology: stride
 metadata:
   title: BFF + frontend web
   summary: SPA, BFF e APIs internas.
@@ -12,54 +12,115 @@ metadata:
   - web
 business_context:
   description: Front estático/SSR fala com BFF que consolida chamadas internas.
+  business_goals: []
+  business_objectives: []
+  security_objectives: []
+  stakeholders: []
   assumptions:
   - BFF na mesma zona de confiança que APIs internas.
-trust_boundaries:
-- id: internet
-  name: Internet
-- id: app_tier
-  name: Conta / VPC aplicação
-  member_component_ids:
+  critical_integrations: []
+assets:
+- id: web_bff_otm_application_state
+  name: Estado e dados processados pela aplicação
+  asset_kind: session
+  sensitivity: confidential
+  business_criticality: high
+  related_component_ids:
   - fe
-  - bff
+  related_data_flow_ids:
+  - u_fe
+  - fe_bff
+  metadata: {}
+- id: web_bff_otm_credentials_and_secrets
+  name: Credenciais, chaves e segredos operacionais
+  asset_kind: credential
+  sensitivity: confidential
+  business_criticality: high
+  related_component_ids:
+  - fe
+  related_data_flow_ids:
+  - u_fe
+  - fe_bff
+  metadata: {}
+- id: web_bff_otm_operational_surface
+  name: Superfície operacional e integrações
+  asset_kind: service
+  business_criticality: medium
+  related_component_ids:
   - internal_api
+  related_data_flow_ids:
+  - bff_int
+  metadata: {}
 components:
 - id: user
   name: Browser
   kind: user
   in_trust_boundary: internet
+  asset_ids: []
+  metadata: {}
 - id: fe
   name: Frontend (SPA/SSR)
   kind: process
   technology: React/Vue
   in_trust_boundary: app_tier
+  asset_ids:
+  - web_bff_otm_application_state
+  - web_bff_otm_credentials_and_secrets
+  metadata: {}
 - id: bff
   name: BFF
   kind: process
   technology: Node/Go
   in_trust_boundary: app_tier
+  asset_ids: []
+  metadata: {}
 - id: internal_api
   name: APIs internas
   kind: process
   technology: REST/gRPC
   in_trust_boundary: app_tier
+  asset_ids:
+  - web_bff_otm_operational_surface
+  metadata: {}
 data_flows:
 - id: u_fe
   from_component: user
   to_component: fe
   protocol: HTTPS
   encrypted: true
+  data_types: []
+  semantic_class: generic
+  metadata: {}
 - id: fe_bff
   from_component: fe
   to_component: bff
   protocol: HTTPS
-  encrypted: true
   authenticated: true
+  encrypted: true
+  data_types: []
+  semantic_class: generic
+  metadata: {}
 - id: bff_int
   from_component: bff
   to_component: internal_api
   protocol: HTTPS
-assets: []
+  data_types: []
+  semantic_class: generic
+  metadata: {}
+trust_boundaries:
+- id: internet
+  name: Internet
+  member_component_ids: []
+  outside_component_ids: []
+  crossing_flow_ids: []
+- id: app_tier
+  name: Conta / VPC aplicação
+  member_component_ids:
+  - fe
+  - bff
+  - internal_api
+  outside_component_ids: []
+  crossing_flow_ids: []
 threats: []
 mitigations: []
 evidence_suggestions: []

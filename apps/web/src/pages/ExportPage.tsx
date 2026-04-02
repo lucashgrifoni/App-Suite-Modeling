@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Navigate } from "react-router-dom";
-import { exportArtifacts } from "../api/otmApi";
+import { exportArtifacts, fetchPremiumReport, type PremiumReportLevel } from "../api/otmApi";
 import { ApiError } from "../api/client";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
@@ -44,6 +44,8 @@ export function ExportPage() {
   );
   const [loading, setLoading] = useState(false);
   const [pdfLoading, setPdfLoading] = useState(false);
+  const [premiumLoading, setPremiumLoading] = useState(false);
+  const [premiumLevel, setPremiumLevel] = useState<PremiumReportLevel>("standard");
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<Record<string, string> | null>(null);
 
@@ -111,6 +113,28 @@ export function ExportPage() {
     }
   }
 
+  async function runPremium(kind: "markdown" | "pdf") {
+    setError(null);
+    setPremiumLoading(true);
+    try {
+      const { blob, filename } = await fetchPremiumReport({
+        document: model,
+        analysis,
+        level: premiumLevel,
+        outputFormat: kind,
+      });
+      downloadPdfBlob(blob, filename);
+      appendSnapshot("export");
+      toast.success(kind === "pdf" ? "PDF premium gerado." : "Markdown premium descarregado.");
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Falha no report premium.";
+      setError(msg);
+      toast.error(msg);
+    } finally {
+      setPremiumLoading(false);
+    }
+  }
+
   return (
     <div className="space-y-8">
       <PageHeader
@@ -154,9 +178,51 @@ export function ExportPage() {
             </li>
           ))}
         </ul>
-        <Button className="mt-4" onClick={() => void runExport()} disabled={loading || pdfLoading}>
+        <Button className="mt-4" onClick={() => void runExport()} disabled={loading || pdfLoading || premiumLoading}>
           {loading ? "A gerar…" : "Gerar ficheiros"}
         </Button>
+      </Card>
+
+      <Card
+        title="Report premium (API)"
+        subtitle="Executive / Standard / Deep — Markdown ou PDF alinhados ao motor e backlog (requer API em execução)."
+        variant="elevated"
+      >
+        <div className="flex flex-wrap items-end gap-3">
+          <div>
+            <Label htmlFor="premium-level" className="text-xs text-otm-text-muted">
+              Nível
+            </Label>
+            <select
+              id="premium-level"
+              className="mt-1 block rounded-otm-md border border-otm-border bg-otm-surface-1 px-3 py-2 text-sm text-otm-text"
+              value={premiumLevel}
+              onChange={(e) => setPremiumLevel(e.target.value as PremiumReportLevel)}
+            >
+              <option value="executive">Executive</option>
+              <option value="standard">Standard</option>
+              <option value="deep">Deep technical</option>
+            </select>
+          </div>
+          <Button
+            variant="secondary"
+            data-testid="export-premium-md"
+            onClick={() => void runPremium("markdown")}
+            disabled={premiumLoading || loading || pdfLoading}
+          >
+            {premiumLoading ? "A gerar…" : "Markdown premium"}
+          </Button>
+          <Button
+            data-testid="export-premium-pdf"
+            onClick={() => void runPremium("pdf")}
+            disabled={premiumLoading || loading || pdfLoading}
+          >
+            {premiumLoading ? "A gerar…" : "PDF premium"}
+          </Button>
+        </div>
+        <p className="mt-3 text-xs text-otm-text-muted">
+          Se não houver análise em sessão, a API executa o motor automaticamente. O PDF usa o mesmo pipeline que a CLI.
+        </p>
       </Card>
 
       <Card
@@ -171,7 +237,7 @@ export function ExportPage() {
           className="mt-4"
           data-testid="export-pdf"
           onClick={() => void runPdf()}
-          disabled={pdfLoading || loading}
+          disabled={pdfLoading || loading || premiumLoading}
         >
           {pdfLoading ? "A gerar PDF…" : "Gerar PDF"}
         </Button>

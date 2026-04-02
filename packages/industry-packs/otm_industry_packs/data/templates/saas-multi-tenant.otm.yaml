@@ -1,8 +1,8 @@
 model:
   schema_version: 1.0.0
-  methodology: stride
   system_type: web_application
   industry_sector: saas
+  methodology: stride
 metadata:
   title: SaaS multi-tenant
   summary: Entrada tenant-aware, camada de aplicação e persistência isolada ou partilhada.
@@ -12,52 +12,115 @@ metadata:
   - tenant
 business_context:
   description: Modelo de isolamento (schema, BD ou conta) deve ser explícito.
+  business_goals: []
+  business_objectives: []
+  security_objectives: []
+  stakeholders: []
   assumptions:
   - Política de dados por tenant documentada.
+  critical_integrations: []
+assets:
+- id: saas_multi_tenant_otm_persisted_data
+  name: Dados persistidos do serviço
+  asset_kind: order_record
+  data_classification: confidential
+  business_criticality: high
+  related_component_ids:
+  - app
+  - tenant_db
+  related_data_flow_ids:
+  - a_d
+  metadata: {}
+- id: saas_multi_tenant_otm_credentials_and_secrets
+  name: Credenciais, chaves e segredos operacionais
+  asset_kind: credential
+  sensitivity: confidential
+  business_criticality: high
+  related_component_ids:
+  - edge
+  - app
+  related_data_flow_ids:
+  - u_e
+  - e_a
+  metadata: {}
+- id: saas_multi_tenant_otm_operational_surface
+  name: Superfície operacional e integrações
+  asset_kind: service
+  business_criticality: medium
+  related_component_ids:
+  - user
+  related_data_flow_ids:
+  - u_e
+  metadata: {}
+components:
+- id: user
+  name: Utilizador do tenant
+  kind: user
+  in_trust_boundary: internet
+  asset_ids:
+  - saas_multi_tenant_otm_operational_surface
+  metadata: {}
+- id: edge
+  name: Entrada web/API
+  kind: gateway
+  in_trust_boundary: app_tier
+  asset_ids:
+  - saas_multi_tenant_otm_credentials_and_secrets
+  metadata: {}
+- id: app
+  name: Aplicação SaaS
+  kind: process
+  in_trust_boundary: app_tier
+  asset_ids:
+  - saas_multi_tenant_otm_credentials_and_secrets
+  metadata: {}
+- id: tenant_db
+  name: Persistência tenant
+  kind: datastore
+  technology: PostgreSQL
+  in_trust_boundary: app_tier
+  asset_ids:
+  - saas_multi_tenant_otm_persisted_data
+  metadata: {}
+data_flows:
+- id: u_e
+  from_component: user
+  to_component: edge
+  protocol: HTTPS
+  authenticated: true
+  encrypted: true
+  data_types: []
+  semantic_class: generic
+  metadata: {}
+- id: e_a
+  from_component: edge
+  to_component: app
+  protocol: HTTPS
+  data_types: []
+  semantic_class: generic
+  metadata: {}
+- id: a_d
+  from_component: app
+  to_component: tenant_db
+  protocol: TCP
+  encrypted: true
+  data_types: []
+  semantic_class: generic
+  metadata: {}
 trust_boundaries:
 - id: internet
   name: Internet
+  member_component_ids: []
+  outside_component_ids: []
+  crossing_flow_ids: []
 - id: app_tier
   name: Conta / VPC aplicação
   member_component_ids:
   - edge
   - app
   - tenant_db
-components:
-- id: user
-  name: Utilizador do tenant
-  kind: user
-  in_trust_boundary: internet
-- id: edge
-  name: Entrada web/API
-  kind: gateway
-  in_trust_boundary: app_tier
-- id: app
-  name: Aplicação SaaS
-  kind: process
-  in_trust_boundary: app_tier
-- id: tenant_db
-  name: Persistência tenant
-  kind: datastore
-  technology: PostgreSQL
-  in_trust_boundary: app_tier
-data_flows:
-- id: u_e
-  from_component: user
-  to_component: edge
-  protocol: HTTPS
-  encrypted: true
-  authenticated: true
-- id: e_a
-  from_component: edge
-  to_component: app
-  protocol: HTTPS
-- id: a_d
-  from_component: app
-  to_component: tenant_db
-  protocol: TCP
-  encrypted: true
-assets: []
+  outside_component_ids: []
+  crossing_flow_ids: []
 threats: []
 mitigations: []
 evidence_suggestions: []

@@ -1,8 +1,8 @@
 model:
   schema_version: 1.0.0
-  methodology: stride
   system_type: api_backend
   industry_sector: generic
+  methodology: stride
 metadata:
   title: Identidade M2M
   summary: Cliente de serviço obtém token e acede a recurso protegido.
@@ -11,11 +11,108 @@ metadata:
   - m2m
 business_context:
   description: Padrão OAuth client credentials ou SPIFFE.
+  business_goals: []
+  business_objectives: []
+  security_objectives: []
+  stakeholders: []
   assumptions:
   - Rotação de segredos automatizada.
+  critical_integrations: []
+assets:
+- id: service_identity_otm_persisted_data
+  name: Dados persistidos do serviço
+  asset_kind: order_record
+  data_classification: confidential
+  business_criticality: high
+  related_component_ids:
+  - svc_b
+  - resource
+  related_data_flow_ids:
+  - b_r
+  metadata: {}
+- id: service_identity_otm_credentials_and_secrets
+  name: Credenciais, chaves e segredos operacionais
+  asset_kind: credential
+  sensitivity: confidential
+  business_criticality: high
+  related_component_ids:
+  - svc_a
+  related_data_flow_ids:
+  - a_sts
+  - a_b
+  metadata: {}
+- id: service_identity_otm_operational_surface
+  name: Superfície operacional e integrações
+  asset_kind: service
+  business_criticality: medium
+  related_component_ids:
+  - svc_b
+  related_data_flow_ids:
+  - a_b
+  - b_r
+  metadata: {}
+components:
+- id: svc_a
+  name: Serviço A (cliente)
+  kind: process
+  in_trust_boundary: app_tier
+  asset_ids:
+  - service_identity_otm_credentials_and_secrets
+  metadata: {}
+- id: sts
+  name: Emissor de tokens
+  kind: process
+  technology: STS/OAuth
+  in_trust_boundary: app_tier
+  asset_ids: []
+  metadata: {}
+- id: svc_b
+  name: Serviço B (recurso)
+  kind: process
+  in_trust_boundary: app_tier
+  asset_ids:
+  - service_identity_otm_operational_surface
+  metadata: {}
+- id: resource
+  name: Dados protegidos
+  kind: datastore
+  in_trust_boundary: app_tier
+  asset_ids:
+  - service_identity_otm_persisted_data
+  metadata: {}
+data_flows:
+- id: a_sts
+  from_component: svc_a
+  to_component: sts
+  protocol: HTTPS
+  authenticated: true
+  encrypted: true
+  data_types: []
+  semantic_class: generic
+  metadata: {}
+- id: a_b
+  from_component: svc_a
+  to_component: svc_b
+  protocol: HTTPS
+  authenticated: true
+  encrypted: true
+  data_types: []
+  semantic_class: generic
+  metadata: {}
+- id: b_r
+  from_component: svc_b
+  to_component: resource
+  protocol: TCP
+  encrypted: true
+  data_types: []
+  semantic_class: generic
+  metadata: {}
 trust_boundaries:
 - id: internet
   name: Internet
+  member_component_ids: []
+  outside_component_ids: []
+  crossing_flow_ids: []
 - id: app_tier
   name: Conta / VPC aplicação
   member_component_ids:
@@ -23,43 +120,8 @@ trust_boundaries:
   - sts
   - svc_b
   - resource
-components:
-- id: svc_a
-  name: Serviço A (cliente)
-  kind: process
-  in_trust_boundary: app_tier
-- id: sts
-  name: Emissor de tokens
-  kind: process
-  technology: STS/OAuth
-  in_trust_boundary: app_tier
-- id: svc_b
-  name: Serviço B (recurso)
-  kind: process
-  in_trust_boundary: app_tier
-- id: resource
-  name: Dados protegidos
-  kind: datastore
-  in_trust_boundary: app_tier
-data_flows:
-- id: a_sts
-  from_component: svc_a
-  to_component: sts
-  protocol: HTTPS
-  encrypted: true
-  authenticated: true
-- id: a_b
-  from_component: svc_a
-  to_component: svc_b
-  protocol: HTTPS
-  encrypted: true
-  authenticated: true
-- id: b_r
-  from_component: svc_b
-  to_component: resource
-  protocol: TCP
-  encrypted: true
-assets: []
+  outside_component_ids: []
+  crossing_flow_ids: []
 threats: []
 mitigations: []
 evidence_suggestions: []

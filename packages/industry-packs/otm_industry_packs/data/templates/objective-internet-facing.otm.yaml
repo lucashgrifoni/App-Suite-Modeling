@@ -1,8 +1,8 @@
 model:
   schema_version: 1.0.0
-  methodology: stride
   system_type: web_application
   industry_sector: generic
+  methodology: stride
 metadata:
   title: 'Foco: Internet-facing'
   summary: Cliente externo, borda e serviços internos.
@@ -12,40 +12,97 @@ metadata:
   - internet
 business_context:
   description: Priorizar STRIDE na borda e autenticação de clientes.
+  business_goals: []
+  business_objectives: []
+  security_objectives: []
+  stakeholders: []
   assumptions:
   - Modelo pode ser refinado com mais componentes.
-trust_boundaries:
-- id: internet
-  name: Internet
-- id: app_tier
-  name: Conta / VPC aplicação
-  member_component_ids:
+  critical_integrations: []
+assets:
+- id: objective_internet_facing_otm_application_state
+  name: Estado e dados processados pela aplicação
+  asset_kind: session
+  sensitivity: confidential
+  business_criticality: high
+  related_component_ids:
+  - app
+  related_data_flow_ids:
+  - e_a
+  metadata: {}
+- id: objective_internet_facing_otm_credentials_and_secrets
+  name: Credenciais, chaves e segredos operacionais
+  asset_kind: credential
+  sensitivity: confidential
+  business_criticality: high
+  related_component_ids:
   - edge
   - app
+  related_data_flow_ids:
+  - u_e
+  - e_a
+  metadata: {}
+- id: objective_internet_facing_otm_operational_surface
+  name: Superfície operacional e integrações
+  asset_kind: service
+  business_criticality: medium
+  related_component_ids:
+  - user
+  related_data_flow_ids:
+  - u_e
+  metadata: {}
 components:
 - id: user
   name: Cliente Internet
   kind: user
   in_trust_boundary: internet
+  asset_ids:
+  - objective_internet_facing_otm_operational_surface
+  metadata: {}
 - id: edge
   name: Borda (WAF/LB)
   kind: gateway
   in_trust_boundary: app_tier
+  asset_ids:
+  - objective_internet_facing_otm_credentials_and_secrets
+  metadata: {}
 - id: app
   name: Aplicação
   kind: process
   in_trust_boundary: app_tier
+  asset_ids:
+  - objective_internet_facing_otm_application_state
+  - objective_internet_facing_otm_credentials_and_secrets
+  metadata: {}
 data_flows:
 - id: u_e
   from_component: user
   to_component: edge
   protocol: HTTPS
   encrypted: true
+  data_types: []
+  semantic_class: generic
+  metadata: {}
 - id: e_a
   from_component: edge
   to_component: app
   protocol: HTTPS
-assets: []
+  data_types: []
+  semantic_class: generic
+  metadata: {}
+trust_boundaries:
+- id: internet
+  name: Internet
+  member_component_ids: []
+  outside_component_ids: []
+  crossing_flow_ids: []
+- id: app_tier
+  name: Conta / VPC aplicação
+  member_component_ids:
+  - edge
+  - app
+  outside_component_ids: []
+  crossing_flow_ids: []
 threats: []
 mitigations: []
 evidence_suggestions: []

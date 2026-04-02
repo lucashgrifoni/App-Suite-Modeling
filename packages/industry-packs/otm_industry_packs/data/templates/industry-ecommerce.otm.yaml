@@ -1,8 +1,9 @@
 model:
   schema_version: 1.0.0
-  methodology: stride
   system_type: web_application
   industry_sector: retail
+  methodology: stride
+  template_semantic_profile: industry_ecommerce
 metadata:
   title: E-commerce
   summary: Montra, carrinho, pagamento e persistência.
@@ -11,11 +12,118 @@ metadata:
   - ecommerce
 business_context:
   description: Fluxo de compra com stock e conciliação de pagamentos.
+  business_goals: []
+  business_objectives: []
+  security_objectives: []
+  stakeholders: []
   assumptions:
   - PCI delegado ao PSP quando possível.
+  critical_integrations: []
+assets:
+- id: industry_ecommerce_otm_persisted_data
+  name: Dados persistidos do serviço
+  asset_kind: order_record
+  data_classification: confidential
+  business_criticality: high
+  related_component_ids:
+  - cart
+  - db
+  related_data_flow_ids:
+  - c_d
+  metadata: {}
+- id: industry_ecommerce_otm_credentials_and_secrets
+  name: Credenciais, chaves e segredos operacionais
+  asset_kind: credential
+  sensitivity: confidential
+  business_criticality: high
+  related_component_ids:
+  - shop
+  related_data_flow_ids:
+  - u_s
+  - s_c
+  metadata: {}
+- id: industry_ecommerce_otm_operational_surface
+  name: Superfície operacional e integrações
+  asset_kind: service
+  business_criticality: medium
+  related_component_ids:
+  - pay
+  related_data_flow_ids:
+  - c_p
+  metadata: {}
+components:
+- id: user
+  name: Cliente
+  kind: user
+  in_trust_boundary: internet
+  asset_ids: []
+  metadata: {}
+- id: shop
+  name: Montra web
+  kind: process
+  in_trust_boundary: app_tier
+  asset_ids:
+  - industry_ecommerce_otm_credentials_and_secrets
+  metadata: {}
+- id: cart
+  name: Carrinho / encomenda
+  kind: process
+  in_trust_boundary: app_tier
+  asset_ids: []
+  metadata: {}
+- id: pay
+  name: Pagamentos
+  kind: process
+  technology: PSP
+  in_trust_boundary: app_tier
+  asset_ids:
+  - industry_ecommerce_otm_operational_surface
+  metadata: {}
+- id: db
+  name: Base de dados
+  kind: datastore
+  in_trust_boundary: app_tier
+  asset_ids:
+  - industry_ecommerce_otm_persisted_data
+  metadata: {}
+data_flows:
+- id: u_s
+  from_component: user
+  to_component: shop
+  protocol: HTTPS
+  encrypted: true
+  data_types: []
+  semantic_class: generic
+  metadata: {}
+- id: s_c
+  from_component: shop
+  to_component: cart
+  protocol: HTTPS
+  data_types: []
+  semantic_class: generic
+  metadata: {}
+- id: c_p
+  from_component: cart
+  to_component: pay
+  protocol: HTTPS
+  encrypted: true
+  data_types: []
+  semantic_class: generic
+  metadata: {}
+- id: c_d
+  from_component: cart
+  to_component: db
+  protocol: TCP
+  encrypted: true
+  data_types: []
+  semantic_class: generic
+  metadata: {}
 trust_boundaries:
 - id: internet
   name: Internet
+  member_component_ids: []
+  outside_component_ids: []
+  crossing_flow_ids: []
 - id: app_tier
   name: Conta / VPC aplicação
   member_component_ids:
@@ -23,49 +131,8 @@ trust_boundaries:
   - cart
   - pay
   - db
-components:
-- id: user
-  name: Cliente
-  kind: user
-  in_trust_boundary: internet
-- id: shop
-  name: Montra web
-  kind: process
-  in_trust_boundary: app_tier
-- id: cart
-  name: Carrinho / encomenda
-  kind: process
-  in_trust_boundary: app_tier
-- id: pay
-  name: Pagamentos
-  kind: process
-  technology: PSP
-  in_trust_boundary: app_tier
-- id: db
-  name: Base de dados
-  kind: datastore
-  in_trust_boundary: app_tier
-data_flows:
-- id: u_s
-  from_component: user
-  to_component: shop
-  protocol: HTTPS
-  encrypted: true
-- id: s_c
-  from_component: shop
-  to_component: cart
-  protocol: HTTPS
-- id: c_p
-  from_component: cart
-  to_component: pay
-  protocol: HTTPS
-  encrypted: true
-- id: c_d
-  from_component: cart
-  to_component: db
-  protocol: TCP
-  encrypted: true
-assets: []
+  outside_component_ids: []
+  crossing_flow_ids: []
 threats: []
 mitigations: []
 evidence_suggestions: []

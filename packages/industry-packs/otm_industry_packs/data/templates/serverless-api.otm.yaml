@@ -1,8 +1,8 @@
 model:
   schema_version: 1.0.0
-  methodology: stride
   system_type: api_backend
   industry_sector: cloud_native
+  methodology: stride
 metadata:
   title: Serverless API
   summary: Gateway, funções, segredos e base de dados gerida.
@@ -11,12 +11,122 @@ metadata:
   - serverless
 business_context:
   description: Modelo pay-per-use com permissões finas por função.
+  business_goals: []
+  business_objectives: []
+  security_objectives: []
+  stakeholders: []
   assumptions:
   - Segredos em cofre gerido.
   - Logging centralizado.
+  critical_integrations: []
+assets:
+- id: serverless_api_otm_persisted_data
+  name: Dados persistidos do serviço
+  asset_kind: order_record
+  data_classification: confidential
+  business_criticality: high
+  related_component_ids:
+  - fn
+  - secrets
+  related_data_flow_ids:
+  - fn_sec
+  metadata: {}
+- id: serverless_api_otm_credentials_and_secrets
+  name: Credenciais, chaves e segredos operacionais
+  asset_kind: credential
+  sensitivity: confidential
+  business_criticality: high
+  related_component_ids:
+  - apigw
+  - fn
+  related_data_flow_ids:
+  - u_gw
+  - gw_fn
+  metadata: {}
+- id: serverless_api_otm_operational_surface
+  name: Superfície operacional e integrações
+  asset_kind: service
+  business_criticality: medium
+  related_component_ids:
+  - db
+  related_data_flow_ids:
+  - fn_db
+  metadata: {}
+components:
+- id: user
+  name: Cliente
+  kind: user
+  in_trust_boundary: internet
+  asset_ids: []
+  metadata: {}
+- id: apigw
+  name: API Gateway
+  kind: gateway
+  in_trust_boundary: app_tier
+  asset_ids:
+  - serverless_api_otm_credentials_and_secrets
+  metadata: {}
+- id: fn
+  name: Função
+  kind: process
+  technology: Lambda/Functions
+  in_trust_boundary: app_tier
+  asset_ids:
+  - serverless_api_otm_credentials_and_secrets
+  metadata: {}
+- id: secrets
+  name: Cofre de segredos
+  kind: datastore
+  technology: Secrets Manager
+  in_trust_boundary: app_tier
+  asset_ids:
+  - serverless_api_otm_persisted_data
+  metadata: {}
+- id: db
+  name: BD gerida
+  kind: datastore
+  technology: RDS/Dynamo
+  in_trust_boundary: app_tier
+  asset_ids:
+  - serverless_api_otm_operational_surface
+  metadata: {}
+data_flows:
+- id: u_gw
+  from_component: user
+  to_component: apigw
+  protocol: HTTPS
+  encrypted: true
+  data_types: []
+  semantic_class: generic
+  metadata: {}
+- id: gw_fn
+  from_component: apigw
+  to_component: fn
+  protocol: HTTPS
+  data_types: []
+  semantic_class: generic
+  metadata: {}
+- id: fn_sec
+  from_component: fn
+  to_component: secrets
+  protocol: HTTPS
+  data_types: []
+  semantic_class: generic
+  metadata: {}
+- id: fn_db
+  from_component: fn
+  to_component: db
+  protocol: TCP
+  encrypted: true
+  data_types: []
+  semantic_class: generic
+  metadata: {}
 trust_boundaries:
 - id: internet
   name: Internet
+  member_component_ids: []
+  outside_component_ids: []
+  crossing_flow_ids: []
 - id: app_tier
   name: Conta / VPC aplicação
   member_component_ids:
@@ -24,50 +134,8 @@ trust_boundaries:
   - fn
   - secrets
   - db
-components:
-- id: user
-  name: Cliente
-  kind: user
-  in_trust_boundary: internet
-- id: apigw
-  name: API Gateway
-  kind: gateway
-  in_trust_boundary: app_tier
-- id: fn
-  name: Função
-  kind: process
-  technology: Lambda/Functions
-  in_trust_boundary: app_tier
-- id: secrets
-  name: Cofre de segredos
-  kind: datastore
-  technology: Secrets Manager
-  in_trust_boundary: app_tier
-- id: db
-  name: BD gerida
-  kind: datastore
-  technology: RDS/Dynamo
-  in_trust_boundary: app_tier
-data_flows:
-- id: u_gw
-  from_component: user
-  to_component: apigw
-  protocol: HTTPS
-  encrypted: true
-- id: gw_fn
-  from_component: apigw
-  to_component: fn
-  protocol: HTTPS
-- id: fn_sec
-  from_component: fn
-  to_component: secrets
-  protocol: HTTPS
-- id: fn_db
-  from_component: fn
-  to_component: db
-  protocol: TCP
-  encrypted: true
-assets: []
+  outside_component_ids: []
+  crossing_flow_ids: []
 threats: []
 mitigations: []
 evidence_suggestions: []

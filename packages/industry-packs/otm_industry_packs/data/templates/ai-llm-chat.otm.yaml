@@ -1,8 +1,8 @@
 model:
   schema_version: 1.0.0
-  methodology: plot4ai
   system_type: web_application
   industry_sector: generic
+  methodology: plot4ai
 metadata:
   title: Chat LLM
   summary: Interface, orquestrador e fornecedor de inferência.
@@ -12,50 +12,111 @@ metadata:
   - genai
 business_context:
   description: Classificar dados enviados ao modelo e reter logs conforme política.
+  business_goals: []
+  business_objectives: []
+  security_objectives: []
+  stakeholders: []
   assumptions:
   - Sem dados sensíveis em prompts sem controlo.
-trust_boundaries:
-- id: internet
-  name: Internet
-- id: app_tier
-  name: Conta / VPC
-  member_component_ids:
+  critical_integrations: []
+assets:
+- id: ai_llm_chat_otm_application_state
+  name: Estado e dados processados pela aplicação
+  asset_kind: session
+  sensitivity: confidential
+  business_criticality: high
+  related_component_ids:
   - ui
-  - orch
+  related_data_flow_ids:
+  - u_ui
+  - ui_o
+  metadata: {}
+- id: ai_llm_chat_otm_credentials_and_secrets
+  name: Credenciais, chaves e segredos operacionais
+  asset_kind: credential
+  sensitivity: confidential
+  business_criticality: high
+  related_component_ids:
+  - ui
+  related_data_flow_ids:
+  - u_ui
+  - ui_o
+  metadata: {}
+- id: ai_llm_chat_otm_operational_surface
+  name: Superfície operacional e integrações
+  asset_kind: service
+  business_criticality: medium
+  related_component_ids:
+  - provider
+  related_data_flow_ids:
+  - o_p
+  metadata: {}
 components:
 - id: user
   name: Utilizador
   kind: user
   in_trust_boundary: internet
+  asset_ids: []
+  metadata: {}
 - id: ui
   name: UI chat
   kind: process
   in_trust_boundary: app_tier
+  asset_ids:
+  - ai_llm_chat_otm_application_state
+  - ai_llm_chat_otm_credentials_and_secrets
+  metadata: {}
 - id: orch
   name: Orquestração de prompts
   kind: process
   in_trust_boundary: app_tier
+  asset_ids: []
+  metadata: {}
 - id: provider
   name: Fornecedor LLM
   kind: external_entity
   in_trust_boundary: internet
+  asset_ids:
+  - ai_llm_chat_otm_operational_surface
+  metadata: {}
 data_flows:
 - id: u_ui
   from_component: user
   to_component: ui
   protocol: HTTPS
   encrypted: true
+  data_types: []
+  semantic_class: generic
+  metadata: {}
 - id: ui_o
   from_component: ui
   to_component: orch
   protocol: HTTPS
+  data_types: []
+  semantic_class: generic
+  metadata: {}
 - id: o_p
   from_component: orch
   to_component: provider
   protocol: HTTPS
-  encrypted: true
   authenticated: true
-assets: []
+  encrypted: true
+  data_types: []
+  semantic_class: generic
+  metadata: {}
+trust_boundaries:
+- id: internet
+  name: Internet
+  member_component_ids: []
+  outside_component_ids: []
+  crossing_flow_ids: []
+- id: app_tier
+  name: Conta / VPC
+  member_component_ids:
+  - ui
+  - orch
+  outside_component_ids: []
+  crossing_flow_ids: []
 threats: []
 mitigations: []
 evidence_suggestions: []

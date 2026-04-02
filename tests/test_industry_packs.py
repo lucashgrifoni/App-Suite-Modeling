@@ -37,3 +37,5 @@ def test_template_yaml_loads() -> None:
     d = load_document_from_yaml(raw)
     assert d.metadata.title
     assert len(d.components) >= 1
+    # Templates industry devem incluir ativos plausíveis (não export vazio por defeito)
+    assert len(d.assets) >= 2

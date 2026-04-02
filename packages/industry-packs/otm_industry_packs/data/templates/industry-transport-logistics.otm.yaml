@@ -1,8 +1,8 @@
 model:
   schema_version: 1.0.0
-  methodology: stride
   system_type: iot_system
   industry_sector: transport
+  methodology: stride
 metadata:
   title: Logística e transporte
   summary: Operadores, dispatch, telemetria e parceiros.
@@ -11,60 +11,126 @@ metadata:
   - logistics
 business_context:
   description: Dados de localização e estado de envio.
+  business_goals: []
+  business_objectives: []
+  security_objectives: []
+  stakeholders: []
   assumptions:
   - Dispositivos com autenticação mútua quando possível.
-trust_boundaries:
-- id: internet
-  name: Internet
-- id: app_tier
-  name: Conta / VPC
-  member_component_ids:
-  - portal
+  critical_integrations: []
+assets:
+- id: industry_transport_logistics_otm_persisted_data
+  name: Dados persistidos do serviço
+  asset_kind: order_record
+  data_classification: confidential
+  business_criticality: high
+  related_component_ids:
   - dispatch
   - tel
+  related_data_flow_ids:
+  - d_t
+  metadata: {}
+- id: industry_transport_logistics_otm_credentials_and_secrets
+  name: Credenciais, chaves e segredos operacionais
+  asset_kind: credential
+  sensitivity: confidential
+  business_criticality: high
+  related_component_ids:
+  - portal
+  related_data_flow_ids:
+  - u_po
+  - p_d
+  metadata: {}
+- id: industry_transport_logistics_otm_operational_surface
+  name: Superfície operacional e integrações
+  asset_kind: service
+  business_criticality: medium
+  related_component_ids:
+  - partner
+  related_data_flow_ids:
+  - d_pa
+  metadata: {}
 components:
 - id: user
   name: Operador
   kind: user
   in_trust_boundary: internet
+  asset_ids: []
+  metadata: {}
 - id: portal
   name: Portal / app
   kind: process
   in_trust_boundary: app_tier
+  asset_ids:
+  - industry_transport_logistics_otm_credentials_and_secrets
+  metadata: {}
 - id: dispatch
   name: Dispatch
   kind: process
   in_trust_boundary: app_tier
+  asset_ids: []
+  metadata: {}
 - id: tel
   name: Telemetria
   kind: datastore
   technology: TSDB
   in_trust_boundary: app_tier
+  asset_ids:
+  - industry_transport_logistics_otm_persisted_data
+  metadata: {}
 - id: partner
   name: Parceiro logístico
   kind: external_entity
   in_trust_boundary: internet
+  asset_ids:
+  - industry_transport_logistics_otm_operational_surface
+  metadata: {}
 data_flows:
 - id: u_po
   from_component: user
   to_component: portal
   protocol: HTTPS
   encrypted: true
+  data_types: []
+  semantic_class: generic
+  metadata: {}
 - id: p_d
   from_component: portal
   to_component: dispatch
   protocol: HTTPS
+  data_types: []
+  semantic_class: generic
+  metadata: {}
 - id: d_t
   from_component: dispatch
   to_component: tel
   protocol: TCP
   encrypted: true
+  data_types: []
+  semantic_class: generic
+  metadata: {}
 - id: d_pa
   from_component: dispatch
   to_component: partner
   protocol: HTTPS
   encrypted: true
-assets: []
+  data_types: []
+  semantic_class: generic
+  metadata: {}
+trust_boundaries:
+- id: internet
+  name: Internet
+  member_component_ids: []
+  outside_component_ids: []
+  crossing_flow_ids: []
+- id: app_tier
+  name: Conta / VPC
+  member_component_ids:
+  - portal
+  - dispatch
+  - tel
+  outside_component_ids: []
+  crossing_flow_ids: []
 threats: []
 mitigations: []
 evidence_suggestions: []

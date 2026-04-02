@@ -4,7 +4,9 @@ from typing import Any
 
 from fastapi import APIRouter, status
 from otm_core_schema import diff_documents
+from otm_core_schema.model_quality_precheck import assess_model_precheck
 from otm_threat_engine import recommend_methodology
+from otm_threat_engine.methodology_completeness import assess_methodology_completeness
 from pydantic import ValidationError as PydanticValidationError
 
 from otm_api.routers._errors import (
@@ -18,6 +20,7 @@ from otm_api.schemas.bodies import (
     CreateModelResponse,
     DiffBody,
     DocumentBody,
+    PrecheckBody,
     RecommendMethodologyResponse,
     ValidateResponse,
 )
@@ -54,6 +57,26 @@ def validate_model(body: DocumentBody) -> ValidateResponse:
         component_count=len(doc.components),
         threat_count=len(doc.threats),
     )
+
+
+@router.post(
+    "/precheck",
+    summary="Model quality pre-check",
+    description=(
+        "Avalia completude do modelo (score, banda, matriz de adequação metodológica) e, "
+        "opcionalmente, estado de completude da metodologia escolhida — sem correr heurísticas STRIDE."
+    ),
+    response_description="`precheck` + `methodology_completeness` serializados.",
+)
+def model_precheck(body: PrecheckBody) -> dict[str, Any]:
+    doc = document_from_payload_or_422(body.document)
+    chosen = body.methodology or doc.model_info.methodology
+    return {
+        "precheck": assess_model_precheck(doc).model_dump(mode="json"),
+        "methodology_completeness": assess_methodology_completeness(doc, chosen).model_dump(
+            mode="json"
+        ),
+    }
 
 
 @router.post(

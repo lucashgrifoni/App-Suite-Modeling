@@ -27,6 +27,14 @@ def test_validate_ok(runner: CliRunner) -> None:
     assert "Valid" in out
 
 
+def test_precheck_ok(runner: CliRunner) -> None:
+    r = runner.invoke(app, ["precheck", str(_MINIMAL)])
+    assert r.exit_code == 0
+    out = (r.stdout or "") + (r.stderr or "")
+    assert "methodology_fit_matrix" in out
+    assert "score_0_100" in out
+
+
 def test_diff_same_file_reports_no_structural_change(runner: CliRunner) -> None:
     r = runner.invoke(app, ["diff", str(_MINIMAL), str(_MINIMAL)])
     assert r.exit_code == 0
@@ -187,6 +195,24 @@ def test_report_writes_markdown(runner: CliRunner) -> None:
     assert r.exit_code == 0
     combined = (r.stdout or "") + (r.stderr or "")
     assert "#" in combined
+
+
+def test_report_premium_markdown_stdout(runner: CliRunner) -> None:
+    r = runner.invoke(app, ["report", str(_MINIMAL), "--level", "standard", "--format", "markdown"])
+    assert r.exit_code == 0
+    out = (r.stdout or "") + (r.stderr or "")
+    assert "Executive summary" in out
+
+
+def test_report_premium_pdf_file(tmp_path: Path, runner: CliRunner) -> None:
+    out = tmp_path / "rep.pdf"
+    r = runner.invoke(
+        app,
+        ["report", str(_MINIMAL), "--level", "executive", "--format", "pdf", "-o", str(out)],
+    )
+    assert r.exit_code == 0
+    assert out.is_file()
+    assert out.read_bytes()[:4] == b"%PDF"
 
 
 def test_export_markdown_stdout(runner: CliRunner) -> None:

@@ -17,6 +17,20 @@ e versionamento semântico quando aplicável.
 
 <!-- Compare links: atualizar com URL do repositório remoto após primeiro push de tag. -->
 
+## [4.0.0] — 2026-04-02
+
+Release **v4.0** (pacote de qualidade de modelagem, relatórios premium, heurísticas compostas e completude metodológica).
+
+### Added
+
+- Pacote `report-premium`, relatórios premium e documentação (`docs/PREMIUM_REPORTS.md`).
+- Modelos de qualidade de modelagem e pré-checagem (`docs/MODELING_QUALITY.md`, `model_quality_precheck`, `methodology_fit_matrix`).
+- Heurísticas compostas, completude metodológica NIST e gate de recomendações.
+
+### Changed
+
+- API, CLI, UI e templates de industry packs alinhados ao conjunto de funcionalidades v4.0.
+
 ## [0.1.0] — 2026-04-01
 
 Primeira release pública incremental coordenada (**App Suite Modeling**), com escopo congelado e documentação de maturidade por área.

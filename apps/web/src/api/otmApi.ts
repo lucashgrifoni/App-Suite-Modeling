@@ -141,6 +141,58 @@ export async function exportArtifacts(body: {
   });
 }
 
+const API_PREFIX = import.meta.env.VITE_API_PREFIX ?? "/api";
+
+export type PremiumReportLevel = "executive" | "standard" | "deep";
+
+/**
+ * Report premium (Markdown ou PDF) via API — mesma lógica que `otm report --level`.
+ */
+export async function fetchPremiumReport(args: {
+  document: OtmDocument;
+  analysis: AnalysisResult | null;
+  level: PremiumReportLevel;
+  outputFormat: "markdown" | "pdf";
+}): Promise<{ blob: Blob; filename: string }> {
+  const res = await fetch(`${API_PREFIX}/v1/reports/premium`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      document: args.document,
+      analysis: args.analysis,
+      run_analysis: args.analysis === null,
+      level: args.level,
+      output_format: args.outputFormat,
+    }),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    let msg = res.statusText;
+    try {
+      const j = JSON.parse(text) as { detail?: { message?: string } };
+      if (j?.detail && typeof j.detail === "object" && "message" in j.detail) {
+        msg = String((j.detail as { message?: string }).message ?? msg);
+      }
+    } catch {
+      /* ignore */
+    }
+    throw new Error(msg);
+  }
+  const ext = args.outputFormat === "pdf" ? "pdf" : "md";
+  if (args.outputFormat === "pdf") {
+    const buf = await res.arrayBuffer();
+    return {
+      blob: new Blob([buf], { type: "application/pdf" }),
+      filename: `otm-premium-${args.level}.${ext}`,
+    };
+  }
+  const text = await res.text();
+  return {
+    blob: new Blob([text], { type: "text/markdown; charset=utf-8" }),
+    filename: `otm-premium-${args.level}.${ext}`,
+  };
+}
+
 export async function fetchRemediationBacklog(args: {
   document: OtmDocument;
   analysis: AnalysisResult;

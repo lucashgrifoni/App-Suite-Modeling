@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "open-threat-model"
-version = "3.0.0"
+version = "4.0.0"
 description = "Plataforma open source de Threat Modeling as Code (core, API, CLI, UI)."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -23,7 +23,9 @@ api = [
   "sqlalchemy>=2.0",
 ]
 cli = ["typer>=0.9", "rich>=13.7"]
-dev = ["pytest>=7.4", "httpx>=0.26", "ruff>=0.3", "mypy>=1.8"]
+# PDF premium (xhtml2pdf); instalar com: pip install -e ".[report]"
+report = ["xhtml2pdf>=0.2.15"]
+dev = ["pytest>=7.4", "httpx>=0.26", "ruff>=0.3", "mypy>=1.8", "xhtml2pdf>=0.2.15"]
 
 [project.scripts]
 otm = "otm_cli.main:main"
@@ -38,6 +40,7 @@ where = [
   "packages/diagram-engine",
   "packages/industry-packs",
   "packages/artifact-import",
+  "packages/report-premium",
   "apps/cli",
   "apps/api",
 ]
@@ -57,6 +60,7 @@ pythonpath = [
   "packages/diagram-engine",
   "packages/industry-packs",
   "packages/artifact-import",
+  "packages/report-premium",
   "apps/api",
   "scripts",
 ]
