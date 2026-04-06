@@ -22,21 +22,13 @@ def cross_boundary_flow_ids(doc: ThreatModelDocument) -> set[str]:
         b = by_comp.get(flow.to_component)
         if not a or not b:
             continue
-        if (
-            a.in_trust_boundary
-            and b.in_trust_boundary
-            and a.in_trust_boundary != b.in_trust_boundary
-        ):
+        if a.in_trust_boundary and b.in_trust_boundary and a.in_trust_boundary != b.in_trust_boundary:
             ids.add(flow.id)
     return ids
 
 
 def _active_risk_scores(heuristics: list[HeuristicThreat]) -> list[float]:
-    return [
-        h.risk.score
-        for h in heuristics
-        if not h.skipped_as_duplicate and h.risk.score is not None
-    ]
+    return [h.risk.score for h in heuristics if not h.skipped_as_duplicate and h.risk.score is not None]
 
 
 def recompute_summary_with_methodology(result: AnalysisResult) -> AnalysisResult:

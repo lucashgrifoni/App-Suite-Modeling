@@ -2,6 +2,18 @@
 
 Este documento fixa a **postura de deployment** para evitar ambiguidade entre “dev local” e “exposto na internet”.
 
+## API sem autenticação integrada (por defeito)
+
+**Sem `OTM_API_KEY`, a API não exige autenticação de aplicação.** Qualquer cliente que consiga alcançar o processo pode chamar os endpoints de `/v1`.
+
+Para **qualquer exposição fora de localhost ou rede não confiável**, é **obrigatório** colocar a API atrás de um **reverse proxy / API gateway** que aplique pelo menos um dos seguintes (consoante a política da organização):
+
+- **API keys** ou **OAuth2/OIDC** validados no edge;
+- **mTLS** entre clientes e gateway;
+- políticas de rede equivalentes (VPN + firewall de aplicação) **documentadas** e auditáveis.
+
+Sem esta camada, **não** trate a API como segura na Internet pública.
+
 ## Decisão de produto (cenário adoptado)
 
 **Cenário A — local / rede interna por defeito**
@@ -35,6 +47,9 @@ Se no futuro o cenário passar a **B (exposto publicamente)**, é obrigatório a
 | `OTM_ENV` | `development` \| `staging` \| `production` (aceita também `prod`). |
 | `OTM_CORS_ORIGINS` | Lista separada por vírgulas de origens permitidas (ex.: `https://app.example.com`). |
 | `OTM_LOG_LEVEL` | Nível de log da API (`INFO` por defeito). |
+| `OTM_API_KEY` | Opcional. Quando definida, exige `X-OTM-API-Key` ou `Authorization: Bearer` em **`/v1/*`**. Ver `docs/API.md`. |
+| `OTM_RATE_LIMIT` | Opcional. Limite SlowAPI (ex.: `60/minute`). Em staging/prod, sem esta variável aplica-se `120/minute` por defeito. |
+| `OTM_RATE_LIMIT_DISABLED` | `1` / `true` desativa o rate limit (útil em testes locais ou atrás de gateway próprio). |
 
 ## Invariantes que o código reforça
 

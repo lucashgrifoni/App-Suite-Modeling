@@ -94,10 +94,14 @@ def build_kubernetes_import_signals_corpus(docs: list[dict[str, Any]]) -> str:
                     ):
                         parts.append(f"{ky}={val}")
         if kind == "Deployment":
-            spec = doc.get("spec") if isinstance(doc.get("spec"), dict) else {}
-            tmpl = spec.get("template") if isinstance(spec.get("template"), dict) else {}
-            pod = tmpl.get("spec") if isinstance(tmpl.get("spec"), dict) else {}
-            cnts = pod.get("containers") if isinstance(pod.get("containers"), list) else []
+            raw_spec = doc.get("spec")
+            spec: dict[str, Any] = raw_spec if isinstance(raw_spec, dict) else {}
+            raw_tmpl = spec.get("template")
+            tmpl: dict[str, Any] = raw_tmpl if isinstance(raw_tmpl, dict) else {}
+            raw_pod = tmpl.get("spec")
+            pod: dict[str, Any] = raw_pod if isinstance(raw_pod, dict) else {}
+            raw_cnts = pod.get("containers")
+            cnts: list[Any] = raw_cnts if isinstance(raw_cnts, list) else []
             for c in cnts:
                 if isinstance(c, dict) and c.get("image"):
                     parts.append(str(c["image"]))
@@ -128,14 +132,14 @@ def build_terraform_import_signals_corpus(text: str) -> str:
     """Extrai tokens de blocos `resource` quando o tipo/nome/body sugere serviços de IA geridos."""
     low = text.lower()
     hits: list[str] = []
-    for m in _TERRAFORM_AI_MARKERS:
-        if m in low:
-            hits.append(m)
-    for m in re.finditer(r'resource\s+"([^"]+)"\s+"([^"]+)"', text):
-        blob = f"{m.group(1)} {m.group(2)}".lower()
+    for marker in _TERRAFORM_AI_MARKERS:
+        if marker in low:
+            hits.append(marker)
+    for mat in re.finditer(r'resource\s+"([^"]+)"\s+"([^"]+)"', text):
+        blob = f"{mat.group(1)} {mat.group(2)}".lower()
         if any(x in blob for x in _TERRAFORM_AI_MARKERS):
-            hits.append(m.group(1))
-            hits.append(m.group(2))
+            hits.append(mat.group(1))
+            hits.append(mat.group(2))
     return " ".join(dict.fromkeys(hits)).strip().lower()
 
 

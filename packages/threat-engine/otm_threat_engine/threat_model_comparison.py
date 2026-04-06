@@ -124,9 +124,7 @@ def _analysis_insights(ad: AnalysisDiff) -> list[str]:
                 "cobertura de controlos pode ter regressado."
             )
         elif fr.count_after > fr.count_before:
-            insights.append(
-                f"Mais referências em `{fr.catalog}` ({fr.count_before} → {fr.count_after})."
-            )
+            insights.append(f"Mais referências em `{fr.catalog}` ({fr.count_before} → {fr.count_after}).")
     if ad.pack_control_hints.removed:
         insights.append(
             "Controlo(s) do pack deixaram de ser sugeridos: "
@@ -201,15 +199,11 @@ def compare_threat_models(
         analysis_max_score_revised=analysis.max_risk_after if analysis else None,
         analysis_max_score_delta=analysis.max_risk_delta if analysis else None,
         heuristic_increased_ids=[
-            h.threat_id
-            for h in (analysis.heuristic_threats.modified if analysis else [])
-            if (h.score_delta or 0) > 0
+            h.threat_id for h in (analysis.heuristic_threats.modified if analysis else []) if (h.score_delta or 0) > 0
         ]
         + [h.threat_id for h in (analysis.heuristic_threats.added if analysis else [])],
         heuristic_decreased_ids=[
-            h.threat_id
-            for h in (analysis.heuristic_threats.modified if analysis else [])
-            if (h.score_delta or 0) < 0
+            h.threat_id for h in (analysis.heuristic_threats.modified if analysis else []) if (h.score_delta or 0) < 0
         ]
         + [h.threat_id for h in (analysis.heuristic_threats.removed if analysis else [])],
         document_residual_aggregate_changed=bool(structural.residual_risk_summary),

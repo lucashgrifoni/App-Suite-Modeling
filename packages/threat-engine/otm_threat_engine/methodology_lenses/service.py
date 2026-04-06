@@ -45,9 +45,7 @@ def recommend_with_rules(doc: ThreatModelDocument) -> MethodologyRecommendation:
                 explanations=(exp,),
             )
     seq = 1
-    fallback = (
-        "Sem sinal forte para outra metodologia; STRIDE é o default do produto para sistemas técnicos."
-    )
+    fallback = "Sem sinal forte para outra metodologia; STRIDE é o default do produto para sistemas técnicos."
     exp = ExplanationRecord(
         id=explanation_id(seq),
         type=ExplanationType.METHODOLOGY_RECOMMENDATION,

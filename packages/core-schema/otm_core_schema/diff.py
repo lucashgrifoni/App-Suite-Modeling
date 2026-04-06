@@ -156,16 +156,8 @@ def diff_documents(baseline: ThreatModelDocument, revised: ThreatModelDocument) 
     a_meta = revised.metadata.model_dump(mode="json")
     b_biz = baseline.business_context.model_dump(mode="json") if baseline.business_context else None
     a_biz = revised.business_context.model_dump(mode="json") if revised.business_context else None
-    b_res = (
-        baseline.residual_risk_summary.model_dump(mode="json")
-        if baseline.residual_risk_summary
-        else None
-    )
-    a_res = (
-        revised.residual_risk_summary.model_dump(mode="json")
-        if revised.residual_risk_summary
-        else None
-    )
+    b_res = baseline.residual_risk_summary.model_dump(mode="json") if baseline.residual_risk_summary else None
+    a_res = revised.residual_risk_summary.model_dump(mode="json") if revised.residual_risk_summary else None
 
     assets = _diff_id_list(baseline.assets, revised.assets)
     components = _diff_id_list(baseline.components, revised.components)

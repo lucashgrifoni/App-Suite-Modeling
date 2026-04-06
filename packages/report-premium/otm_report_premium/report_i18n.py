@@ -232,18 +232,14 @@ _BUILDER_PT = PremiumBuilderCopy(
         "Documentar padrões de fronteiras, identidade e dados sensíveis alinhados ao vosso catálogo."
     ),
     strategic_integrations_title="Política de integrações",
-    strategic_integrations_detail=(
-        "Definir requisitos mínimos para webhooks, callbacks e integrações third-party."
-    ),
+    strategic_integrations_detail=("Definir requisitos mínimos para webhooks, callbacks e integrações third-party."),
     strategic_pack_title="Pack / controlo",
     roadmap_immediate="Imediato",
     roadmap_short="Curto prazo",
     roadmap_medium="Médio prazo",
     tb_delta="Achados de fronteira: {before} → {after}",
     struct_delta="Estruturais: {before} → {after}",
-    baseline_narrative=(
-        "Delta de score máximo: {delta}; ameaças adicionadas {added}, removidas {removed}."
-    ),
+    baseline_narrative=("Delta de score máximo: {delta}; ameaças adicionadas {added}, removidas {removed}."),
     tech_methodology_outputs=(
         "Outputs específicos do engine por metodologia estão em `analysis_json` e em "
         "`methodology_insights` / `ai_system_context` quando aplicável."
@@ -256,8 +252,7 @@ _BUILDER_PT = PremiumBuilderCopy(
     disclaimer_b1="Priorização composta (P1/P2/P3) combina score, exposição e esforço estimado.",
     disclaimer_b2="Recomendações estratégicas devem ser validadas contra políticas internas.",
     business_impact_summary=(
-        "Principais vectores: confidencialidade, integridade e disponibilidade — "
-        "ver secção de impacto por ameaça."
+        "Principais vectores: confidencialidade, integridade e disponibilidade — ver secção de impacto por ameaça."
     ),
     mq_line="Pré-check {score}/100 ({band}); confiança recomendações: {conf}.",
     mc_line_prefix="Completude metodológica:",
@@ -436,10 +431,7 @@ _RENDER_PT = PremiumRenderCopy(
     html_meta_product_version="Product version",
     html_state="State:",
     html_risk_heuristic="Risk (heuristic):",
-    html_footer=(
-        "Premium report — App Suite Modeling. "
-        "Full technical content is available in exported Markdown."
-    ),
+    html_footer=("Premium report — App Suite Modeling. Full technical content is available in exported Markdown."),
 )
 
 _RENDER_EN = PremiumRenderCopy(
@@ -554,10 +546,7 @@ _RENDER_EN = PremiumRenderCopy(
     html_meta_product_version="Product version",
     html_state="State:",
     html_risk_heuristic="Risk (heuristic):",
-    html_footer=(
-        "Premium report — App Suite Modeling. "
-        "Full technical content is available in exported Markdown."
-    ),
+    html_footer=("Premium report — App Suite Modeling. Full technical content is available in exported Markdown."),
 )
 
 

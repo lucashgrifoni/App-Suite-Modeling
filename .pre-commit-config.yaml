@@ -1,0 +1,21 @@
+# Opcional: instalar com `pip install pre-commit && pre-commit install`
+# Ver docs/PRE_COMMIT.md
+
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.9.10
+    hooks:
+      - id: ruff
+        args: [--fix]
+        files: ^(packages|apps|tests)/.*\.py$
+      - id: ruff-format
+        files: ^(packages|apps|tests)/.*\.py$
+
+  - repo: local
+    hooks:
+      - id: mypy-partial
+        name: mypy (core-schema + API)
+        language: system
+        entry: python -m mypy packages/core-schema/otm_core_schema apps/api/otm_api
+        pass_filenames: false
+        files: ^(packages|apps|tests)/.*\.py$

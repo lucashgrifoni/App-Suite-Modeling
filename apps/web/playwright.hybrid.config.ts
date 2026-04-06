@@ -26,6 +26,9 @@ export default defineConfig({
       url: "http://127.0.0.1:8000/health",
       timeout: 120_000,
       reuseExistingServer: !process.env.CI,
+      env: {
+        OTM_RATE_LIMIT_DISABLED: "1",
+      },
     },
     {
       command: "node ./node_modules/vite/bin/vite.js --host 127.0.0.1 --port 4173",

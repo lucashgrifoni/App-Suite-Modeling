@@ -26,9 +26,7 @@ def register(app: typer.Typer) -> None:
             typer.Option(
                 "--document",
                 "-d",
-                help=(
-                    "With a `.json` path: YAML model to resolve component names (recommended)."
-                ),
+                help=("With a `.json` path: YAML model to resolve component names (recommended)."),
             ),
         ] = None,
         fmt: BacklogFormat = typer.Option(

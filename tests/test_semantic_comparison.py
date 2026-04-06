@@ -46,9 +46,7 @@ def test_enrich_comparison_meta_includes_semantic_insights_version() -> None:
     links = meta.get("semantic_interpretation_links")
     assert isinstance(links, list)
     assert links, "v1.5 espera pelo menos uma ligação quando há boundary + bullets com tokens em comum"
-    assert all(
-        "link_kind" in x and "inference_strength" in x and "anchoring_rationale" in x for x in links
-    )
+    assert all("link_kind" in x and "inference_strength" in x and "anchoring_rationale" in x for x in links)
     assert any(x.get("link_kind") == "lexical_token_overlap" for x in links)
     assert all(x.get("inference_strength") in ("low", "medium") for x in links)
 
@@ -59,9 +57,7 @@ def test_comparison_result_meta_rejects_unknown_root_keys() -> None:
 
 
 def test_comparison_result_meta_accepts_extensions_bucket() -> None:
-    m = ComparisonResultMeta.model_validate(
-        {"comparison_contract_version": "1.5", "extensions": {"lab": {"x": 1}}}
-    )
+    m = ComparisonResultMeta.model_validate({"comparison_contract_version": "1.5", "extensions": {"lab": {"x": 1}}})
     assert m.extensions == {"lab": {"x": 1}}
 
 

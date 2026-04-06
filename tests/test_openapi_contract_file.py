@@ -37,17 +37,13 @@ def test_openapi_file_exists_and_defines_core_schemas() -> None:
 
 def test_openapi_analyze_response_refs_analysis_result() -> None:
     data = json.loads(_OPENAPI.read_text(encoding="utf-8"))
-    ref = (
-        data["paths"]["/v1/models/analyze"]["post"]["responses"]["200"]["content"]["application/json"]["schema"]
-    )
+    ref = data["paths"]["/v1/models/analyze"]["post"]["responses"]["200"]["content"]["application/json"]["schema"]
     assert ref == {"$ref": "#/components/schemas/AnalysisResult"}
 
 
 def test_openapi_compare_response_refs_comparison_result() -> None:
     data = json.loads(_OPENAPI.read_text(encoding="utf-8"))
-    ref = (
-        data["paths"]["/v1/models/compare"]["post"]["responses"]["200"]["content"]["application/json"]["schema"]
-    )
+    ref = data["paths"]["/v1/models/compare"]["post"]["responses"]["200"]["content"]["application/json"]["schema"]
     assert ref == {"$ref": "#/components/schemas/ThreatModelComparisonResult"}
 
 

@@ -47,15 +47,10 @@ def export_remediation_backlog_markdown(
                 continue
             lines.append(f"### {it.id}: {it.title}")
             lines.append("")
-            lines.append(
-                f"- **Prioridade:** {it.priority_label} (rank {it.priority_rank}) — "
-                f"{it.priority_explanation}"
-            )
+            lines.append(f"- **Prioridade:** {it.priority_label} (rank {it.priority_rank}) — {it.priority_explanation}")
             lines.append(f"- **Esforço:** {it.effort_estimate} · **Impacto:** {it.impact_estimate}")
             if it.recommended_owner:
-                lines.append(
-                    f"- **Owner sugerido:** `{it.recommended_owner}` — {it.owner_explanation}"
-                )
+                lines.append(f"- **Owner sugerido:** `{it.recommended_owner}` — {it.owner_explanation}")
             else:
                 lines.append(f"- **Owner:** _a definir_ — {it.owner_explanation}")
             if it.quick_win:
@@ -116,12 +111,10 @@ def export_remediation_backlog_markdown(
     lines.extend(["## Todos os itens (ordem de prioridade)", ""])
     for it in sorted(backlog.items, key=lambda x: x.priority_rank):
         lines.append(
-            f"{it.priority_rank}. **{it.id}** — {it.title} "
-            f"({it.priority_label}, esforço {it.effort_estimate})"
+            f"{it.priority_rank}. **{it.id}** — {it.title} ({it.priority_label}, esforço {it.effort_estimate})"
         )
     lines.append("")
     lines.append(
-        "---\n*Gerado automaticamente — revisar antes de comprometer roadmap; "
-        "não substitui gestão de projecto.*"
+        "---\n*Gerado automaticamente — revisar antes de comprometer roadmap; não substitui gestão de projecto.*"
     )
     return "\n".join(lines)

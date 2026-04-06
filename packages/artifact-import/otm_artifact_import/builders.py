@@ -89,7 +89,8 @@ def assemble_draft(
     for u in unknowns:
         assumption_lines.append(f"[não inferido] {u}")
 
-    doc = ThreatModelDocument(
+    # model_info: mypy+pydantic v2 alinham o campo Python; ignore evita falso positivo em alguns plugins.
+    doc = ThreatModelDocument(  # type: ignore[call-arg]
         metadata=Metadata(
             title=title,
             summary=summary or f"Rascunho importado ({source_kind})",

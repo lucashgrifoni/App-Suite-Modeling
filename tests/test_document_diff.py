@@ -82,8 +82,6 @@ def test_diff_detects_modified_model_info() -> None:
         if base.model_info.industry_sector != IndustrySector.HEALTHCARE
         else IndustrySector.FINANCE
     )
-    rev = base.model_copy(
-        update={"model_info": base.model_info.model_copy(update={"industry_sector": other})}
-    )
+    rev = base.model_copy(update={"model_info": base.model_info.model_copy(update={"industry_sector": other})})
     out = diff_documents(base, rev)
     assert any(c.field == "industry_sector" for c in out.model_info)

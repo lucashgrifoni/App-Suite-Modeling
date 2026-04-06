@@ -59,10 +59,7 @@ def test_component_without_trust_boundary_message_lists_ids() -> None:
 
 
 def test_component_without_trust_boundary_truncates_after_ten() -> None:
-    comps = [
-        Component(id=f"c{i}", name=f"C{i}", kind=ComponentKind.PROCESS, in_trust_boundary=None)
-        for i in range(12)
-    ]
+    comps = [Component(id=f"c{i}", name=f"C{i}", kind=ComponentKind.PROCESS, in_trust_boundary=None) for i in range(12)]
     doc = ThreatModelDocument(
         model_info=ModelInfo(),
         metadata=Metadata(title="x"),
@@ -82,7 +79,5 @@ def test_minimal_example_has_no_structural_warnings() -> None:
 
     from otm_core_schema import load_document_from_yaml_path
 
-    doc = load_document_from_yaml_path(
-        Path(__file__).resolve().parents[1] / "examples" / "minimal.otm.yaml"
-    )
+    doc = load_document_from_yaml_path(Path(__file__).resolve().parents[1] / "examples" / "minimal.otm.yaml")
     assert collect_structural_findings(doc) == []

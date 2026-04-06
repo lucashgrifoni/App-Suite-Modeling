@@ -135,9 +135,7 @@ def test_extend_with_pack_heuristics_none_returns_zeros() -> None:
     doc = load_document_from_yaml_path(_MINIMAL)
     heuristics: list[HeuristicThreat] = []
     covered: set[tuple[str | None, str | None, str]] = set()
-    gen, skip, hints = extend_with_pack_heuristics(
-        doc=doc, heuristics=heuristics, covered=covered, pack=None
-    )
+    gen, skip, hints = extend_with_pack_heuristics(doc=doc, heuristics=heuristics, covered=covered, pack=None)
     assert gen == 0
     assert skip == 0
     assert hints == []
@@ -161,9 +159,7 @@ def test_extend_with_pack_heuristics_appends_and_returns_hints() -> None:
     )
     heuristics: list[HeuristicThreat] = []
     covered: set[tuple[str | None, str | None, str]] = set()
-    gen, _, hints = extend_with_pack_heuristics(
-        doc=doc, heuristics=heuristics, covered=covered, pack=pack
-    )
+    gen, _, hints = extend_with_pack_heuristics(doc=doc, heuristics=heuristics, covered=covered, pack=pack)
     assert hints == ["hint-a"]
     assert gen >= 1
     assert len(heuristics) >= 1

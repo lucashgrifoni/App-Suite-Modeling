@@ -1,0 +1,15 @@
+# Artefactos e dependências — não são código-fonte da aplicação.
+.git/
+.github/
+.venv/
+**/node_modules/
+**/dist/
+**/build/
+**/.ruff_cache/
+**/.mypy_cache/
+**/__pycache__/
+*.egg-info/
+
+# Lockfiles e binários (ruído em regras de secrets genéricas)
+package-lock.json
+**/package-lock.json

@@ -98,9 +98,7 @@ def test_methodology_explicit_cia_die_changes_output_shape() -> None:
 
 
 def test_auto_recommend_methodology_for_privacy_context() -> None:
-    doc = load_document_from_yaml_path(_MINIMAL).model_copy(
-        update={"metadata": Metadata(title="Portal LGPD com PII")}
-    )
+    doc = load_document_from_yaml_path(_MINIMAL).model_copy(update={"metadata": Metadata(title="Portal LGPD com PII")})
     rec = recommend_methodology(doc)
     assert rec.methodology == ThreatModelMethodology.LINDDUN
     r = analyze_document(doc, auto_recommend=True)
@@ -289,16 +287,12 @@ def test_summary_generated_counts_match_active_heuristics_without_pack() -> None
     doc = load_document_from_yaml_path(_MINIMAL)
     result = analyze_document(doc, methodology=ThreatModelMethodology.STRIDE)
     active = [h for h in result.heuristic_threats if not h.skipped_as_duplicate]
-    summary_total = (
-        result.summary.heuristic_threats_generated + result.summary.pack_threats_generated
-    )
+    summary_total = result.summary.heuristic_threats_generated + result.summary.pack_threats_generated
     assert summary_total == len(active)
 
 
 def test_business_abuse_heuristics_present_for_finance_fixture() -> None:
-    finance_doc = load_document_from_yaml_path(
-        _ROOT / "examples" / "test-apps" / "finance-wallet.otm.yaml"
-    )
+    finance_doc = load_document_from_yaml_path(_ROOT / "examples" / "test-apps" / "finance-wallet.otm.yaml")
     result = analyze_document(finance_doc, methodology=ThreatModelMethodology.STRIDE)
     ids = {h.id for h in result.heuristic_threats if not h.skipped_as_duplicate}
     assert "biz_webhook_replay_economic_abuse" in ids
@@ -307,9 +301,7 @@ def test_business_abuse_heuristics_present_for_finance_fixture() -> None:
 
 
 def test_business_abuse_heuristics_present_for_ecommerce_fixture() -> None:
-    ecommerce_doc = load_document_from_yaml_path(
-        _ROOT / "examples" / "test-apps" / "ecommerce-subscription.otm.yaml"
-    )
+    ecommerce_doc = load_document_from_yaml_path(_ROOT / "examples" / "test-apps" / "ecommerce-subscription.otm.yaml")
     result = analyze_document(ecommerce_doc, methodology=ThreatModelMethodology.PASTA)
     active = [h for h in result.heuristic_threats if not h.skipped_as_duplicate]
     ids = {h.id for h in active}
@@ -323,9 +315,7 @@ def test_business_abuse_heuristics_present_for_ecommerce_fixture() -> None:
 
 
 def test_phase3_engine_suppresses_stride_noise_only_when_biz_present_finance() -> None:
-    finance_doc = load_document_from_yaml_path(
-        _ROOT / "examples" / "test-apps" / "finance-wallet.otm.yaml"
-    )
+    finance_doc = load_document_from_yaml_path(_ROOT / "examples" / "test-apps" / "finance-wallet.otm.yaml")
     result = analyze_document(finance_doc, methodology=ThreatModelMethodology.STRIDE)
 
     all_ids = {h.id for h in result.heuristic_threats}
@@ -342,9 +332,7 @@ def test_phase3_engine_suppresses_stride_noise_only_when_biz_present_finance() -
 
 
 def test_phase3_engine_suppresses_stride_noise_only_when_biz_present_ecommerce() -> None:
-    ecommerce_doc = load_document_from_yaml_path(
-        _ROOT / "examples" / "test-apps" / "ecommerce-subscription.otm.yaml"
-    )
+    ecommerce_doc = load_document_from_yaml_path(_ROOT / "examples" / "test-apps" / "ecommerce-subscription.otm.yaml")
     result = analyze_document(ecommerce_doc, methodology=ThreatModelMethodology.PASTA)
     all_ids = {h.id for h in result.heuristic_threats}
     assert "biz_payment_entitlement_mismatch" in all_ids

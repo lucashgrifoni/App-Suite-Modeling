@@ -34,12 +34,8 @@ def build_business_abuse_context(doc: ThreatModelDocument) -> BusinessAbuseConte
     coupon_component = first_component_id_with(doc, "coupon", "discount")
     ledger_component = first_component_id_with(doc, "ledger", "finance", "wallet")
     billing_asset = first_asset_id_with(doc, "billing", "payment", "cobranca", "saldo", "balance")
-    entitlement_asset = first_asset_id_with(
-        doc, "entitlement", "premium", "subscription", "assinatura"
-    )
-    sensitive_flow = first_flow_id_with(
-        doc, "checkout", "transfer", "record", "entitlement", "webhook"
-    )
+    entitlement_asset = first_asset_id_with(doc, "entitlement", "premium", "subscription", "assinatura")
+    sensitive_flow = first_flow_id_with(doc, "checkout", "transfer", "record", "entitlement", "webhook")
     sensitive_component = None
     if sensitive_flow and sensitive_flow in flow_by_id:
         flow = flow_by_id[sensitive_flow]
@@ -48,8 +44,7 @@ def build_business_abuse_context(doc: ThreatModelDocument) -> BusinessAbuseConte
         has_payment=bool(first_component_id_with(doc, "payment", "billing", "checkout")),
         has_webhook=bool(webhook_flow),
         has_entitlement=bool(entitlement_component),
-        has_coupon=bool(coupon_component)
-        or bool(first_asset_id_with(doc, "coupon", "desconto", "discount")),
+        has_coupon=bool(coupon_component) or bool(first_asset_id_with(doc, "coupon", "desconto", "discount")),
         has_ledger=bool(ledger_component),
         has_transfer=bool(first_flow_id_with(doc, "transfer", "transaction", "ledger")),
         has_cancel=bool(first_component_id_with(doc, "cancel", "subscription")),
@@ -67,9 +62,7 @@ def build_business_abuse_context(doc: ThreatModelDocument) -> BusinessAbuseConte
 
 def first_flow_id_with(doc: ThreatModelDocument, *tokens: str) -> str | None:
     for f in doc.data_flows:
-        text = " ".join(
-            [f.id, f.name or "", f.from_component, f.to_component, f.protocol or ""]
-        ).lower()
+        text = " ".join([f.id, f.name or "", f.from_component, f.to_component, f.protocol or ""]).lower()
         if any(t in text for t in tokens):
             return f.id
     return None

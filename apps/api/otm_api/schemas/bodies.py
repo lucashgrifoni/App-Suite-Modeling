@@ -98,10 +98,7 @@ class AnalyzeBody(DocumentBody):
     )
     methodology: ThreatModelMethodology | None = Field(
         default=None,
-        description=(
-            "Metodologia/engine explícita. Se ausente, usa `document.model.methodology` "
-            "(default STRIDE)."
-        ),
+        description=("Metodologia/engine explícita. Se ausente, usa `document.model.methodology` (default STRIDE)."),
     )
     auto_recommend_methodology: bool = Field(
         default=False,

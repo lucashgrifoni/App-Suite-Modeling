@@ -11,15 +11,13 @@ from typing import Any
 
 from otm_core_schema import ThreatModelDocument
 
-_DOCUMENT_JSON_KW: dict[str, object] = {"by_alias": True, "exclude_none": True}
-
 
 def export_document_json_obj(doc: ThreatModelDocument) -> dict[str, Any]:
     """
     Objeto JSON-compatível; ordem das chaves segue `ThreatModelDocument` com aliases
     (`exclude_none`, `test_exporters`).
     """
-    return doc.model_dump(mode="json", **_DOCUMENT_JSON_KW)
+    return doc.model_dump(mode="json", by_alias=True, exclude_none=True)
 
 
 def export_document_json(doc: ThreatModelDocument, *, indent: int = 2) -> str:

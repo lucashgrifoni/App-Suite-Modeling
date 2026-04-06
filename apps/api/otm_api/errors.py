@@ -33,7 +33,7 @@ def request_validation_handler(
     exc: RequestValidationError,
 ) -> JSONResponse:
     return JSONResponse(
-        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
         content=problem_detail(
             code="REQUEST_VALIDATION_ERROR",
             message=msg_request_validation_error(),

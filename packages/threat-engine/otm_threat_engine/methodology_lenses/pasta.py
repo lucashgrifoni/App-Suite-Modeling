@@ -29,10 +29,7 @@ def apply_pasta_lens(doc: ThreatModelDocument, result: AnalysisResult) -> Analys
     return append_engine_lens_note(
         out,
         methodology=ThreatModelMethodology.PASTA,
-        note=(
-            "Lente PASTA aplicada: análise orientada a ataque, vulnerabilidade, risco e impacto "
-            "com foco avançado."
-        ),
+        note=("Lente PASTA aplicada: análise orientada a ataque, vulnerabilidade, risco e impacto com foco avançado."),
     )
 
 
@@ -73,8 +70,7 @@ def _append_pasta_native_heuristics(
         (
             "pasta_critical_integration_path",
             "[pasta] Integrações críticas como caminho de ataque",
-            "Integrações com terceiros podem propagar falhas e credenciais comprometidas "
-            "para ativos centrais.",
+            "Integrações com terceiros podem propagar falhas e credenciais comprometidas para ativos centrais.",
             StrideCategory.TAMPERING,
             3,
             5,
@@ -100,8 +96,7 @@ def _append_pasta_native_heuristics(
                     (
                         f"pasta_attack_path_{comp.id}",
                         f"[pasta] Caminho plausível de ataque via {comp.name}",
-                        "Componente exposto pode ser pivô para movimento lateral e escalada "
-                        "de privilégio.",
+                        "Componente exposto pode ser pivô para movimento lateral e escalada de privilégio.",
                         StrideCategory.ELEVATION_OF_PRIVILEGE,
                         4,
                         4,
@@ -123,17 +118,12 @@ def _append_pasta_risk_findings(result: AnalysisResult) -> AnalysisResult:
         StructuralFinding(
             code="PASTA_RISK_INTEGRATIONS",
             severity="info",
-            message=(
-                "PASTA fase 2: tratar integrações críticas como caminhos preferenciais de ataque."
-            ),
+            message=("PASTA fase 2: tratar integrações críticas como caminhos preferenciais de ataque."),
         ),
         StructuralFinding(
             code="PASTA_RISK_IMPACT",
             severity="info",
-            message=(
-                "PASTA fase 2: relacionar cenário de ataque a impacto operacional, financeiro "
-                "e reputacional."
-            ),
+            message=("PASTA fase 2: relacionar cenário de ataque a impacto operacional, financeiro e reputacional."),
         ),
     ]
     return result.model_copy(update={"structural_findings": findings})

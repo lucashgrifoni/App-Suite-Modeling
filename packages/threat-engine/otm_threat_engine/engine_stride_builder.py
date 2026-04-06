@@ -138,8 +138,7 @@ def _flow_stride_candidates(
             (
                 s.value,
                 f"Atravessa fronteira — {flow_id}",
-                "Fluxo entre zonas de confiança distintas; rever integridade e "
-                "autenticação de extremidades.",
+                "Fluxo entre zonas de confiança distintas; rever integridade e autenticação de extremidades.",
             )
         )
     if unencrypted:

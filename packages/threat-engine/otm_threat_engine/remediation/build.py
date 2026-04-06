@@ -89,13 +89,9 @@ def _item_from_threat(
     foundational = ctrl == "identity_access" and score >= 9
 
     title = f"Mitigar: {threat.title[:80]}"
-    desc = (
-        f"Endereçar o achado '{threat.id}' ({threat.stride.value}). "
-        f"Controlo sugerido: {ctrl.replace('_', ' ')}."
-    )
+    desc = f"Endereçar o achado '{threat.id}' ({threat.stride.value}). Controlo sugerido: {ctrl.replace('_', ' ')}."
     rationale = (
-        f"Derivado da ameaça heurística {threat.id} (STRIDE {threat.stride.value}) "
-        f"com score de risco ~{score:.0f}."
+        f"Derivado da ameaça heurística {threat.id} (STRIDE {threat.stride.value}) com score de risco ~{score:.0f}."
     )
     pexpl = (
         f"Etiqueta '{plab}' por heurística L×I (ou score agregado): valor ~{score:.0f}. "
@@ -226,9 +222,7 @@ def _item_from_structural(
         architecture_layer="governance",
         priority_rank=1,
         priority_label="medium",
-        priority_explanation=(
-            "Prioridade média por defeito: consistência do modelo habilita análise fiável."
-        ),
+        priority_explanation=("Prioridade média por defeito: consistência do modelo habilita análise fiável."),
         effort_estimate="low",
         impact_estimate="medium",
         recommended_owner="security_architecture",

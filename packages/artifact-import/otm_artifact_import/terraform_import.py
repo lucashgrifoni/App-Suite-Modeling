@@ -44,7 +44,7 @@ def _helm_chart_hint(text: str) -> bool:
 
 def _public_ingress_hint(body: str) -> bool:
     """Heurística fraca: 0.0.0.0/0 em blocos de rede."""
-    return bool(re.search(r'0\.0\.0\.0/0', body))
+    return bool(re.search(r"0\.0\.0\.0/0", body))
 
 
 def _map_resource_kind(rtype: str) -> tuple[ComponentKind, str | None]:
@@ -94,7 +94,7 @@ def import_terraform_text(text: str, *, filename: str = "bundle.tf") -> Artifact
     resources = list(_iter_resource_blocks(text))
     if not resources:
         unknowns.append(
-            "Nenhum bloco `resource \"tipo\" \"nome\"` encontrado — ficheiro pode usar só módulos ou sintaxe não suportada."
+            'Nenhum bloco `resource "tipo" "nome"` encontrado — ficheiro pode usar só módulos ou sintaxe não suportada.'
         )
 
     tb_ext = "tb_internet_facing"

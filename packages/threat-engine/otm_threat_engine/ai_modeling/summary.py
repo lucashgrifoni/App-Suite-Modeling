@@ -152,8 +152,7 @@ def _recommendations(bundle: AiSignalBundle) -> list[str]:
         recs.append("Contratos e classificação de dados com o fornecedor; plano de continuidade e limites de uso.")
     if not bundle.explicit_governance_evidence and (bundle.model_interaction or bundle.ml_pipeline_referenced):
         recs.append(
-            "Observabilidade mínima: logging seguro de prompts/respostas resumidas, "
-            "IDs de sessão e tool-calls."
+            "Observabilidade mínima: logging seguro de prompts/respostas resumidas, IDs de sessão e tool-calls."
         )
     return recs[:8]
 

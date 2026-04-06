@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "open-threat-model"
-version = "7.1.0"
+version = "7.2.0"
 description = "Plataforma open source de Threat Modeling as Code (core, API, CLI, UI)."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -20,6 +20,8 @@ api = [
   "fastapi>=0.115",
   "python-multipart>=0.0.18",
   "uvicorn[standard]>=0.27",
+  "slowapi>=0.1.9",
+  # Reservado para persistência pós-MVP (multi-utilizador / histórico); a API atual não importa SQLAlchemy.
   "sqlalchemy>=2.0",
 ]
 cli = ["typer>=0.9", "rich>=13.7"]
@@ -33,6 +35,7 @@ dev = [
   "mypy>=1.8",
   "types-PyYAML>=6.0.12",
   "xhtml2pdf>=0.2.15",
+  "bandit>=1.7",
 ]
 # AST leve opcional para `scan_node_express_repo` (env `OTM_REPO_ESPRIMA=1`). Sem isto, mantém-se só heurística regex.
 artifact_import_ast = ["esprima>=4.0.0,<5"]

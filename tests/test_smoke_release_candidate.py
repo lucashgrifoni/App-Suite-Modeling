@@ -54,9 +54,7 @@ def test_smoke_api_basic_flow(client: TestClient) -> None:
         ("plot4ai", "LLM"),
     ],
 )
-def test_smoke_methodology_analysis(
-    client: TestClient, methodology: str, title_keyword: str
-) -> None:
+def test_smoke_methodology_analysis(client: TestClient, methodology: str, title_keyword: str) -> None:
     base = load_document_from_yaml_path(_MINIMAL)
     doc = base.model_copy(update={"metadata": Metadata(title=f"Sistema {title_keyword}")})
     r = client.post(

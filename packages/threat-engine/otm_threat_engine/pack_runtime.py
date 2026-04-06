@@ -48,9 +48,7 @@ def _build_pack_heuristic(
     base_l, base_i = _base_li_from_rule(rule)
     bl, bi = apply_pack_to_li(base_l, base_i, pack)
     risk = build_risk_assessment(bl, bi)
-    desc = rule.description or (
-        f"Ameaça contextual do setor ({pack.name}). Rever control_hints do pack."
-    )
+    desc = rule.description or (f"Ameaça contextual do setor ({pack.name}). Rever control_hints do pack.")
     return HeuristicThreat(
         id=hid,
         title=f"[pack:{pack.id}] {rule.title}",

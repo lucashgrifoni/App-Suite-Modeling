@@ -28,10 +28,7 @@ def apply_linddun_lens(doc: ThreatModelDocument, result: AnalysisResult) -> Anal
     return append_engine_lens_note(
         out,
         methodology=ThreatModelMethodology.LINDDUN,
-        note=(
-            "Lente LINDDUN aplicada: privacidade reforçada (PII, consentimento, "
-            "identificação e linkabilidade)."
-        ),
+        note=("Lente LINDDUN aplicada: privacidade reforçada (PII, consentimento, identificação e linkabilidade)."),
     )
 
 
@@ -74,8 +71,7 @@ def _append_linddun_flow_heuristics(
         (
             f"{base_id}_linkability",
             f"[linddun] Linkabilidade indevida no fluxo {flow_label}",
-            "Eventos podem permitir correlacionar identidade/atividade entre contextos "
-            "sem base legal clara.",
+            "Eventos podem permitir correlacionar identidade/atividade entre contextos sem base legal clara.",
             StrideCategory.REPUDIATION,
             3,
             4,
@@ -83,8 +79,7 @@ def _append_linddun_flow_heuristics(
         (
             f"{base_id}_detectability",
             f"[linddun] Detectabilidade excessiva no fluxo {flow_label}",
-            "Metadados de tráfego e padrões de uso podem revelar comportamento pessoal mesmo "
-            "sem conteúdo explícito.",
+            "Metadados de tráfego e padrões de uso podem revelar comportamento pessoal mesmo sem conteúdo explícito.",
             StrideCategory.INFORMATION_DISCLOSURE,
             3,
             4,
@@ -103,8 +98,7 @@ def _append_linddun_component_heuristics(
         (
             f"linddun_comp_{component_id}_identification",
             f"[linddun] Identificação indevida em {component_name}",
-            "Possível reidentificação de titulares por combinação de dados "
-            "ou telemetria excessiva.",
+            "Possível reidentificação de titulares por combinação de dados ou telemetria excessiva.",
             StrideCategory.SPOOFING,
             2,
             5,
@@ -112,8 +106,7 @@ def _append_linddun_component_heuristics(
         (
             f"linddun_comp_{component_id}_consent",
             f"[linddun] Consentimento e finalidade em {component_name}",
-            "Verificar base legal, finalidade e trilha de consentimento para tratamento "
-            "de dados pessoais.",
+            "Verificar base legal, finalidade e trilha de consentimento para tratamento de dados pessoais.",
             StrideCategory.REPUDIATION,
             3,
             4,
@@ -121,8 +114,7 @@ def _append_linddun_component_heuristics(
         (
             f"linddun_comp_{component_id}_unawareness",
             f"[linddun] Falta de transparência para titulares em {component_name}",
-            "Risco de unawareness: titular sem clareza de coleta, finalidade, retenção "
-            "e compartilhamento.",
+            "Risco de unawareness: titular sem clareza de coleta, finalidade, retenção e compartilhamento.",
             StrideCategory.REPUDIATION,
             3,
             3,
@@ -130,8 +122,7 @@ def _append_linddun_component_heuristics(
         (
             f"linddun_comp_{component_id}_non_compliance",
             f"[linddun] Não conformidade regulatória em {component_name}",
-            "Risco de non-compliance por ausência de controles de consentimento, minimização, "
-            "retenção e governança.",
+            "Risco de non-compliance por ausência de controles de consentimento, minimização, retenção e governança.",
             StrideCategory.REPUDIATION,
             2,
             5,
@@ -163,9 +154,7 @@ def _append_linddun_recommendation_findings(
         StructuralFinding(
             code="LINDDUN_REC_EXPOSURE",
             severity="info",
-            message=(
-                "Recomendação LINDDUN: reduzir exposição em APIs, logs e integrações de terceiros."
-            ),
+            message=("Recomendação LINDDUN: reduzir exposição em APIs, logs e integrações de terceiros."),
         ),
     ]
 
@@ -183,7 +172,6 @@ def _looks_like_pii_context(doc: ThreatModelDocument) -> bool:
     if any(k in text for k in ("pii", _PII_LITERAL, "privacidade", "lgpd", "gdpr", "consent")):
         return True
     return any(
-        a.asset_kind.value == "data"
-        and (a.sensitivity or "").lower() in {"confidential", "restricted"}
+        a.asset_kind.value == "data" and (a.sensitivity or "").lower() in {"confidential", "restricted"}
         for a in doc.assets
     )

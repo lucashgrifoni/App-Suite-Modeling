@@ -106,9 +106,7 @@ def assess_model_precheck(doc: ThreatModelDocument) -> ModelQualityPrecheck:
         )
 
     rich_components = sum(
-        1
-        for c in doc.components
-        if c.responsibility or c.privilege_level or c.handles_sensitive_data is not None
+        1 for c in doc.components if c.responsibility or c.privilege_level or c.handles_sensitive_data is not None
     )
     if rich_components > 0:
         score += min(18, 6 + rich_components * 2)
@@ -128,9 +126,7 @@ def assess_model_precheck(doc: ThreatModelDocument) -> ModelQualityPrecheck:
             )
         )
 
-    if doc.business_context and (
-        doc.business_context.business_objectives or doc.business_context.business_goals
-    ):
+    if doc.business_context and (doc.business_context.business_objectives or doc.business_context.business_goals):
         score += 12
         checks.append(
             QualityCheckItem(
@@ -149,9 +145,7 @@ def assess_model_precheck(doc: ThreatModelDocument) -> ModelQualityPrecheck:
         )
 
     classified = sum(
-        1
-        for a in doc.assets
-        if a.data_classification is not None or (a.sensitivity and len(a.sensitivity) > 2)
+        1 for a in doc.assets if a.data_classification is not None or (a.sensitivity and len(a.sensitivity) > 2)
     )
     if classified > 0:
         score += 14

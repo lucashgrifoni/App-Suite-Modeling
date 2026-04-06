@@ -99,16 +99,13 @@ _MSG: dict[ExportArtifactLocale, AnalysisMarkdownMessages] = {
         bullet_pack_covered="- Ameaças do pack (já cobertas):",
         bullet_max_score="- Maior score heurístico (L×I):",
         framework_agg_title="### Referências a frameworks (agregado)",
-        framework_agg_intro=(
-            "Contagem de referências `framework:control_id` nas heurísticas (por catálogo canónico):"
-        ),
+        framework_agg_intro=("Contagem de referências `framework:control_id` nas heurísticas (por catálogo canónico):"),
         pack_control_title="### Controlo sugerido (pack)",
         section_structural="### Avisos estruturais",
         section_trust_flows="### Fluxos entre fronteiras",
         risk_categories_title="### Categorias de risco (top)",
         risk_categories_blurb=(
-            "Bloco curto para leitura humana; a lista completa permanece abaixo "
-            "(com rastreabilidade no JSON)."
+            "Bloco curto para leitura humana; a lista completa permanece abaixo (com rastreabilidade no JSON)."
         ),
         risk_cat_economic="Fraude econômica",
         risk_cat_abuse="Abuso de processo / lógica de negócio",
@@ -121,21 +118,11 @@ _MSG: dict[ExportArtifactLocale, AnalysisMarkdownMessages] = {
             "Padronizar idempotência por `event_id/request_id` e bloquear replay "
             "com armazenamento de eventos processados."
         ),
-        rec_payment=(
-            "Exigir correlação `payment -> owner -> plano -> entitlement` antes de ativação "
-            "de benefício."
-        ),
-        rec_cancel=(
-            "Aplicar revogação atômica de entitlement no cancelamento com reconciliação "
-            "periódica de estado."
-        ),
-        rec_coupon=(
-            "Aplicar política anti-abuso de cupom: unicidade por owner/período, "
-            "anti-stacking e anti-reuso."
-        ),
+        rec_payment=("Exigir correlação `payment -> owner -> plano -> entitlement` antes de ativação de benefício."),
+        rec_cancel=("Aplicar revogação atômica de entitlement no cancelamento com reconciliação periódica de estado."),
+        rec_coupon=("Aplicar política anti-abuso de cupom: unicidade por owner/período, anti-stacking e anti-reuso."),
         rec_auth=(
-            "Implementar autorização contextual (ownership, vínculo e escopo econômico), "
-            "além de autenticação técnica."
+            "Implementar autorização contextual (ownership, vínculo e escopo econômico), além de autenticação técnica."
         ),
         ref_none="—",
         ref_more="… (+{n})",
@@ -164,9 +151,7 @@ _MSG: dict[ExportArtifactLocale, AnalysisMarkdownMessages] = {
         methodology_insights_title="### Insights metodológicos",
         profile_prefix="- Perfil:",
         exec_summary_title="### Resumo executivo",
-        total_active_line=(
-            "- Total de ameaças ativas: **{active}** · Maior score: **{max_score}**"
-        ),
+        total_active_line=("- Total de ameaças ativas: **{active}** · Maior score: **{max_score}**"),
         methodology_applied="- Metodologia aplicada:",
         immediate_priority="- Prioridade imediata:",
         priority_item="  - {title} (score {score}) {prep} `{tgt}`",
@@ -182,19 +167,14 @@ _MSG: dict[ExportArtifactLocale, AnalysisMarkdownMessages] = {
             "- **Pré-check:** score **{score}/100** (banda `{band}`) · "
             "confiança nas recomendações: `{conf}` · fit STRIDE: `{fit}`."
         ),
-        completeness_line='- **Completude metodológica:** `{state}` — {reasons}{note}',
+        completeness_line="- **Completude metodológica:** `{state}` — {reasons}{note}",
         wizard_context_title="### Contexto do assistente (modelação guiada)",
-        wizard_context_blurb=(
-            "Notas derivadas de respostas `wz:` alinhadas ao perfil semântico do modelo."
-        ),
+        wizard_context_blurb=("Notas derivadas de respostas `wz:` alinhadas ao perfil semântico do modelo."),
         audit_title="### Rastreabilidade do assistente (audit trail)",
         audit_blurb=(
-            "Ligação compacta entre declarações no questionário e efeitos no motor "
-            "(ranking, corpus, observações)."
+            "Ligação compacta entre declarações no questionário e efeitos no motor (ranking, corpus, observações)."
         ),
-        audit_entry=(
-            "- `{tag}` — **{effect}** ({weight}; {mechanism}) → {areas}: {explanation}"
-        ),
+        audit_entry=("- `{tag}` — **{effect}** ({weight}; {mechanism}) → {areas}: {explanation}"),
         model_gaps_title="### Lacunas do modelo (pré-check)",
         anti_patterns_title="### Anti-padrões de modelagem (destaque)",
         anti_pattern_confidence=" · confiança _{conf}_ — ",
@@ -202,12 +182,8 @@ _MSG: dict[ExportArtifactLocale, AnalysisMarkdownMessages] = {
         next_no_high_priority="- Sem ameaças ativas de alta prioridade nesta execução.",
         next_workshop="- Validar os 3 maiores riscos em workshop curto com engenharia e segurança.",
         next_backlog="- Converter os achados críticos em backlog com owner e prazo.",
-        next_controls=(
-            "- Revisar controles de acesso, integridade de fluxo e proteção de dados sensíveis."
-        ),
-        next_use_insights=(
-            "- Usar os insights do perfil **{profile}** para priorização contextual."
-        ),
+        next_controls=("- Revisar controles de acesso, integridade de fluxo e proteção de dados sensíveis."),
+        next_use_insights=("- Usar os insights do perfil **{profile}** para priorização contextual."),
     ),
     "en": AnalysisMarkdownMessages(
         heading_automatic="## Automated analysis (engine)",
@@ -223,16 +199,12 @@ _MSG: dict[ExportArtifactLocale, AnalysisMarkdownMessages] = {
         bullet_pack_covered="- Pack threats (already covered):",
         bullet_max_score="- Highest heuristic score (L×I):",
         framework_agg_title="### Framework references (aggregate)",
-        framework_agg_intro=(
-            "Count of `framework:control_id` references in heuristics (by canonical catalog):"
-        ),
+        framework_agg_intro=("Count of `framework:control_id` references in heuristics (by canonical catalog):"),
         pack_control_title="### Suggested controls (pack)",
         section_structural="### Structural warnings",
         section_trust_flows="### Flows across boundaries",
         risk_categories_title="### Risk categories (top)",
-        risk_categories_blurb=(
-            "Short block for human reading; the full list remains below (traceable in JSON)."
-        ),
+        risk_categories_blurb=("Short block for human reading; the full list remains below (traceable in JSON)."),
         risk_cat_economic="Economic fraud",
         risk_cat_abuse="Process abuse / business logic",
         risk_cat_state="State inconsistency",
@@ -241,29 +213,18 @@ _MSG: dict[ExportArtifactLocale, AnalysisMarkdownMessages] = {
         threat_target_label="target",
         consolidated_recs_title="### Consolidated root-cause recommendations",
         rec_webhook=(
-            "Standardize idempotency via `event_id/request_id` and block replay "
-            "with storage of processed events."
+            "Standardize idempotency via `event_id/request_id` and block replay with storage of processed events."
         ),
-        rec_payment=(
-            "Require correlation `payment -> owner -> plan -> entitlement` before "
-            "activating benefits."
-        ),
-        rec_cancel=(
-            "Apply atomic entitlement revocation on cancellation with periodic state reconciliation."
-        ),
-        rec_coupon=(
-            "Apply anti-abuse coupon policy: uniqueness per owner/period, anti-stacking, anti-reuse."
-        ),
+        rec_payment=("Require correlation `payment -> owner -> plan -> entitlement` before activating benefits."),
+        rec_cancel=("Apply atomic entitlement revocation on cancellation with periodic state reconciliation."),
+        rec_coupon=("Apply anti-abuse coupon policy: uniqueness per owner/period, anti-stacking, anti-reuse."),
         rec_auth=(
-            "Implement contextual authorization (ownership, linkage, economic scope) "
-            "beyond technical authentication."
+            "Implement contextual authorization (ownership, linkage, economic scope) beyond technical authentication."
         ),
         ref_none="—",
         ref_more="… (+{n})",
         threats_harmonized_title="### Suggested threats (harmonized)",
-        threats_harmonized_blurb=(
-            "View prioritized by specificity (`biz_*`) with reduced semantic redundancy."
-        ),
+        threats_harmonized_blurb=("View prioritized by specificity (`biz_*`) with reduced semantic redundancy."),
         threat_line_fw_label="Frameworks",
         more_entries="\n… and {n} more entries.",
         harmonization_notes=(
@@ -290,8 +251,7 @@ _MSG: dict[ExportArtifactLocale, AnalysisMarkdownMessages] = {
         scope_general="general scope",
         explain_title="### Explainability (summary)",
         explain_blurb=(
-            "Structured reasons from the engine (methodology, findings, risk). "
-            "Full detail in the result JSON."
+            "Structured reasons from the engine (methodology, findings, risk). Full detail in the result JSON."
         ),
         explain_more="\n… and {n} more entries in JSON.",
         quality_title="### Model and methodology quality (summary)",
@@ -303,9 +263,7 @@ _MSG: dict[ExportArtifactLocale, AnalysisMarkdownMessages] = {
         wizard_context_title="### Wizard context (guided modeling)",
         wizard_context_blurb="Notes derived from `wz:` answers aligned with the model semantic profile.",
         audit_title="### Wizard traceability (audit trail)",
-        audit_blurb=(
-            "Compact link between questionnaire statements and engine effects (ranking, corpus, notes)."
-        ),
+        audit_blurb=("Compact link between questionnaire statements and engine effects (ranking, corpus, notes)."),
         audit_entry="- `{tag}` — **{effect}** ({weight}; {mechanism}) → {areas}: {explanation}",
         model_gaps_title="### Model gaps (pre-check)",
         anti_patterns_title="### Modeling anti-patterns (highlight)",
@@ -327,9 +285,7 @@ def analysis_markdown_messages(locale: str | None) -> AnalysisMarkdownMessages:
 def risk_category_key(h) -> str:
     """Chave estável para bucketização (independente do idioma do relatório)."""
     t = f"{h.id} {h.title} {h.description}".lower()
-    if h.id.startswith("biz_") or any(
-        k in t for k in ("business_abuse", "economic_fraud", "state_inconsistency")
-    ):
+    if h.id.startswith("biz_") or any(k in t for k in ("business_abuse", "economic_fraud", "state_inconsistency")):
         if any(
             k in t
             for k in (
@@ -343,9 +299,7 @@ def risk_category_key(h) -> str:
             )
         ):
             return "economic"
-        if "state_inconsistency" in t or any(
-            k in t for k in ("out_of_order", "regression", "inconsist", "cancel")
-        ):
+        if "state_inconsistency" in t or any(k in t for k in ("out_of_order", "regression", "inconsist", "cancel")):
             return "state"
         return "abuse"
     return "stride"

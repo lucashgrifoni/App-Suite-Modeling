@@ -100,6 +100,7 @@ evidence_suggestions: []
     ):
         load_document_from_yaml(raw)
 
+
 def test_methodology_default_is_stride() -> None:
     doc = load_document_from_yaml_path(_EXAMPLE_MIN)
     assert doc.model_info.methodology == ThreatModelMethodology.STRIDE

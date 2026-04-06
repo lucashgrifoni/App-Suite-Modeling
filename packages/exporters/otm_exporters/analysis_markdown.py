@@ -30,9 +30,7 @@ def _active_threats(result: AnalysisResult) -> list:
 
 def _is_business_specific(h) -> bool:
     t = f"{h.id} {h.title}".lower()
-    return h.id.startswith("biz_") or any(
-        k in t for k in ("business_abuse", "economic_fraud", "state_inconsistency")
-    )
+    return h.id.startswith("biz_") or any(k in t for k in ("business_abuse", "economic_fraud", "state_inconsistency"))
 
 
 def _biz_family_flags(active: list) -> dict[str, bool]:
@@ -211,9 +209,7 @@ def _append_risk_categories_block(
         for h in items:
             tgt = _target_of(h)
             sc = h.risk.score if h.risk.score is not None else "—"
-            lines.append(
-                f"- {h.title} (`{h.id}`) {msgs.risk_item_in_target} `{tgt}` — score {sc}"
-            )
+            lines.append(f"- {h.title} (`{h.id}`) {msgs.risk_item_in_target} `{tgt}` — score {sc}")
         lines.append("")
 
 
@@ -495,10 +491,7 @@ def _append_guided_context_and_audit(
         lines.append("")
         for hit in result.anti_pattern_hits[:10]:
             conf = getattr(hit, "confidence_hint", None) or "medium"
-            lines.append(
-                f"- **{hit.name}** (`{hit.id}`)"
-                f"{msgs.anti_pattern_confidence.format(conf=conf)}{hit.message}"
-            )
+            lines.append(f"- **{hit.name}** (`{hit.id}`){msgs.anti_pattern_confidence.format(conf=conf)}{hit.message}")
         lines.append("")
 
 
@@ -521,9 +514,7 @@ def _append_next_steps_from_harmonized(
     lines.append(msgs.next_controls)
     _append_root_cause_recommendations(lines, top, msgs)
     if result.methodology_insights and result.methodology_insights.profile:
-        lines.append(
-            msgs.next_use_insights.format(profile=result.methodology_insights.profile)
-        )
+        lines.append(msgs.next_use_insights.format(profile=result.methodology_insights.profile))
     lines.append("")
 
 
@@ -579,15 +570,13 @@ def export_analysis_markdown(
     if result.trust_boundary_findings:
         lines.append(msgs.section_trust_flows)
         lines.append("")
-        for f in result.trust_boundary_findings:
-            lines.append(f"- {f.message}")
+        for tbf in result.trust_boundary_findings:
+            lines.append(f"- {tbf.message}")
         lines.append("")
     _append_guided_context_and_audit(lines, result, msgs)
     active = _active_threats(result)
     harmonized, suppressed, _ = _build_harmonized(active)
-    _append_executive_summary_from_harmonized(
-        lines, result, active=active, harmonized=harmonized, msgs=msgs
-    )
+    _append_executive_summary_from_harmonized(lines, result, active=active, harmonized=harmonized, msgs=msgs)
     _append_methodology_insights_block(lines, result, msgs)
     _append_plot4ai_ai_context_block(lines, result, msgs)
     _append_risk_categories_block(lines, harmonized, top_n=2, msgs=msgs)
@@ -612,8 +601,4 @@ def export_document_and_analysis_markdown(
     """Concatena Markdown do documento e da análise (atalho para relatórios)."""
     from otm_exporters.document_markdown import export_document_markdown
 
-    return (
-        export_document_markdown(doc, locale=locale)
-        + "\n"
-        + export_analysis_markdown(result, locale=locale)
-    )
+    return export_document_markdown(doc, locale=locale) + "\n" + export_analysis_markdown(result, locale=locale)

@@ -1,38 +1,64 @@
 # Evidência consolidada — CI, tipagem, SCA, CLI, observabilidade e perímetro da API
 
 Documento único que substitui relatórios de execução dispersos (rodada de higiene docs, 2026-04).  
-**Índice:** [Mypy](#1-mypy-no-ci-gradual) · [SCA](#2-sca-supply-chain) · [CLI modular](#3-refatoração-da-cli) · [Observabilidade](#4-observabilidade-da-api) · [Perímetro / CORS](#5-endurecimento-de-perímetro-da-api)
+**Índice:** [Ruff + Bandit](#0-ruff-lint--formato) · [Mypy](#1-mypy-no-ci-monorepo) · [SCA](#2-sca-supply-chain) · [CLI modular](#3-refatoração-da-cli) · [Observabilidade](#4-observabilidade-da-api) · [Perímetro / CORS](#5-endurecimento-de-perímetro-da-api) · [Semgrep](#6-semgrep) · [Trivy](#7-trivy-imagem-api)
 
 ---
 
-## 1. Mypy no CI (gradual)
+## 0. Ruff (lint + formato)
 
-### Módulos cobertos inicialmente
+### Comandos no CI (job `python`)
+
+```bash
+ruff check packages apps tests
+ruff format --check packages apps tests
+```
+
+### Critérios de aceite
+
+- **Lint:** regras em `[tool.ruff.lint]` no `pyproject.toml` (`E`, `F`, `I`, `UP`), com `per-file-ignores` onde documentado.
+- **Formato:** o repositório mantém estilo canónico Ruff; PRs que desviarem falham no job `Ruff (format)`.
+
+### Local
+
+```bash
+ruff check packages apps tests
+ruff format packages apps tests
+```
+
+### Bandit (SAST, Python)
+
+- Job `python`: `python -m bandit -r packages apps -ll -q` (severidade **medium** e acima; `-q` reduz ruído).
+- Dependência: `bandit>=1.7` no extra `[dev]` do `pyproject.toml` (instalado com `pip install -e ".[dev,cli,api]"` no CI).
+
+---
+
+## 1. Mypy no CI (monorepo)
+
+### Pacotes cobertos (job `python`)
+
+O comando no `.github/workflows/ci.yml` inclui **todos** os pacotes Python de primeira linha e a CLI:
 
 - `packages/core-schema/otm_core_schema`
 - `apps/api/otm_api`
-
-Comando no CI (job `python`):
-
-```bash
-mypy packages/core-schema/otm_core_schema apps/api/otm_api
-```
+- `packages/explainability/otm_explainability`
+- `packages/framework-mappings/otm_framework_mappings`
+- `packages/diagram-engine/otm_diagram_engine`
+- `apps/cli/otm_cli`
+- `packages/exporters/otm_exporters`
+- `packages/artifact-import/otm_artifact_import`
+- `packages/report-premium/otm_report_premium`
+- `packages/threat-engine/otm_threat_engine`
+- `packages/industry-packs/otm_industry_packs`
 
 ### Strictness
 
 - Configuração global em `[tool.mypy]` no `pyproject.toml` (`python_version`, `warn_unused_ignores`, `show_error_codes`).
-- `ignore_missing_imports = true` **no global** para não explodir o legado de stubs de terceiros; a adoção é **por pastas** no comando CI (não “mypy em todo o monorepo” de uma vez).
-
-### Roadmap de expansão
-
-1. `packages/threat-engine/otm_threat_engine`
-2. `packages/exporters`, `packages/artifact-import`
-3. `apps/cli/otm_cli` (após estabilizar a refatoração modular)
-4. Reduzir `ignore_missing_imports` global substituindo por `[[tool.mypy.overrides]]` por pacote
+- `ignore_missing_imports = true` no global; próximo passo de maturidade: `[[tool.mypy.overrides]]` por pacote e stubs onde fizer sentido.
 
 ### Critérios de aceite
 
-- Job `Mypy (core-schema + API)` no `.github/workflows/ci.yml` falha em erros reais nos diretórios listados.
+- Job `Mypy (monorepo)` falha em erros de tipo nos diretórios listados.
 
 ---
 
@@ -48,7 +74,7 @@ mypy packages/core-schema/otm_core_schema apps/api/otm_api
 ### Thresholds
 
 - **Python:** `python -m pip_audit --desc on -S .` — gate estrito (qualquer vulnerabilidade conhecida falha o CI na árvore resolvida).
-- **Node:** `npm audit --audit-level=critical`
+- **Node:** `npm audit --audit-level=critical` e **`npm audit --audit-level=moderate`** (job `web`; após upgrade Vite 6 / Vitest 3 a árvore `apps/web` ficou sem CVEs reportados na resolução actual).
 
 ### Política de exceção
 
@@ -124,3 +150,18 @@ API sem autenticação se exposta publicamente sem gateway — ver [`DEPLOYMENT_
 ### Próximos passos (cenário público)
 
 API keys/OAuth2/mTLS + testes de autorização + OpenAPI/UI alinhados ao fluxo completo.
+
+---
+
+## 6. Semgrep
+
+- Job `semgrep` no CI: imagem `semgrep/semgrep`, configs **`p/python`**, **`p/typescript`**, **`p/javascript`**, **`p/react`** sobre `packages` e `apps/web/src`.
+- Exclusões: **`.semgrepignore`** na raiz (artefactos, `node_modules`, `.venv`, etc.).
+- Política de triagem, `nosemgrep` e evolução: **[`SEMGREP_POLICY.md`](SEMGREP_POLICY.md)**.
+
+---
+
+## 7. Trivy (imagem API)
+
+- Job `trivy-image`: `docker build -f apps/api/Dockerfile -t otm-api:ci .` seguido de `aquasecurity/trivy-action@0.28.0` com `severity: CRITICAL,HIGH` e `exit-code: 1`.
+- Complementa pip-audit (Python na host) com visão de **imagem** (OS + dependências instaladas na layer).

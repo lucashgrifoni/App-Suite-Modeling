@@ -145,4 +145,3 @@ def import_helm_path(path: Path) -> ArtifactImportResult:
             res.unknowns.append("Directório sem Chart.yaml nem values*.yaml.")
         return res
     return import_helm_text(path.read_text(encoding="utf-8"), filename=path.name)
-

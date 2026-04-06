@@ -15,9 +15,7 @@ _MINIMAL = _ROOT / "examples" / "minimal.otm.yaml"
 
 def test_recommendation_defaults_to_stride_without_strong_signals() -> None:
     doc = load_document_from_yaml_path(_MINIMAL).model_copy(
-        update={
-            "metadata": Metadata(title="Sistema interno", summary="Aplicação corporativa genérica")
-        }
+        update={"metadata": Metadata(title="Sistema interno", summary="Aplicação corporativa genérica")}
     )
     rec = recommend_methodology(doc)
     assert rec.methodology == ThreatModelMethodology.STRIDE
@@ -33,9 +31,7 @@ def test_recommendation_prioritizes_ai_signals_over_other_signals() -> None:
 
 def test_recommendation_prioritizes_pasta_over_privacy_when_both_present() -> None:
     doc = load_document_from_yaml_path(_MINIMAL).model_copy(
-        update={
-            "metadata": Metadata(title="Advanced risk-centric attack simulation with LGPD and PII")
-        }
+        update={"metadata": Metadata(title="Advanced risk-centric attack simulation with LGPD and PII")}
     )
     rec = recommend_methodology(doc)
     assert rec.methodology == ThreatModelMethodology.PASTA

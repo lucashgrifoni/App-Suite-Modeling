@@ -120,10 +120,10 @@ def _sensitive_controls_mentioned(text: str) -> bool:
 
 def extra_plot4ai_heuristic_entries(
     doc: ThreatModelDocument, bundle: AiSignalBundle
-) -> list[tuple[str, str, str, object, int, int]]:
+) -> list[tuple[str, str, str, StrideCategory, int, int]]:
     """Entradas condicionais; não duplicam `plot4ai.py` base mas reforçam cenários modernos."""
     text = _corpus_lower(doc)
-    out: list[tuple[str, str, str, object, int, int]] = []
+    out: list[tuple[str, str, str, StrideCategory, int, int]] = []
 
     if bundle.vector_embedding and bundle.retrieval_grounding:
         out.append(
@@ -179,12 +179,8 @@ def extra_plot4ai_heuristic_entries(
                 5,
             )
         )
-    if (
-        not bundle.explicit_governance_evidence
-        and (
-            (bundle.agent_tool and bundle.provider_inference)
-            or (bundle.prompt_input and _sensitive_data_mentioned(text))
-        )
+    if not bundle.explicit_governance_evidence and (
+        (bundle.agent_tool and bundle.provider_inference) or (bundle.prompt_input and _sensitive_data_mentioned(text))
     ):
         out.append(
             (
@@ -209,9 +205,13 @@ def extra_plot4ai_heuristic_entries(
                 5,
             )
         )
-    if bundle.retrieval_grounding and has_any(text, ("rag", "retrieval", "grounding")) and not has_any(
-        text,
-        ("citation", "attribution", "provenance", "fonte"),
+    if (
+        bundle.retrieval_grounding
+        and has_any(text, ("rag", "retrieval", "grounding"))
+        and not has_any(
+            text,
+            ("citation", "attribution", "provenance", "fonte"),
+        )
     ):
         out.append(
             (
@@ -228,6 +228,6 @@ def extra_plot4ai_heuristic_entries(
     return out
 
 
-def extra_entries_from_document(doc: ThreatModelDocument) -> list[tuple[str, str, str, object, int, int]]:
+def extra_entries_from_document(doc: ThreatModelDocument) -> list[tuple[str, str, str, StrideCategory, int, int]]:
     """Atalho: recalcula sinais e devolve heurísticas extra."""
     return extra_plot4ai_heuristic_entries(doc, collect_ai_signals_from_document(doc))

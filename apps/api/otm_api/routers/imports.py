@@ -50,10 +50,7 @@ async def _read_limited(file: UploadFile) -> tuple[bytes, str]:
 @router.post(
     "/openapi",
     summary="Draft from OpenAPI/Swagger",
-    description=(
-        "Body: `multipart/form-data` with field `file` (YAML/JSON). "
-        "Returns canonical draft and inferences."
-    ),
+    description=("Body: `multipart/form-data` with field `file` (YAML/JSON). Returns canonical draft and inferences."),
     response_model=ArtifactImportResponse,
 )
 async def import_openapi_route(file: UploadFile = File(...)) -> ArtifactImportResponse:
@@ -68,8 +65,7 @@ async def import_openapi_route(file: UploadFile = File(...)) -> ArtifactImportRe
     "/terraform",
     summary="Draft from Terraform (.tf)",
     description=(
-        "A single `.tf` file or aggregated HCL text. "
-        "For directories, prefer the CLI: `otm import terraform`."
+        "A single `.tf` file or aggregated HCL text. For directories, prefer the CLI: `otm import terraform`."
     ),
     response_model=ArtifactImportResponse,
 )

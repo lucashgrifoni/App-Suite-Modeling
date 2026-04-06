@@ -38,10 +38,7 @@ def register(app: typer.Typer) -> None:
             None,
             "--methodology",
             "-m",
-            help=(
-                "Methodology/engine (stride, linddun, nist_data_centric, "
-                "octave_allegro, cia_die, pasta, plot4ai)."
-            ),
+            help=("Methodology/engine (stride, linddun, nist_data_centric, octave_allegro, cia_die, pasta, plot4ai)."),
         ),
         auto_methodology: bool = typer.Option(
             False,
@@ -81,10 +78,7 @@ def register(app: typer.Typer) -> None:
             pack_line = f"Pack: {result.industry_pack_id} · pack threats: {s.pack_threats_generated}\n"
         fw_line = ""
         if s.framework_ref_counts_by_catalog:
-            bits = [
-                f"{framework_display_name(k)}: {v}"
-                for k, v in sorted(s.framework_ref_counts_by_catalog.items())
-            ]
+            bits = [f"{framework_display_name(k)}: {v}" for k, v in sorted(s.framework_ref_counts_by_catalog.items())]
             fw_line = "Framework refs: " + " · ".join(bits) + "\n"
         console.print(
             Panel.fit(
@@ -103,9 +97,7 @@ def register(app: typer.Typer) -> None:
             )
         )
         if result.methodology_recommendation_reason:
-            console.print(
-                f"[dim]Auto recommendation:[/dim] {result.methodology_recommendation_reason}"
-            )
+            console.print(f"[dim]Auto recommendation:[/dim] {result.methodology_recommendation_reason}")
         if result.methodology == ThreatModelMethodology.PLOT4AI and result.ai_system_context:
             ctx = result.ai_system_context
             tags = ", ".join(ctx.pattern_tags[:6]) if ctx.pattern_tags else "—"
@@ -124,7 +116,4 @@ def register(app: typer.Typer) -> None:
             for n in result.wizard_context_notes[:6]:
                 console.print(f"  [dim]note:[/dim] {n[:200]}")
             for tr in result.wizard_signal_trace[:8]:
-                console.print(
-                    f"  [dim]{tr.effect}[/dim] `{tr.source_tag[:64]}` "
-                    f"({tr.weight}) → {tr.explanation[:160]}"
-                )
+                console.print(f"  [dim]{tr.effect}[/dim] `{tr.source_tag[:64]}` ({tr.weight}) → {tr.explanation[:160]}")

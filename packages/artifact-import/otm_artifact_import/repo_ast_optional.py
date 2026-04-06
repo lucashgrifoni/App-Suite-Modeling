@@ -40,7 +40,7 @@ def collect_express_routes_ast_lite(source: str) -> list[tuple[str, str]]:
     if flag not in ("1", "true", "yes", "on"):
         return []
     try:
-        import esprima  # type: ignore[import-untyped]
+        import esprima
     except ImportError:
         return []
     try:
@@ -48,5 +48,5 @@ def collect_express_routes_ast_lite(source: str) -> list[tuple[str, str]]:
     except Exception:
         return []
     hits: list[tuple[str, str]] = []
-    _walk(tree.toDict() if hasattr(tree, "toDict") else tree, hits)  # type: ignore[arg-type]
+    _walk(tree.toDict() if hasattr(tree, "toDict") else tree, hits)
     return hits

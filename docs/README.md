@@ -137,6 +137,9 @@ Abra `http://localhost:5173`.
 | [REMEDIATION_BACKLOG.md](REMEDIATION_BACKLOG.md) | Backlog inteligente de remediação |
 | [THREAT_MODEL_DIFF.md](THREAT_MODEL_DIFF.md) | Diff semântico de modelos e análise (inclui histórico resumido das frentes de inovação) |
 | [CI_AND_SECURITY_EVIDENCE.md](CI_AND_SECURITY_EVIDENCE.md) | Mypy, SCA, CLI modular, observabilidade e perímetro da API (evidência consolidada) |
+| [SECURITY_HEADERS.md](SECURITY_HEADERS.md) | CSP e cabeçalhos HTTP do frontend (`apps/web`) |
+| [SEMGREP_POLICY.md](SEMGREP_POLICY.md) | Política Semgrep (CI, exclusões, `nosemgrep`) |
+| [PRE_COMMIT.md](PRE_COMMIT.md) | Pre-commit opcional (Ruff + mypy parcial) |
 | [GITHUB_README_AND_METADATA.md](GITHUB_README_AND_METADATA.md) | README raiz, metadados OSS e publicação GitHub |
 | [FRONTEND_UI_ROLLOUT_HISTORY.md](FRONTEND_UI_ROLLOUT_HISTORY.md) | Histórico resumido da evolução da UI web (substitui trilhos plano/validação/handoff) |
 | [RELEASE_NOTES_RC1.md](RELEASE_NOTES_RC1.md) | Nota de release incremental (RC1) |

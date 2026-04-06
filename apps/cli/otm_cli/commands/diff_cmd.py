@@ -66,7 +66,8 @@ def register(app: typer.Typer) -> None:
             write_json_file(payload=out_payload, output=json_out)
             console.print(f"[green]Diff written to[/green] {json_out.resolve()}")
         if fmt == DiffFormat.json:
-            print(json_print, end="" if json_print.endswith("\n") else "\n")
+            body = json_print or ""
+            print(body, end="" if body.endswith("\n") else "\n")
             return
         if fmt == DiffFormat.markdown:
             print(md_text or "", end="")

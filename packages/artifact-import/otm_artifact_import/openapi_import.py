@@ -39,11 +39,7 @@ def _collect_servers_v2(data: dict[str, Any]) -> list[str]:
     out: list[str] = []
     for sch in schemes:
         if isinstance(sch, str):
-            url = (
-                f"{sch}://{host}{base}"
-                if base.startswith("/")
-                else f"{sch}://{host}/{base}"
-            )
+            url = f"{sch}://{host}{base}" if base.startswith("/") else f"{sch}://{host}/{base}"
             out.append(url)
     return out
 
@@ -115,9 +111,7 @@ def import_openapi_text(text: str, *, filename: str = "openapi.yaml") -> Artifac
         has_auth, scheme_names = _security_hints_v2(data)
         title = str((data.get("info") or {}).get("title") or "API Swagger")
     else:
-        unknowns.append(
-            "Chave raiz 'openapi' ou 'swagger' não encontrada — não é um OpenAPI/Swagger reconhecido."
-        )
+        unknowns.append("Chave raiz 'openapi' ou 'swagger' não encontrada — não é um OpenAPI/Swagger reconhecido.")
         title = "API (formato desconhecido)"
         version = "?"
         servers = []
@@ -198,11 +192,7 @@ def import_openapi_text(text: str, *, filename: str = "openapi.yaml") -> Artifac
             auth_from_ops = all(any_sec) if any_sec else None
 
         root_sec = _root_security_required(data)
-        path_level_sec = [
-            _operation_security_required(item)
-            for item in paths.values()
-            if isinstance(item, dict)
-        ]
+        path_level_sec = [_operation_security_required(item) for item in paths.values() if isinstance(item, dict)]
         path_level_sec = [x for x in path_level_sec if x is not None]
         authenticated: bool | None = None
         if root_sec:

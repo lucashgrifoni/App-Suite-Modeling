@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 
-from otm_core_schema import RiskAssessment, ThreatModelDocument, ThreatModelMethodology
+from otm_core_schema import RiskAssessment, StrideCategory, ThreatModelDocument, ThreatModelMethodology
 
 from otm_threat_engine.ai_modeling.corpus import build_ai_calibration_corpus
 from otm_threat_engine.result import (
@@ -37,9 +37,7 @@ def append_methodology_insights(
     profile: str,
     blocks: list[tuple[str, str, list[str]]],
 ) -> AnalysisResult:
-    insight_blocks = [
-        MethodologyInsightBlock(key=key, title=title, items=items) for key, title, items in blocks
-    ]
+    insight_blocks = [MethodologyInsightBlock(key=key, title=title, items=items) for key, title, items in blocks]
     insights = MethodologyInsights(profile=profile, blocks=insight_blocks)
     return result.model_copy(update={"methodology_insights": insights})
 
@@ -64,7 +62,7 @@ def boost_impact(result: AnalysisResult, predicate) -> AnalysisResult:
 def append_heuristics_from_entries(
     out: list[HeuristicThreat],
     existing: set[str],
-    entries: list[tuple[str, str, str, object, int, int]],
+    entries: list[tuple[str, str, str, StrideCategory, int, int]],
     *,
     target_component_id: str | None = None,
     target_data_flow_id: str | None = None,
@@ -94,6 +92,7 @@ def append_heuristics_from_entries(
 def has_any(text: str, words: tuple[str, ...]) -> bool:
     return any(k in text for k in words)
 
+
 _TOKEN_RE_CACHE: dict[str, re.Pattern[str]] = {}
 
 
@@ -118,6 +117,7 @@ def has_token(text: str, token: str) -> bool:
 
 def has_any_token(text: str, tokens: tuple[str, ...]) -> bool:
     return any(has_token(text, t) for t in tokens)
+
 
 _AI_COMPANION_TERMS = (
     "model",

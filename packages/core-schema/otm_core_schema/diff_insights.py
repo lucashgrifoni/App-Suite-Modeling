@@ -81,15 +81,12 @@ def structural_key_insights(
                 "ver autenticação e superfície exposta à Internet."
             )
         if c.kind == ComponentKind.EXTERNAL_ENTITY:
-            insights.append(
-                f"Nova entidade externa `{cid}`; integrações e webhook devem ser reverificadas."
-            )
+            insights.append(f"Nova entidade externa `{cid}`; integrações e webhook devem ser reverificadas.")
 
     for ment in d.trust_boundaries.modified:
         name = r_bn.get(ment.id, ment.id)
         insights.append(
-            f"Fronteira `{name}` (`{ment.id}`) foi alterada (membros ou metadados); "
-            "revalidar fluxos que a atravessam."
+            f"Fronteira `{name}` (`{ment.id}`) foi alterada (membros ou metadados); revalidar fluxos que a atravessam."
         )
     for bid in d.trust_boundaries.added:
         insights.append(f"Nova trust boundary `{r_bn.get(bid, bid)}` (`{bid}`); mapear fluxos que a cruzam.")
@@ -97,9 +94,7 @@ def structural_key_insights(
         insights.append(f"Trust boundary `{b_bn.get(bid, bid)}` (`{bid}`) removida; rede de confiança mudou.")
 
     for aid in d.assets.added:
-        insights.append(
-            f"Novo ativo `{aid}`; ver classificação, retenção e fluxos que o processam."
-        )
+        insights.append(f"Novo ativo `{aid}`; ver classificação, retenção e fluxos que o processam.")
     for t in d.threats.added:
         insights.append(f"Nova ameaça canónica no documento (`{t}`); priorizar tratamento no backlog.")
     for t in d.threats.removed:
@@ -108,9 +103,7 @@ def structural_key_insights(
     for m in d.mitigations.modified:
         for ch in m.changes:
             if ch.field == "status":
-                insights.append(
-                    f"Mitigação `{m.id}` mudou de estado; rever cobertura de ameaças ligadas."
-                )
+                insights.append(f"Mitigação `{m.id}` mudou de estado; rever cobertura de ameaças ligadas.")
                 break
 
     if d.residual_risk_summary:

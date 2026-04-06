@@ -162,9 +162,5 @@ def test_skipped_threats_ignored() -> None:
         summary=AnalysisSummary(),
     )
     bl = build_remediation_backlog(result, doc)
-    ids = {
-        i.related_findings[0].id
-        for i in bl.items
-        if i.related_findings[0].kind == "heuristic_threat"
-    }
+    ids = {i.related_findings[0].id for i in bl.items if i.related_findings[0].kind == "heuristic_threat"}
     assert "skip2" not in ids

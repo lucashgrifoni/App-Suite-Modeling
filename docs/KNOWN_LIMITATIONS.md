@@ -5,7 +5,7 @@ Documento objetivo para utilizadores e mantenedores. Complementa o [congelamento
 ## Produto e plataforma
 
 - **Sem persistência server-side:** a UI usa rascunho local (`sessionStorage`). Não há contas, equipas nem histórico centralizado.
-- **Sem autenticação/autorização na API/UI:** implantação exposta à internet requer reverso com controlo de acesso à sua cargo.
+- **Autenticação na API (opcional):** pode activar-se **`OTM_API_KEY`** para proteger `/v1/*`; sem esta variável, a API permanece aberta na rede onde correr. A UI não gere contas; implantação pública requer reverso/gateway conforme `DEPLOYMENT_INVARIANTS.md`.
 - **MVP de diagramação:** canvas avançado não é o fluxo principal; exportação textual e Mermaid cobrem o núcleo.
 
 ## Heurísticas e metodologias

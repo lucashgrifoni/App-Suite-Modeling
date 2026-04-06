@@ -64,9 +64,9 @@ def append_agent_block(
 ) -> None:
     if not sig.agent_tool:
         return
-    agent_ev = evidence_lines(sig, ("agent_tool",)) or [
-        p for p in ctx.primary_risk_surfaces if "agent" in p.lower()
-    ][:2]
+    agent_ev = (
+        evidence_lines(sig, ("agent_tool",)) or [p for p in ctx.primary_risk_surfaces if "agent" in p.lower()][:2]
+    )
     if not agent_ev:
         agent_ev = ["Agent/tools descritos no diagrama ou fluxos."]
     out.append(

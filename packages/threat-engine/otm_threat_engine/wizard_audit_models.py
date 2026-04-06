@@ -18,8 +18,7 @@ class WizardSignalTraceEntry(BaseModel):
     effect: Literal["ranking_impact", "corpus_mitigation", "observation"] = Field(
         ...,
         description=(
-            "ranking_impact: reforço L×I; corpus_mitigation: keywords no anti-pattern; "
-            "observation: só rastreio."
+            "ranking_impact: reforço L×I; corpus_mitigation: keywords no anti-pattern; observation: só rastreio."
         ),
     )
     weight: Literal["low", "moderate"] = "low"

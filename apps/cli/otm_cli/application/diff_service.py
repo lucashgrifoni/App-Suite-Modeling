@@ -110,20 +110,20 @@ def run_model_diff(
         refs = meta.semantic_structural_refs
         if refs:
             lines.append("Structural→interpretation refs (anchored, non-causal):")
-            for item in refs[:12]:
-                lines.append(f"  {item.ref} · {item.entity_kind} `{item.entity_id}`")
+            for ref_item in refs[:12]:
+                lines.append(f"  {ref_item.ref} · {ref_item.entity_kind} `{ref_item.entity_id}`")
             lines.append("")
         ilinks = meta.semantic_interpretation_links
         if ilinks:
             lines.append("Ref → interpretation mapping (v1.5, with rationale):")
-            for item in ilinks[:10]:
+            for link_item in ilinks[:10]:
                 lines.append(
-                    f"  {item.structural_ref} → {item.related_section} "
-                    f"[{item.link_kind}/{item.inference_strength}]: "
-                    f"{str(item.summary)[:100]}"
+                    f"  {link_item.structural_ref} → {link_item.related_section} "
+                    f"[{link_item.link_kind}/{link_item.inference_strength}]: "
+                    f"{str(link_item.summary)[:100]}"
                 )
-                if item.anchoring_rationale:
-                    lines.append(f"    → {str(item.anchoring_rationale)[:160]}")
+                if link_item.anchoring_rationale:
+                    lines.append(f"    → {str(link_item.anchoring_rationale)[:160]}")
             lines.append("")
         si = meta.semantic_insights
         if si:
@@ -132,18 +132,18 @@ def run_model_diff(
                 lines.append(f"- {x}")
             lines.append("")
 
-    for label, sec in [
+    for label, field_section in [
         ("model_info", result.model_info),
         ("metadata", result.metadata),
         ("business_context", result.business_context),
         ("residual_risk_summary", result.residual_risk_summary),
     ]:
-        if sec:
+        if field_section:
             lines.append(f"[{label}]")
-            for ch in sec:
+            for ch in field_section:
                 lines.append(f"  - {ch.field}: changed")
             lines.append("")
-    for name, sec in [
+    for name, id_section in [
         ("assets", result.assets),
         ("components", result.components),
         ("data_flows", result.data_flows),
@@ -152,17 +152,19 @@ def run_model_diff(
         ("mitigations", result.mitigations),
         ("evidence_suggestions", result.evidence_suggestions),
     ]:
-        if sec.added or sec.removed or sec.modified:
-            lines.append(f"[{name}] +{len(sec.added)} / -{len(sec.removed)} / ~{len(sec.modified)}")
-            if sec.added:
-                lines.append(f"  added: {', '.join(sec.added)}")
-            if sec.removed:
-                lines.append(f"  removed: {', '.join(sec.removed)}")
-            for m in sec.modified[:12]:
+        if id_section.added or id_section.removed or id_section.modified:
+            lines.append(
+                f"[{name}] +{len(id_section.added)} / -{len(id_section.removed)} / ~{len(id_section.modified)}"
+            )
+            if id_section.added:
+                lines.append(f"  added: {', '.join(id_section.added)}")
+            if id_section.removed:
+                lines.append(f"  removed: {', '.join(id_section.removed)}")
+            for m in id_section.modified[:12]:
                 fields = ", ".join(c.field for c in m.changes)
                 lines.append(f"  ~ {m.id}: {fields}")
-            if len(sec.modified) > 12:
-                lines.append(f"  … +{len(sec.modified) - 12} more modified")
+            if len(id_section.modified) > 12:
+                lines.append(f"  … +{len(id_section.modified) - 12} more modified")
             lines.append("")
     text = "\n".join(lines).rstrip() + "\n"
     return out_payload, None, None, text

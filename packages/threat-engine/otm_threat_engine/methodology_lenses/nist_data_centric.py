@@ -14,9 +14,7 @@ from otm_threat_engine.result import AnalysisResult, HeuristicThreat, Structural
 def apply_nist_data_centric_lens(result: AnalysisResult) -> AnalysisResult:
     out = boost_impact(
         result,
-        lambda h: (
-            h.target_asset_id is not None or h.stride == StrideCategory.INFORMATION_DISCLOSURE
-        ),
+        lambda h: h.target_asset_id is not None or h.stride == StrideCategory.INFORMATION_DISCLOSURE,
     )
     out = _append_nist_data_centric_native_heuristics(out)
     out = _append_nist_data_centric_focus_findings(out)
@@ -34,9 +32,7 @@ def _append_nist_data_centric_prep_notes(result: AnalysisResult) -> AnalysisResu
         StructuralFinding(
             code="NIST_DC_PREP_CLASSIFICATION",
             severity="info",
-            message=(
-                "Preparação NIST DC v1: classificar dados críticos por sensibilidade e impacto."
-            ),
+            message=("Preparação NIST DC v1: classificar dados críticos por sensibilidade e impacto."),
         ),
         StructuralFinding(
             code="NIST_DC_PREP_DATA_PATHS",
@@ -46,10 +42,7 @@ def _append_nist_data_centric_prep_notes(result: AnalysisResult) -> AnalysisResu
         StructuralFinding(
             code="NIST_DC_PREP_CONTROLS",
             severity="info",
-            message=(
-                "Preparação NIST DC v1: alinhar controles por contexto de dado "
-                "(repouso/trânsito/uso)."
-            ),
+            message=("Preparação NIST DC v1: alinhar controles por contexto de dado (repouso/trânsito/uso)."),
         ),
     ]
     return result.model_copy(update={"structural_findings": findings})
@@ -101,8 +94,7 @@ def _append_nist_data_centric_native_heuristics(result: AnalysisResult) -> Analy
                 (
                     f"nist_dc_in_transit_{flow_id}",
                     f"[nist_data_centric] Proteção em trânsito no fluxo {flow_id}",
-                    "Reforçar criptografia, integridade e autenticação de canal para dados "
-                    "críticos em trânsito.",
+                    "Reforçar criptografia, integridade e autenticação de canal para dados críticos em trânsito.",
                     StrideCategory.TAMPERING,
                     4,
                     5,
@@ -113,9 +105,7 @@ def _append_nist_data_centric_native_heuristics(result: AnalysisResult) -> Analy
     for comp_id, items in by_comp.items():
         if comp_id not in sensitive_components:
             continue
-        has_datastore_signal = any(
-            "datastore" in (h.title.lower() + " " + h.description.lower()) for h in items
-        )
+        has_datastore_signal = any("datastore" in (h.title.lower() + " " + h.description.lower()) for h in items)
         has_process_signal = any(
             x in (h.title.lower() + " " + h.description.lower())
             for h in items
@@ -132,17 +122,11 @@ def _append_nist_data_centric_native_heuristics(result: AnalysisResult) -> Analy
 
 
 def _collect_sensitive_component_ids(by_comp: dict[str, list[HeuristicThreat]]) -> set[str]:
-    return {
-        comp_id
-        for comp_id, items in by_comp.items()
-        if _looks_sensitive_component_heuristics(items)
-    }
+    return {comp_id for comp_id, items in by_comp.items() if _looks_sensitive_component_heuristics(items)}
 
 
 def _collect_sensitive_flow_ids(by_flow: dict[str, list[HeuristicThreat]]) -> set[str]:
-    return {
-        flow_id for flow_id, items in by_flow.items() if _looks_sensitive_flow_heuristics(items)
-    }
+    return {flow_id for flow_id, items in by_flow.items() if _looks_sensitive_flow_heuristics(items)}
 
 
 def _looks_sensitive_component_heuristics(items: list[HeuristicThreat]) -> bool:
@@ -222,8 +206,7 @@ def _append_nist_dc_state_heuristics(
                 (
                     f"nist_dc_at_rest_{comp_id}",
                     f"[nist_data_centric] Proteção em repouso no componente {comp_id}",
-                    "Aplicar hardening de storage, criptografia em repouso, gestão de chaves "
-                    "e segregação de dados.",
+                    "Aplicar hardening de storage, criptografia em repouso, gestão de chaves e segregação de dados.",
                     StrideCategory.INFORMATION_DISCLOSURE,
                     3,
                     5,
@@ -239,8 +222,7 @@ def _append_nist_dc_state_heuristics(
                 (
                     f"nist_dc_in_use_{comp_id}",
                     f"[nist_data_centric] Proteção em uso no componente {comp_id}",
-                    "Reforçar controle de acesso contextual, minimização de dados e isolamento "
-                    "durante processamento.",
+                    "Reforçar controle de acesso contextual, minimização de dados e isolamento durante processamento.",
                     StrideCategory.ELEVATION_OF_PRIVILEGE,
                     3,
                     4,

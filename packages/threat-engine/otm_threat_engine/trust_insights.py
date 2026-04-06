@@ -32,10 +32,7 @@ def analyze_trust_boundary_crossings(doc: ThreatModelDocument) -> list[TrustBoun
             out.append(
                 TrustBoundaryFinding(
                     code="CROSS_BOUNDARY_FLOW",
-                    message=(
-                        f"Fluxo '{_flow_display_id(flow.id, flow.name)}' "
-                        f"liga fronteira '{fb}' → '{tb}'."
-                    ),
+                    message=(f"Fluxo '{_flow_display_id(flow.id, flow.name)}' liga fronteira '{fb}' → '{tb}'."),
                     data_flow_id=flow.id,
                     from_boundary_id=fb,
                     to_boundary_id=tb,

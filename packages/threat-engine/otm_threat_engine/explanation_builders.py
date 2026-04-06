@@ -65,10 +65,7 @@ def _threat_explanation(
     if asset_line:
         ev.append(asset_line)
     if h.framework_refs:
-        ev.append(
-            "Normas: "
-            + ", ".join(f"{fr.framework}:{fr.control_id}" for fr in h.framework_refs[:4])
-        )
+        ev.append("Normas: " + ", ".join(f"{fr.framework}:{fr.control_id}" for fr in h.framework_refs[:4]))
     msg = (
         f"Heurística identificou {h.stride.value}"
         f"{' em ' + target if target else ''} com base no desenho e no motor STRIDE."
@@ -151,9 +148,7 @@ def _trust_boundary_exp(tf: TrustBoundaryFinding, seq: int) -> ExplanationRecord
         type=ExplanationType.TRUST_BOUNDARY,
         category=ExplanationCategory.TRUST_BOUNDARY,
         subject=f"Fronteira {tf.code}",
-        message=(
-            "Tráfego entre perímetros exige controlos explícitos; usar este achado para rever segmentação."
-        ),
+        message=("Tráfego entre perímetros exige controlos explícitos; usar este achado para rever segmentação."),
         evidence=ev,
         confidence="high",
         related_entities=[
@@ -183,9 +178,7 @@ def merge_analysis_explanations(
                 message=recommendation_reason,
                 evidence=["Análise com recomendação automática de metodologia."],
                 confidence="medium",
-                related_entities=[
-                    RelatedEntityRef(entity_kind="document", entity_id=doc.metadata.title[:120])
-                ],
+                related_entities=[RelatedEntityRef(entity_kind="document", entity_id=doc.metadata.title[:120])],
             )
         )
 

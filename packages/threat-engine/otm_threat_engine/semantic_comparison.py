@@ -84,8 +84,7 @@ def _interpretation_links(
                     st = sorted(inter)
                     strength: str = "medium" if len(st) >= 2 else "low"
                     rationale = (
-                        "Vários tokens em comum entre a nota da ref estrutural e o bullet "
-                        f"({', '.join(st)})."
+                        f"Vários tokens em comum entre a nota da ref estrutural e o bullet ({', '.join(st)})."
                         if strength == "medium"
                         else (
                             "Um token lexical em comum entre a nota da ref e o bullet "
@@ -246,8 +245,7 @@ def semantic_diff_from_analyses_only(
     if bq is not None and rq is not None and bq.score_0_100 != rq.score_0_100:
         delta = rq.score_0_100 - bq.score_0_100
         insights.append(
-            f"Pré-check de qualidade: score {bq.score_0_100} → {rq.score_0_100} "
-            f"(banda {bq.band} → {rq.band})."
+            f"Pré-check de qualidade: score {bq.score_0_100} → {rq.score_0_100} (banda {bq.band} → {rq.band})."
         )
         if delta > 0:
             improved.append(f"Model quality +{delta} pts — modelo mais completo ou explícito.")
@@ -258,8 +256,7 @@ def semantic_diff_from_analyses_only(
     rc = revised_analysis.methodology_completeness
     if bc is not None and rc is not None and bc.state.value != rc.state.value:
         insights.append(
-            f"Completude metodológica: {bc.state.value} → {rc.state.value}; "
-            "rever interpretação dos achados."
+            f"Completude metodológica: {bc.state.value} → {rc.state.value}; rever interpretação dos achados."
         )
         if rc.state.value == "degraded":
             worsened.append("Metodologia degrada — achados podem estar mais fracos ou genéricos.")
@@ -269,9 +266,7 @@ def semantic_diff_from_analyses_only(
     bs = baseline_analysis.summary.heuristic_threats_skipped_duplicate
     rs = revised_analysis.summary.heuristic_threats_skipped_duplicate
     if bs != rs:
-        insights.append(
-            f"Ruído heurístico (duplicados suprimidos): {bs} → {rs} — comparar relevância dos top risks."
-        )
+        insights.append(f"Ruído heurístico (duplicados suprimidos): {bs} → {rs} — comparar relevância dos top risks.")
 
     ap_b = {h.id for h in baseline_analysis.anti_pattern_hits}
     ap_r = {h.id for h in revised_analysis.anti_pattern_hits}
@@ -279,8 +274,7 @@ def semantic_diff_from_analyses_only(
     removed_ap = ap_b - ap_r
     if added_ap:
         worsened.append(
-            f"Novos anti-padrões de modelagem: {', '.join(sorted(added_ap)[:5])}"
-            + ("…" if len(added_ap) > 5 else "")
+            f"Novos anti-padrões de modelagem: {', '.join(sorted(added_ap)[:5])}" + ("…" if len(added_ap) > 5 else "")
         )
     if removed_ap:
         improved.append(
@@ -296,9 +290,7 @@ def semantic_diff_from_analyses_only(
     t_b = _top_ids(baseline_analysis)
     t_r = _top_ids(revised_analysis)
     if t_b != t_r:
-        insights.append(
-            "Top 5 heurísticas por score mudou — revisar priorização e dependências de negócio."
-        )
+        insights.append("Top 5 heurísticas por score mudou — revisar priorização e dependências de negócio.")
         risk_impact.append("Alteração no ranking de risco heurístico; rever quick wins.")
 
     return insights, improved, worsened, risk_impact
@@ -337,9 +329,7 @@ def enrich_comparison_meta(
                 "para spoofing e exposição de dados."
             )
         if c.kind == ComponentKind.DATASTORE:
-            insights.append(
-                f"Novo datastore `{cid}`: rever backup, segregação e classificação de dados em repouso."
-            )
+            insights.append(f"Novo datastore `{cid}`: rever backup, segregação e classificação de dados em repouso.")
             worsened.append("Persistência adicional — aumenta superfície de dados sensíveis.")
     comp_rem = aggregate.components["removed"]
     for cid in comp_rem:
@@ -349,15 +339,11 @@ def enrich_comparison_meta(
 
     tb_add = aggregate.trust_boundaries["added"]
     for bid in tb_add:
-        insights.append(
-            f"Nova trust boundary `{bid}`: mapear fluxos que a cruzam e controlos de segmentação."
-        )
+        insights.append(f"Nova trust boundary `{bid}`: mapear fluxos que a cruzam e controlos de segmentação.")
         risk_impact.append("Segmentação de rede/perímetro mais explícita; revisar crossing flows.")
     tb_rem = aggregate.trust_boundaries["removed"]
     for bid in tb_rem:
-        insights.append(
-            f"Trust boundary `{bid}` removida: rede de confiança e superfície de ataque podem ter mudado."
-        )
+        insights.append(f"Trust boundary `{bid}` removida: rede de confiança e superfície de ataque podem ter mudado.")
         worsened.append(f"Remoção de boundary `{bid}` — possível perda de visibilidade de perímetro.")
 
     for aid in aggregate.assets["added"]:
@@ -373,18 +359,14 @@ def enrich_comparison_meta(
         )
 
     if baseline_analysis is not None and revised_analysis is not None:
-        ai, imp_a, wor_a, risk_a = semantic_diff_from_analyses_only(
-            baseline_analysis, revised_analysis
-        )
+        ai, imp_a, wor_a, risk_a = semantic_diff_from_analyses_only(baseline_analysis, revised_analysis)
         insights.extend(ai)
         improved.extend(imp_a)
         worsened.extend(wor_a)
         risk_impact.extend(risk_a)
 
     structural_refs = _structural_interpretation_refs(aggregate)
-    interp_links = _interpretation_links(
-        structural_refs, insights, improved, worsened, risk_impact
-    )
+    interp_links = _interpretation_links(structural_refs, insights, improved, worsened, risk_impact)
 
     out: dict[str, Any] = {
         "semantic_insights": insights,

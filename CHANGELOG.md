@@ -9,6 +9,20 @@ e versionamento semântico quando aplicável.
 
 ### Added
 
+### Changed
+
+### Fixed
+
+### Removed
+
+<!-- Compare links: atualizar com URL do repositório remoto após primeiro push de tag. -->
+
+## [7.2.0] — 2026-04-02
+
+Release **v7.2** — perímetro opcional da API (rate limit, API key), hardening do front-end e da pipeline CI, stack web React 19 / Vite 8, grupos Dependabot para Vite, alinhamento **gitpage** com Vite 8, correções de qualidade (mypy, Ruff, artefactos) e documentação de segurança.
+
+### Added
+
 - `.gitleaksignore` — exclusão de `.venv/`, `node_modules/` e artefactos de build para `gitleaks detect --no-git` sem falsos positivos locais.
 - Vitest: `apps/web/src/utils/diagramSanitize.test.ts` (etiquetas do diagrama: remoção de HTML, whitespace, truncagem).
 - API: **`slowapi`** (rate limit: `OTM_RATE_LIMIT`, `OTM_RATE_LIMIT_DISABLED`; defeito **120/minute** em staging/produção) e middleware **`OptionalApiKeyMiddleware`** quando **`OTM_API_KEY`** está definida (`X-OTM-API-Key` / `Authorization: Bearer` em `/v1/*`). Ficheiros `otm_api.perimeter_settings`, `otm_api.middleware_api_key`.
@@ -16,6 +30,7 @@ e versionamento semântico quando aplicável.
 - Testes `tests/test_api.py` para API key; E2E híbrido com **`OTM_RATE_LIMIT_DISABLED=1`** no uvicorn (`playwright.hybrid.config.ts`).
 - Frontend: **`public/_headers`** (CSP + cabeçalhos para hosts estáticos), **`public/theme-init.js`** (tema sem script inline), endurecimento em **`vite.config.ts`** (`server` / `preview` headers).
 - **`.semgrepignore`**; política **`docs/SEMGREP_POLICY.md`**; guia **`docs/SECURITY_HEADERS.md`**; **`docs/PRE_COMMIT.md`**; **`.pre-commit-config.yaml`** (Ruff + mypy parcial).
+- Workflow **`deploy-gitpage.yml`** (build e deploy do site em `gitpage/` para GitHub Pages).
 
 ### Changed
 
@@ -39,8 +54,6 @@ e versionamento semântico quando aplicável.
 - CI Dependabot: PRs que atualizavam só **Vite 8** ou só **`@vitejs/plugin-react` 6** quebravam `npm ci` (**ERESOLVE** entre peers). **Vite 8** e **plugin-react 6** passam a subir em conjunto no `apps/web`; grupo Dependabot `vite-ecosystem`. **`gitpage/`:** Vite 8 + plugin-react 6 alinhados para o mesmo motivo.
 
 ### Removed
-
-<!-- Compare links: atualizar com URL do repositório remoto após primeiro push de tag. -->
 
 ## [7.1.0] — 2026-04-08
 

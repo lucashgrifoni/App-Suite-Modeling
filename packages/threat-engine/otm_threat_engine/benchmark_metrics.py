@@ -80,18 +80,12 @@ def compute_benchmark_metrics(
         coverage = hits / max(1, len(expected_stride_prefixes))
 
     top10 = sorted(active, key=lambda h: -(h.risk.score or 0))[:10]
-    actionability = (
-        sum(1 for h in top10 if not _generic_title(h)) / max(1, len(top10))
-        if top10
-        else 0.0
-    )
+    actionability = sum(1 for h in top10 if not _generic_title(h)) / max(1, len(top10)) if top10 else 0.0
     top_10_actionability_score = round(100.0 * actionability, 2)
 
     mc_info = analysis.methodology_completeness
     methodology_delta = (
-        {"complete": 1.0, "partial": 0.5, "degraded": 0.2}.get(mc_info.state.value, 0.5)
-        if mc_info
-        else 0.5
+        {"complete": 1.0, "partial": 0.5, "degraded": 0.2}.get(mc_info.state.value, 0.5) if mc_info else 0.5
     )
 
     ap_n = len(analysis.anti_pattern_hits)

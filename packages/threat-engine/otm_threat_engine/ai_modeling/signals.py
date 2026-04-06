@@ -162,9 +162,7 @@ def _apply_structural_enrichment(doc: ThreatModelDocument, b: AiSignalBundle) ->
     llm_ext_ids = {
         c.id
         for c in ext
-        if _external_model_blob_match(
-            f"{c.id} {c.name} {(c.description or '')} {(c.technology or '')}".lower()
-        )
+        if _external_model_blob_match(f"{c.id} {c.name} {(c.description or '')} {(c.technology or '')}".lower())
     }
     if llm_ext_ids:
         b.provider_inference = True

@@ -38,8 +38,7 @@ def build_exports(
     Formatos que exigem análise obtêm-na via `analysis` ou executam `run_analysis`.
     """
     need_analysis = any(
-        f in (ExportFormat.analysis_json, ExportFormat.analysis_markdown, ExportFormat.bundle_json)
-        for f in formats
+        f in (ExportFormat.analysis_json, ExportFormat.analysis_markdown, ExportFormat.bundle_json) for f in formats
     )
     resolved = analysis
     if need_analysis and resolved is None:

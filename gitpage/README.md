@@ -60,16 +60,32 @@ Rebuild after changing environment variables.
 
 ### Option A — GitHub Actions (recommended)
 
-1. Build output must be published from `gitpage/dist` (or copy `dist` to the branch GitHub Pages serves).
-2. In your repository settings → **Pages** → set **Source** to **GitHub Actions** (or the branch/folder you use).
-3. Add a workflow **in the main repository** (not required to live inside `gitpage/`) that:
+The repository includes **`.github/workflows/deploy-gitpage.yml`**, which:
 
-   - Checks out the repo
-   - Runs `cd gitpage && npm ci && npm run build`
-   - Uploads `gitpage/dist` with `actions/upload-pages-artifact`
-   - Deploys with `actions/deploy-pages`
+- runs on **every push** to `main` or `master`, and on **Run workflow** (manual) in the Actions tab;
+- runs `npm ci` and `npm run build` inside `gitpage/`;
+- publishes `gitpage/dist` to GitHub Pages.
 
-Use the official [“Static HTML” / Node workflow templates](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site) as a base and adjust paths to `gitpage`.
+**One-time setup in GitHub**
+
+1. **Settings → Pages → Build and deployment**: **Source** = **GitHub Actions** (as in your screenshot).
+2. Commit and push the workflow file (repo root `.github/workflows/`, not inside `gitpage/` — GitHub only loads workflows from there).
+3. Open **Actions** → **Deploy GitHub Pages (gitpage)** → confirm the latest run is **green** (both **build** and **deploy** jobs). The site URL appears on the run summary and under Pages (for a project repo, e.g. `https://lucashgrifoni.github.io/App_Suite_Modeling/` — use the exact name of your repository in the path).
+
+If GitHub asks to approve the **`github-pages` environment** on first deploy, approve it once in **Settings → Environments**.
+
+### If you see “404 — There isn’t a GitHub Pages site here”
+
+That message means **no successful deploy** has completed yet, not that the Vite `base` is wrong. Check:
+
+1. **Actions** → **Deploy GitHub Pages (gitpage)** → open the latest run. Fix any red step (often `npm ci` / `npm run build` in `gitpage/`).
+2. The workflow file must be on the **default branch** (`main` or `master`).
+3. Run **Deploy GitHub Pages (gitpage)** manually: **Actions** → workflow name → **Run workflow**.
+4. After a green **deploy** job, wait 1–2 minutes and hard-refresh the site (Ctrl+F5).
+
+**Do not merge** Dependabot **major** Vite upgrades for `gitpage` until the stack is migrated (Vite 8 needs a newer `@vitejs/plugin-react`). The repo Dependabot config ignores major Vite bumps under `/gitpage` for that reason.
+
+More templates: [GitHub Pages + Actions](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site).
 
 ### Option B — `gh-pages` branch
 

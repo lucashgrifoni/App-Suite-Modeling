@@ -37,9 +37,7 @@ router = APIRouter(prefix="/models", tags=["Models"])
     "",
     status_code=status.HTTP_201_CREATED,
     summary="Create blank model",
-    description=(
-        "Returns a minimal valid `ThreatModelDocument` (same as `otm init` without a template)."
-    ),
+    description=("Returns a minimal valid `ThreatModelDocument` (same as `otm init` without a template)."),
 )
 def create_model() -> CreateModelResponse:
     doc = create_blank_document()

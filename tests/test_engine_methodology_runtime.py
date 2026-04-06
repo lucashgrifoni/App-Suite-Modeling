@@ -9,9 +9,7 @@ _MINIMAL = _ROOT / "examples" / "minimal.otm.yaml"
 
 
 def test_resolve_methodology_prefers_explicit_parameter() -> None:
-    doc = load_document_from_yaml_path(_MINIMAL).model_copy(
-        update={"metadata": Metadata(title="LLM RAG com agentes")}
-    )
+    doc = load_document_from_yaml_path(_MINIMAL).model_copy(update={"metadata": Metadata(title="LLM RAG com agentes")})
     chosen, reason, exps = resolve_methodology_selection(
         doc,
         methodology=ThreatModelMethodology.CIA_DIE,
@@ -23,9 +21,7 @@ def test_resolve_methodology_prefers_explicit_parameter() -> None:
 
 
 def test_resolve_methodology_uses_auto_recommend_when_no_explicit() -> None:
-    doc = load_document_from_yaml_path(_MINIMAL).model_copy(
-        update={"metadata": Metadata(title="LLM RAG com agentes")}
-    )
+    doc = load_document_from_yaml_path(_MINIMAL).model_copy(update={"metadata": Metadata(title="LLM RAG com agentes")})
     chosen, reason, exps = resolve_methodology_selection(
         doc,
         methodology=None,
@@ -51,11 +47,7 @@ def test_resolve_methodology_accepts_string_enum_value() -> None:
 def test_resolve_methodology_falls_back_to_document_when_no_explicit() -> None:
     base = load_document_from_yaml_path(_MINIMAL)
     doc = base.model_copy(
-        update={
-            "model_info": base.model_info.model_copy(
-                update={"methodology": ThreatModelMethodology.PASTA}
-            )
-        }
+        update={"model_info": base.model_info.model_copy(update={"methodology": ThreatModelMethodology.PASTA})}
     )
     chosen, reason, exps = resolve_methodology_selection(
         doc,

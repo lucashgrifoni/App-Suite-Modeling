@@ -46,10 +46,7 @@ def test_append_flow_heuristics_dedupes_tampering_when_cross_and_unencrypted() -
     Deve haver só uma heurística TAMPERING por fluxo (vista ativa).
     """
     doc = load_document_from_yaml_path(_MINIMAL)
-    flows = [
-        f.model_copy(update={"encrypted": False}) if f.id == "http_in" else f
-        for f in doc.data_flows
-    ]
+    flows = [f.model_copy(update={"encrypted": False}) if f.id == "http_in" else f for f in doc.data_flows]
     doc2 = doc.model_copy(update={"data_flows": flows})
     out: list = []
     append_flow_heuristics(
@@ -91,12 +88,6 @@ def test_append_component_heuristics_marks_duplicate_when_document_covers_key() 
         assets_by_id={a.id: a for a in doc2.assets},
         pack=None,
     )
-    dup = [
-        h
-        for h in out
-        if h.target_component_id == comp0.id
-        and h.stride == stride0
-        and h.skipped_as_duplicate
-    ]
+    dup = [h for h in out if h.target_component_id == comp0.id and h.stride == stride0 and h.skipped_as_duplicate]
     assert dup
     assert skipped >= 1

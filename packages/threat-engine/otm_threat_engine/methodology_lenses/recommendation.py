@@ -13,9 +13,7 @@ def build_recommendation_context_text(doc: ThreatModelDocument) -> str:
     return build_ai_calibration_corpus(doc)
 
 
-def _plot4ai_recommendation_detail(
-    doc: ThreatModelDocument, text: str
-) -> tuple[str, list[str]] | None:
+def _plot4ai_recommendation_detail(doc: ThreatModelDocument, text: str) -> tuple[str, list[str]] | None:
     """Razão curta e evidências concretas; retorna None se não houver sinal suficiente de IA."""
     tags_l = [t.lower() for t in (doc.metadata.tags or [])]
     bits: list[str] = []

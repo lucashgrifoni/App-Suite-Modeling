@@ -18,8 +18,7 @@ def _classified_assets_count(doc: ThreatModelDocument) -> int:
     return sum(
         1
         for a in doc.assets
-        if a.data_classification is not None
-        or (a.sensitivity and len((a.sensitivity or "").strip()) > 2)
+        if a.data_classification is not None or (a.sensitivity and len((a.sensitivity or "").strip()) > 2)
     )
 
 

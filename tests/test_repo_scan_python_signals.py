@@ -9,7 +9,7 @@ from otm_artifact_import import scan_node_express_repo
 
 def test_scan_python_routes_upload_and_external_http(tmp_path: Path) -> None:
     (tmp_path / "api.py").write_text(
-        '''
+        """
 from fastapi import FastAPI, UploadFile, Depends
 import httpx
 
@@ -23,7 +23,7 @@ async def create(file: UploadFile):
 @app.get("/admin/stats")
 def admin():
     return {}
-''',
+""",
         encoding="utf-8",
     )
     out = scan_node_express_repo(tmp_path)

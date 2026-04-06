@@ -143,11 +143,7 @@ def _file_risk_signal(signals: list[WizardSignal]) -> bool:
 
 def _api_negative_count(signals: list[WizardSignal]) -> int:
     keys = {"auth", "rate_limit", "edge_controls"}
-    return sum(
-        1
-        for s in signals
-        if s.profile == "api_backend_rest" and s.key in keys and s.value == "no"
-    )
+    return sum(1 for s in signals if s.profile == "api_backend_rest" and s.key in keys and s.value == "no")
 
 
 def _api_risk_signal(signals: list[WizardSignal]) -> bool:
@@ -156,11 +152,7 @@ def _api_risk_signal(signals: list[WizardSignal]) -> bool:
 
 def _ecom_negative_count(signals: list[WizardSignal]) -> int:
     keys = {"checkout", "psp_boundary", "sensitive_data"}
-    return sum(
-        1
-        for s in signals
-        if s.profile == "industry_ecommerce" and s.key in keys and s.value == "no"
-    )
+    return sum(1 for s in signals if s.profile == "industry_ecommerce" and s.key in keys and s.value == "no")
 
 
 def _ecom_risk_signal(signals: list[WizardSignal]) -> bool:
@@ -250,9 +242,7 @@ def _build_ranking_trace_entries(
                 weight="moderate",
                 impact_areas=["heuristic_ranking"],
                 mechanism="contextual",
-                explanation=(
-                    "≥2 lacunas em checkout/PSP/dados sensíveis: +1 impacto em heurísticas de pagamento."
-                ),
+                explanation=("≥2 lacunas em checkout/PSP/dados sensíveis: +1 impacto em heurísticas de pagamento."),
             )
         )
 
@@ -280,8 +270,7 @@ def _build_ranking_trace_entries(
                 impact_areas=["audit_only"],
                 mechanism="auxiliary",
                 explanation=(
-                    "Uma única fraqueza API declarada não aplica boost — "
-                    "requer confirmação cruzada (≥2 eixos)."
+                    "Uma única fraqueza API declarada não aplica boost — requer confirmação cruzada (≥2 eixos)."
                 ),
             )
         )
@@ -343,9 +332,7 @@ def apply_wizard_context_to_heuristics(
     api_r = _api_risk_signal(sigs)
     ecom = _ecom_risk_signal(sigs)
 
-    trace = _build_ranking_trace_entries(
-        admin=admin, file_r=file_r, api_r=api_r, ecom=ecom, signals=sigs
-    )
+    trace = _build_ranking_trace_entries(admin=admin, file_r=file_r, api_r=api_r, ecom=ecom, signals=sigs)
 
     if admin:
         notes.append(
@@ -357,13 +344,9 @@ def apply_wizard_context_to_heuristics(
             "Assistente: quarentena+scan ausentes ou exposição pública — reforço em achados de ficheiro/upload."
         )
     if api_r:
-        notes.append(
-            "Assistente: ≥2 fraquezas API/perímetro declaradas — reforço em achados de perímetro/API."
-        )
+        notes.append("Assistente: ≥2 fraquezas API/perímetro declaradas — reforço em achados de perímetro/API.")
     if ecom:
-        notes.append(
-            "Assistente: ≥2 lacunas e-commerce declaradas — reforço em achados de pagamento."
-        )
+        notes.append("Assistente: ≥2 lacunas e-commerce declaradas — reforço em achados de pagamento.")
 
     changed = 0
     for h in heuristics:

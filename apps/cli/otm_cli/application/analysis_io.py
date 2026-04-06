@@ -57,5 +57,3 @@ def load_two_analysis_results(baseline: Path, revised: Path) -> tuple[AnalysisRe
             next_step="regenerate with `otm analyze --json-out`.",
             validation_detail=format_validation_error(e),
         ) from e
-
-

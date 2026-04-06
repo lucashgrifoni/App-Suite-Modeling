@@ -40,11 +40,7 @@ def _cross_boundary_flow_ids(doc: ThreatModelDocument) -> set[str]:
         b = by_comp.get(flow.to_component)
         if not a or not b:
             continue
-        if (
-            a.in_trust_boundary
-            and b.in_trust_boundary
-            and a.in_trust_boundary != b.in_trust_boundary
-        ):
+        if a.in_trust_boundary and b.in_trust_boundary and a.in_trust_boundary != b.in_trust_boundary:
             ids.add(flow.id)
     return ids
 
@@ -75,10 +71,7 @@ class AntiPatternDefinition(BaseModel):
     )
     require_any_component_kinds: list[str] = Field(
         default_factory=list,
-        description=(
-            "Só avalia se existir componente com kind nesta lista "
-            "(valores enum em minúsculas)."
-        ),
+        description=("Só avalia se existir componente com kind nesta lista (valores enum em minúsculas)."),
     )
     require_min_cross_boundary_flows: int = Field(
         default=0,
@@ -271,10 +264,7 @@ def detect_anti_patterns(doc: ThreatModelDocument) -> list[AntiPatternHit]:
                 sources.append("corpus:missing_any_of(secondary)")
             msg = (dfn.structural_primary_message or "").strip()
             if not msg:
-                msg = (
-                    f"Perfil `{profile}`: sinais estruturais do modelo indicam lacuna de controlos "
-                    f"({dfn.name})."
-                )
+                msg = f"Perfil `{profile}`: sinais estruturais do modelo indicam lacuna de controlos ({dfn.name})."
             hits.append(
                 AntiPatternHit(
                     id=dfn.id,

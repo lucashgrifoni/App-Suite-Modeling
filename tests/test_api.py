@@ -319,9 +319,7 @@ def test_recommend_methodology_endpoint(client: TestClient) -> None:
 
 
 def test_analyze_with_auto_methodology(client: TestClient) -> None:
-    doc = load_document_from_yaml_path(_MINIMAL).model_copy(
-        update={"metadata": Metadata(title="Sistema LGPD com PII")}
-    )
+    doc = load_document_from_yaml_path(_MINIMAL).model_copy(update={"metadata": Metadata(title="Sistema LGPD com PII")})
     r = client.post(
         "/v1/models/analyze",
         json={
@@ -565,3 +563,31 @@ def test_analyze_plot4ai_contains_specialized_insights(client: TestClient) -> No
     assert out["methodology_insights"]["profile"]
     assert out.get("ai_system_context") is not None
     assert out["ai_system_context"]["pattern_tags"]
+
+
+def test_v1_rejects_without_api_key_when_otm_api_key_set(monkeypatch: pytest.MonkeyPatch, client: TestClient) -> None:
+    monkeypatch.setenv("OTM_API_KEY", "integration-test-secret")
+    r = client.get("/v1/templates")
+    assert r.status_code == 401
+    assert r.json().get("code") == "API_KEY_REQUIRED"
+
+
+def test_v1_accepts_x_otm_api_key(monkeypatch: pytest.MonkeyPatch, client: TestClient) -> None:
+    monkeypatch.setenv("OTM_API_KEY", "integration-test-secret")
+    r = client.get("/v1/templates", headers={"X-OTM-API-Key": "integration-test-secret"})
+    assert r.status_code == 200
+
+
+def test_v1_accepts_bearer_token(monkeypatch: pytest.MonkeyPatch, client: TestClient) -> None:
+    monkeypatch.setenv("OTM_API_KEY", "integration-test-secret")
+    r = client.get(
+        "/v1/templates",
+        headers={"Authorization": "Bearer integration-test-secret"},
+    )
+    assert r.status_code == 200
+
+
+def test_health_unauthenticated_even_when_api_key_set(monkeypatch: pytest.MonkeyPatch, client: TestClient) -> None:
+    monkeypatch.setenv("OTM_API_KEY", "integration-test-secret")
+    r = client.get("/health")
+    assert r.status_code == 200

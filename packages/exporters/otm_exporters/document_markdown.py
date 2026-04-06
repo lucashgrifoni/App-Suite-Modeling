@@ -64,11 +64,7 @@ def _append_components(lines: list[str], doc: ThreatModelDocument, msgs: Documen
     _append_section(lines, msgs.section_components)
     items: list[str] = []
     for c in doc.components:
-        tb = (
-            msgs.component_trust_boundary.format(boundary=c.in_trust_boundary)
-            if c.in_trust_boundary
-            else ""
-        )
+        tb = msgs.component_trust_boundary.format(boundary=c.in_trust_boundary) if c.in_trust_boundary else ""
         tech = f" — {c.technology}" if c.technology else ""
         items.append(f"- **{c.name}** (`{c.id}`) — {c.kind.value}{tech}{tb}")
     _append_bulleted(lines, items)

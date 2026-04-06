@@ -17,8 +17,7 @@ def html_to_pdf_bytes(html: str) -> bytes:
         from xhtml2pdf import pisa
     except ImportError as e:
         raise ImportError(
-            "PDF requer o pacote opcional: pip install 'open-threat-model[report]' "
-            "ou pip install xhtml2pdf"
+            "PDF requer o pacote opcional: pip install 'open-threat-model[report]' ou pip install xhtml2pdf"
         ) from e
 
     out = BytesIO()

@@ -38,9 +38,7 @@ def apply_plot4ai_lens(doc: ThreatModelDocument, result: AnalysisResult) -> Anal
     return append_engine_lens_note(
         out,
         methodology=ThreatModelMethodology.PLOT4AI,
-        note=(
-            "Lente PLOT4ai aplicada: threat modeling incremental para LLM, RAG, agentes, vector DB e integrações."
-        ),
+        note=("Lente PLOT4ai aplicada: threat modeling incremental para LLM, RAG, agentes, vector DB e integrações."),
     )
 
 
@@ -62,8 +60,7 @@ def _append_plot4ai_native_heuristics(
                 (
                     "plot4ai_prompt_input_handling",
                     "[plot4ai] Validação insuficiente de prompt/input",
-                    "Entrada sem normalização/guardrails pode induzir bypass de políticas "
-                    "e ações inseguras.",
+                    "Entrada sem normalização/guardrails pode induzir bypass de políticas e ações inseguras.",
                     StrideCategory.TAMPERING,
                     4,
                     4,
@@ -94,8 +91,7 @@ def _append_plot4ai_native_heuristics(
                 (
                     "plot4ai_agent_tool_execution",
                     "[plot4ai] Execução de ferramentas por agente sem isolamento",
-                    "Agentes com tool-use sem sandbox podem executar ações destrutivas "
-                    "fora do escopo esperado.",
+                    "Agentes com tool-use sem sandbox podem executar ações destrutivas fora do escopo esperado.",
                     StrideCategory.ELEVATION_OF_PRIVILEGE,
                     4,
                     5,
@@ -110,8 +106,7 @@ def _append_plot4ai_native_heuristics(
                 (
                     "plot4ai_governance_pipeline",
                     "[plot4ai] Falhas de governança em pipeline de modelo",
-                    "Ausência de versionamento, aprovação e rastreabilidade no pipeline "
-                    "aumenta risco sistémico.",
+                    "Ausência de versionamento, aprovação e rastreabilidade no pipeline aumenta risco sistémico.",
                     StrideCategory.REPUDIATION,
                     3,
                     4,
@@ -122,7 +117,7 @@ def _append_plot4ai_native_heuristics(
     return result.model_copy(update={"heuristic_threats": out})
 
 
-def _plot4ai_base_entries() -> list[tuple[str, str, str, object, int, int]]:
+def _plot4ai_base_entries() -> list[tuple[str, str, str, StrideCategory, int, int]]:
     return [
         (
             "plot4ai_prompt_injection",
@@ -143,8 +138,7 @@ def _plot4ai_base_entries() -> list[tuple[str, str, str, object, int, int]]:
         (
             "plot4ai_model_abuse",
             "[plot4ai] Abuso de inferência e extração de modelo",
-            "Uso abusivo pode exfiltrar comportamento interno, elevar custo e reduzir "
-            "disponibilidade.",
+            "Uso abusivo pode exfiltrar comportamento interno, elevar custo e reduzir disponibilidade.",
             StrideCategory.DENIAL_OF_SERVICE,
             3,
             4,
@@ -158,9 +152,7 @@ def _append_plot4ai_recommendations(result: AnalysisResult) -> AnalysisResult:
         StructuralFinding(
             code="PLOT4AI_REC_PROMPT_RETRIEVAL",
             severity="info",
-            message=(
-                "PLOT4ai: proteger dados em prompts/retrieval com minimização e filtros contextuais."
-            ),
+            message=("PLOT4ai: proteger dados em prompts/retrieval com minimização e filtros contextuais."),
         ),
         StructuralFinding(
             code="PLOT4AI_REC_AGENT_ISOLATION",
@@ -175,9 +167,7 @@ def _append_plot4ai_recommendations(result: AnalysisResult) -> AnalysisResult:
         StructuralFinding(
             code="PLOT4AI_REC_VECTOR_GOVERNANCE",
             severity="info",
-            message=(
-                "PLOT4ai: governança de índices/embeddings — ingestão, segregação e ciclo de vida dos vectores."
-            ),
+            message=("PLOT4ai: governança de índices/embeddings — ingestão, segregação e ciclo de vida dos vectores."),
         ),
         StructuralFinding(
             code="PLOT4AI_REC_GOVERNANCE_OBSERVABILITY",
@@ -294,9 +284,7 @@ def _append_plot4ai_insights(
                         "Sem evidência textual de controlos formais (possível gap operacional)",
                     ]
                     if signals.ml_pipeline_referenced or signals.model_interaction
-                    else [
-                        "Sem sinal de pipeline de IA no texto — planear mínimo de logging seguro para evolução."
-                    ]
+                    else ["Sem sinal de pipeline de IA no texto — planear mínimo de logging seguro para evolução."]
                 )
             ),
         ),

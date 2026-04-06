@@ -47,9 +47,7 @@ def load_template_yaml(template_id: str) -> str:
     """Conteúdo textual do template (OTM YAML)."""
     path = _data_dir() / "templates" / f"{template_id}.otm.yaml"
     if not path.is_file():
-        raise FileNotFoundError(
-            f"Template desconhecido: {template_id!r} (use: {list_template_ids()})"
-        )
+        raise FileNotFoundError(f"Template desconhecido: {template_id!r} (use: {list_template_ids()})")
     return path.read_text(encoding="utf-8")
 
 

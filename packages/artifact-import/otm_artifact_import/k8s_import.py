@@ -203,9 +203,7 @@ def import_kubernetes_text(text: str, *, filename: str = "manifests.yaml") -> Ar
         for svc_name in dict.fromkeys(backend_svcs):
             sid = services.get(svc_name)
             if not sid:
-                unknowns.append(
-                    f"Ingress referencia Service `{svc_name}` não encontrado neste conjunto de manifests."
-                )
+                unknowns.append(f"Ingress referencia Service `{svc_name}` não encontrado neste conjunto de manifests.")
                 continue
             flows.append(
                 DataFlow(

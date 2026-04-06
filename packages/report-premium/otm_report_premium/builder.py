@@ -9,6 +9,7 @@ from __future__ import annotations
 import importlib.metadata
 from collections import Counter, defaultdict
 from datetime import date
+from typing import Literal
 
 from otm_core_schema import ComponentKind
 from otm_core_schema.document import ThreatModelDocument
@@ -69,7 +70,12 @@ def _severity_band(t: HeuristicThreat) -> str:
     return "low"
 
 
-def _overall_status(max_score: float | None, b: PremiumBuilderCopy) -> tuple[str, str]:
+def _overall_status(
+    max_score: float | None, b: PremiumBuilderCopy
+) -> tuple[
+    Literal["requires_immediate_attention", "action_recommended", "acceptable_with_follow_up"],
+    str,
+]:
     if max_score is None:
         return "acceptable_with_follow_up", b.status_acceptable_no_aggregate
     if max_score >= 20:
@@ -172,15 +178,7 @@ def build_premium_report_payload(
         stride_counter[threat.stride.value] += 1
         if threat.risk:
             raw = threat.risk.score or float(threat.risk.likelihood * threat.risk.impact)
-            band = (
-                "critical"
-                if raw >= 20
-                else "high"
-                if raw >= 15
-                else "medium"
-                if raw >= 9
-                else "low"
-            )
+            band = "critical" if raw >= 20 else "high" if raw >= 15 else "medium" if raw >= 9 else "low"
             sev_counter[band] += 1
         if threat.target_component_id:
             comp_counter[threat.target_component_id] += 1
@@ -188,10 +186,7 @@ def build_premium_report_payload(
     methodology_dist = {meth.value: len(active) + len(doc.threats)}
     total_threats = len(active) + len(doc.threats)
 
-    top_boundaries = [
-        _boundary_name(doc, bid) or bid
-        for bid, _n in tb_counter.most_common(5)
-    ]
+    top_boundaries = [_boundary_name(doc, bid) or bid for bid, _n in tb_counter.most_common(5)]
     top_surfaces = [comp_names.get(cid, cid) for cid, _n in comp_counter.most_common(5)]
 
     sorted_threats = sorted(
@@ -201,7 +196,9 @@ def build_premium_report_payload(
     )
     top5_titles = [t.title for t in sorted_threats[:5]]
 
-    urgency: str = "high" if (max_score or 0) >= 15 else "medium" if (max_score or 0) >= 9 else "low"
+    urgency: Literal["high", "medium", "low"] = (
+        "high" if (max_score or 0) >= 15 else "medium" if (max_score or 0) >= 9 else "low"
+    )
 
     readiness = [
         b.readiness_high if (max_score or 0) >= 15 else b.readiness_moderate,
@@ -229,13 +226,9 @@ def build_premium_report_payload(
         main_components=[c.name for c in doc.components[:12]],
         main_flows=[f.name or f.id for f in doc.data_flows[:12]],
         trust_boundaries=[b.name for b in doc.trust_boundaries],
-        external_dependencies=[
-            c.name for c in doc.components if c.kind == ComponentKind.EXTERNAL_ENTITY
-        ][:10],
+        external_dependencies=[c.name for c in doc.components if c.kind == ComponentKind.EXTERNAL_ENTITY][:10],
         sensitive_assets=[
-            a.name
-            for a in doc.assets
-            if (a.sensitivity or "").lower() in ("confidential", "restricted", "high")
+            a.name for a in doc.assets if (a.sensitivity or "").lower() in ("confidential", "restricted", "high")
         ][:10],
         methodology_used=meth.value,
         methodology_recommended=recommendation.methodology.value,
@@ -262,9 +255,7 @@ def build_premium_report_payload(
         by_stride=dict(stride_counter),
         by_methodology_tag=methodology_dist,
         by_component={comp_names.get(k, k): v for k, v in comp_counter.most_common(15)},
-        by_trust_boundary={
-            _boundary_name(doc, k) or k: v for k, v in tb_counter.most_common(15)
-        },
+        by_trust_boundary={_boundary_name(doc, k) or k: v for k, v in tb_counter.most_common(15)},
         by_risk_type=dict(stride_counter),
         by_control_domain=dict(Counter(b.control_category for b in backlog.items)),
         heatmap_stride_severity={sk: dict(sv) for sk, sv in heatmap.items()},
@@ -282,11 +273,7 @@ def build_premium_report_payload(
             (b for b in backlog.items if any(r.id == t.id for r in b.related_findings if r.kind == "heuristic_threat")),
             None,
         )
-        action = (
-            backlog_match.next_step
-            if backlog_match
-            else b.default_threat_action.format(threat_id=t.id)
-        )
+        action = backlog_match.next_step if backlog_match else b.default_threat_action.format(threat_id=t.id)
         top_risks.append(
             TopRiskItem(
                 rank=i + 1,
@@ -450,16 +437,14 @@ def build_premium_report_payload(
         lines = []
         for t in active:
             lines.append(f"### {t.id} — {t.title}\n{t.description}\n")
-        for t in doc.threats:
+        for c_threat in doc.threats:
             lines.append(
-                f"### {b.threat_canonical_prefix} {t.id} — {t.title}\n{t.description or ''}\n"
+                f"### {b.threat_canonical_prefix} {c_threat.id} — {c_threat.title}\n{c_threat.description or ''}\n"
             )
         tech_appendix = TechnicalAppendix(
             full_threat_listing="\n".join(lines)[:120000],
             methodology_outputs_note=b.tech_methodology_outputs,
-            import_evidence_note=(
-                b.tech_import_evidence if doc.import_signals_corpus else None
-            ),
+            import_evidence_note=(b.tech_import_evidence if doc.import_signals_corpus else None),
         )
 
     disclaimer = InferenceDisclaimer(
@@ -528,14 +513,7 @@ def build_premium_report_payload(
         if mc.note:
             mc_line += f" {mc.note[:160]}"
 
-    if (
-        result.wizard_context_notes
-        or trace_lines
-        or gap_msgs
-        or ap_summaries
-        or mq_line
-        or mc_line
-    ):
+    if result.wizard_context_notes or trace_lines or gap_msgs or ap_summaries or mq_line or mc_line:
         guided_audit = GuidedModelingAuditBlock(
             model_quality_summary_line=mq_line,
             methodology_completeness_line=mc_line,

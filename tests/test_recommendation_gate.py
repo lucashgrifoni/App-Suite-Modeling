@@ -51,11 +51,7 @@ def test_entitlement_subscription_and_premium_hints_suppressed_without_commercia
 def test_entitlement_hints_preserved_when_model_has_subscription_signals() -> None:
     doc = load_document_from_yaml_path(_ROOT / "examples" / "minimal.otm.yaml")
     doc = doc.model_copy(
-        update={
-            "metadata": doc.metadata.model_copy(
-                update={"summary": "API REST com subscription e billing."}
-            )
-        }
+        update={"metadata": doc.metadata.model_copy(update={"summary": "API REST com subscription e billing."})}
     )
     hints = ["Validar entitlement entre plano premium e SKU"]
     out = filter_pack_control_hints(doc, hints)

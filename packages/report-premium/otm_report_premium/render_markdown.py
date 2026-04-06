@@ -27,9 +27,7 @@ def render_premium_markdown(payload: PremiumReportPayload) -> str:
     ver = payload.cover.document_version or r.nd
     lines.append(f"- {r.md_schema_version} {payload.cover.schema_version} / {ver}")
     lines.append(f"- {r.md_primary_methodology} {payload.cover.primary_methodology}")
-    lines.append(
-        f"- {r.md_system_sector} {payload.cover.system_type} · {payload.cover.industry_sector}"
-    )
+    lines.append(f"- {r.md_system_sector} {payload.cover.system_type} · {payload.cover.industry_sector}")
     lines.append(f"- {r.md_analysis_date} {payload.cover.analysis_date_iso}")
     lines.append(f"- {r.md_app_version} {payload.cover.app_suite_version}")
     lines.append(f"- {r.md_risk_class} {payload.cover.overall_risk_label}")
@@ -37,8 +35,8 @@ def render_premium_markdown(payload: PremiumReportPayload) -> str:
 
     lines.append(f"{r.md_inference_notice}\n")
     lines.append(payload.disclaimer.summary)
-    for b in payload.disclaimer.bullets:
-        lines.append(f"- {b}")
+    for bullet in payload.disclaimer.bullets:
+        lines.append(f"- {bullet}")
     lines.append("")
 
     lines.append(f"{r.md_executive_summary}\n")
@@ -75,30 +73,30 @@ def render_premium_markdown(payload: PremiumReportPayload) -> str:
     lines.append("")
 
     if payload.guided_modeling_audit:
-        g = payload.guided_modeling_audit
+        audit = payload.guided_modeling_audit
         lines.append(f"{r.md_guided_context}\n")
-        if g.model_quality_summary_line:
-            lines.append(f"- {r.md_model_quality} {g.model_quality_summary_line}\n")
-        if g.methodology_completeness_line:
-            lines.append(f"- {r.md_methodology_line} {g.methodology_completeness_line}\n")
-        if g.wizard_context_notes:
+        if audit.model_quality_summary_line:
+            lines.append(f"- {r.md_model_quality} {audit.model_quality_summary_line}\n")
+        if audit.methodology_completeness_line:
+            lines.append(f"- {r.md_methodology_line} {audit.methodology_completeness_line}\n")
+        if audit.wizard_context_notes:
             lines.append(f"{r.md_wizard_notes}\n")
-            for n in g.wizard_context_notes:
+            for n in audit.wizard_context_notes:
                 lines.append(f"- {n}")
             lines.append("")
-        if g.wizard_signal_trace_lines:
+        if audit.wizard_signal_trace_lines:
             lines.append(f"{r.md_audit_trail}\n")
-            for t in g.wizard_signal_trace_lines:
-                lines.append(f"- {t}")
+            for trace_line in audit.wizard_signal_trace_lines:
+                lines.append(f"- {trace_line}")
             lines.append("")
-        if g.top_model_gap_messages:
+        if audit.top_model_gap_messages:
             lines.append(f"{r.md_gap_precheck}\n")
-            for m in g.top_model_gap_messages:
+            for m in audit.top_model_gap_messages:
                 lines.append(f"- {m}")
             lines.append("")
-        if g.anti_pattern_summaries:
+        if audit.anti_pattern_summaries:
             lines.append(f"{r.md_anti_patterns}\n")
-            for a in g.anti_pattern_summaries:
+            for a in audit.anti_pattern_summaries:
                 lines.append(f"- {a}")
             lines.append("")
 
@@ -170,24 +168,24 @@ def render_premium_markdown(payload: PremiumReportPayload) -> str:
 
     if lvl != ReportLevel.EXECUTIVE:
         lines.append(f"{r.md_root_cause_groups}\n")
-        for g in payload.root_cause_groups[:15]:
-            lines.append(f"### {g.display_name} (`{g.key}`)\n")
-            lines.append(f"- {r.md_occurrences_backlog} {g.threat_count}")
-            lines.append(f"- {r.md_single_fix} {g.single_fix_recommendation[:400]}")
-            lines.append(f"- {r.md_controls} {', '.join(g.suggested_controls)}\n")
+        for rc_group in payload.root_cause_groups[:15]:
+            lines.append(f"### {rc_group.display_name} (`{rc_group.key}`)\n")
+            lines.append(f"- {r.md_occurrences_backlog} {rc_group.threat_count}")
+            lines.append(f"- {r.md_single_fix} {rc_group.single_fix_recommendation[:400]}")
+            lines.append(f"- {r.md_controls} {', '.join(rc_group.suggested_controls)}\n")
 
         lines.append(f"{r.md_exploit_sample}\n")
-        for ex in payload.exploitability_profiles[:10]:
-            lines.append(f"### {ex.threat_id}\n")
-            lines.append(f"- {ex.notes}")
+        for exp_prof in payload.exploitability_profiles[:10]:
+            lines.append(f"### {exp_prof.threat_id}\n")
+            lines.append(f"- {exp_prof.notes}")
             lines.append(
-                f"- {r.md_locality} {ex.attack_locality} · {r.md_external} {ex.requires_external_access} · "
-                f"{r.md_mitm} {ex.requires_mitm}\n"
+                f"- {r.md_locality} {exp_prof.attack_locality} · {r.md_external} {exp_prof.requires_external_access} · "
+                f"{r.md_mitm} {exp_prof.requires_mitm}\n"
             )
 
         lines.append(f"{r.md_business_impact_labels}\n")
-        for b in payload.business_impacts[:10]:
-            lines.append(f"- **{b.threat_id}:** {', '.join(b.labels)} — _{b.rationale}_\n")
+        for biz_row in payload.business_impacts[:10]:
+            lines.append(f"- **{biz_row.threat_id}:** {', '.join(biz_row.labels)} — _{biz_row.rationale}_\n")
 
     if lvl != ReportLevel.EXECUTIVE:
         lines.append(f"{r.md_quick_wins}\n")
@@ -197,9 +195,7 @@ def render_premium_markdown(payload: PremiumReportPayload) -> str:
         lines.append(f"{r.md_ownership}\n")
         for ow in payload.ownership:
             role = ow.suggested_owner_role or r.md_to_define
-            lines.append(
-                f"- **{role}:** {len(ow.backlog_item_ids)} {r.md_items} {r.md_em_dash} {ow.explanation}\n"
-            )
+            lines.append(f"- **{role}:** {len(ow.backlog_item_ids)} {r.md_items} {r.md_em_dash} {ow.explanation}\n")
 
         lines.append(f"{r.md_strategic}\n")
         for s in payload.strategic_recommendations:
@@ -252,8 +248,8 @@ def render_premium_markdown(payload: PremiumReportPayload) -> str:
 
     if lvl != ReportLevel.EXECUTIVE:
         lines.append(f"{r.md_explainability}\n")
-        for ex in payload.explainability[:20]:
-            lines.append(f"- **[{ex.category}]** {ex.message[:400]}\n")
+        for ex_snippet in payload.explainability[:20]:
+            lines.append(f"- **[{ex_snippet.category}]** {ex_snippet.message[:400]}\n")
 
     if lvl == ReportLevel.DEEP and payload.technical_appendix:
         lines.append(f"{r.md_technical_appendix}\n")

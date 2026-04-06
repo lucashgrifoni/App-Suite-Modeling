@@ -58,9 +58,7 @@ def test_iter_pack_heuristics_adds_non_duplicate_when_not_covered() -> None:
 
 def test_iter_pack_heuristics_deduplicates_repeated_rules_per_component() -> None:
     doc = load_document_from_yaml_path(_MINIMAL)
-    pack = _sample_pack().model_copy(
-        update={"additional_threats": [*_sample_pack().additional_threats] * 2}
-    )
+    pack = _sample_pack().model_copy(update={"additional_threats": [*_sample_pack().additional_threats] * 2})
     covered: set[tuple[str | None, str | None, str]] = set()
     out, skipped = iter_pack_heuristic_threats(doc, pack, covered)
     assert out

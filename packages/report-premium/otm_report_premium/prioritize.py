@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Literal
+
 from otm_core_schema import StrideCategory, ThreatModelMethodology
 from otm_core_schema.document import ThreatModelDocument
 from otm_threat_engine.remediation.classify import classify_threat, effort_for_threat
@@ -51,17 +53,11 @@ def composite_priority_score(
     biz = 0.55 if threat.stride in high_stride else 0.4
     remed_inv = 1.0 - _effort_weight(effort)
 
-    score = (
-        0.35 * r_norm
-        + 0.22 * ew
-        + 0.18 * biz
-        + 0.15 * remed_inv
-        + 0.07 * (remote_boost + edge_boost)
-    )
+    score = 0.35 * r_norm + 0.22 * ew + 0.18 * biz + 0.15 * remed_inv + 0.07 * (remote_boost + edge_boost)
     return round(score, 4)
 
 
-def assign_priority_tier(rank_index: int, total: int) -> str:
+def assign_priority_tier(rank_index: int, total: int) -> Literal["P1", "P2", "P3"]:
     """Tercis: P1 topo ~33%, P2 meio, P3 resto."""
     if total <= 0:
         return "P3"
@@ -73,7 +69,7 @@ def assign_priority_tier(rank_index: int, total: int) -> str:
     return "P3"
 
 
-def horizon_for_tier(tier: str) -> str:
+def horizon_for_tier(tier: Literal["P1", "P2", "P3"]) -> Literal["immediate", "short", "medium"]:
     if tier == "P1":
         return "immediate"
     if tier == "P2":

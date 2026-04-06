@@ -21,6 +21,17 @@ Documentação interativa: **`/docs`** (Swagger UI), **`/redoc`**.
 
 Contrato exportado, gate anti-stale, goldens HTTP e E2E híbrido: ver **`docs/CONTRACTS_CI_HYBRID.md`**.
 
+## Perímetro opcional (API key e rate limit)
+
+| Variável | Efeito |
+|----------|--------|
+| `OTM_API_KEY` | Se definida (não vazia), todos os pedidos a **`/v1/*`** exigem **`X-OTM-API-Key: <valor>`** ou **`Authorization: Bearer <valor>`**. Rotas como `/health`, `/docs`, `/openapi.json` permanecem sem chave. |
+| `OTM_RATE_LIMIT` | Expressão [SlowAPI](https://github.com/laurents/slowapi) (ex.: `120/minute`). Se definida, aplica-se como limite global por IP (em conjunto com o middleware SlowAPI). |
+| `OTM_RATE_LIMIT_DISABLED` | `1` / `true` — desativa o rate limit mesmo em staging/produção. |
+| (sem `OTM_RATE_LIMIT` e sem `OTM_RATE_LIMIT_DISABLED`) | Em **`development`** (defeito de `OTM_ENV`): sem limite. Em **staging** / **production**: limite por defeito **`120/minute`**. |
+
+Sem `OTM_API_KEY`, o comportamento permanece o de API aberta na rede onde estiver exposta — ver **`docs/DEPLOYMENT_INVARIANTS.md`**.
+
 ## Endpoints (MVP)
 
 | Método | Caminho | Descrição |

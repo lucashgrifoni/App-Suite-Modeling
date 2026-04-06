@@ -18,10 +18,26 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y libcairo2-dev pkg-config
       - name: Install
         run: pip install -e ".[dev,cli,api]"
-      - name: Ruff
+      - name: Ruff (lint)
         run: ruff check packages apps tests
-      - name: Mypy (core-schema + API)
-        run: mypy packages/core-schema/otm_core_schema apps/api/otm_api
+      - name: Ruff (format)
+        run: ruff format --check packages apps tests
+      - name: Bandit (SAST, medium+)
+        run: python -m bandit -r packages apps -ll -q
+      - name: Mypy (monorepo)
+        run: |
+          mypy \
+            packages/core-schema/otm_core_schema \
+            apps/api/otm_api \
+            packages/explainability/otm_explainability \
+            packages/framework-mappings/otm_framework_mappings \
+            packages/diagram-engine/otm_diagram_engine \
+            apps/cli/otm_cli \
+            packages/exporters/otm_exporters \
+            packages/artifact-import/otm_artifact_import \
+            packages/report-premium/otm_report_premium \
+            packages/threat-engine/otm_threat_engine \
+            packages/industry-packs/otm_industry_packs
       # pip-audit 2.x não expõe `--fail-on=critical`; qualquer CVE/OSV conhecido falha o job (gate estrito).
       - name: pip-audit (supply chain)
         run: pip install "pip-audit>=2.7" && python -m pip_audit --desc on -S .
@@ -33,6 +49,38 @@ jobs:
         run: python -m pytest
       - name: Smoke suite
         run: python -m pytest tests/test_smoke_release_candidate.py
+
+  semgrep:
+    name: Semgrep
+    runs-on: ubuntu-latest
+    container:
+      image: semgrep/semgrep
+    steps:
+      - uses: actions/checkout@v4
+      - name: Scan Python + TS/JS + React
+        run: >-
+          semgrep scan
+          --config p/python
+          --config p/typescript
+          --config p/javascript
+          --config p/react
+          --error
+          packages
+          apps/web/src
+
+  trivy-image:
+    name: Trivy (API image)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build API image
+        run: docker build -f apps/api/Dockerfile -t otm-api:ci .
+      - uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: image
+          image-ref: otm-api:ci
+          severity: CRITICAL,HIGH
+          exit-code: "1"
 
   web:
     strategy:
@@ -54,6 +102,9 @@ jobs:
       - name: npm audit (critical)
         working-directory: apps/web
         run: npm audit --audit-level=critical
+      - name: npm audit (moderate+)
+        working-directory: apps/web
+        run: npm audit --audit-level=moderate
       - name: UI build (standard)
         if: runner.os != 'Windows'
         working-directory: apps/web

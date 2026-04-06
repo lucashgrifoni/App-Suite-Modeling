@@ -38,9 +38,7 @@ def _validate_component_refs(
 ) -> None:
     for c in components:
         if c.in_trust_boundary is not None and c.in_trust_boundary not in boundary_ids:
-            raise ValueError(
-                f"component '{c.id}' references unknown trust boundary '{c.in_trust_boundary}'"
-            )
+            raise ValueError(f"component '{c.id}' references unknown trust boundary '{c.in_trust_boundary}'")
         for aid in c.asset_ids:
             if aid not in asset_ids:
                 raise ValueError(f"component '{c.id}' references unknown asset '{aid}'")
@@ -191,9 +189,7 @@ class ModelInfo(BaseModel):
     )
     template_semantic_profile: str | None = Field(
         default=None,
-        description=(
-            "Perfil semântico do template/pack (ex.: api_backend_rest) — alinha heurísticas e benchmark."
-        ),
+        description=("Perfil semântico do template/pack (ex.: api_backend_rest) — alinha heurísticas e benchmark."),
     )
 
 
@@ -389,9 +385,7 @@ class EvidenceSuggestion(BaseModel):
     evidence_kind: EvidenceKind = Field(default=EvidenceKind.OTHER)
     related_threat_ids: list[str] = Field(
         default_factory=list,
-        description=(
-            "Ameaças associadas (espelho opcional; ameaça também pode referenciar evidências)."
-        ),
+        description=("Ameaças associadas (espelho opcional; ameaça também pode referenciar evidências)."),
     )
     metadata: dict[str, Any] = Field(default_factory=dict)
 

@@ -1,0 +1,7 @@
+# Excluir dependências e ambientes virtuais de scans `gitleaks detect --no-git`.
+# O histórico Git continua coberto pelo modo default (sem --no-git).
+.venv/
+**/node_modules/
+dist/
+build/
+*.egg-info/

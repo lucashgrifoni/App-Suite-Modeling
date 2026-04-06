@@ -9,14 +9,20 @@ from __future__ import annotations
 from fastapi import APIRouter, FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
+from slowapi.util import get_remote_address
 
 from otm_api.cors_settings import resolve_cors_profile
 from otm_api.errors import request_validation_handler
+from otm_api.middleware_api_key import OptionalApiKeyMiddleware
 from otm_api.observability import (
     ObservabilityMiddleware,
     register_unhandled_exception_handler,
     setup_api_logging,
 )
+from otm_api.perimeter_settings import resolve_rate_limit_default
 from otm_api.routers import analyses, exports, imports, models, remediation, reports_premium, system, templates
 
 setup_api_logging()
@@ -52,8 +58,17 @@ app = FastAPI(
 app.add_exception_handler(RequestValidationError, request_validation_handler)  # type: ignore[arg-type]
 register_unhandled_exception_handler(app)
 
+_rate_limit_spec = resolve_rate_limit_default()
+if _rate_limit_spec:
+    app.state.limiter = Limiter(key_func=get_remote_address, default_limits=[_rate_limit_spec])
+    # slowapi handler é compatível em runtime; Starlette tipa Exception genérico.
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # type: ignore[arg-type]
+
 _cors = resolve_cors_profile()
 app.add_middleware(ObservabilityMiddleware)
+if _rate_limit_spec:
+    app.add_middleware(SlowAPIMiddleware)
+app.add_middleware(OptionalApiKeyMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_cors.origins,

@@ -52,11 +52,7 @@ def run_explain(
     if not explanations:
         return []
     if category:
-        explanations = [
-            e
-            for e in explanations
-            if str(e.get("category", "")).strip().lower() == category.lower()
-        ]
+        explanations = [e for e in explanations if str(e.get("category", "")).strip().lower() == category.lower()]
     out: list[tuple[str, str, str]] = []
     for item in explanations[:limit]:
         subj = str(item.get("subject", ""))

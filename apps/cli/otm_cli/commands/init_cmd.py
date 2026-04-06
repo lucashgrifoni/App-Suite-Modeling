@@ -56,9 +56,7 @@ def register(app: typer.Typer) -> None:
             exit_on_cli_error(console, e)
 
         if res.message_key == "template":
-            console.print(
-                f"[green]Template[/green] [cyan]{res.template_id}[/cyan] → {res.path.resolve()}"
-            )
+            console.print(f"[green]Template[/green] [cyan]{res.template_id}[/cyan] → {res.path.resolve()}")
             if res.suggested_pack:
                 console.print(f"Suggestion: [cyan]otm analyze {res.path} --pack {res.suggested_pack}[/cyan]")
             else:

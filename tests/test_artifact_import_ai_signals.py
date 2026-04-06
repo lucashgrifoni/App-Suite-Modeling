@@ -63,11 +63,11 @@ spec:
 
 
 def test_terraform_bedrock_snippet_feeds_import_corpus() -> None:
-    tf = '''
+    tf = """
 resource "aws_bedrock_inference_profile" "example" {
   name = "demo"
 }
-'''
+"""
     result = import_terraform_text(tf, filename="ai.tf")
     assert result.document.import_signals_corpus
     assert "bedrock" in result.document.import_signals_corpus

@@ -43,30 +43,30 @@ def export_comparison_markdown(result: ThreatModelComparisonResult) -> str:
             lines.append("")
             if scs:
                 lines.append("_Mudanças estruturais (contagens de IDs):_")
-                for item in scs[:6]:
-                    lines.append(f"- {item}")
+                for sc_line in scs[:6]:
+                    lines.append(f"- {sc_line}")
                 lines.append("")
             if improved:
                 lines.append("_Melhorias / convergência:_")
-                for item in improved[:8]:
-                    lines.append(f"- {item}")
+                for imp_line in improved[:8]:
+                    lines.append(f"- {imp_line}")
                 lines.append("")
             if worsened:
                 lines.append("_Atenção / regressão aparente:_")
-                for item in worsened[:8]:
-                    lines.append(f"- {item}")
+                for wor_line in worsened[:8]:
+                    lines.append(f"- {wor_line}")
                 lines.append("")
             if risk_impact:
                 lines.append("_Impacto em risco (heurístico):_")
-                for item in risk_impact[:6]:
-                    lines.append(f"- {item}")
+                for risk_line in risk_impact[:6]:
+                    lines.append(f"- {risk_line}")
                 lines.append("")
     refs = meta.semantic_structural_refs
     if refs:
         lines.extend(["", "### Ligação estrutura → interpretação (refs estáveis)", ""])
-        for item in refs[:20]:
-            cc = f" · `{item.change_category}`" if item.change_category else ""
-            lines.append(f"- `{item.ref}` · {item.entity_kind} `{item.entity_id}`{cc} — {item.note}")
+        for ref_row in refs[:20]:
+            cc = f" · `{ref_row.change_category}`" if ref_row.change_category else ""
+            lines.append(f"- `{ref_row.ref}` · {ref_row.entity_kind} `{ref_row.entity_id}`{cc} — {ref_row.note}")
         lines.append("")
     links = meta.semantic_interpretation_links
     if links:
@@ -82,12 +82,12 @@ def export_comparison_markdown(result: ThreatModelComparisonResult) -> str:
                 "",
             ]
         )
-        for item in links[:16]:
-            tok = ", ".join(item.shared_tokens) if item.shared_tokens else "—"
-            rationale = (item.anchoring_rationale or "").replace("\n", " ")
+        for link_row in links[:16]:
+            tok = ", ".join(link_row.shared_tokens) if link_row.shared_tokens else "—"
+            rationale = (link_row.anchoring_rationale or "").replace("\n", " ")
             lines.append(
-                f"- `{item.structural_ref}` → **{item.related_section}** "
-                f"(`{item.link_kind}`, {item.inference_strength}; tokens: {tok}): {item.summary}"
+                f"- `{link_row.structural_ref}` → **{link_row.related_section}** "
+                f"(`{link_row.link_kind}`, {link_row.inference_strength}; tokens: {tok}): {link_row.summary}"
             )
             if rationale:
                 lines.append(f"  - _Porquê:_ {rationale}")
@@ -95,8 +95,8 @@ def export_comparison_markdown(result: ThreatModelComparisonResult) -> str:
     si = meta.semantic_insights
     if si:
         lines.extend(["", "### Insights semânticos (narrativa)", ""])
-        for item in si[:14]:
-            lines.append(f"- {item}")
+        for insight_line in si[:14]:
+            lines.append(f"- {insight_line}")
         lines.append("")
     if result.explanations:
         lines.extend(["", "### Explicabilidade (foco)", ""])

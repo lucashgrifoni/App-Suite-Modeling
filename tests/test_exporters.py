@@ -321,9 +321,7 @@ def test_export_flowchart_mermaid_sanitizes_ids_and_quotes() -> None:
     doc = load_document_from_yaml_path(_MINIMAL)
 
     # adiciona um nó e um fluxo com IDs "não mermaid-friendly" e aspas no label
-    doc.components.append(
-        doc.components[0].model_copy(update={"id": "api-gw", "name": 'API "Gateway"'})
-    )
+    doc.components.append(doc.components[0].model_copy(update={"id": "api-gw", "name": 'API "Gateway"'}))
     doc.data_flows.append(
         doc.data_flows[0].model_copy(
             update={
@@ -642,11 +640,7 @@ def test_export_threat_model_bundle_json_contract_plot4ai() -> None:
     # O objetivo é travar que o bundle preserva insights especializados quando a análise os produz.
     base = load_document_from_yaml_path(_MINIMAL)
     doc = base.model_copy(
-        update={
-            "metadata": base.metadata.model_copy(
-                update={"title": "Plataforma LLM com RAG e agentes"}
-            )
-        }
+        update={"metadata": base.metadata.model_copy(update={"title": "Plataforma LLM com RAG e agentes"})}
     )
     result = analyze_document(doc, methodology="plot4ai")
     payload = json.loads(export_threat_model_bundle_json(doc, result, indent=2))
