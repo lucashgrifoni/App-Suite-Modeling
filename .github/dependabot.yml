@@ -7,11 +7,29 @@ updates:
       interval: weekly
     open-pull-requests-limit: 5
 
+  # Landing GitHub Pages (Vite 8 + plugin-react 6 exigem migração; manter 5.x até ajuste explícito).
+  - package-ecosystem: npm
+    directory: /gitpage
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 3
+    ignore:
+      - dependency-name: vite
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@vitejs/plugin-react"
+        update-types: ["version-update:semver-major"]
+
   - package-ecosystem: npm
     directory: /apps/web
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    # Vite 8 exige @vitejs/plugin-react 6+; PRs separados geram ERESOLVE no npm ci.
+    groups:
+      vite-ecosystem:
+        patterns:
+          - "vite"
+          - "@vitejs/plugin-react"
     # Tailwind v4 exige @tailwindcss/postcss e migração de CSS; manter v3 até migração explícita.
     ignore:
       - dependency-name: tailwindcss
@@ -19,3 +37,14 @@ updates:
       # openapi-typescript 7.x declara peer typescript@^5.x; TS 6 quebra npm ci (ERESOLVE).
       - dependency-name: typescript
         update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: npm
+    directory: /gitpage
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 3
+    groups:
+      vite-ecosystem:
+        patterns:
+          - "vite"
+          - "@vitejs/plugin-react"

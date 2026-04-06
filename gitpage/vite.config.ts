@@ -13,9 +13,15 @@ export default defineConfig({
     sourcemap: false,
     rollupOptions: {
       output: {
-        manualChunks: {
-          three: ["three"],
-          r3f: ["@react-three/fiber", "@react-three/drei"],
+        // Vite 8 / Rolldown: manualChunks deve ser função (objeto legado rejeitado).
+        manualChunks(id: string) {
+          if (id.includes("/node_modules/three/")) return "three";
+          if (
+            id.includes("/node_modules/@react-three/fiber/") ||
+            id.includes("/node_modules/@react-three/drei/")
+          ) {
+            return "r3f";
+          }
         },
       },
     },

@@ -11,21 +11,32 @@ e versionamento semântico quando aplicável.
 
 - `.gitleaksignore` — exclusão de `.venv/`, `node_modules/` e artefactos de build para `gitleaks detect --no-git` sem falsos positivos locais.
 - Vitest: `apps/web/src/utils/diagramSanitize.test.ts` (etiquetas do diagrama: remoção de HTML, whitespace, truncagem).
+- API: **`slowapi`** (rate limit: `OTM_RATE_LIMIT`, `OTM_RATE_LIMIT_DISABLED`; defeito **120/minute** em staging/produção) e middleware **`OptionalApiKeyMiddleware`** quando **`OTM_API_KEY`** está definida (`X-OTM-API-Key` / `Authorization: Bearer` em `/v1/*`). Ficheiros `otm_api.perimeter_settings`, `otm_api.middleware_api_key`.
+- CI: jobs **Semgrep** (`p/python`, `p/typescript`, `p/javascript`, `p/react`) e **Trivy** (imagem Docker da API); gate **`npm audit --audit-level=moderate`** no job `web`.
+- Testes `tests/test_api.py` para API key; E2E híbrido com **`OTM_RATE_LIMIT_DISABLED=1`** no uvicorn (`playwright.hybrid.config.ts`).
+- Frontend: **`public/_headers`** (CSP + cabeçalhos para hosts estáticos), **`public/theme-init.js`** (tema sem script inline), endurecimento em **`vite.config.ts`** (`server` / `preview` headers).
+- **`.semgrepignore`**; política **`docs/SEMGREP_POLICY.md`**; guia **`docs/SECURITY_HEADERS.md`**; **`docs/PRE_COMMIT.md`**; **`.pre-commit-config.yaml`** (Ruff + mypy parcial).
 
 ### Changed
 
-- CI (`.github/workflows/ci.yml`): gate **`ruff format --check`** no job Python, além de `ruff check`; job **Bandit** (`-ll`, medium+) sobre `packages/` e `apps/`.
-- `pyproject.toml` extra `dev`: dependência **`bandit>=1.7`** para SAST reprodutível.
+- CI (`.github/workflows/ci.yml`): gate **`ruff format --check`** no job Python, além de `ruff check`; job **Bandit** (`-ll`, medium+) sobre `packages/` e `apps/`; **Mypy monorepo** (todos os pacotes Python principais + CLI); jobs **semgrep** e **trivy-image**.
+- `pyproject.toml` extra `dev`: dependência **`bandit>=1.7`** para SAST reprodutível; extra `api`: **`slowapi>=0.1.9`**.
 - Python: formatação Ruff aplicada em massa (`packages/`, `apps/`, `tests/`) para alinhar com o novo gate.
 - API: respostas de validação usam `status.HTTP_422_UNPROCESSABLE_CONTENT` (Starlette/FastAPI) em `otm_api.errors` e `otm_api.routers._errors`, eliminando `DeprecationWarning` de `HTTP_422_UNPROCESSABLE_ENTITY`.
-- `docs/DEPLOYMENT_INVARIANTS.md`: secção explícita **API sem autenticação integrada** (obrigatoriedade de gateway com API key/OIDC/mTLS fora de localhost/rede confiável).
+- `docs/DEPLOYMENT_INVARIANTS.md`: secção **API sem autenticação integrada** + variáveis **`OTM_API_KEY`**, **`OTM_RATE_LIMIT`**, **`OTM_RATE_LIMIT_DISABLED`**.
 - `pyproject.toml`: comentário no extra `api` sobre **SQLAlchemy** reservado a persistência pós-MVP (sem uso no código da API atual).
-- `docs/CI_AND_SECURITY_EVIDENCE.md`: secção **Ruff (lint + formato)** documentando os comandos e critérios de aceite.
+- `docs/CI_AND_SECURITY_EVIDENCE.md`: Ruff/Bandit, **Mypy monorepo**, Semgrep, Trivy, npm audit moderate.
+- `docs/API.md`: secção **Perímetro opcional**; `docs/KNOWN_LIMITATIONS.md`: **`OTM_API_KEY`** opcional.
+- **Mypy:** correcções transversais (tipos `StrideCategory` em heurísticas PLOT4ai, variáveis de loop em Markdown premium/diff export, `ai_import_corpus`, `document_json`, etc.); `otm_artifact_import.builders` com `type: ignore[call-arg]` documentado (falso positivo pydantic/mypy).
+- **Web (`apps/web`):** **React ^19.2**, **Vite ^8**, `@vitejs/plugin-react` ^6, **Vitest ^3.2**; Dependabot agrupa `vite` + `@vitejs/plugin-react` para evitar **ERESOLVE** no `npm ci` (PRs separados incompatíveis).
+- **`gitpage/` (site estático):** **Vite ^8** e `@vitejs/plugin-react` ^6 (mesma regra de peers); Dependabot semanal em `/gitpage` com grupo `vite-ecosystem`; `vite.config.ts`: `manualChunks` em forma de **função** (Rolldown rejeita o mapa objeto).
+- CI **Semgrep**: configs adicionais **`p/javascript`** e **`p/react`**.
 
 ### Fixed
 
 - `apps/web`: **Tailwind CSS** fixado em `3.4.19` (evita resolução para v4, que exige `@tailwindcss/postcss` e quebrava `postcss.config.js` + build Vite/E2E). Dependabot: ignorar **major** em `tailwindcss` até migração explícita para v4.
 - `apps/web`: **TypeScript** restrito a `~5.9.3` — `openapi-typescript@7.6.1` exige peer `typescript@^5.x`; TS 6 faz `npm ci` falhar com **ERESOLVE**. Dependabot: ignorar **major** em `typescript` até `openapi-typescript` suportar TS 6 (ou troca de ferramenta).
+- CI Dependabot: PRs que atualizavam só **Vite 8** ou só **`@vitejs/plugin-react` 6** quebravam `npm ci` (**ERESOLVE** entre peers). **Vite 8** e **plugin-react 6** passam a subir em conjunto no `apps/web`; grupo Dependabot `vite-ecosystem`. **`gitpage/`:** Vite 8 + plugin-react 6 alinhados para o mesmo motivo.
 
 ### Removed
 
