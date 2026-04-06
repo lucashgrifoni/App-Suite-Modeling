@@ -33,3 +33,5 @@ O workflow usa **Node 20** (npm **10.x**). Se regenerares `gitpage/package-lock.
 ```bash
 cd gitpage && npx npm@10.9.2 install
 ```
+
+O mesmo alinhamento aplica-se a **`apps/web/`** quando alterares dependências npm (job `web` no CI usa Node 20 + npm 10).

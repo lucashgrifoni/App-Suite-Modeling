@@ -14,6 +14,7 @@ e versionamento semântico quando aplicável.
 ### Fixed
 
 - **`gitpage/package-lock.json`** regenerado com **npm 10.x** (alinhado ao **Node 20** no GitHub Actions). Locks gerados com **npm 11** faziam `npm ci` falhar no deploy Pages (pacotes **`@emnapi/*`** em falta no lock; mensagem no UI pode parecer “openapi”).
+- **`apps/web`:** **`i18next` ^26.0.3** com **`react-i18next` ^17** (peer `i18next@>=26.0.1`); **`package-lock.json`** atualizado com **npm 10.x** para **`npm ci`** no CI não falhar com **ERESOLVE** (npm 10 é mais estrito que npm 11 neste par).
 - CI: **`aquasecurity/trivy-action`** atualizado para **0.35.0** (advisory / Dependabot security job deixava de aplicar patch e falhava com `security_update_not_needed` com **0.28.0**).
 - **`deploy-gitpage.yml`:** passo **`actions/configure-pages@v5`** antes de `upload-pages-artifact` (requisito do fluxo GitHub Pages).
 - **Dependabot:** removida duplicata de entrada **`npm` / `gitpage`**; adicionado **`package-ecosystem: github-actions`** para atualizações semanais de actions.
