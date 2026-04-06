@@ -9,9 +9,22 @@ e versionamento semântico quando aplicável.
 
 ### Added
 
+- `.gitleaksignore` — exclusão de `.venv/`, `node_modules/` e artefactos de build para `gitleaks detect --no-git` sem falsos positivos locais.
+- Vitest: `apps/web/src/utils/diagramSanitize.test.ts` (etiquetas do diagrama: remoção de HTML, whitespace, truncagem).
+
 ### Changed
 
+- CI (`.github/workflows/ci.yml`): gate **`ruff format --check`** no job Python, além de `ruff check`; job **Bandit** (`-ll`, medium+) sobre `packages/` e `apps/`.
+- `pyproject.toml` extra `dev`: dependência **`bandit>=1.7`** para SAST reprodutível.
+- Python: formatação Ruff aplicada em massa (`packages/`, `apps/`, `tests/`) para alinhar com o novo gate.
+- API: respostas de validação usam `status.HTTP_422_UNPROCESSABLE_CONTENT` (Starlette/FastAPI) em `otm_api.errors` e `otm_api.routers._errors`, eliminando `DeprecationWarning` de `HTTP_422_UNPROCESSABLE_ENTITY`.
+- `docs/DEPLOYMENT_INVARIANTS.md`: secção explícita **API sem autenticação integrada** (obrigatoriedade de gateway com API key/OIDC/mTLS fora de localhost/rede confiável).
+- `pyproject.toml`: comentário no extra `api` sobre **SQLAlchemy** reservado a persistência pós-MVP (sem uso no código da API atual).
+- `docs/CI_AND_SECURITY_EVIDENCE.md`: secção **Ruff (lint + formato)** documentando os comandos e critérios de aceite.
+
 ### Fixed
+
+- `apps/web`: **Tailwind CSS** fixado em `3.4.19` (evita resolução para v4, que exige `@tailwindcss/postcss` e quebrava `postcss.config.js` + build Vite/E2E). Dependabot: ignorar **major** em `tailwindcss` até migração explícita para v4.
 
 ### Removed
 

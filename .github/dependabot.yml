@@ -12,3 +12,7 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    # Tailwind v4 exige @tailwindcss/postcss e migração de CSS; manter v3 até migração explícita.
+    ignore:
+      - dependency-name: tailwindcss
+        update-types: ["version-update:semver-major"]
