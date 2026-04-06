@@ -709,6 +709,44 @@ def cmd_diff(
         for ins in full.analysis_insights[:12]:
             lines.append(f"- {ins}")
         lines.append("")
+    if with_analysis and full.meta:
+        meta = full.meta
+        disc = meta.get("interpretation_disclaimer") if isinstance(meta, dict) else None
+        if isinstance(disc, str) and disc.strip():
+            lines.append("Aviso inferencial:")
+            lines.append(f"  {disc.strip()}")
+            lines.append("")
+        sem = meta.get("semantic_diff_sections") if isinstance(meta, dict) else None
+        if isinstance(sem, dict):
+            scs = sem.get("structural_change_summary") or []
+            imp, wor, risk = sem.get("improved") or [], sem.get("worsened") or [], sem.get("risk_impact") or []
+            if scs or imp or wor or risk:
+                lines.append("Diff semântico (heurístico):")
+                for x in scs[:5]:
+                    lines.append(f"  Δ {x}")
+                for x in imp[:6]:
+                    lines.append(f"  + {x}")
+                for x in wor[:6]:
+                    lines.append(f"  ! {x}")
+                for x in risk[:5]:
+                    lines.append(f"  ~ {x}")
+                lines.append("")
+        refs = meta.get("semantic_structural_refs") if isinstance(meta, dict) else None
+        if isinstance(refs, list) and refs:
+            lines.append("Refs estrutura→interpretação (correlacional):")
+            for item in refs[:12]:
+                if not isinstance(item, dict):
+                    continue
+                lines.append(
+                    f"  {item.get('ref', '')} · {item.get('entity_kind', '')} `{item.get('entity_id', '')}`"
+                )
+            lines.append("")
+        si = meta.get("semantic_insights") if isinstance(meta, dict) else None
+        if isinstance(si, list) and si:
+            lines.append("Insights semânticos:")
+            for x in si[:10]:
+                lines.append(f"- {x}")
+            lines.append("")
 
     for label, sec in [
         ("model_info", result.model_info),
@@ -978,6 +1016,16 @@ def cmd_analyze(
         for ex in result.explanations[:15]:
             cat = getattr(ex.category, "value", ex.category)
             console.print(f"  [cyan]{cat}[/cyan] · {ex.subject} — {ex.message}")
+
+    if result.wizard_context_notes or result.wizard_signal_trace:
+        console.print("\n[bold]Assistente / audit trail[/bold] (resumo)")
+        for n in result.wizard_context_notes[:6]:
+            console.print(f"  [dim]nota:[/dim] {n[:200]}")
+        for tr in result.wizard_signal_trace[:8]:
+            console.print(
+                f"  [dim]{tr.effect}[/dim] `{tr.source_tag[:64]}` "
+                f"({tr.weight}) → {tr.explanation[:160]}"
+            )
 
 
 @app.command("explain")

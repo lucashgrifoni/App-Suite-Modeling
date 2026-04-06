@@ -24,6 +24,16 @@ Contagem de referências `framework:control_id` nas heurísticas (por catálogo 
 
 - Fluxo 'http_in' liga fronteira 'internet' → 'vpc'.
 
+### Qualidade do modelo e metodologia (resumo)
+
+- **Pré-check:** score **72/100** (banda `good`) · confiança nas recomendações: `high` · fit STRIDE: `strong`.
+- **Completude metodológica:** `complete` — —
+
+### Lacunas do modelo (pré-check)
+
+- [component_context] 1 componente(s) com responsabilidade/privilégio explícitos.
+- [business_context] Sem objetivos de negócio — PASTA/risk-centric degradam.
+
 ### Resumo executivo
 
 - Total de ameaças ativas: **21** · Maior score: **25.0**

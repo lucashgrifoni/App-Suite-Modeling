@@ -50,9 +50,39 @@ export interface HeuristicThreat {
   stride: string;
   target_component_id?: string | null;
   target_data_flow_id?: string | null;
+  target_asset_id?: string | null;
   risk: { likelihood: number; impact: number; score?: number | null };
   skipped_as_duplicate: boolean;
   framework_refs: FrameworkRef[];
+  signal_refs?: string[];
+  finding_family?: string | null;
+  heuristic_tier?: string | null;
+}
+
+/** Alinhado a `StructuralFinding` no motor — achados de consistência estrutural. */
+export interface StructuralFinding {
+  code: string;
+  severity: "info" | "warning";
+  message: string;
+}
+
+/** Alinhado a `TrustBoundaryFinding` no motor. */
+export interface TrustBoundaryFinding {
+  code: string;
+  message: string;
+  data_flow_id?: string | null;
+  from_boundary_id?: string | null;
+  to_boundary_id?: string | null;
+}
+
+/** Entrada de audit trail do assistente (`wizard_signal_trace` no motor). */
+export interface WizardSignalTraceEntry {
+  source_tag: string;
+  effect: "ranking_impact" | "corpus_mitigation" | "observation";
+  weight: "low" | "moderate";
+  impact_areas: string[];
+  mechanism: "direct" | "contextual" | "auxiliary";
+  explanation: string;
 }
 
 export interface AnalysisSummary {
@@ -112,6 +142,9 @@ export interface AntiPatternHit {
   message: string;
   evidence: string[];
   expected_controls: string[];
+  /** Alinhado ao motor (`AntiPatternHit.confidence_hint`). */
+  confidence_hint?: string;
+  detection_sources?: string[];
 }
 
 export interface AnalysisResult {
@@ -126,6 +159,8 @@ export interface AnalysisResult {
     | "plot4ai";
   methodology_recommendation_reason?: string | null;
   document_title: string;
+  structural_findings: StructuralFinding[];
+  trust_boundary_findings: TrustBoundaryFinding[];
   heuristic_threats: HeuristicThreat[];
   summary: AnalysisSummary;
   methodology_insights?: {
@@ -140,6 +175,7 @@ export interface AnalysisResult {
   methodology_completeness?: MethodologyCompletenessInfo | null;
   /** Notas quando tags `wz:` do assistente influenciam o motor. */
   wizard_context_notes?: string[];
+  wizard_signal_trace?: WizardSignalTraceEntry[];
   anti_pattern_hits?: AntiPatternHit[];
 }
 
@@ -225,6 +261,115 @@ export interface RecommendationDelta {
   methodology_insight_blocks_removed?: string[];
 }
 
+/** Delta de uma heurística entre duas análises (`HeuristicThreatDelta` no motor). */
+export interface HeuristicThreatDelta {
+  threat_id: string;
+  change: "added" | "removed" | "modified";
+  match_kind?: "id" | "signature_remap";
+  score_before?: number | null;
+  score_after?: number | null;
+  score_delta?: number | null;
+  field_changes: FieldChange[];
+  paired_id?: string | null;
+}
+
+export interface HeuristicThreatDeltaSection {
+  added: HeuristicThreatDelta[];
+  removed: HeuristicThreatDelta[];
+  modified: HeuristicThreatDelta[];
+}
+
+export interface FrameworkRefCountDelta {
+  catalog: string;
+  count_before: number;
+  count_after: number;
+}
+
+export interface PackHintsDelta {
+  added: string[];
+  removed: string[];
+}
+
+export interface MethodologyInsightsDelta {
+  profile_before?: string | null;
+  profile_after?: string | null;
+  blocks_added: string[];
+  blocks_removed: string[];
+}
+
+export interface TrustBoundaryFindingDelta {
+  added_keys: string[];
+  removed_keys: string[];
+  count_before: number;
+  count_after: number;
+}
+
+export interface StructuralFindingDelta {
+  codes_added: string[];
+  codes_removed: string[];
+  count_before: number;
+  count_after: number;
+}
+
+/**
+ * Diff entre duas análises (`AnalysisDiff` no motor).
+ * Presente em `ThreatModelComparisonResult.analysis` quando `run_analysis=true`.
+ */
+export interface AnalysisDiff {
+  methodology_before: string;
+  methodology_after: string;
+  methodology_changed: boolean;
+  max_risk_before?: number | null;
+  max_risk_after?: number | null;
+  max_risk_delta?: number | null;
+  heuristic_threats: HeuristicThreatDeltaSection;
+  framework_ref_counts: FrameworkRefCountDelta[];
+  pack_control_hints: PackHintsDelta;
+  methodology_insights?: MethodologyInsightsDelta | null;
+  trust_boundary_findings?: TrustBoundaryFindingDelta | null;
+  structural_findings?: StructuralFindingDelta | null;
+  signature_remap_hints: string[];
+}
+
+export interface ThreatDeltaSummary {
+  canonical: IdListSectionDiff;
+  heuristic: HeuristicThreatDeltaSection;
+}
+
+/** Secções semânticas agregadas (heurística; não causalidade provada). */
+export interface SemanticDiffSections {
+  /** Contagens de IDs alterados (separado de interpretação). */
+  structural_change_summary?: string[];
+  improved: string[];
+  worsened: string[];
+  risk_impact: string[];
+}
+
+/**
+ * Referência estável ligando mudança estrutural a notas de interpretação.
+ * Espelha `semantic_structural_refs` em `ThreatModelComparisonResult.meta`.
+ */
+export interface SemanticStructuralRef {
+  ref: string;
+  entity_kind: string;
+  entity_id: string;
+  note: string;
+}
+
+/**
+ * Metadados de comparação semântica — alinhados ao motor (`enrich_comparison_meta`).
+ * Chaves extra podem existir; tipamos as estáveis para consumo na UI.
+ */
+export type ComparisonMeta = {
+  semantic_insights?: string[];
+  semantic_insights_version?: string;
+  semantic_diff_sections?: SemanticDiffSections;
+  /** Ligação explícita mudança estrutural → nota interpretativa (correlacional). */
+  semantic_structural_refs?: SemanticStructuralRef[];
+  /** Aviso único sobre limites inferenciais. */
+  interpretation_disclaimer?: string;
+} & Record<string, unknown>;
+
 /** Resposta de `POST /v1/models/compare`. */
 export interface ThreatModelComparisonResult {
   summary: ComparisonSummary;
@@ -239,13 +384,13 @@ export interface ThreatModelComparisonResult {
   };
   structural: ThreatModelDiff;
   structural_insights: string[];
-  analysis: Record<string, unknown> | null;
+  analysis: AnalysisDiff | null;
   analysis_insights: string[];
   risk_delta: RiskDeltaSummary;
-  threat_delta: Record<string, unknown>;
+  threat_delta: ThreatDeltaSummary;
   recommendation_delta: RecommendationDelta;
   key_insights: string[];
-  meta: Record<string, unknown>;
+  meta: ComparisonMeta;
   explanations?: ExplanationRecord[];
 }
 

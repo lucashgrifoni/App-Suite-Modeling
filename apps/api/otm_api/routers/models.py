@@ -6,7 +6,9 @@ from fastapi import APIRouter, status
 from otm_core_schema import diff_documents
 from otm_core_schema.model_quality_precheck import assess_model_precheck
 from otm_threat_engine import recommend_methodology
+from otm_threat_engine.comparison_models import ThreatModelComparisonResult
 from otm_threat_engine.methodology_completeness import assess_methodology_completeness
+from otm_threat_engine.result import AnalysisResult
 from pydantic import ValidationError as PydanticValidationError
 
 from otm_api.routers._errors import (
@@ -102,9 +104,10 @@ def diff_model_versions(body: DiffBody) -> dict[str, Any]:
         "Returns `ThreatModelComparisonResult`: canonical diff, aggregates, insights and, when "
         "`baseline_analysis`/`revised_analysis` or `run_analysis=true` is provided, risk/heuristic delta."
     ),
+    response_model=ThreatModelComparisonResult,
     response_description="JSON of the unified comparison result.",
 )
-def compare_models(body: CompareBody) -> dict[str, Any]:
+def compare_models(body: CompareBody) -> ThreatModelComparisonResult:
     b_doc = document_from_payload_or_422(body.baseline)
     r_doc = document_from_payload_or_422(body.revised)
     try:
@@ -120,7 +123,7 @@ def compare_models(body: CompareBody) -> dict[str, Any]:
         raise raise_pack_not_found(e) from e
     except PydanticValidationError as e:
         raise raise_analysis_validation_error(e) from e
-    return result.model_dump(mode="json")
+    return result
 
 
 @router.post(
@@ -142,9 +145,10 @@ def recommend_methodology_for_model(body: DocumentBody) -> RecommendMethodologyR
     "/analyze",
     summary="Analyze model",
     description="Runs the STRIDE engine, trust boundaries, and risk; optional industry pack.",
+    response_model=AnalysisResult,
     response_description="Serialized `AnalysisResult` JSON.",
 )
-def analyze_model(body: AnalyzeBody) -> dict[str, Any]:
+def analyze_model(body: AnalyzeBody) -> AnalysisResult:
     doc = document_from_payload_or_422(body.document)
     try:
         result = run_analysis(
@@ -155,4 +159,4 @@ def analyze_model(body: AnalyzeBody) -> dict[str, Any]:
         )
     except FileNotFoundError as e:
         raise raise_pack_not_found(e) from e
-    return result.model_dump(mode="json")
+    return result

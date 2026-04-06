@@ -11,6 +11,7 @@ from otm_explainability import ExplanationRecord
 from pydantic import BaseModel, Field
 
 from otm_threat_engine.anti_pattern_library import AntiPatternHit
+from otm_threat_engine.wizard_audit_models import WizardSignalTraceEntry
 
 
 class StructuralFinding(BaseModel):
@@ -186,6 +187,10 @@ class AnalysisResult(BaseModel):
     wizard_context_notes: list[str] = Field(
         default_factory=list,
         description="Notas explicáveis quando sinais `wz:` do assistente influenciam ranking/corpus.",
+    )
+    wizard_signal_trace: list[WizardSignalTraceEntry] = Field(
+        default_factory=list,
+        description="Audit trail compacto: tag → efeito → áreas impactadas (governança / export).",
     )
     anti_pattern_hits: list[AntiPatternHit] = Field(
         default_factory=list,

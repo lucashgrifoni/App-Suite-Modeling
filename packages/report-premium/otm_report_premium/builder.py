@@ -15,6 +15,7 @@ from otm_core_schema.document import ThreatModelDocument
 from otm_diagram_engine import export_flowchart_mermaid
 from otm_threat_engine import build_remediation_backlog
 from otm_threat_engine.analysis_diff import diff_analysis_results
+from otm_threat_engine.semantic_comparison import semantic_diff_from_analyses_only
 from otm_threat_engine.methodologies import recommend_methodology
 from otm_threat_engine.result import AnalysisResult, HeuristicThreat
 
@@ -29,6 +30,7 @@ from .models import (
     DistributionBlock,
     ExecutiveSummaryBlock,
     ExplainabilitySnippet,
+    GuidedModelingAuditBlock,
     InferenceDisclaimer,
     OwnershipRow,
     PremiumReportPayload,
@@ -397,6 +399,7 @@ def build_premium_report_payload(
     baseline_section: BaselineDiffSection | None = None
     if baseline is not None:
         adiff = diff_analysis_results(baseline, result)
+        sem_ins, sem_imp, sem_wor, sem_risk = semantic_diff_from_analyses_only(baseline, result)
         baseline_section = BaselineDiffSection(
             has_baseline=True,
             methodology_changed=adiff.methodology_changed,
@@ -421,6 +424,10 @@ def build_premium_report_payload(
                 f"ameaças adicionadas {len(adiff.heuristic_threats.added)}, "
                 f"removidas {len(adiff.heuristic_threats.removed)}."
             ),
+            semantic_improved=sem_imp[:12],
+            semantic_worsened=sem_wor[:12],
+            semantic_risk_impact=sem_risk[:8],
+            semantic_insights_from_analysis=sem_ins[:14],
         )
 
     dedupe: list[DedupeGroup] = build_dedupe_groups(active, meth, doc)
@@ -498,6 +505,49 @@ def build_premium_report_payload(
         readiness_questions=readiness,
     )
 
+    guided_audit: GuidedModelingAuditBlock | None = None
+    trace_lines = [
+        f"{e.source_tag} → {e.effect} ({e.weight}): {e.explanation[:220]}"
+        for e in result.wizard_signal_trace[:14]
+    ]
+    gap_msgs: list[str] = []
+    if result.model_quality_precheck and result.model_quality_precheck.checks:
+        gap_msgs = [c.message for c in result.model_quality_precheck.checks if not c.passed][:8]
+    ap_summaries = [
+        f"{h.name} (`{h.id}`) · conf. {getattr(h, 'confidence_hint', None) or 'medium'}"
+        for h in result.anti_pattern_hits[:10]
+    ]
+    mq_line = None
+    if result.model_quality_precheck:
+        pqx = result.model_quality_precheck
+        mq_line = (
+            f"Pré-check {pqx.score_0_100}/100 ({pqx.band}); "
+            f"confiança recomendações: {pqx.recommendation_confidence}."
+        )
+    mc_line = None
+    if result.methodology_completeness:
+        mc = result.methodology_completeness
+        mc_line = f"Completude metodológica: {mc.state.value}."
+        if mc.note:
+            mc_line += f" {mc.note[:160]}"
+
+    if (
+        result.wizard_context_notes
+        or trace_lines
+        or gap_msgs
+        or ap_summaries
+        or mq_line
+        or mc_line
+    ):
+        guided_audit = GuidedModelingAuditBlock(
+            model_quality_summary_line=mq_line,
+            methodology_completeness_line=mc_line,
+            wizard_context_notes=list(result.wizard_context_notes[:8]),
+            wizard_signal_trace_lines=trace_lines,
+            top_model_gap_messages=gap_msgs,
+            anti_pattern_summaries=ap_summaries,
+        )
+
     return PremiumReportPayload(
         level=level,
         disclaimer=disclaimer,
@@ -518,6 +568,7 @@ def build_premium_report_payload(
         explainability=explain_snippets,
         technical_appendix=tech_appendix,
         methodology_voice=methodology_voice_lines(meth),
+        guided_modeling_audit=guided_audit,
     )
 
 

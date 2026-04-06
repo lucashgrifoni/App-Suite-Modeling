@@ -3,6 +3,7 @@ model:
   system_type: web_application
   industry_sector: saas
   methodology: stride
+  template_semantic_profile: saas_tenant_isolation
 metadata:
   title: SaaS — aplicação web
   summary: Utilizador, gateway/WAF, API e base de dados.

@@ -31,13 +31,14 @@ export function ModelQualityStrip({ analysis }: Readonly<{ analysis: AnalysisRes
   return (
     <section
       aria-label="Qualidade do modelo e metodologia"
+      data-testid="model-quality-strip"
       className="rounded-otm-lg border border-otm-border/90 bg-otm-surface-1/60 px-4 py-3 text-sm text-otm-text"
     >
       <div className="flex flex-wrap items-start gap-3">
         {pq ? (
           <div className="min-w-[200px] flex-1 space-y-1">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-otm-text-subtle">
-              Model completeness
+              Completude do modelo
             </p>
             <p className="font-display text-xl font-semibold tabular-nums text-otm-text">{pq.score_0_100}</p>
             <div className="flex flex-wrap gap-1.5">
@@ -82,7 +83,7 @@ export function ModelQualityStrip({ analysis }: Readonly<{ analysis: AnalysisRes
         {mc ? (
           <div className="min-w-[220px] flex-1 space-y-1 border-t border-otm-border/60 pt-2 sm:border-l sm:border-t-0 sm:pl-4 sm:pt-0">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-otm-text-subtle">
-              Methodology completeness
+              Completude metodológica
             </p>
             <Badge tone={completenessBadgeTone(mc.state)}>
               {completenessLabel(mc.state)}
@@ -105,7 +106,12 @@ export function ModelQualityStrip({ analysis }: Readonly<{ analysis: AnalysisRes
             <ul className="mt-2 list-inside list-disc space-y-1 text-xs text-otm-text-muted">
               {ap.slice(0, 5).map((h) => (
                 <li key={h.id}>
-                  <span className="text-otm-text">{h.name}</span> — {h.message}
+                  <span className="text-otm-text">{h.name}</span>
+                  {h.confidence_hint ? (
+                    <span className="text-otm-text-subtle"> · conf. {h.confidence_hint}</span>
+                  ) : null}
+                  {" — "}
+                  {h.message}
                 </li>
               ))}
             </ul>

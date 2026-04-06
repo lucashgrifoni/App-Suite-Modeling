@@ -24,7 +24,11 @@ from otm_threat_engine.engine_support import (
     extend_with_pack_heuristics,
 )
 from otm_threat_engine.anti_pattern_library import detect_anti_patterns
-from otm_threat_engine.wizard_signals import apply_wizard_context_to_heuristics
+from otm_threat_engine.wizard_signals import (
+    apply_wizard_context_to_heuristics,
+    build_corpus_mitigation_trace,
+    signals_for_profile,
+)
 from otm_threat_engine.methodology_completeness import assess_methodology_completeness
 from otm_threat_engine.recommendation_gate import filter_pack_control_hints
 from otm_threat_engine.result import AnalysisResult, HeuristicThreat
@@ -197,7 +201,9 @@ class ThreatAnalysisEngine:
         )
         pack_hints = filter_pack_control_hints(doc, pack_hints)
         skipped += suppress_stride_genericity_noise(heuristics)
-        _, wizard_notes = apply_wizard_context_to_heuristics(doc, heuristics)
+        _, wizard_notes, boost_trace = apply_wizard_context_to_heuristics(doc, heuristics)
+        corpus_trace = build_corpus_mitigation_trace(signals_for_profile(doc))
+        wizard_signal_trace = [*boost_trace, *corpus_trace]
         summary = build_analysis_summary(
             structural_count=len(structural),
             trust_count=len(trust_findings),
@@ -218,6 +224,7 @@ class ThreatAnalysisEngine:
             industry_pack_id=pack.id if pack else None,
             pack_control_hints=pack_hints,
             wizard_context_notes=wizard_notes,
+            wizard_signal_trace=wizard_signal_trace,
         )
         return raw
 

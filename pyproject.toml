@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "open-threat-model"
-version = "5.0.0"
+version = "6.0.0"
 description = "Plataforma open source de Threat Modeling as Code (core, API, CLI, UI)."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -25,7 +25,16 @@ api = [
 cli = ["typer>=0.9", "rich>=13.7"]
 # PDF premium (xhtml2pdf); instalar com: pip install -e ".[report]"
 report = ["xhtml2pdf>=0.2.15"]
-dev = ["pytest>=7.4", "httpx>=0.26", "ruff>=0.3", "mypy>=1.8", "xhtml2pdf>=0.2.15"]
+dev = [
+  "pytest>=7.4",
+  "pytest-cov>=4.0",
+  "httpx>=0.26",
+  "ruff>=0.3",
+  "mypy>=1.8",
+  "xhtml2pdf>=0.2.15",
+]
+# AST leve opcional para `scan_node_express_repo` (env `OTM_REPO_ESPRIMA=1`). Sem isto, mantém-se só heurística regex.
+artifact_import_ast = ["esprima>=4.0.0,<5"]
 
 [project.scripts]
 otm = "otm_cli.main:main"
@@ -49,6 +58,11 @@ where = [
 otm_industry_packs = ["data/**/*"]
 otm_framework_mappings = ["data/**/*"]
 otm_threat_engine = ["data/**/*"]
+
+[tool.coverage.run]
+relative_files = true
+source = ["packages", "apps"]
+omit = ["*/tests/*", "*/__pycache__/*", "*/.venv/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

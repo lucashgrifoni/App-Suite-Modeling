@@ -10,6 +10,8 @@ import re
 from pathlib import Path
 from typing import Any
 
+from otm_artifact_import.repo_ast_optional import collect_express_routes_ast_lite
+
 # Extensões consideradas para texto de aplicação
 _SUFFIXES = {".js", ".mjs", ".cjs", ".ts", ".tsx"}
 
@@ -44,26 +46,56 @@ def scan_node_express_repo(root: Path) -> dict[str, Any]:
 
     route_re = re.compile(r"(?:app|router)\.(?:get|post|put|delete|patch)\(\s*['\"]([^'\"]+)['\"]")
     router_mount_re = re.compile(r"(?:app|router)\.use\s*\(\s*['\"]([^'\"]+)['\"]")
-    multer_re = re.compile(r"multer\(|upload\.single|upload\.array")
-    session_re = re.compile(r"express-session|expressSession")
-    fetch_re = re.compile(r"(?:axios|fetch)\(")
-    eval_re = re.compile(r"\beval\s*\(|exec\s*\(")
+    multer_re = re.compile(
+        r"multer\s*\(|upload\.(?:single|array|fields)|express\.file\s*\(|busboy\s*\(",
+        re.IGNORECASE,
+    )
+    session_re = re.compile(
+        r"express-session|expressSession|cookie-session|connect\.mongo|req\.session\b",
+        re.IGNORECASE,
+    )
+    fetch_re = re.compile(r"(?:axios|fetch|got|needle|request)\s*\(")
+    eval_re = re.compile(r"\beval\s*\(|new\s+Function\s*\(")
     auth_re = re.compile(
         r"(?:passport|jsonwebtoken|express-jwt|jwt\.verify|requireAuth|authMiddleware|isAuthenticated)",
         re.IGNORECASE,
     )
     admin_route_re = re.compile(r"['\"]\/admin(?:\/|['\"])")
-    child_re = re.compile(r"child_process|spawn\s*\(|execFile\s*\(")
+    debug_route_re = re.compile(r"['\"]\/(?:debug|__debug)['\"\/]")
+    child_re = re.compile(
+        r"child_process|\.spawn\s*\(|execFile\s*\(|\.fork\s*\(|promisify\s*\(\s*exec\s*\)",
+        re.IGNORECASE,
+    )
 
     for path, text in files:
         rel = path.relative_to(root)
-        for m in route_re.finditer(text):
+        ast_routes = collect_express_routes_ast_lite(text)
+        ast_paths = {p for _, p in ast_routes}
+        route_matches = list(route_re.finditer(text))
+        regex_paths = {m.group(1) for m in route_matches}
+
+        for m in route_matches:
+            ev = m.group(1)[:120]
+            src = "combined" if ev in ast_paths else "regex_heuristic"
             inferences.append(
                 {
                     "kind": "route",
                     "message": f"Rota HTTP encontrada em `{rel}`",
-                    "evidence": m.group(1)[:120],
+                    "evidence": ev,
                     "confidence": "medium",
+                    "inference_source": src,
+                }
+            )
+        for method, apath in ast_routes:
+            if apath in regex_paths:
+                continue
+            inferences.append(
+                {
+                    "kind": "route",
+                    "message": f"Rota HTTP {method.upper()} (deteção AST leve) em `{rel}`",
+                    "evidence": f"{method.upper()} {apath}"[:120],
+                    "confidence": "medium",
+                    "inference_source": "ast_lite",
                 }
             )
         if multer_re.search(text):
@@ -73,6 +105,7 @@ def scan_node_express_repo(root: Path) -> dict[str, Any]:
                     "message": f"Possível upload de ficheiros (`multer`/upload) em `{rel}`",
                     "evidence": "multer|upload.single|upload.array",
                     "confidence": "medium",
+                    "inference_source": "regex_heuristic",
                 }
             )
         if session_re.search(text):
@@ -82,6 +115,7 @@ def scan_node_express_repo(root: Path) -> dict[str, Any]:
                     "message": f"Sessão/cookies prováveis em `{rel}`",
                     "evidence": "express-session",
                     "confidence": "medium",
+                    "inference_source": "regex_heuristic",
                 }
             )
         if fetch_re.search(text):
@@ -91,6 +125,7 @@ def scan_node_express_repo(root: Path) -> dict[str, Any]:
                     "message": f"Chamadas HTTP externas (axios/fetch) em `{rel}`",
                     "evidence": "axios|fetch",
                     "confidence": "low",
+                    "inference_source": "regex_heuristic",
                 }
             )
         if eval_re.search(text):
@@ -100,6 +135,7 @@ def scan_node_express_repo(root: Path) -> dict[str, Any]:
                     "message": f"Possível eval/exec em `{rel}` — rever risco de injeção",
                     "evidence": "eval|exec",
                     "confidence": "high",
+                    "inference_source": "regex_heuristic",
                 }
             )
         if auth_re.search(text):
@@ -109,6 +145,7 @@ def scan_node_express_repo(root: Path) -> dict[str, Any]:
                     "message": f"Padrões de autenticação/autorização em `{rel}`",
                     "evidence": "passport|jwt|authMiddleware",
                     "confidence": "low",
+                    "inference_source": "regex_heuristic",
                 }
             )
         if admin_route_re.search(text):
@@ -118,6 +155,17 @@ def scan_node_express_repo(root: Path) -> dict[str, Any]:
                     "message": f"Possível rota ou prefixo `/admin` em `{rel}`",
                     "evidence": "/admin",
                     "confidence": "medium",
+                    "inference_source": "regex_heuristic",
+                }
+            )
+        if debug_route_re.search(text):
+            inferences.append(
+                {
+                    "kind": "debug_route",
+                    "message": f"Possível rota de debug em `{rel}` — rever exposição",
+                    "evidence": "/debug|__debug",
+                    "confidence": "low",
+                    "inference_source": "regex_heuristic",
                 }
             )
         if child_re.search(text):
@@ -127,6 +175,7 @@ def scan_node_express_repo(root: Path) -> dict[str, Any]:
                     "message": f"Uso de child_process/spawn/execFile em `{rel}` — rever superfície de comando",
                     "evidence": "child_process|spawn|execFile",
                     "confidence": "medium",
+                    "inference_source": "regex_heuristic",
                 }
             )
         for m in router_mount_re.finditer(text):
@@ -136,6 +185,7 @@ def scan_node_express_repo(root: Path) -> dict[str, Any]:
                     "message": f"Montagem `use('{m.group(1)}')` em `{rel}`",
                     "evidence": m.group(1)[:120],
                     "confidence": "low",
+                    "inference_source": "regex_heuristic",
                 }
             )
         if len(corpus_chunks) < 40:
@@ -161,8 +211,54 @@ def scan_node_express_repo(root: Path) -> dict[str, Any]:
                     "message": f"Diretório `{sub}/` presente na raiz — possível conteúdo estático ou uploads",
                     "evidence": str(p.relative_to(root)),
                     "confidence": "low",
+                    "inference_source": "convention",
                 }
             )
+
+    modeling_hints: list[dict[str, Any]] = []
+    kinds_present = {inf.get("kind") for inf in unique}
+    if "upload" in kinds_present:
+        modeling_hints.append(
+            {
+                "target": "data_flow",
+                "hint": "Marcar fluxos com `supports_file_upload: true` onde o código trata multipart.",
+                "confidence": "low",
+                "basis": "repo_inference:upload",
+            }
+        )
+    if "session" in kinds_present:
+        modeling_hints.append(
+            {
+                "target": "trust_boundary",
+                "hint": "Garantir boundary explícito entre cliente e camada de sessão/cookies.",
+                "confidence": "low",
+                "basis": "repo_inference:session",
+            }
+        )
+    if "external_fetch" in kinds_present:
+        modeling_hints.append(
+            {
+                "target": "data_flow",
+                "hint": "Marcar `supports_external_fetch: true` e rever SSRF no modelo.",
+                "confidence": "low",
+                "basis": "repo_inference:external_fetch",
+            }
+        )
+    if "admin_route" in kinds_present or "debug_route" in kinds_present:
+        modeling_hints.append(
+            {
+                "target": "component",
+                "hint": "Componentes admin/debug devem refletir `privilege_level` / segregação no threat model.",
+                "confidence": "medium",
+                "basis": "repo_inference:admin_or_debug",
+            }
+        )
+
+    import_signals_corpus_snippets: list[str] = []
+    for inf in unique[:24]:
+        msg = inf.get("message")
+        if isinstance(msg, str) and msg:
+            import_signals_corpus_snippets.append(msg[:200])
 
     return {
         "root": str(root),
@@ -170,4 +266,6 @@ def scan_node_express_repo(root: Path) -> dict[str, Any]:
         "inferences": unique[:80],
         "directory_hints": dir_hints,
         "corpus_excerpt": "\n\n".join(corpus_chunks)[:8000],
+        "modeling_hints": modeling_hints[:20],
+        "import_signals_corpus_snippets": import_signals_corpus_snippets,
     }

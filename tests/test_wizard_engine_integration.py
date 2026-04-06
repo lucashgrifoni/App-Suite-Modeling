@@ -34,3 +34,32 @@ def test_wizard_negative_signals_produce_notes_and_boost() -> None:
     assert r.wizard_context_notes
     boosted = any("wizard:context_boost" in (h.signal_refs or []) for h in r.heuristic_threats)
     assert boosted or r.summary.max_risk_score is not None
+    assert r.wizard_signal_trace
+    assert any(e.effect == "ranking_impact" for e in r.wizard_signal_trace)
+
+
+def test_wizard_single_admin_negative_no_ranking_boost() -> None:
+    """Uma única resposta negativa admin não deve aplicar `wizard:context_boost` (anti-overfitting)."""
+    raw = load_template_yaml("admin-portal")
+    doc = load_document_from_yaml(raw)
+    doc.metadata.tags = ["wz:internal_admin_portal:approval=no"]
+    r = analyze_document(doc, methodology="stride")
+    boosted = any("wizard:context_boost" in (h.signal_refs or []) for h in r.heuristic_threats)
+    assert not boosted
+    assert any(
+        e.source_tag == "wz:internal_admin_portal:isolated_no" and e.effect == "observation"
+        for e in r.wizard_signal_trace
+    )
+
+
+def test_wizard_approval_yes_blocks_admin_ranking_boost() -> None:
+    raw = load_template_yaml("admin-portal")
+    doc = load_document_from_yaml(raw)
+    doc.metadata.tags = [
+        "wz:internal_admin_portal:approval=no",
+        "wz:internal_admin_portal:segregation=no",
+        "wz:internal_admin_portal:approval=yes",
+    ]
+    r = analyze_document(doc, methodology="stride")
+    boosted = any("wizard:context_boost" in (h.signal_refs or []) for h in r.heuristic_threats)
+    assert not boosted

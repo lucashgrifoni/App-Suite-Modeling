@@ -16,7 +16,7 @@ import { RiskScoreBar } from "../components/analytics/RiskScoreBar";
 import { StatusPill } from "../components/ui/StatusPill";
 import { useSession } from "../context/SessionContext";
 import { useToast } from "../context/ToastContext";
-import type { DiffAggregateSection, ThreatModelComparisonResult } from "../types/api";
+import type { ComparisonMeta, DiffAggregateSection, ThreatModelComparisonResult } from "../types/api";
 import type { OtmDocument } from "../types/document";
 
 function parseRevisedJson(raw: string): OtmDocument {
@@ -156,16 +156,32 @@ function DiffRiskDeltaCard({
   );
 }
 
-function SemanticDiffSectionsBlock({ meta }: Readonly<{ meta: Record<string, unknown> }>) {
+function SemanticDiffSectionsBlock({ meta }: Readonly<{ meta: ComparisonMeta }>) {
   const raw = meta.semantic_diff_sections;
   if (!raw || typeof raw !== "object") return null;
-  const sec = raw as { improved?: string[]; worsened?: string[]; risk_impact?: string[] };
+  const sec = raw as {
+    structural_change_summary?: string[];
+    improved?: string[];
+    worsened?: string[];
+    risk_impact?: string[];
+  };
+  const scs = sec.structural_change_summary ?? [];
   const imp = sec.improved ?? [];
   const wor = sec.worsened ?? [];
   const risk = sec.risk_impact ?? [];
-  if (imp.length === 0 && wor.length === 0 && risk.length === 0) return null;
+  if (scs.length === 0 && imp.length === 0 && wor.length === 0 && risk.length === 0) return null;
   return (
     <div className="grid gap-3 sm:grid-cols-3">
+      {scs.length ? (
+        <div className="rounded-otm-md border border-otm-border bg-otm-surface-1/80 p-3 text-xs text-otm-text-muted sm:col-span-3">
+          <p className="font-semibold text-otm-text">Mudança estrutural (contagens)</p>
+          <ul className="mt-2 list-inside list-disc space-y-1">
+            {scs.map((x) => (
+              <li key={x}>{x}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
       {imp.length ? (
         <div className="rounded-otm-md border border-emerald-500/20 bg-emerald-950/15 p-3 text-xs text-otm-text-muted">
           <p className="font-semibold text-emerald-100">Melhorou</p>
@@ -200,19 +216,45 @@ function SemanticDiffSectionsBlock({ meta }: Readonly<{ meta: Record<string, unk
   );
 }
 
-function SemanticInsightsBlock({ meta }: Readonly<{ meta: Record<string, unknown> }>) {
+function StructuralRefsBlock({ meta }: Readonly<{ meta: ComparisonMeta }>) {
+  const refs = meta.semantic_structural_refs ?? [];
+  if (!refs.length) return null;
+  return (
+    <div data-testid="diff-structural-refs">
+      <Card className="space-y-2 p-4" variant="glass">
+        <h2 className="font-display text-sm font-semibold text-otm-text">Estrutura → interpretação</h2>
+        <p className="text-xs text-otm-text-muted">
+          Referências correlacionais (ref:struct:*). Não implicam causalidade provada entre mudança e incidente.
+        </p>
+        <ul className="list-inside list-disc space-y-1.5 text-xs text-otm-text-muted">
+          {refs.slice(0, 12).map((r) => (
+            <li key={r.ref}>
+              <span className="font-mono text-otm-accent">{r.ref}</span> · {r.entity_kind}{" "}
+              <span className="text-otm-text">{r.entity_id}</span>
+            </li>
+          ))}
+        </ul>
+      </Card>
+    </div>
+  );
+}
+
+function SemanticInsightsBlock({ meta }: Readonly<{ meta: ComparisonMeta }>) {
   const raw = meta.semantic_insights;
   const insights = Array.isArray(raw) ? (raw as string[]) : [];
   const ver = typeof meta.semantic_insights_version === "string" ? meta.semantic_insights_version : "";
+  const disc = typeof meta.interpretation_disclaimer === "string" ? meta.interpretation_disclaimer : "";
   const hasSections =
     meta.semantic_diff_sections != null && typeof meta.semantic_diff_sections === "object";
   if (insights.length === 0 && !hasSections) return null;
   return (
+    <div data-testid="diff-semantic-panel">
     <Card className="space-y-2 p-4" variant="elevated">
       <h2 className="font-display text-sm font-semibold text-otm-text">Diff semântico</h2>
       {ver ? (
         <p className="text-[10px] uppercase tracking-wide text-otm-text-subtle">Versão {ver}</p>
       ) : null}
+      {disc ? <p className="text-xs italic text-otm-text-muted">{disc}</p> : null}
       <SemanticDiffSectionsBlock meta={meta} />
       {insights.length > 0 ? (
         <ul className="list-inside list-disc space-y-1.5 text-sm text-otm-text-muted">
@@ -222,6 +264,7 @@ function SemanticInsightsBlock({ meta }: Readonly<{ meta: Record<string, unknown
         </ul>
       ) : null}
     </Card>
+    </div>
   );
 }
 
@@ -283,6 +326,8 @@ function ComparisonResultPanel({
       <DiffRiskDeltaCard rd={rd} runAnalysis={runAnalysis} />
 
       <SemanticInsightsBlock meta={result.meta} />
+
+      <StructuralRefsBlock meta={result.meta} />
 
       <Card className="space-y-2 p-4" variant="glass">
         <h2 className="font-display text-sm font-semibold text-otm-text">JSON completo</h2>

@@ -194,6 +194,16 @@ class BaselineDiffSection(BaseModel):
     trust_boundary_delta_summary: str
     structural_delta_summary: str
     narrative: str
+    semantic_improved: list[str] = Field(
+        default_factory=list,
+        description="Melhorias heurísticas entre análises (não causalidade com YAML).",
+    )
+    semantic_worsened: list[str] = Field(default_factory=list)
+    semantic_risk_impact: list[str] = Field(default_factory=list)
+    semantic_insights_from_analysis: list[str] = Field(
+        default_factory=list,
+        description="Bullets de contexto (precheck, anti-patterns, ranking) entre execuções.",
+    )
 
 
 class DedupeGroup(BaseModel):
@@ -230,6 +240,23 @@ class TechnicalAppendix(BaseModel):
     import_evidence_note: str | None = None
 
 
+class GuidedModelingAuditBlock(BaseModel):
+    """Eco do cockpit / assistente no report — compacto, auditável, sem duplicar o JSON completo."""
+
+    model_quality_summary_line: str | None = Field(
+        default=None,
+        description="Uma linha: score pré-check, banda e confiança.",
+    )
+    methodology_completeness_line: str | None = Field(
+        default=None,
+        description="Estado e nota curta da completude metodológica.",
+    )
+    wizard_context_notes: list[str] = Field(default_factory=list)
+    wizard_signal_trace_lines: list[str] = Field(default_factory=list)
+    top_model_gap_messages: list[str] = Field(default_factory=list)
+    anti_pattern_summaries: list[str] = Field(default_factory=list)
+
+
 class PremiumReportPayload(BaseModel):
     """Payload completo — entrada para Markdown/HTML/PDF."""
 
@@ -255,4 +282,8 @@ class PremiumReportPayload(BaseModel):
     methodology_voice: list[str] = Field(
         default_factory=list,
         description="Notas de adaptação por metodologia dominante.",
+    )
+    guided_modeling_audit: GuidedModelingAuditBlock | None = Field(
+        default=None,
+        description="Contexto do assistente, lacunas do pré-check e anti-padrões (alinhado ao export Markdown).",
     )

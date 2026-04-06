@@ -380,6 +380,7 @@ def test_export_analysis_json_minimal_top_level_key_order_stable() -> None:
         "model_quality_precheck",
         "methodology_completeness",
         "wizard_context_notes",
+        "wizard_signal_trace",
         "anti_pattern_hits",
     ]
 
@@ -498,6 +499,8 @@ def test_export_analysis_markdown_harmonized_minimal_h3_heading_order_stable(
     assert headings == [
         "### Referências a frameworks (agregado)",
         "### Fluxos entre fronteiras",
+        "### Qualidade do modelo e metodologia (resumo)",
+        "### Lacunas do modelo (pré-check)",
         "### Resumo executivo",
         "### Categorias de risco (top)",
         "### Ameaças sugeridas (harmonizadas)",
@@ -602,6 +605,11 @@ def test_export_threat_model_bundle_json_contract_minimal_stride() -> None:
         "methodology_insights",
         "explanations",
         "ai_system_context",
+        "model_quality_precheck",
+        "methodology_completeness",
+        "wizard_context_notes",
+        "wizard_signal_trace",
+        "anti_pattern_hits",
     }
     assert expected_top.issubset(set(analysis_out.keys()))
     assert analysis_out["methodology"] == "stride"
@@ -636,3 +644,53 @@ def test_diagram_engine_reexports_mermaid() -> None:
 
     doc = load_document_from_yaml_path(_MINIMAL)
     assert from_de(doc) == export_flowchart_mermaid(doc)
+
+
+def test_export_analysis_markdown_includes_guided_and_audit_sections() -> None:
+    from otm_core_schema.enums import ThreatModelMethodology
+    from otm_core_schema.model_quality_precheck import ModelQualityPrecheck, QualityCheckItem
+    from otm_threat_engine.anti_pattern_library import AntiPatternHit
+    from otm_threat_engine.result import AnalysisResult, AnalysisSummary
+    from otm_threat_engine.wizard_audit_models import WizardSignalTraceEntry
+
+    r = AnalysisResult(
+        engine_version="test",
+        document_title="t",
+        methodology=ThreatModelMethodology.STRIDE,
+        summary=AnalysisSummary(),
+        wizard_context_notes=["Nota guiada"],
+        wizard_signal_trace=[
+            WizardSignalTraceEntry(
+                source_tag="wz:demo:key=no",
+                effect="observation",
+                weight="low",
+                impact_areas=["audit_only"],
+                mechanism="auxiliary",
+                explanation="Teste de audit trail.",
+            )
+        ],
+        model_quality_precheck=ModelQualityPrecheck(
+            score_0_100=40,
+            band="minimal",
+            methodology_fit="weak",
+            recommendation_confidence="low",
+            checks=[QualityCheckItem(code="gap", passed=False, message="Lacuna sintética.")],
+            methodology_fit_matrix={"stride": "weak"},
+        ),
+        anti_pattern_hits=[
+            AntiPatternHit(
+                id="ap_x",
+                name="Padrão X",
+                severity_hint="medium",
+                message="Mensagem anti-pattern.",
+            )
+        ],
+    )
+    md = export_analysis_markdown(r)
+    assert "### Qualidade do modelo e metodologia (resumo)" in md
+    assert "### Contexto do assistente (modelação guiada)" in md
+    assert "### Rastreabilidade do assistente (audit trail)" in md
+    assert "### Lacunas do modelo (pré-check)" in md
+    assert "### Anti-padrões de modelagem (destaque)" in md
+    assert "Nota guiada" in md
+    assert "wz:demo:key=no" in md

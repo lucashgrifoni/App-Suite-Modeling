@@ -38,6 +38,7 @@ Thumbs.db
 .coverage
 coverage/
 coverage-output.txt
+coverage.xml
 artifacts/
 apps/web/test-results/
 apps/web/playwright-report/

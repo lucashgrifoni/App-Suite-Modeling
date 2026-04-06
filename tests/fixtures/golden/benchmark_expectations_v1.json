@@ -4,27 +4,27 @@
     "industry-ecommerce": {
       "min_assets": 2,
       "min_trust_boundaries": 2,
-      "min_model_completeness_score": 35,
+      "min_model_completeness_score": 37,
       "methodology_completeness_stride": ["complete", "partial", "degraded"]
     },
     "admin-portal": {
       "min_assets": 2,
       "min_trust_boundaries": 2,
-      "min_model_completeness_score": 35,
+      "min_model_completeness_score": 37,
       "methodology_completeness_stride": ["complete", "partial", "degraded"],
       "finance_pack_no_payment_keyword_in_hints": true
     },
     "file-upload-processing": {
       "min_assets": 2,
       "min_trust_boundaries": 2,
-      "min_model_completeness_score": 35,
+      "min_model_completeness_score": 37,
       "methodology_completeness_stride": ["complete", "partial", "degraded"],
       "must_include_trust_boundary_ids": ["internet", "dmz", "app_tier"]
     },
     "api-public": {
       "min_assets": 2,
       "min_trust_boundaries": 2,
-      "min_model_completeness_score": 35,
+      "min_model_completeness_score": 37,
       "methodology_completeness_stride": ["complete", "partial", "degraded"],
       "stride_fit_matrix_strong_or_partial": true
     },

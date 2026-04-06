@@ -14,6 +14,7 @@ import { useAnalysisHistory } from "../context/AnalysisHistoryContext";
 import { useSession } from "../context/SessionContext";
 import { useToast } from "../context/ToastContext";
 import { downloadPdfBlob, generateReportPdfBlob } from "../lib/generateReportPdf";
+import { extFor, mimeFor } from "../utils/exportArtifactHelpers";
 import type { ExportFormat } from "../types/api";
 
 const FORMATS: { id: ExportFormat; label: string; hint: string }[] = [
@@ -100,7 +101,7 @@ export function ExportPage() {
         queueMicrotask(r);
       });
       const blob = await generateReportPdfBlob(model, analysis);
-      const safe = model.metadata.title.replace(/[^\w\-]+/g, "_").slice(0, 40);
+      const safe = model.metadata.title.replaceAll(/[^\w-]+/g, "_").slice(0, 40);
       downloadPdfBlob(blob, `otm-report-${safe}.pdf`);
       appendSnapshot("export");
       toast.success("PDF gerado.");
@@ -246,6 +247,7 @@ export function ExportPage() {
       {error && <Alert>{error}</Alert>}
 
       {result && (
+        <div data-testid="export-download-section">
         <Card title="Descarregar" subtitle="Ficheiros prontos para arquivo ou revisão." variant="elevated">
           <ul className="space-y-2">
             {Object.entries(result).map(([key, text]) => (
@@ -282,19 +284,8 @@ export function ExportPage() {
             </details>
           ))}
         </Card>
+        </div>
       )}
     </div>
   );
-}
-
-function extFor(key: string): string {
-  if (key.includes("mermaid")) return "mmd";
-  if (key.includes("markdown")) return "md";
-  return "json";
-}
-
-function mimeFor(key: string): string {
-  if (key.includes("markdown")) return "text/markdown;charset=utf-8";
-  if (key.includes("mermaid")) return "text/plain;charset=utf-8";
-  return "application/json;charset=utf-8";
 }

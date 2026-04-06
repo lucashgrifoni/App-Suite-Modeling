@@ -429,6 +429,70 @@ def _append_explainability_compact(lines: list[str], result: AnalysisResult, *, 
     lines.append("")
 
 
+def _append_guided_context_and_audit(lines: list[str], result: AnalysisResult) -> None:
+    """Propaga notas do assistente, audit trail, lacunas do pré-check e anti-padrões (fora da UI)."""
+    pq = result.model_quality_precheck
+    mc = result.methodology_completeness
+    if pq is not None or mc is not None:
+        lines.append("### Qualidade do modelo e metodologia (resumo)")
+        lines.append("")
+        if pq is not None:
+            lines.append(
+                f"- **Pré-check:** score **{pq.score_0_100}/100** (banda `{pq.band}`) · "
+                f"confiança nas recomendações: `{pq.recommendation_confidence}` · "
+                f"fit STRIDE: `{pq.methodology_fit_matrix.get('stride', pq.methodology_fit)}`."
+            )
+        if mc is not None:
+            reasons = "; ".join(mc.reasons[:3]) if mc.reasons else "—"
+            note = mc.note or ""
+            lines.append(
+                f"- **Completude metodológica:** `{mc.state.value}` — {reasons}"
+                + (f" · _{note}_" if note else "")
+            )
+        lines.append("")
+
+    if result.wizard_context_notes:
+        lines.append("### Contexto do assistente (modelação guiada)")
+        lines.append("")
+        lines.append("Notas derivadas de respostas `wz:` alinhadas ao perfil semântico do modelo.")
+        lines.append("")
+        for note in result.wizard_context_notes[:8]:
+            lines.append(f"- {note}")
+        lines.append("")
+
+    if result.wizard_signal_trace:
+        lines.append("### Rastreabilidade do assistente (audit trail)")
+        lines.append("")
+        lines.append(
+            "Ligação compacta entre declarações no questionário e efeitos no motor (ranking, corpus, observações)."
+        )
+        lines.append("")
+        for entry in result.wizard_signal_trace[:12]:
+            areas = ", ".join(entry.impact_areas) if entry.impact_areas else "—"
+            lines.append(
+                f"- `{entry.source_tag}` — **{entry.effect}** ({entry.weight}; {entry.mechanism}) → "
+                f"{areas}: {entry.explanation}"
+            )
+        lines.append("")
+
+    if pq and pq.checks:
+        failed = [c for c in pq.checks if not c.passed][:6]
+        if failed:
+            lines.append("### Lacunas do modelo (pré-check)")
+            lines.append("")
+            for c in failed:
+                lines.append(f"- [{c.code}] {c.message}")
+            lines.append("")
+
+    if result.anti_pattern_hits:
+        lines.append("### Anti-padrões de modelagem (destaque)")
+        lines.append("")
+        for hit in result.anti_pattern_hits[:10]:
+            conf = getattr(hit, "confidence_hint", None) or "medium"
+            lines.append(f"- **{hit.name}** (`{hit.id}`) · confiança _{conf}_ — {hit.message}")
+        lines.append("")
+
+
 def _append_next_steps_from_harmonized(
     lines: list[str],
     result: AnalysisResult,
@@ -505,6 +569,7 @@ def export_analysis_markdown(result: AnalysisResult, *, max_heuristic_rows: int 
         for f in result.trust_boundary_findings:
             lines.append(f"- {f.message}")
         lines.append("")
+    _append_guided_context_and_audit(lines, result)
     active = _active_threats(result)
     harmonized, suppressed, _ = _build_harmonized(active)
     _append_executive_summary_from_harmonized(lines, result, active=active, harmonized=harmonized)

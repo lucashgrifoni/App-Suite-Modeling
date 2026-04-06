@@ -12,6 +12,21 @@ import type { OtmDocument } from "../types/document";
 const DOC_KEY = "otm.web.document";
 const ANALYSIS_KEY = "otm.web.analysis";
 
+/** Garante campos obrigatórios do contrato API para análises antigas em sessionStorage. */
+function normalizeAnalysis(raw: unknown): AnalysisResult | null {
+  if (!raw || typeof raw !== "object") return null;
+  const a = raw as Partial<AnalysisResult>;
+  if (typeof a.engine_version !== "string" || typeof a.document_title !== "string" || !a.summary) {
+    return null;
+  }
+  return {
+    ...(a as AnalysisResult),
+    structural_findings: a.structural_findings ?? [],
+    trust_boundary_findings: a.trust_boundary_findings ?? [],
+    heuristic_threats: a.heuristic_threats ?? [],
+  };
+}
+
 function normalizeDoc(raw: unknown): OtmDocument | null {
   if (!raw || typeof raw !== "object") return null;
   const d = raw as OtmDocument;
@@ -72,7 +87,7 @@ export function SessionProvider({ children }: Readonly<{ children: ReactNode }>)
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(() => {
     try {
       const s = sessionStorage.getItem(ANALYSIS_KEY);
-      return s ? (JSON.parse(s) as AnalysisResult) : null;
+      return s ? normalizeAnalysis(JSON.parse(s)) : null;
     } catch {
       return null;
     }
@@ -89,8 +104,9 @@ export function SessionProvider({ children }: Readonly<{ children: ReactNode }>)
   }, []);
 
   const setAnalysisValue = useCallback((a: AnalysisResult | null) => {
-    setAnalysis(a);
-    persistAnalysis(a);
+    const n = a ? normalizeAnalysis(a) : null;
+    setAnalysis(n);
+    persistAnalysis(n);
   }, []);
 
   const reset = useCallback(() => {

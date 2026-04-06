@@ -68,3 +68,26 @@ def test_deep_has_appendix_or_voice(doc_and_result) -> None:
     payload = build_premium_report_payload(doc, result, level=ReportLevel.DEEP)
     assert payload.technical_appendix is not None
     assert payload.methodology_voice
+
+
+def test_guided_modeling_audit_in_markdown_when_trace_or_gaps(doc_and_result) -> None:
+    doc, result = doc_and_result
+    payload = build_premium_report_payload(doc, result, level=ReportLevel.EXECUTIVE)
+    if payload.guided_modeling_audit:
+        md = render_premium_markdown(payload)
+        assert "## Contexto de decisão (assistente / completude)" in md
+
+
+def test_baseline_premium_markdown_includes_semantic_between_analyses(doc_and_result) -> None:
+    doc, r1 = doc_and_result
+    assert r1.model_quality_precheck is not None
+    pq = r1.model_quality_precheck
+    r2 = r1.model_copy(
+        update={
+            "model_quality_precheck": pq.model_copy(update={"score_0_100": max(0, pq.score_0_100 - 20)}),
+        }
+    )
+    payload = build_premium_report_payload(doc, r2, baseline=r1, level=ReportLevel.STANDARD)
+    assert payload.baseline_diff is not None
+    md = render_premium_markdown(payload)
+    assert "Diff semântico (entre execuções de análise)" in md

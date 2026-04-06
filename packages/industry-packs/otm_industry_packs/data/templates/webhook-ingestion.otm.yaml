@@ -3,6 +3,7 @@ model:
   system_type: api_backend
   industry_sector: generic
   methodology: stride
+  template_semantic_profile: webhook_ingestion_pipeline
 metadata:
   title: Webhook e ingestão
   summary: Fornecedor externo envia eventos para fila processada por workers.

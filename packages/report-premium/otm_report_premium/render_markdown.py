@@ -58,6 +58,34 @@ def render_premium_markdown(payload: PremiumReportPayload) -> str:
         lines.append(f"- {q}")
     lines.append("")
 
+    if payload.guided_modeling_audit:
+        g = payload.guided_modeling_audit
+        lines.append("## Contexto de decisão (assistente / completude)\n")
+        if g.model_quality_summary_line:
+            lines.append(f"- **Qualidade do modelo:** {g.model_quality_summary_line}\n")
+        if g.methodology_completeness_line:
+            lines.append(f"- **Metodologia:** {g.methodology_completeness_line}\n")
+        if g.wizard_context_notes:
+            lines.append("### Notas do assistente\n")
+            for n in g.wizard_context_notes:
+                lines.append(f"- {n}")
+            lines.append("")
+        if g.wizard_signal_trace_lines:
+            lines.append("### Audit trail do assistente (resumo)\n")
+            for t in g.wizard_signal_trace_lines:
+                lines.append(f"- {t}")
+            lines.append("")
+        if g.top_model_gap_messages:
+            lines.append("### Lacunas do pré-check\n")
+            for m in g.top_model_gap_messages:
+                lines.append(f"- {m}")
+            lines.append("")
+        if g.anti_pattern_summaries:
+            lines.append("### Anti-padrões\n")
+            for a in g.anti_pattern_summaries:
+                lines.append(f"- {a}")
+            lines.append("")
+
     if lvl != ReportLevel.EXECUTIVE:
         lines.append("## Visão arquitetural resumida\n")
         ar = payload.architecture
@@ -157,6 +185,27 @@ def render_premium_markdown(payload: PremiumReportPayload) -> str:
         lines.append(payload.baseline_diff.narrative + "\n")
         lines.append(f"- Novos: {', '.join(payload.baseline_diff.threats_added[:20])}\n")
         lines.append(f"- Removidos: {', '.join(payload.baseline_diff.threats_removed[:20])}\n")
+        bd = payload.baseline_diff
+        if bd.semantic_insights_from_analysis or bd.semantic_improved or bd.semantic_worsened or bd.semantic_risk_impact:
+            lines.append("\n### Diff semântico (entre execuções de análise)\n")
+            lines.append(
+                "_Heurística sobre pré-check, anti-patterns e ranking — não atribui causa a alterações no YAML._\n"
+            )
+            for x in bd.semantic_insights_from_analysis[:10]:
+                lines.append(f"- {x}")
+            if bd.semantic_improved:
+                lines.append("\n_Melhorou:_")
+                for x in bd.semantic_improved[:8]:
+                    lines.append(f"- {x}")
+            if bd.semantic_worsened:
+                lines.append("\n_Atenção:_")
+                for x in bd.semantic_worsened[:8]:
+                    lines.append(f"- {x}")
+            if bd.semantic_risk_impact:
+                lines.append("\n_Impacto de risco (leitura):_")
+                for x in bd.semantic_risk_impact[:6]:
+                    lines.append(f"- {x}")
+            lines.append("")
 
     if lvl != ReportLevel.EXECUTIVE and payload.deduplication:
         lines.append("## Deduplicação inteligente\n")

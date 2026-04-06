@@ -96,7 +96,9 @@ test("fluxo mínimo UI: home -> análise -> export", async ({ page }) => {
   await page.selectOption("#methodology", "stride");
   await page.getByRole("button", { name: "Gerar análise" }).click();
   await expect(page.getByText("Heurísticas novas")).toBeVisible();
-  await expect(page.getByText("Tampering no componente API")).toBeVisible();
+  await expect(
+    page.getByTestId("cockpit-priorities").getByText("Tampering no componente API"),
+  ).toBeVisible();
 
   await page.getByRole("button", { name: "Exportar resultados" }).click();
   await expect(page).toHaveURL(/\/export/);

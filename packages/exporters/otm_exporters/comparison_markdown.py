@@ -24,6 +24,61 @@ def export_comparison_markdown(result: ThreatModelComparisonResult) -> str:
         lines.append(f"{i}. {ins}")
     if not result.key_insights:
         lines.append("_Nenhum insight automático._")
+    meta = result.meta or {}
+    disc = meta.get("interpretation_disclaimer") if isinstance(meta, dict) else None
+    if isinstance(disc, str) and disc.strip():
+        lines.extend(["", "### Aviso inferencial (diff)", "", f"_{disc}_", ""])
+
+    sem = meta.get("semantic_diff_sections")
+    if isinstance(sem, dict):
+        improved = sem.get("improved") or []
+        worsened = sem.get("worsened") or []
+        risk_impact = sem.get("risk_impact") or []
+        scs = sem.get("structural_change_summary") or []
+        if improved or worsened or risk_impact or scs:
+            lines.extend(["", "### Diff semântico (resumo)", ""])
+            lines.append(
+                "_Agregado heurístico (estrutura + análise). Não atribui causalidade fina a campos individuais._"
+            )
+            lines.append("")
+            if scs:
+                lines.append("_Mudanças estruturais (contagens de IDs):_")
+                for item in scs[:6]:
+                    lines.append(f"- {item}")
+                lines.append("")
+            if improved:
+                lines.append("_Melhorias / convergência:_")
+                for item in improved[:8]:
+                    lines.append(f"- {item}")
+                lines.append("")
+            if worsened:
+                lines.append("_Atenção / regressão aparente:_")
+                for item in worsened[:8]:
+                    lines.append(f"- {item}")
+                lines.append("")
+            if risk_impact:
+                lines.append("_Impacto em risco (heurístico):_")
+                for item in risk_impact[:6]:
+                    lines.append(f"- {item}")
+                lines.append("")
+    refs = meta.get("semantic_structural_refs") if isinstance(meta, dict) else None
+    if isinstance(refs, list) and refs:
+        lines.extend(["", "### Ligação estrutura → interpretação (refs estáveis)", ""])
+        for item in refs[:20]:
+            if not isinstance(item, dict):
+                continue
+            r = item.get("ref", "")
+            ek = item.get("entity_kind", "")
+            eid = item.get("entity_id", "")
+            note = item.get("note", "")
+            lines.append(f"- `{r}` · {ek} `{eid}` — {note}")
+        lines.append("")
+    si = meta.get("semantic_insights") if isinstance(meta, dict) else None
+    if isinstance(si, list) and si:
+        lines.extend(["", "### Insights semânticos (narrativa)", ""])
+        for item in si[:14]:
+            lines.append(f"- {item}")
+        lines.append("")
     if result.explanations:
         lines.extend(["", "### Explicabilidade (foco)", ""])
         for ex in result.explanations[:6]:

@@ -1,0 +1,3546 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "App Suite Modeling API",
+    "description": "HTTP API for threat modeling as code: validation, analysis, templates, and exports. Versioned routes under `/v1`. See `docs/API.md` in the repository.",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/": {
+      "get": {
+        "tags": [
+          "System"
+        ],
+        "summary": "API entry",
+        "description": "Links to interactive docs and health. Open `/docs` for Swagger UI.",
+        "operationId": "root__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Root  Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "tags": [
+          "System"
+        ],
+        "summary": "Health check",
+        "description": "Liveness probe for load balancers / Kubernetes.",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Health Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/models": {
+      "post": {
+        "tags": [
+          "Models"
+        ],
+        "summary": "Create blank model",
+        "description": "Returns a minimal valid `ThreatModelDocument` (same as `otm init` without a template).",
+        "operationId": "create_model_v1_models_post",
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateModelResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/models/validate": {
+      "post": {
+        "tags": [
+          "Models"
+        ],
+        "summary": "Validate model",
+        "description": "Validates the payload against the canonical schema; does not persist data.",
+        "operationId": "validate_model_v1_models_validate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DocumentBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/models/precheck": {
+      "post": {
+        "tags": [
+          "Models"
+        ],
+        "summary": "Model quality pre-check",
+        "description": "Avalia completude do modelo (score, banda, matriz de adequação metodológica) e, opcionalmente, estado de completude da metodologia escolhida — sem correr heurísticas STRIDE.",
+        "operationId": "model_precheck_v1_models_precheck_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrecheckBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "`precheck` + `methodology_completeness` serializados.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Model Precheck V1 Models Precheck Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/models/diff": {
+      "post": {
+        "tags": [
+          "Models"
+        ],
+        "summary": "Diff model versions",
+        "description": "Compares two canonical versions (baseline vs revised) and returns structured diff. Implemented in `otm_core_schema.diff_documents` — same semantics as `otm diff` in the CLI.",
+        "operationId": "diff_model_versions_v1_models_diff_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DiffBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Serialized `ThreatModelDiff` JSON object.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Diff Model Versions V1 Models Diff Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/models/compare": {
+      "post": {
+        "tags": [
+          "Models"
+        ],
+        "summary": "Compare models (structure and optional analysis)",
+        "description": "Returns `ThreatModelComparisonResult`: canonical diff, aggregates, insights and, when `baseline_analysis`/`revised_analysis` or `run_analysis=true` is provided, risk/heuristic delta.",
+        "operationId": "compare_models_v1_models_compare_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompareBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "JSON of the unified comparison result.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThreatModelComparisonResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/models/recommend-methodology": {
+      "post": {
+        "tags": [
+          "Models"
+        ],
+        "summary": "Recommend methodology / engine",
+        "description": "Suggests a methodology based on document context.",
+        "operationId": "recommend_methodology_for_model_v1_models_recommend_methodology_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DocumentBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecommendMethodologyResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/models/analyze": {
+      "post": {
+        "tags": [
+          "Models"
+        ],
+        "summary": "Analyze model",
+        "description": "Runs the STRIDE engine, trust boundaries, and risk; optional industry pack.",
+        "operationId": "analyze_model_v1_models_analyze_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnalyzeBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Serialized `AnalysisResult` JSON.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalysisResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/analyses/diff": {
+      "post": {
+        "tags": [
+          "Analyses"
+        ],
+        "summary": "Diff two analysis results",
+        "description": "Compares two `AnalysisResult` JSON payloads. Useful in CI without re-running the engine.",
+        "operationId": "diff_analysis_results_route_v1_analyses_diff_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnalysisDiffBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Serialized `AnalysisDiff` object.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Diff Analysis Results Route V1 Analyses Diff Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/templates": {
+      "get": {
+        "tags": [
+          "Templates"
+        ],
+        "summary": "List templates",
+        "description": "Built-in templates from `otm_industry_packs` (IDs used with `otm init -t`). Optional query filters combine with AND semantics.",
+        "operationId": "get_templates_v1_templates_get",
+        "parameters": [
+          {
+            "name": "category",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filtra pela chave `category` (ex.: applications, ai_llm).",
+              "title": "Category"
+            },
+            "description": "Filtra pela chave `category` (ex.: applications, ai_llm)."
+          },
+          {
+            "name": "tag",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Corresponde a uma tag (exata, case-insensitive).",
+              "title": "Tag"
+            },
+            "description": "Corresponde a uma tag (exata, case-insensitive)."
+          },
+          {
+            "name": "complexity",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "low | medium | high",
+              "title": "Complexity"
+            },
+            "description": "low | medium | high"
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Texto livre em id, título, descrição, tags ou best_for.",
+              "title": "Q"
+            },
+            "description": "Texto livre em id, título, descrição, tags ou best_for."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TemplateListItem"
+                  },
+                  "title": "Response Get Templates V1 Templates Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/templates/{template_id}": {
+      "get": {
+        "tags": [
+          "Templates"
+        ],
+        "summary": "Get template metadata",
+        "description": "Detalhe de um template embutido (metadados do manifest).",
+        "operationId": "get_template_detail_v1_templates__template_id__get",
+        "parameters": [
+          {
+            "name": "template_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Template ID (ex.: api-public).",
+              "title": "Template Id"
+            },
+            "description": "Template ID (ex.: api-public)."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TemplateListItem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/templates/{template_id}/instantiate": {
+      "post": {
+        "tags": [
+          "Templates"
+        ],
+        "summary": "Instantiate model from template",
+        "description": "Loads template YAML and returns the validated canonical document.",
+        "operationId": "instantiate_template_v1_templates__template_id__instantiate_post",
+        "parameters": [
+          {
+            "name": "template_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Template ID (e.g. saas-web).",
+              "title": "Template Id"
+            },
+            "description": "Template ID (e.g. saas-web)."
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateModelResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/exports": {
+      "post": {
+        "tags": [
+          "Export"
+        ],
+        "summary": "Export artifacts",
+        "description": "Produces one or more artifacts (JSON, Markdown, Mermaid, bundle). If a format requires analysis and `analysis` is omitted, the engine runs automatically.",
+        "operationId": "export_artifacts_v1_exports_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExportBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExportResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/imports/openapi": {
+      "post": {
+        "tags": [
+          "Assisted import"
+        ],
+        "summary": "Draft from OpenAPI/Swagger",
+        "description": "Body: `multipart/form-data` with field `file` (YAML/JSON). Returns canonical draft and inferences.",
+        "operationId": "import_openapi_route_v1_imports_openapi_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_import_openapi_route_v1_imports_openapi_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArtifactImportResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/imports/terraform": {
+      "post": {
+        "tags": [
+          "Assisted import"
+        ],
+        "summary": "Draft from Terraform (.tf)",
+        "description": "A single `.tf` file or aggregated HCL text. For directories, prefer the CLI: `otm import terraform`.",
+        "operationId": "import_terraform_route_v1_imports_terraform_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_import_terraform_route_v1_imports_terraform_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArtifactImportResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/imports/kubernetes": {
+      "post": {
+        "tags": [
+          "Assisted import"
+        ],
+        "summary": "Draft from Kubernetes manifests",
+        "description": "Multi-document YAML (multiple resources separated by `---`).",
+        "operationId": "import_kubernetes_route_v1_imports_kubernetes_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_import_kubernetes_route_v1_imports_kubernetes_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArtifactImportResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/remediation/backlog": {
+      "post": {
+        "tags": [
+          "Remediation"
+        ],
+        "summary": "Generate remediation backlog",
+        "description": "Body: canonical `document`; optional `analysis` (`AnalysisResult`). If `analysis` is omitted, set `run_analysis: true` to run the engine.",
+        "operationId": "post_remediation_backlog_v1_remediation_backlog_post",
+        "parameters": [
+          {
+            "name": "format",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "json",
+                "markdown"
+              ],
+              "type": "string",
+              "description": "json = full object; markdown = human-readable report.",
+              "default": "json",
+              "title": "Format"
+            },
+            "description": "json = full object; markdown = human-readable report."
+          },
+          {
+            "name": "group_by",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "For Markdown: root-cause | control | category.",
+              "title": "Group By"
+            },
+            "description": "For Markdown: root-cause | control | category."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RemediationBacklogRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Post Remediation Backlog V1 Remediation Backlog Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/reports/premium": {
+      "post": {
+        "tags": [
+          "Reports"
+        ],
+        "summary": "Premium report (Markdown or PDF)",
+        "description": "Builds the consolidated premium report from analysis, backlog, diff, and explainability. Requires `document` and either `analysis` or `run_analysis: true`.",
+        "operationId": "post_premium_report_v1_reports_premium_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PremiumReportBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AiLayerAssessment": {
+        "properties": {
+          "layer_id": {
+            "type": "string",
+            "title": "Layer Id",
+            "description": "Identificador estável (ex.: retrieval_grounding)."
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "no_signal",
+              "weak",
+              "moderate",
+              "strong"
+            ],
+            "title": "Status",
+            "default": "no_signal"
+          },
+          "evidence": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Evidence",
+            "description": "Factos curtos extraídos do modelo — não prova arquitectónica completa."
+          }
+        },
+        "type": "object",
+        "required": [
+          "layer_id",
+          "label"
+        ],
+        "title": "AiLayerAssessment",
+        "description": "Uma camada de análise AI (PLOT4ai) com evidência limitada ao texto do documento."
+      },
+      "AiSystemContextSummary": {
+        "properties": {
+          "schema_version": {
+            "type": "string",
+            "title": "Schema Version",
+            "default": "1.0"
+          },
+          "synopsis": {
+            "type": "string",
+            "title": "Synopsis",
+            "description": "Resumo honesto do contexto IA inferido."
+          },
+          "pattern_tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Pattern Tags",
+            "description": "Etiquetas heurísticas (llm_core, rag, vector_store, …)."
+          },
+          "layers": {
+            "items": {
+              "$ref": "#/components/schemas/AiLayerAssessment"
+            },
+            "type": "array",
+            "title": "Layers"
+          },
+          "primary_risk_surfaces": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Primary Risk Surfaces"
+          },
+          "prioritized_recommendations": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Prioritized Recommendations"
+          },
+          "sensitive_data_notes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Sensitive Data Notes"
+          },
+          "heuristic_ids_by_layer": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Heuristic Ids By Layer",
+            "description": "Agrupa `plot4ai_*` heuristics por layer_id."
+          }
+        },
+        "type": "object",
+        "required": [
+          "synopsis"
+        ],
+        "title": "AiSystemContextSummary",
+        "description": "Síntese especializada quando `methodology=plot4ai`.\n\nComplementa `methodology_insights` com camadas, agrupamento de heurísticas e acções."
+      },
+      "AnalysisDiff": {
+        "properties": {
+          "methodology_before": {
+            "type": "string",
+            "title": "Methodology Before"
+          },
+          "methodology_after": {
+            "type": "string",
+            "title": "Methodology After"
+          },
+          "methodology_changed": {
+            "type": "boolean",
+            "title": "Methodology Changed"
+          },
+          "max_risk_before": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Risk Before"
+          },
+          "max_risk_after": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Risk After"
+          },
+          "max_risk_delta": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Risk Delta",
+            "description": "revised - baseline nos scores máximos ativos."
+          },
+          "heuristic_threats": {
+            "$ref": "#/components/schemas/HeuristicThreatDeltaSection"
+          },
+          "framework_ref_counts": {
+            "items": {
+              "$ref": "#/components/schemas/FrameworkRefCountDelta"
+            },
+            "type": "array",
+            "title": "Framework Ref Counts"
+          },
+          "pack_control_hints": {
+            "$ref": "#/components/schemas/PackHintsDelta"
+          },
+          "methodology_insights": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MethodologyInsightsDelta"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "trust_boundary_findings": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TrustBoundaryFindingDelta"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "structural_findings": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StructuralFindingDelta"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "signature_remap_hints": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Signature Remap Hints",
+            "description": "Texto explicativo quando IDs diferem mas assinatura coincide."
+          }
+        },
+        "type": "object",
+        "required": [
+          "methodology_before",
+          "methodology_after",
+          "methodology_changed"
+        ],
+        "title": "AnalysisDiff",
+        "description": "Diff entre dois `AnalysisResult` (mesmo contrato que `analyze.json`).\n\nMatching de heurísticas: primário por `id`; fallback por assinatura semântica\n(stride + alvos + prefixo do título) só para *insights* de possível remapeamento."
+      },
+      "AnalysisDiffBody": {
+        "properties": {
+          "baseline_analysis": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Baseline Analysis"
+          },
+          "revised_analysis": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Revised Analysis"
+          }
+        },
+        "type": "object",
+        "required": [
+          "baseline_analysis",
+          "revised_analysis"
+        ],
+        "title": "AnalysisDiffBody",
+        "description": "Dois `AnalysisResult` serializados (ex.: ficheiros gerados por `otm analyze --json-out`)."
+      },
+      "AnalysisResult": {
+        "properties": {
+          "engine_version": {
+            "type": "string",
+            "title": "Engine Version"
+          },
+          "methodology": {
+            "$ref": "#/components/schemas/ThreatModelMethodology",
+            "default": "stride"
+          },
+          "methodology_recommendation_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Methodology Recommendation Reason"
+          },
+          "document_title": {
+            "type": "string",
+            "title": "Document Title"
+          },
+          "structural_findings": {
+            "items": {
+              "$ref": "#/components/schemas/StructuralFinding"
+            },
+            "type": "array",
+            "title": "Structural Findings"
+          },
+          "trust_boundary_findings": {
+            "items": {
+              "$ref": "#/components/schemas/TrustBoundaryFinding"
+            },
+            "type": "array",
+            "title": "Trust Boundary Findings"
+          },
+          "heuristic_threats": {
+            "items": {
+              "$ref": "#/components/schemas/HeuristicThreat"
+            },
+            "type": "array",
+            "title": "Heuristic Threats"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/AnalysisSummary"
+          },
+          "methodology_insights": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MethodologyInsights"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "industry_pack_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Industry Pack Id"
+          },
+          "pack_control_hints": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Pack Control Hints",
+            "description": "Sugestões de controlo do pack (relatório / backlog)."
+          },
+          "explanations": {
+            "items": {
+              "$ref": "#/components/schemas/ExplanationRecord"
+            },
+            "type": "array",
+            "title": "Explanations",
+            "description": "Explicabilidade estruturada (metodologia, achados, risco, fronteiras)."
+          },
+          "ai_system_context": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AiSystemContextSummary"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Visão PLOT4ai: camadas, superfícies de risco e agrupamento de achados `plot4ai_*`."
+          },
+          "model_quality_precheck": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ModelQualityPrecheck"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Pré-check de completude do modelo (sem substituir auditoria)."
+          },
+          "methodology_completeness": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MethodologyCompletenessInfo"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Adequação do contexto à metodologia (complete/partial/degraded)."
+          },
+          "wizard_context_notes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Wizard Context Notes",
+            "description": "Notas explicáveis quando sinais `wz:` do assistente influenciam ranking/corpus."
+          },
+          "wizard_signal_trace": {
+            "items": {
+              "$ref": "#/components/schemas/WizardSignalTraceEntry"
+            },
+            "type": "array",
+            "title": "Wizard Signal Trace",
+            "description": "Audit trail compacto: tag → efeito → áreas impactadas (governança / export)."
+          },
+          "anti_pattern_hits": {
+            "items": {
+              "$ref": "#/components/schemas/AntiPatternHit"
+            },
+            "type": "array",
+            "title": "Anti Pattern Hits",
+            "description": "Anti-padrões de modelagem alinhados ao template_semantic_profile."
+          }
+        },
+        "type": "object",
+        "required": [
+          "engine_version",
+          "document_title"
+        ],
+        "title": "AnalysisResult",
+        "description": "Saída única do motor de análise.\nNão altera o documento de entrada; use `merge` para persistir ameaças novas."
+      },
+      "AnalysisSummary": {
+        "properties": {
+          "structural_findings": {
+            "type": "integer",
+            "title": "Structural Findings",
+            "default": 0
+          },
+          "trust_boundary_findings": {
+            "type": "integer",
+            "title": "Trust Boundary Findings",
+            "default": 0
+          },
+          "heuristic_threats_generated": {
+            "type": "integer",
+            "title": "Heuristic Threats Generated",
+            "default": 0
+          },
+          "heuristic_threats_skipped_duplicate": {
+            "type": "integer",
+            "title": "Heuristic Threats Skipped Duplicate",
+            "default": 0
+          },
+          "pack_threats_generated": {
+            "type": "integer",
+            "title": "Pack Threats Generated",
+            "default": 0
+          },
+          "pack_threats_skipped_duplicate": {
+            "type": "integer",
+            "title": "Pack Threats Skipped Duplicate",
+            "default": 0
+          },
+          "max_risk_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Risk Score"
+          },
+          "framework_ref_counts_by_catalog": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Framework Ref Counts By Catalog",
+            "description": "Contagem de referências por `FrameworkRef.framework` nas heurísticas."
+          }
+        },
+        "type": "object",
+        "title": "AnalysisSummary",
+        "description": "Totais para dashboards e relatórios rápidos."
+      },
+      "AnalyzeBody": {
+        "properties": {
+          "document": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Document",
+            "description": "Raiz compatível com `ThreatModelDocument` (aliases YAML respeitados)."
+          },
+          "pack_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pack Id",
+            "description": "Industry pack opcional (mesmos IDs que `otm analyze --pack`)."
+          },
+          "methodology": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ThreatModelMethodology"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Metodologia/engine explícita. Se ausente, usa `document.model.methodology` (default STRIDE)."
+          },
+          "auto_recommend_methodology": {
+            "type": "boolean",
+            "title": "Auto Recommend Methodology",
+            "description": "Se true e `methodology` não informado, aplica recomendação automática.",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "document"
+        ],
+        "title": "AnalyzeBody"
+      },
+      "AntiPatternHit": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "severity_hint": {
+            "type": "string",
+            "title": "Severity Hint"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "evidence": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Evidence"
+          },
+          "expected_controls": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Expected Controls"
+          },
+          "confidence_hint": {
+            "type": "string",
+            "title": "Confidence Hint",
+            "description": "Confiança agregada do match (heurística + estrutura).",
+            "default": "medium"
+          },
+          "detection_sources": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Detection Sources",
+            "description": "Origens do match (ex.: corpus:missing_any_of, structural:min_flows)."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "severity_hint",
+          "message"
+        ],
+        "title": "AntiPatternHit",
+        "description": "Ocorrência detectada para relatório, backlog e benchmark."
+      },
+      "ArtifactImportResponse": {
+        "properties": {
+          "document": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Document"
+          },
+          "inferences": {
+            "items": {
+              "$ref": "#/components/schemas/InferenceRecordBody"
+            },
+            "type": "array",
+            "title": "Inferences"
+          },
+          "unknowns": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Unknowns"
+          },
+          "assumptions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Assumptions"
+          },
+          "explanations": {
+            "items": {
+              "$ref": "#/components/schemas/ExplanationRecord"
+            },
+            "type": "array",
+            "title": "Explanations"
+          }
+        },
+        "type": "object",
+        "required": [
+          "document",
+          "inferences",
+          "unknowns",
+          "assumptions"
+        ],
+        "title": "ArtifactImportResponse",
+        "description": "Rascunho canónico + lista estruturada de inferências (não é `AnalysisResult`)."
+      },
+      "Body_import_kubernetes_route_v1_imports_kubernetes_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "format": "binary",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_import_kubernetes_route_v1_imports_kubernetes_post"
+      },
+      "Body_import_openapi_route_v1_imports_openapi_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "format": "binary",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_import_openapi_route_v1_imports_openapi_post"
+      },
+      "Body_import_terraform_route_v1_imports_terraform_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "format": "binary",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_import_terraform_route_v1_imports_terraform_post"
+      },
+      "CompareBody": {
+        "properties": {
+          "baseline": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Baseline",
+            "description": "Documento canónico baseline."
+          },
+          "revised": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Revised",
+            "description": "Documento canónico revisão."
+          },
+          "baseline_analysis": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline Analysis",
+            "description": "Resultado de `analyze` em JSON (opcional)."
+          },
+          "revised_analysis": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revised Analysis",
+            "description": "Análise da revisão (opcional)."
+          },
+          "run_analysis": {
+            "type": "boolean",
+            "title": "Run Analysis",
+            "description": "Se true e análises não forem enviadas, executa o motor em ambos os documentos.",
+            "default": false
+          },
+          "pack_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pack Id",
+            "description": "Pack opcional quando `run_analysis` é true."
+          }
+        },
+        "type": "object",
+        "required": [
+          "baseline",
+          "revised"
+        ],
+        "title": "CompareBody",
+        "description": "Comparação completa: estrutura + opcional análise (payload explícito ou `run_analysis`)."
+      },
+      "ComparisonSummary": {
+        "properties": {
+          "headline": {
+            "type": "string",
+            "title": "Headline"
+          },
+          "has_structural_changes": {
+            "type": "boolean",
+            "title": "Has Structural Changes"
+          },
+          "has_analysis_changes": {
+            "type": "boolean",
+            "title": "Has Analysis Changes"
+          },
+          "methodology_in_model_changed": {
+            "type": "boolean",
+            "title": "Methodology In Model Changed"
+          }
+        },
+        "type": "object",
+        "required": [
+          "headline",
+          "has_structural_changes",
+          "has_analysis_changes",
+          "methodology_in_model_changed"
+        ],
+        "title": "ComparisonSummary"
+      },
+      "CreateModelResponse": {
+        "properties": {
+          "document": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Document",
+            "description": "Modelo mínimo novo, pronto a editar."
+          }
+        },
+        "type": "object",
+        "required": [
+          "document"
+        ],
+        "title": "CreateModelResponse"
+      },
+      "DiffAggregate": {
+        "properties": {
+          "components": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Components",
+            "description": "Chaves: added, removed, changed."
+          },
+          "assets": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Assets"
+          },
+          "data_flows": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Data Flows"
+          },
+          "trust_boundaries": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Trust Boundaries"
+          },
+          "threats": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Threats",
+            "description": "Ameaças canónicas no documento (não heurísticas do motor)."
+          },
+          "mitigations": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Mitigations"
+          },
+          "evidence_suggestions": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Evidence Suggestions"
+          }
+        },
+        "type": "object",
+        "title": "DiffAggregate",
+        "description": "Vista agregada added/removed/changed por secção estrutural (IDs)."
+      },
+      "DiffBody": {
+        "properties": {
+          "baseline": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Baseline",
+            "description": "Versão anterior (baseline) — mesmo formato que `document` em /validate."
+          },
+          "revised": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Revised",
+            "description": "Versão nova (revisão)."
+          }
+        },
+        "type": "object",
+        "required": [
+          "baseline",
+          "revised"
+        ],
+        "title": "DiffBody",
+        "description": "Duas raízes `ThreatModelDocument` para comparação estruturada (sem persistência)."
+      },
+      "DocumentBody": {
+        "properties": {
+          "document": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Document",
+            "description": "Raiz compatível com `ThreatModelDocument` (aliases YAML respeitados)."
+          }
+        },
+        "type": "object",
+        "required": [
+          "document"
+        ],
+        "title": "DocumentBody",
+        "description": "Corpo com documento canónico serializado como objeto JSON."
+      },
+      "ExplanationCategory": {
+        "type": "string",
+        "enum": [
+          "methodology",
+          "threat",
+          "risk",
+          "control",
+          "backlog",
+          "import",
+          "trust_boundary",
+          "diff",
+          "governance",
+          "ai_modeling"
+        ],
+        "title": "ExplanationCategory",
+        "description": "Área funcional (alinhada aos motores do produto)."
+      },
+      "ExplanationRecord": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "type": {
+            "$ref": "#/components/schemas/ExplanationType"
+          },
+          "category": {
+            "$ref": "#/components/schemas/ExplanationCategory"
+          },
+          "subject": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Subject",
+            "description": "O que está a ser explicado (curto)."
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "description": "Porquê, em linguagem directa para humanos."
+          },
+          "evidence": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Evidence",
+            "description": "Factos do modelo/artefacto que sustentam a mensagem."
+          },
+          "confidence": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "title": "Confidence",
+            "description": "high = regra directa sobre dados explícitos; low = heurística fraca.",
+            "default": "medium"
+          },
+          "related_entities": {
+            "items": {
+              "$ref": "#/components/schemas/RelatedEntityRef"
+            },
+            "type": "array",
+            "title": "Related Entities"
+          },
+          "reasoning_path": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reasoning Path",
+            "description": "Passos opcionais do raciocínio (maiores que 1 decisão)."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "category",
+          "subject",
+          "message"
+        ],
+        "title": "ExplanationRecord",
+        "description": "Explicação única e auditável.\n\n`message` deve ser específica ao contexto; `evidence` lista factos discretos que a suportam."
+      },
+      "ExplanationType": {
+        "type": "string",
+        "enum": [
+          "methodology_recommendation",
+          "threat_heuristic",
+          "risk_score",
+          "control_suggestion",
+          "backlog_prioritization",
+          "import_inference",
+          "trust_boundary",
+          "structural_finding",
+          "diff_change",
+          "aggregation",
+          "ai_specialized_rationale"
+        ],
+        "title": "ExplanationType",
+        "description": "Natureza do raciocínio (para filtros e relatórios)."
+      },
+      "ExportBody": {
+        "properties": {
+          "document": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Document",
+            "description": "Raiz compatível com `ThreatModelDocument` (aliases YAML respeitados)."
+          },
+          "formats": {
+            "items": {
+              "$ref": "#/components/schemas/ExportFormat"
+            },
+            "type": "array",
+            "title": "Formats",
+            "description": "Um ou mais formatos de saída."
+          },
+          "pack_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pack Id",
+            "description": "Usado se for preciso correr análise para formatos que a exigem."
+          },
+          "analysis": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Analysis",
+            "description": "Resultado de análise já calculado (opcional); evita reexecutar o motor."
+          }
+        },
+        "type": "object",
+        "required": [
+          "document"
+        ],
+        "title": "ExportBody"
+      },
+      "ExportFormat": {
+        "type": "string",
+        "enum": [
+          "document_json",
+          "document_markdown",
+          "flowchart_mermaid",
+          "analysis_json",
+          "analysis_markdown",
+          "bundle_json"
+        ],
+        "title": "ExportFormat"
+      },
+      "ExportResponse": {
+        "properties": {
+          "artifacts": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Artifacts",
+            "description": "Chave = id do formato; valor = texto (JSON, Markdown ou Mermaid)."
+          }
+        },
+        "type": "object",
+        "required": [
+          "artifacts"
+        ],
+        "title": "ExportResponse"
+      },
+      "FieldChange": {
+        "properties": {
+          "field": {
+            "type": "string",
+            "title": "Field"
+          },
+          "before": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Before"
+          },
+          "after": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "After"
+          }
+        },
+        "type": "object",
+        "required": [
+          "field"
+        ],
+        "title": "FieldChange",
+        "description": "Uma diferença em um campo de entidade ou na raiz do documento."
+      },
+      "FrameworkRef": {
+        "properties": {
+          "framework": {
+            "type": "string",
+            "title": "Framework",
+            "description": "Ex.: owasp_asvs, nist_800_53, iso_27001."
+          },
+          "control_id": {
+            "type": "string",
+            "title": "Control Id",
+            "description": "Identificador no catálogo referenciado."
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "framework",
+          "control_id"
+        ],
+        "title": "FrameworkRef",
+        "description": "Referência a um controlo em norma/framework (uso funcional, não decorativo)."
+      },
+      "FrameworkRefCountDelta": {
+        "properties": {
+          "catalog": {
+            "type": "string",
+            "title": "Catalog"
+          },
+          "count_before": {
+            "type": "integer",
+            "title": "Count Before"
+          },
+          "count_after": {
+            "type": "integer",
+            "title": "Count After"
+          }
+        },
+        "type": "object",
+        "required": [
+          "catalog",
+          "count_before",
+          "count_after"
+        ],
+        "title": "FrameworkRefCountDelta"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HeuristicThreat": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "stride": {
+            "$ref": "#/components/schemas/StrideCategory"
+          },
+          "target_component_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Component Id"
+          },
+          "target_data_flow_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Data Flow Id"
+          },
+          "target_asset_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Asset Id"
+          },
+          "risk": {
+            "$ref": "#/components/schemas/RiskAssessment"
+          },
+          "skipped_as_duplicate": {
+            "type": "boolean",
+            "title": "Skipped As Duplicate",
+            "description": "True se já existia ameaça semelhante no documento.",
+            "default": false
+          },
+          "framework_refs": {
+            "items": {
+              "$ref": "#/components/schemas/FrameworkRef"
+            },
+            "type": "array",
+            "title": "Framework Refs",
+            "description": "Controles/normas associados (catálogo STRIDE → framework)."
+          },
+          "finding_family": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finding Family",
+            "description": "Família de achado (ex.: access_control_broken, external_fetch_risk)."
+          },
+          "heuristic_tier": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HeuristicTier"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Proveniência: genérico, contextual ou padrão composto."
+          },
+          "signal_refs": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Signal Refs",
+            "description": "Sinais do modelo que dispararam a regra (IDs ou etiquetas)."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "description",
+          "stride",
+          "risk"
+        ],
+        "title": "HeuristicThreat",
+        "description": "Ameaça sugerida pelo motor (heurística STRIDE).\nPode ser convertida em `Threat` canónico via `merge.merge_heuristic_threats`."
+      },
+      "HeuristicThreatDelta": {
+        "properties": {
+          "threat_id": {
+            "type": "string",
+            "title": "Threat Id"
+          },
+          "change": {
+            "type": "string",
+            "enum": [
+              "added",
+              "removed",
+              "modified"
+            ],
+            "title": "Change"
+          },
+          "match_kind": {
+            "type": "string",
+            "enum": [
+              "id",
+              "signature_remap"
+            ],
+            "title": "Match Kind",
+            "default": "id"
+          },
+          "score_before": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score Before"
+          },
+          "score_after": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score After"
+          },
+          "score_delta": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score Delta"
+          },
+          "field_changes": {
+            "items": {
+              "$ref": "#/components/schemas/FieldChange"
+            },
+            "type": "array",
+            "title": "Field Changes"
+          },
+          "paired_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paired Id",
+            "description": "Se match_kind=signature_remap, o ID correspondente no outro lado."
+          }
+        },
+        "type": "object",
+        "required": [
+          "threat_id",
+          "change"
+        ],
+        "title": "HeuristicThreatDelta"
+      },
+      "HeuristicThreatDeltaSection": {
+        "properties": {
+          "added": {
+            "items": {
+              "$ref": "#/components/schemas/HeuristicThreatDelta"
+            },
+            "type": "array",
+            "title": "Added"
+          },
+          "removed": {
+            "items": {
+              "$ref": "#/components/schemas/HeuristicThreatDelta"
+            },
+            "type": "array",
+            "title": "Removed"
+          },
+          "modified": {
+            "items": {
+              "$ref": "#/components/schemas/HeuristicThreatDelta"
+            },
+            "type": "array",
+            "title": "Modified"
+          }
+        },
+        "type": "object",
+        "title": "HeuristicThreatDeltaSection",
+        "description": "Diff de heurísticas ativas (skipped_as_duplicate=False)."
+      },
+      "HeuristicTier": {
+        "type": "string",
+        "enum": [
+          "generic_stride",
+          "contextual",
+          "composite_pattern",
+          "structural"
+        ],
+        "title": "HeuristicTier",
+        "description": "Proveniência da heurística no motor."
+      },
+      "IdListSectionDiff": {
+        "properties": {
+          "added": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Added",
+            "description": "IDs presentes só na revisão."
+          },
+          "removed": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Removed",
+            "description": "IDs presentes só na baseline."
+          },
+          "modified": {
+            "items": {
+              "$ref": "#/components/schemas/ModifiedEntity"
+            },
+            "type": "array",
+            "title": "Modified",
+            "description": "Mesmo ID com campos alterados."
+          }
+        },
+        "type": "object",
+        "title": "IdListSectionDiff",
+        "description": "Diff de uma lista indexada por `id` (ativos, componentes, fluxos, etc.)."
+      },
+      "InferenceRecordBody": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "confidence": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "title": "Confidence"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "openapi",
+              "terraform",
+              "kubernetes",
+              "helm"
+            ],
+            "title": "Source"
+          },
+          "related_component_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Related Component Ids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "message",
+          "confidence",
+          "source"
+        ],
+        "title": "InferenceRecordBody",
+        "description": "Uma inferência assistida (transparência obrigatória)."
+      },
+      "MethodologyCompletenessInfo": {
+        "properties": {
+          "state": {
+            "$ref": "#/components/schemas/MethodologyCompletenessState"
+          },
+          "reasons": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Reasons"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note",
+            "description": "Texto curto para relatório (ex.: fallback explícito)."
+          }
+        },
+        "type": "object",
+        "required": [
+          "state"
+        ],
+        "title": "MethodologyCompletenessInfo",
+        "description": "Estado explícito quando o contexto não cobre a metodologia escolhida."
+      },
+      "MethodologyCompletenessState": {
+        "type": "string",
+        "enum": [
+          "complete",
+          "partial",
+          "degraded"
+        ],
+        "title": "MethodologyCompletenessState",
+        "description": "Adequação do modelo ao contexto esperado pela metodologia."
+      },
+      "MethodologyInsightBlock": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key",
+            "description": "Identificador estável do bloco."
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "items": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "title"
+        ],
+        "title": "MethodologyInsightBlock",
+        "description": "Bloco estruturado para destacar foco metodológico sem quebrar contrato principal."
+      },
+      "MethodologyInsights": {
+        "properties": {
+          "profile": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profile",
+            "description": "Resumo curto do perfil metodológico aplicado (ex.: advanced/risk-centric)."
+          },
+          "blocks": {
+            "items": {
+              "$ref": "#/components/schemas/MethodologyInsightBlock"
+            },
+            "type": "array",
+            "title": "Blocks"
+          }
+        },
+        "type": "object",
+        "title": "MethodologyInsights",
+        "description": "Complemento opcional da análise com visão específica da metodologia escolhida."
+      },
+      "MethodologyInsightsDelta": {
+        "properties": {
+          "profile_before": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profile Before"
+          },
+          "profile_after": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profile After"
+          },
+          "blocks_added": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Blocks Added"
+          },
+          "blocks_removed": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Blocks Removed"
+          }
+        },
+        "type": "object",
+        "title": "MethodologyInsightsDelta"
+      },
+      "ModelQualityPrecheck": {
+        "properties": {
+          "score_0_100": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Score 0 100"
+          },
+          "band": {
+            "type": "string",
+            "enum": [
+              "minimal",
+              "good",
+              "rich"
+            ],
+            "title": "Band"
+          },
+          "methodology_fit": {
+            "type": "string",
+            "enum": [
+              "strong",
+              "partial",
+              "weak"
+            ],
+            "title": "Methodology Fit"
+          },
+          "recommendation_confidence": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "title": "Recommendation Confidence"
+          },
+          "checks": {
+            "items": {
+              "$ref": "#/components/schemas/QualityCheckItem"
+            },
+            "type": "array",
+            "title": "Checks"
+          },
+          "methodology_fit_matrix": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Methodology Fit Matrix",
+            "description": "Adequação por metodologia (stride, pasta, nist_data_centric, …)."
+          }
+        },
+        "type": "object",
+        "required": [
+          "score_0_100",
+          "band",
+          "methodology_fit",
+          "recommendation_confidence",
+          "checks"
+        ],
+        "title": "ModelQualityPrecheck",
+        "description": "Resultado do pré-check — não substitui análise de risco."
+      },
+      "ModifiedEntity": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "changes": {
+            "items": {
+              "$ref": "#/components/schemas/FieldChange"
+            },
+            "type": "array",
+            "title": "Changes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "title": "ModifiedEntity"
+      },
+      "PackHintsDelta": {
+        "properties": {
+          "added": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Added"
+          },
+          "removed": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Removed"
+          }
+        },
+        "type": "object",
+        "title": "PackHintsDelta"
+      },
+      "PrecheckBody": {
+        "properties": {
+          "document": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Document",
+            "description": "Raiz compatível com `ThreatModelDocument` (aliases YAML respeitados)."
+          },
+          "methodology": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ThreatModelMethodology"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Metodologia para `methodology_completeness`; default = `document.model.methodology`."
+          }
+        },
+        "type": "object",
+        "required": [
+          "document"
+        ],
+        "title": "PrecheckBody",
+        "description": "Pré-check de completude sem executar o motor completo (rápido para UI)."
+      },
+      "PremiumReportBody": {
+        "properties": {
+          "document": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Document",
+            "description": "Raiz compatível com `ThreatModelDocument` (aliases YAML respeitados)."
+          },
+          "analysis": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Analysis",
+            "description": "`AnalysisResult` em JSON; obrigatório se `run_analysis` é false."
+          },
+          "baseline_analysis": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline Analysis",
+            "description": "Análise anterior para secção baseline/diff (opcional)."
+          },
+          "run_analysis": {
+            "type": "boolean",
+            "title": "Run Analysis",
+            "description": "Se true e `analysis` ausente, executa o motor no documento.",
+            "default": false
+          },
+          "pack_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pack Id",
+            "description": "Pack quando `run_analysis` é usado."
+          },
+          "methodology": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ThreatModelMethodology"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "auto_recommend_methodology": {
+            "type": "boolean",
+            "title": "Auto Recommend Methodology",
+            "default": false
+          },
+          "level": {
+            "type": "string",
+            "enum": [
+              "executive",
+              "standard",
+              "deep"
+            ],
+            "title": "Level",
+            "description": "Profundidade do relatório.",
+            "default": "standard"
+          },
+          "output_format": {
+            "type": "string",
+            "enum": [
+              "markdown",
+              "pdf"
+            ],
+            "title": "Output Format",
+            "description": "markdown = texto; pdf = binário application/pdf.",
+            "default": "markdown"
+          }
+        },
+        "type": "object",
+        "required": [
+          "document"
+        ],
+        "title": "PremiumReportBody",
+        "description": "Report premium — mesmo padrão de análise que `/remediation/backlog`."
+      },
+      "QualityCheckItem": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "passed": {
+            "type": "boolean",
+            "title": "Passed"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "passed",
+          "message"
+        ],
+        "title": "QualityCheckItem",
+        "description": "Um critério avaliado."
+      },
+      "RecommendMethodologyResponse": {
+        "properties": {
+          "methodology": {
+            "$ref": "#/components/schemas/ThreatModelMethodology"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          },
+          "explanations": {
+            "items": {
+              "$ref": "#/components/schemas/ExplanationRecord"
+            },
+            "type": "array",
+            "title": "Explanations"
+          }
+        },
+        "type": "object",
+        "required": [
+          "methodology",
+          "reason"
+        ],
+        "title": "RecommendMethodologyResponse"
+      },
+      "RecommendationDelta": {
+        "properties": {
+          "pack_hints_added": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Pack Hints Added"
+          },
+          "pack_hints_removed": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Pack Hints Removed"
+          },
+          "framework_catalog_deltas": {
+            "items": {
+              "$ref": "#/components/schemas/FrameworkRefCountDelta"
+            },
+            "type": "array",
+            "title": "Framework Catalog Deltas"
+          },
+          "methodology_insight_blocks_added": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Methodology Insight Blocks Added"
+          },
+          "methodology_insight_blocks_removed": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Methodology Insight Blocks Removed"
+          }
+        },
+        "type": "object",
+        "title": "RecommendationDelta"
+      },
+      "RelatedEntityRef": {
+        "properties": {
+          "entity_kind": {
+            "type": "string",
+            "title": "Entity Kind",
+            "description": "ex.: heuristic_threat, component, data_flow, trust_boundary, document"
+          },
+          "entity_id": {
+            "type": "string",
+            "title": "Entity Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "entity_kind",
+          "entity_id"
+        ],
+        "title": "RelatedEntityRef",
+        "description": "Ligação a uma entidade do modelo ou do resultado de motor."
+      },
+      "RemediationBacklogRequest": {
+        "properties": {
+          "document": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Document",
+            "description": "Raiz `ThreatModelDocument`."
+          },
+          "analysis": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Analysis",
+            "description": "Resultado de `analyze` (JSON). Obrigatório se `run_analysis` é false."
+          },
+          "run_analysis": {
+            "type": "boolean",
+            "title": "Run Analysis",
+            "description": "Se true, executa o motor quando `analysis` está ausente.",
+            "default": false
+          },
+          "pack_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pack Id",
+            "description": "Pack para `run_analysis`."
+          },
+          "methodology": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ThreatModelMethodology"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "auto_recommend_methodology": {
+            "type": "boolean",
+            "title": "Auto Recommend Methodology",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "document"
+        ],
+        "title": "RemediationBacklogRequest",
+        "description": "Entrada para gerar backlog: sempre `document`; `analysis` opcional se `run_analysis`."
+      },
+      "RiskAssessment": {
+        "properties": {
+          "likelihood": {
+            "type": "integer",
+            "maximum": 5.0,
+            "minimum": 1.0,
+            "title": "Likelihood"
+          },
+          "impact": {
+            "type": "integer",
+            "maximum": 5.0,
+            "minimum": 1.0,
+            "title": "Impact"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score",
+            "description": "Ex.: L×I ou normalizado; pode ser preenchido pelo motor."
+          }
+        },
+        "type": "object",
+        "required": [
+          "likelihood",
+          "impact"
+        ],
+        "title": "RiskAssessment",
+        "description": "Avaliação de risco por ameaça (escala 1–5, score derivado opcional)."
+      },
+      "RiskDeltaSummary": {
+        "properties": {
+          "analysis_max_score_baseline": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Analysis Max Score Baseline"
+          },
+          "analysis_max_score_revised": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Analysis Max Score Revised"
+          },
+          "analysis_max_score_delta": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Analysis Max Score Delta"
+          },
+          "heuristic_increased_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Heuristic Increased Ids"
+          },
+          "heuristic_decreased_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Heuristic Decreased Ids"
+          },
+          "document_residual_aggregate_changed": {
+            "type": "boolean",
+            "title": "Document Residual Aggregate Changed",
+            "default": false
+          }
+        },
+        "type": "object",
+        "title": "RiskDeltaSummary"
+      },
+      "StrideCategory": {
+        "type": "string",
+        "enum": [
+          "spoofing",
+          "tampering",
+          "repudiation",
+          "information_disclosure",
+          "denial_of_service",
+          "elevation_of_privilege"
+        ],
+        "title": "StrideCategory"
+      },
+      "StructuralFinding": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code",
+            "description": "Identificador estável para automação e testes."
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "info",
+              "warning"
+            ],
+            "title": "Severity",
+            "default": "warning"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "StructuralFinding",
+        "description": "Aviso ou achado de consistência (além da validação Pydantic do documento)."
+      },
+      "StructuralFindingDelta": {
+        "properties": {
+          "codes_added": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Codes Added"
+          },
+          "codes_removed": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Codes Removed"
+          },
+          "count_before": {
+            "type": "integer",
+            "title": "Count Before",
+            "default": 0
+          },
+          "count_after": {
+            "type": "integer",
+            "title": "Count After",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "StructuralFindingDelta"
+      },
+      "TemplateListItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "default": ""
+          },
+          "suggested_pack": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suggested Pack"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category",
+            "default": "applications"
+          },
+          "category_label": {
+            "type": "string",
+            "title": "Category Label",
+            "default": "Aplicações"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tags"
+          },
+          "complexity": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Complexity"
+          },
+          "best_for": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Best For"
+          },
+          "suggested_methodology": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suggested Methodology"
+          },
+          "recommendation_hints": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Recommendation Hints"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title"
+        ],
+        "title": "TemplateListItem"
+      },
+      "ThreatDeltaSummary": {
+        "properties": {
+          "canonical": {
+            "$ref": "#/components/schemas/IdListSectionDiff",
+            "description": "Ameaças persistidas no YAML (document.threats)."
+          },
+          "heuristic": {
+            "$ref": "#/components/schemas/HeuristicThreatDeltaSection"
+          }
+        },
+        "type": "object",
+        "title": "ThreatDeltaSummary"
+      },
+      "ThreatModelComparisonResult": {
+        "properties": {
+          "summary": {
+            "$ref": "#/components/schemas/ComparisonSummary"
+          },
+          "aggregate": {
+            "$ref": "#/components/schemas/DiffAggregate"
+          },
+          "structural": {
+            "$ref": "#/components/schemas/ThreatModelDiff"
+          },
+          "structural_insights": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Structural Insights"
+          },
+          "analysis": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AnalysisDiff"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "analysis_insights": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Analysis Insights"
+          },
+          "risk_delta": {
+            "$ref": "#/components/schemas/RiskDeltaSummary"
+          },
+          "threat_delta": {
+            "$ref": "#/components/schemas/ThreatDeltaSummary"
+          },
+          "recommendation_delta": {
+            "$ref": "#/components/schemas/RecommendationDelta"
+          },
+          "key_insights": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Key Insights",
+            "description": "Lista priorizada para humanos (estrutura + análise)."
+          },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Meta",
+            "description": "Metadados extensíveis (versão do contrato de diff, etc.)."
+          },
+          "explanations": {
+            "items": {
+              "$ref": "#/components/schemas/ExplanationRecord"
+            },
+            "type": "array",
+            "title": "Explanations",
+            "description": "Explicabilidade estruturada (mudança principal, risco, metodologia)."
+          }
+        },
+        "type": "object",
+        "required": [
+          "summary",
+          "aggregate",
+          "structural"
+        ],
+        "title": "ThreatModelComparisonResult",
+        "description": "Resultado unificado: estrutura canónica + opcional análise + agregados acionáveis.\n\n`structural` mantém o contrato já exposto em `/v1/models/diff`."
+      },
+      "ThreatModelDiff": {
+        "properties": {
+          "baseline_title": {
+            "type": "string",
+            "title": "Baseline Title",
+            "description": "metadata.title da baseline."
+          },
+          "revised_title": {
+            "type": "string",
+            "title": "Revised Title",
+            "description": "metadata.title da revisão."
+          },
+          "summary_line": {
+            "type": "string",
+            "title": "Summary Line",
+            "description": "Resumo em uma linha para logs e UI compacta."
+          },
+          "model_info": {
+            "items": {
+              "$ref": "#/components/schemas/FieldChange"
+            },
+            "type": "array",
+            "title": "Model Info"
+          },
+          "metadata": {
+            "items": {
+              "$ref": "#/components/schemas/FieldChange"
+            },
+            "type": "array",
+            "title": "Metadata"
+          },
+          "business_context": {
+            "items": {
+              "$ref": "#/components/schemas/FieldChange"
+            },
+            "type": "array",
+            "title": "Business Context"
+          },
+          "residual_risk_summary": {
+            "items": {
+              "$ref": "#/components/schemas/FieldChange"
+            },
+            "type": "array",
+            "title": "Residual Risk Summary"
+          },
+          "assets": {
+            "$ref": "#/components/schemas/IdListSectionDiff"
+          },
+          "components": {
+            "$ref": "#/components/schemas/IdListSectionDiff"
+          },
+          "data_flows": {
+            "$ref": "#/components/schemas/IdListSectionDiff"
+          },
+          "trust_boundaries": {
+            "$ref": "#/components/schemas/IdListSectionDiff"
+          },
+          "threats": {
+            "$ref": "#/components/schemas/IdListSectionDiff"
+          },
+          "mitigations": {
+            "$ref": "#/components/schemas/IdListSectionDiff"
+          },
+          "evidence_suggestions": {
+            "$ref": "#/components/schemas/IdListSectionDiff"
+          }
+        },
+        "type": "object",
+        "required": [
+          "baseline_title",
+          "revised_title",
+          "summary_line"
+        ],
+        "title": "ThreatModelDiff",
+        "description": "Resultado canónico de `diff_documents` — estável para `/models/diff` e CLI."
+      },
+      "ThreatModelMethodology": {
+        "type": "string",
+        "enum": [
+          "stride",
+          "linddun",
+          "nist_data_centric",
+          "octave_allegro",
+          "cia_die",
+          "pasta",
+          "plot4ai"
+        ],
+        "title": "ThreatModelMethodology",
+        "description": "Metodologias principais suportadas pela arquitetura de engines."
+      },
+      "TrustBoundaryFinding": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "data_flow_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data Flow Id"
+          },
+          "from_boundary_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "From Boundary Id"
+          },
+          "to_boundary_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "To Boundary Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "TrustBoundaryFinding",
+        "description": "Insight sobre fronteiras (ex.: fluxo que as atravessa)."
+      },
+      "TrustBoundaryFindingDelta": {
+        "properties": {
+          "added_keys": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Added Keys"
+          },
+          "removed_keys": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Removed Keys"
+          },
+          "count_before": {
+            "type": "integer",
+            "title": "Count Before",
+            "default": 0
+          },
+          "count_after": {
+            "type": "integer",
+            "title": "Count After",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "TrustBoundaryFindingDelta",
+        "description": "Contagem e chaves estáveis (code + data_flow_id)."
+      },
+      "ValidateResponse": {
+        "properties": {
+          "valid": {
+            "type": "boolean",
+            "const": true,
+            "title": "Valid",
+            "default": true
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "description": "Título em `metadata.title`."
+          },
+          "schema_version": {
+            "type": "string",
+            "title": "Schema Version",
+            "description": "Versão do schema canónico."
+          },
+          "component_count": {
+            "type": "integer",
+            "title": "Component Count",
+            "default": 0
+          },
+          "threat_count": {
+            "type": "integer",
+            "title": "Threat Count",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "title",
+          "schema_version"
+        ],
+        "title": "ValidateResponse"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "WizardSignalTraceEntry": {
+        "properties": {
+          "source_tag": {
+            "type": "string",
+            "title": "Source Tag",
+            "description": "Tag original, ex.: wz:profile:key=no"
+          },
+          "effect": {
+            "type": "string",
+            "enum": [
+              "ranking_impact",
+              "corpus_mitigation",
+              "observation"
+            ],
+            "title": "Effect",
+            "description": "ranking_impact: reforço L×I; corpus_mitigation: keywords no anti-pattern; observation: só rastreio."
+          },
+          "weight": {
+            "type": "string",
+            "enum": [
+              "low",
+              "moderate"
+            ],
+            "title": "Weight",
+            "default": "low"
+          },
+          "impact_areas": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Impact Areas",
+            "description": "Ex.: heuristic_ranking, anti_pattern_corpus."
+          },
+          "mechanism": {
+            "type": "string",
+            "enum": [
+              "direct",
+              "contextual",
+              "auxiliary"
+            ],
+            "title": "Mechanism",
+            "default": "contextual"
+          },
+          "explanation": {
+            "type": "string",
+            "title": "Explanation",
+            "description": "Texto curto para humanos / governança."
+          }
+        },
+        "type": "object",
+        "required": [
+          "source_tag",
+          "effect",
+          "explanation"
+        ],
+        "title": "WizardSignalTraceEntry",
+        "description": "Uma linha auditável: o que foi declarado, efeito e onde se reflecte."
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "System",
+      "description": "Service health."
+    },
+    {
+      "name": "Models",
+      "description": "Create, validate, analyze, and compare the canonical document."
+    },
+    {
+      "name": "Analyses",
+      "description": "Diff between engine results (`AnalysisResult`)."
+    },
+    {
+      "name": "Templates",
+      "description": "Built-in starter templates."
+    },
+    {
+      "name": "Export",
+      "description": "JSON, Markdown, Mermaid, and bundles."
+    },
+    {
+      "name": "Assisted import",
+      "description": "Canonical draft from OpenAPI, Terraform, or Kubernetes (no final analysis)."
+    },
+    {
+      "name": "Remediation",
+      "description": "Actionable backlog from `AnalysisResult` (heuristic prioritization, not Jira)."
+    },
+    {
+      "name": "Reports",
+      "description": "Premium executive/standard/deep reports (Markdown and PDF)."
+    }
+  ]
+}

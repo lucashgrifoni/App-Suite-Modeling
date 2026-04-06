@@ -94,7 +94,7 @@ def compute_benchmark_metrics(
     )
 
     ap_n = len(analysis.anti_pattern_hits)
-    anti_pattern_signal_density = round(min(1.0, ap_n / 4.0), 4)
+    anti_pattern_signal_density = round(min(1.0, ap_n / 8.0), 4)
 
     recommendation_relevance_score = round(
         0.5 * recommendation_fit_score + 0.5 * (100.0 * (1.0 - generic_finding_ratio)),

@@ -244,7 +244,7 @@ def compare_threat_models(
     )
 
     meta = {
-        "comparison_contract_version": "1.1",
+        "comparison_contract_version": "1.2",
         **enrich_comparison_meta(
             baseline,
             revised,
@@ -253,6 +253,14 @@ def compare_threat_models(
             aggregate=aggregate,
         ),
     }
+    # Inclui insights semânticos (estrutura + análise) na lista principal para CLI/Markdown legível.
+    sem_list = list(meta.get("semantic_insights") or [])
+    seen_ki: set[str] = set(key_insights)
+    for s in sem_list:
+        if s not in seen_ki and len(key_insights) < 48:
+            seen_ki.add(s)
+            key_insights.append(s)
+
     base = ThreatModelComparisonResult(
         summary=summary,
         aggregate=aggregate,

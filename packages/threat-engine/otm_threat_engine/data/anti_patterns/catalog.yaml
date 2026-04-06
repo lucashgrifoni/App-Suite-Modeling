@@ -6,6 +6,8 @@ patterns:
     name: "Fluxo admin sem evidência de aprovação / segregação"
     semantic_profiles:
       - internal_admin_portal
+    require_component_id_contains_any:
+      - admin
     missing_any_of:
       - aprovação
       - approval
@@ -20,6 +22,7 @@ patterns:
     name: "Upload sem evidência de quarentena ou revalidação"
     semantic_profiles:
       - file_handling_application
+    require_min_data_flows: 3
     missing_any_of:
       - quarentena
       - quarantine
@@ -34,6 +37,9 @@ patterns:
     name: "API pública com gateway sem sinais de política/rate limit"
     semantic_profiles:
       - api_backend_rest
+    require_any_component_kinds:
+      - gateway
+    require_min_cross_boundary_flows: 1
     missing_any_of:
       - rate limit
       - ratelimit
@@ -48,6 +54,10 @@ patterns:
     name: "E-commerce sem boundary ou PSP explícito no texto"
     semantic_profiles:
       - industry_ecommerce
+    require_component_id_contains_any:
+      - pay
+      - cart
+      - shop
     missing_any_of:
       - psp
       - pagamento
@@ -63,6 +73,8 @@ patterns:
     name: "Portal admin sem menção explícita a auditoria imutável"
     semantic_profiles:
       - internal_admin_portal
+    require_component_id_contains_any:
+      - admin
     missing_any_of:
       - auditoria
       - audit
@@ -77,6 +89,7 @@ patterns:
     name: "Upload sem separação clara entre entrada e processamento"
     semantic_profiles:
       - file_handling_application
+    require_min_data_flows: 3
     missing_any_of:
       - dmz
       - segmentação
@@ -90,6 +103,9 @@ patterns:
     name: "API com chamadas externas sem menção a allowlist/egress"
     semantic_profiles:
       - api_backend_rest
+    require_any_component_kinds:
+      - gateway
+    require_min_cross_boundary_flows: 1
     missing_any_of:
       - allowlist
       - egress
@@ -103,6 +119,10 @@ patterns:
     name: "E-commerce sem sinais de anti-fraude ou risco de encomenda"
     semantic_profiles:
       - industry_ecommerce
+    require_component_id_contains_any:
+      - pay
+      - cart
+      - shop
     missing_any_of:
       - fraude
       - fraud
@@ -111,3 +131,255 @@ patterns:
     severity_hint: medium
     expected_controls:
       - "Controlos de fraude e revisão de encomendas"
+
+  - id: ap_admin_session_hardening
+    name: "Portal admin sem sinais explícitos de endurecimento de sessão"
+    semantic_profiles:
+      - internal_admin_portal
+    require_component_id_contains_any:
+      - admin
+    missing_any_of:
+      - sessão
+      - session
+      - timeout
+      - reauth
+      - mfa
+      - 2fa
+    mitigating_keywords:
+      - oauth
+      - sso
+    severity_hint: medium
+    confidence_hint: medium
+    expected_controls:
+      - "Política de sessão admin (timeout, re-auth em ações sensíveis)"
+
+  - id: ap_admin_break_glass
+    name: "Admin sem menção a break-glass / conta de emergência"
+    semantic_profiles:
+      - internal_admin_portal
+    require_component_id_contains_any:
+      - admin
+    missing_any_of:
+      - break-glass
+      - emergência
+      - emergency
+      - contingência
+    require_min_trust_boundaries: 1
+    severity_hint: low
+    confidence_hint: low
+    expected_controls:
+      - "Procedimento de acesso de emergência auditável"
+
+  - id: ap_upload_content_type
+    name: "Upload sem validação de tipo / conteúdo mencionada"
+    semantic_profiles:
+      - file_handling_application
+    require_min_data_flows: 3
+    missing_any_of:
+      - content-type
+      - magic
+      - mime
+      - assinatura
+    mitigating_keywords:
+      - antivirus
+      - sandbox
+    require_min_data_flows: 1
+    severity_hint: medium
+    confidence_hint: medium
+    expected_controls:
+      - "Validação de tipo de ficheiro além da extensão"
+
+  - id: ap_upload_async_worker
+    name: "Pipeline de ficheiro sem evidência de processamento assíncrono isolado"
+    semantic_profiles:
+      - file_handling_application
+    require_min_data_flows: 3
+    missing_any_of:
+      - fila
+      - queue
+      - worker
+      - assíncrono
+      - async
+    require_min_data_flows: 2
+    severity_hint: low
+    confidence_hint: low
+    expected_controls:
+      - "Processamento pesado fora do caminho síncrono do upload"
+
+  - id: ap_api_cors_policy
+    name: "API sem menção a CORS ou política de origens"
+    semantic_profiles:
+      - api_backend_rest
+    require_any_component_kinds:
+      - gateway
+    require_min_cross_boundary_flows: 1
+    missing_any_of:
+      - cors
+      - origin
+      - same-site
+      - samesite
+    mitigating_keywords:
+      - cors
+      - política de origens
+    severity_hint: medium
+    confidence_hint: medium
+    expected_controls:
+      - "Política explícita de origens e cookies em API pública"
+
+  - id: ap_api_versioning
+    name: "API pública sem versionamento ou deprecação mencionados"
+    semantic_profiles:
+      - api_backend_rest
+    require_any_component_kinds:
+      - gateway
+    require_min_cross_boundary_flows: 1
+    missing_any_of:
+      - version
+      - v1
+      - deprecat
+      - sunset
+    require_min_data_flows: 2
+    severity_hint: low
+    confidence_hint: low
+    expected_controls:
+      - "Estratégia de versionamento e descontinuação de clientes"
+
+  - id: ap_api_logging_redaction
+    name: "API sem menção a redacção / minimização de logs"
+    semantic_profiles:
+      - api_backend_rest
+    require_any_component_kinds:
+      - gateway
+    require_min_cross_boundary_flows: 1
+    missing_any_of:
+      - redac
+      - mascar
+      - mask
+      - pii
+      - token
+    severity_hint: medium
+    confidence_hint: low
+    expected_controls:
+      - "Política de logging sem dados sensíveis em claro"
+
+  - id: ap_ecommerce_pci_scope
+    name: "E-commerce sem delimitação de âmbito PCI / dados de cartão"
+    semantic_profiles:
+      - industry_ecommerce
+    require_component_id_contains_any:
+      - pay
+      - cart
+      - shop
+    missing_any_of:
+      - pci
+      - cartão
+      - card
+      - tokeniz
+    mitigating_keywords:
+      - psp
+    severity_hint: high
+    confidence_hint: medium
+    expected_controls:
+      - "Delimitar o que transita pelo vosso sistema vs PSP"
+
+  - id: ap_ecommerce_inventory_race
+    name: "E-commerce sem menção a consistência de stock / concorrência"
+    semantic_profiles:
+      - industry_ecommerce
+    require_component_id_contains_any:
+      - pay
+      - cart
+      - shop
+    missing_any_of:
+      - stock
+      - inventário
+      - inventory
+      - concorrência
+      - oversell
+    require_min_data_flows: 2
+    severity_hint: medium
+    confidence_hint: low
+    expected_controls:
+      - "Controlos de consistência de inventário sob carga"
+
+  - id: ap_saas_tenant_isolation
+    name: "SaaS sem sinais explícitos de isolamento entre inquilinos"
+    semantic_profiles:
+      - saas_tenant_isolation
+    missing_any_of:
+      - tenant
+      - inquilino
+      - isolamento
+      - row-level
+      - rls
+    severity_hint: high
+    confidence_hint: medium
+    expected_controls:
+      - "Isolamento forte de dados e identidade por tenant"
+
+  - id: ap_saas_billing_access
+    name: "SaaS sem boundary explícito para billing / subscrição"
+    semantic_profiles:
+      - saas_tenant_isolation
+    missing_any_of:
+      - billing
+      - subscrição
+      - subscription
+      - faturação
+    mitigating_keywords:
+      - stripe
+      - pagamento
+    require_min_trust_boundaries: 1
+    severity_hint: medium
+    confidence_hint: low
+    expected_controls:
+      - "Fronteira de confiança para serviços de cobrança"
+
+  - id: ap_webhook_signature_verification
+    name: "Webhook sem menção a verificação de assinatura / segredo"
+    semantic_profiles:
+      - webhook_ingestion_pipeline
+    missing_any_of:
+      - assinatura
+      - signature
+      - hmac
+      - segredo
+      - secret
+    mitigating_keywords:
+      - mTLS
+      - mtls
+    require_min_data_flows: 1
+    severity_hint: high
+    confidence_hint: high
+    expected_controls:
+      - "Validar origem com segredo partilhado ou mTLS"
+
+  - id: ap_webhook_replay_idempotency
+    name: "Ingestão webhook sem idempotência / deduplicação mencionada"
+    semantic_profiles:
+      - webhook_ingestion_pipeline
+    missing_any_of:
+      - idempot
+      - dedup
+      - event_id
+      - replay
+    require_min_data_flows: 2
+    severity_hint: medium
+    confidence_hint: medium
+    expected_controls:
+      - "Chave de idempotência por evento e proteção a replay"
+
+  - id: ap_webhook_queue_backpressure
+    name: "Pipeline webhook sem fila ou backpressure descritos"
+    semantic_profiles:
+      - webhook_ingestion_pipeline
+    missing_any_of:
+      - fila
+      - queue
+      - backpressure
+      - rate
+    require_min_data_flows: 2
+    severity_hint: low
+    confidence_hint: low
+    expected_controls:
+      - "Fila resiliente entre edge e workers"

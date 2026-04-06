@@ -18,6 +18,7 @@ from typing import Any
 from otm_core_schema import ThreatModelDocument
 from otm_core_schema.document import RiskAssessment
 from otm_threat_engine.risk_calc import build_risk_assessment
+from otm_threat_engine.wizard_audit_models import WizardSignalTraceEntry
 
 _TAG_RE = re.compile(
     r"^wz:(?P<profile>[a-z0-9_]+):(?P<key>[a-z0-9_]+)=(?P<val>yes|no|unk)$",
@@ -104,55 +105,195 @@ def _boost_impact(r: RiskAssessment, delta: int) -> RiskAssessment:
     return build_risk_assessment(r.likelihood, ni)
 
 
-def _admin_risk_signal(signals: list[WizardSignal]) -> bool:
-    """Ausência de aprovação ou segregação declarada pelo modelador."""
+def _admin_negative_count(signals: list[WizardSignal]) -> int:
+    """Conta respostas negativas distintas no cluster admin (anti-overfitting: precisa ≥2 para armar boost)."""
+    keys = {"approval", "segregation"}
+    n = 0
     for s in signals:
         if s.profile != "internal_admin_portal":
             continue
-        if s.key == "approval" and s.value == "no":
-            return True
-        if s.key == "segregation" and s.value == "no":
-            return True
-    return False
+        if s.key in keys and s.value == "no":
+            n += 1
+    return n
+
+
+def _admin_mitigators(signals: list[WizardSignal]) -> list[WizardSignal]:
+    return [s for s in signals if s.profile == "internal_admin_portal" and s.value == "yes"]
+
+
+def _admin_risk_signal(signals: list[WizardSignal]) -> bool:
+    """Requer ≥2 lacunas declaradas (ex.: approval=no e segregation=no) para não amplificar com 1 resposta isolada."""
+    if _admin_negative_count(signals) < 2:
+        return False
+    # Mitigador forte: aprovação confirmada reduz confiança no boost — não arma.
+    for s in signals:
+        if s.profile == "internal_admin_portal" and s.key == "approval" and s.value == "yes":
+            return False
+    return True
 
 
 def _file_risk_signal(signals: list[WizardSignal]) -> bool:
-    for s in signals:
-        if s.profile != "file_handling_application":
-            continue
-        if s.key == "quarantine" and s.value == "no":
-            return True
-        if s.key == "scan" and s.value == "no":
-            return True
-        if s.key == "public_objects" and s.value == "yes":
-            return True
-    return False
+    """Combinação (quarantine=no e scan=no) OU exposição pública declarada (sinal único de alto valor)."""
+    fh = [s for s in signals if s.profile == "file_handling_application"]
+    q_no = any(s.key == "quarantine" and s.value == "no" for s in fh)
+    sc_no = any(s.key == "scan" and s.value == "no" for s in fh)
+    pub_yes = any(s.key == "public_objects" and s.value == "yes" for s in fh)
+    return pub_yes or (q_no and sc_no)
+
+
+def _api_negative_count(signals: list[WizardSignal]) -> int:
+    keys = {"auth", "rate_limit", "edge_controls"}
+    return sum(
+        1
+        for s in signals
+        if s.profile == "api_backend_rest" and s.key in keys and s.value == "no"
+    )
 
 
 def _api_risk_signal(signals: list[WizardSignal]) -> bool:
-    for s in signals:
-        if s.profile != "api_backend_rest":
-            continue
-        if s.key == "auth" and s.value == "no":
-            return True
-        if s.key == "rate_limit" and s.value == "no":
-            return True
-        if s.key == "edge_controls" and s.value == "no":
-            return True
-    return False
+    return _api_negative_count(signals) >= 2
+
+
+def _ecom_negative_count(signals: list[WizardSignal]) -> int:
+    keys = {"checkout", "psp_boundary", "sensitive_data"}
+    return sum(
+        1
+        for s in signals
+        if s.profile == "industry_ecommerce" and s.key in keys and s.value == "no"
+    )
 
 
 def _ecom_risk_signal(signals: list[WizardSignal]) -> bool:
+    return _ecom_negative_count(signals) >= 2
+
+
+def build_corpus_mitigation_trace(signals: list[WizardSignal]) -> list[WizardSignalTraceEntry]:
+    """Uma entrada por resposta `yes` que injeta keywords no corpus anti-pattern."""
+    out: list[WizardSignalTraceEntry] = []
     for s in signals:
-        if s.profile != "industry_ecommerce":
+        if s.value != "yes":
             continue
-        if s.key == "psp_boundary" and s.value == "no":
-            return True
-        if s.key == "sensitive_data" and s.value == "no":
-            return True
-        if s.key == "checkout" and s.value == "no":
-            return True
-    return False
+        tag = f"wz:{s.profile}:{s.key}=yes"
+        out.append(
+            WizardSignalTraceEntry(
+                source_tag=tag,
+                effect="corpus_mitigation",
+                weight="low",
+                impact_areas=["anti_pattern_corpus"],
+                mechanism="auxiliary",
+                explanation=(
+                    "Resposta positiva do assistente injeta termos de controlo no corpus agregado "
+                    "usado pelo matcher de anti-patterns (reduz falsos positivos de `missing_any_of`)."
+                ),
+            )
+        )
+    return out
+
+
+def _build_ranking_trace_entries(
+    *,
+    admin: bool,
+    file_r: bool,
+    api_r: bool,
+    ecom: bool,
+    signals: list[WizardSignal],
+) -> list[WizardSignalTraceEntry]:
+    trace: list[WizardSignalTraceEntry] = []
+    if admin:
+        negs = [s for s in signals if s.profile == "internal_admin_portal" and s.value == "no"]
+        tag = ",".join(f"wz:{s.profile}:{s.key}=no" for s in negs[:4])
+        trace.append(
+            WizardSignalTraceEntry(
+                source_tag=tag,
+                effect="ranking_impact",
+                weight="moderate",
+                impact_areas=["heuristic_ranking"],
+                mechanism="contextual",
+                explanation=(
+                    "≥2 lacunas admin declaradas (sem mitigador approval=yes): +1 impacto em heurísticas "
+                    "admin/privilégio/auditoria (cap 5)."
+                ),
+            )
+        )
+    if file_r:
+        trace.append(
+            WizardSignalTraceEntry(
+                source_tag="wz:file_handling_application:cluster",
+                effect="ranking_impact",
+                weight="moderate",
+                impact_areas=["heuristic_ranking"],
+                mechanism="contextual",
+                explanation=(
+                    "Combinação quarentena+scan ausentes ou objetos públicos: +1 impacto em heurísticas de upload/ficheiro."
+                ),
+            )
+        )
+    if api_r:
+        trace.append(
+            WizardSignalTraceEntry(
+                source_tag="wz:api_backend_rest:cluster",
+                effect="ranking_impact",
+                weight="moderate",
+                impact_areas=["heuristic_ranking"],
+                mechanism="contextual",
+                explanation=(
+                    "≥2 entre auth/rate/WAF declarados como fracos: +1 impacto em heurísticas de perímetro/API."
+                ),
+            )
+        )
+    if ecom:
+        trace.append(
+            WizardSignalTraceEntry(
+                source_tag="wz:industry_ecommerce:cluster",
+                effect="ranking_impact",
+                weight="moderate",
+                impact_areas=["heuristic_ranking"],
+                mechanism="contextual",
+                explanation=(
+                    "≥2 lacunas em checkout/PSP/dados sensíveis: +1 impacto em heurísticas de pagamento."
+                ),
+            )
+        )
+
+    # Observações: sinais negativos isolados que não armaram o cluster
+    if _admin_negative_count(signals) == 1 and not admin:
+        trace.append(
+            WizardSignalTraceEntry(
+                source_tag="wz:internal_admin_portal:isolated_no",
+                effect="observation",
+                weight="low",
+                impact_areas=["audit_only"],
+                mechanism="auxiliary",
+                explanation=(
+                    "Uma única resposta negativa no perfil admin não aplica boost de ranking (política anti-overfitting)."
+                ),
+            )
+        )
+    if _api_negative_count(signals) == 1 and not api_r:
+        trace.append(
+            WizardSignalTraceEntry(
+                source_tag="wz:api_backend_rest:isolated_no",
+                effect="observation",
+                weight="low",
+                impact_areas=["audit_only"],
+                mechanism="auxiliary",
+                explanation="Uma única fraqueza API declarada não aplica boost — requer confirmação cruzada (≥2 eixos).",
+            )
+        )
+    mit = _admin_mitigators(signals)
+    for s in mit:
+        if s.key in ("approval", "segregation", "jit"):
+            trace.append(
+                WizardSignalTraceEntry(
+                    source_tag=f"wz:{s.profile}:{s.key}=yes",
+                    effect="observation",
+                    weight="low",
+                    impact_areas=["mitigation_note"],
+                    mechanism="auxiliary",
+                    explanation="Mitigador declarado no assistente — documentado para auditoria; pode bloquear boost de ranking.",
+                ),
+            )
+    return trace
 
 
 def _matches_admin_context(h: Any) -> bool:
@@ -178,15 +319,15 @@ def _matches_payment_context(h: Any) -> bool:
 def apply_wizard_context_to_heuristics(
     doc: ThreatModelDocument,
     heuristics: list[Any],
-) -> tuple[int, list[str]]:
+) -> tuple[int, list[str], list[WizardSignalTraceEntry]]:
     """
-    Aumenta impacto (conservador, +1) quando sinais negativos do assistente reforçam o contexto.
+    Aumenta impacto (conservador, +1, cap) quando clusters do assistente estão armados.
 
-    Devolve (n_alterados, notas_explicativas).
+    Devolve (n_alterados, notas_explicativas, audit_trail).
     """
     sigs = signals_for_profile(doc)
     if not sigs:
-        return 0, []
+        return 0, [], []
 
     notes: list[str] = []
     admin = _admin_risk_signal(sigs)
@@ -194,21 +335,25 @@ def apply_wizard_context_to_heuristics(
     api_r = _api_risk_signal(sigs)
     ecom = _ecom_risk_signal(sigs)
 
+    trace = _build_ranking_trace_entries(
+        admin=admin, file_r=file_r, api_r=api_r, ecom=ecom, signals=sigs
+    )
+
     if admin:
         notes.append(
-            "Assistente: ausência de aprovação/segregação declarada — reforço conservador em achados admin/privilégio."
+            "Assistente: ≥2 lacunas admin declaradas (sem mitigador de aprovação) — reforço conservador em achados admin/privilégio."
         )
     if file_r:
         notes.append(
-            "Assistente: quarentena/scan ausentes ou exposição pública — reforço em achados de ficheiro/upload."
+            "Assistente: quarentena+scan ausentes ou exposição pública — reforço em achados de ficheiro/upload."
         )
     if api_r:
         notes.append(
-            "Assistente: auth/rate/WAF fracos declarados — reforço em achados de perímetro/API."
+            "Assistente: ≥2 fraquezas API/perímetro declaradas — reforço em achados de perímetro/API."
         )
     if ecom:
         notes.append(
-            "Assistente: checkout/PSP/dados sensíveis em risco declarado — reforço em achados de pagamento."
+            "Assistente: ≥2 lacunas e-commerce declaradas — reforço em achados de pagamento."
         )
 
     changed = 0
@@ -231,4 +376,4 @@ def apply_wizard_context_to_heuristics(
                 h.signal_refs = [*list(h.signal_refs), ref]
             changed += 1
 
-    return changed, notes
+    return changed, notes, trace
