@@ -15,6 +15,8 @@ e versionamento semântico quando aplicável.
 
 ### Fixed
 
+- `apps/web`: atualização de `jspdf` para ^4.2.1, resolvendo `dompurify` transitivo para 3.3.3 (avisos de segurança do Dependabot).
+
 <!-- Compare links: atualizar com URL do repositório remoto após primeiro push de tag. -->
 
 ## [5.0.0] — 2026-04-03
