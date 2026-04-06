@@ -7,8 +7,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from otm_industry_packs.loader import load_template_yaml
 from otm_core_schema import load_document_from_yaml
+from otm_industry_packs.loader import load_template_yaml
 from otm_threat_engine import analyze_document
 
 _ROOT = Path(__file__).resolve().parents[1]

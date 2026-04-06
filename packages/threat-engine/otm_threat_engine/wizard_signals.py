@@ -12,11 +12,11 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-
 from typing import Any
 
 from otm_core_schema import ThreatModelDocument
 from otm_core_schema.document import RiskAssessment
+
 from otm_threat_engine.risk_calc import build_risk_assessment
 from otm_threat_engine.wizard_audit_models import WizardSignalTraceEntry
 
@@ -224,7 +224,8 @@ def _build_ranking_trace_entries(
                 impact_areas=["heuristic_ranking"],
                 mechanism="contextual",
                 explanation=(
-                    "Combinação quarentena+scan ausentes ou objetos públicos: +1 impacto em heurísticas de upload/ficheiro."
+                    "Combinação quarentena+scan ausentes ou objetos públicos: "
+                    "+1 impacto em heurísticas de upload/ficheiro."
                 ),
             )
         )
@@ -265,7 +266,8 @@ def _build_ranking_trace_entries(
                 impact_areas=["audit_only"],
                 mechanism="auxiliary",
                 explanation=(
-                    "Uma única resposta negativa no perfil admin não aplica boost de ranking (política anti-overfitting)."
+                    "Uma única resposta negativa no perfil admin não aplica boost de ranking "
+                    "(política anti-overfitting)."
                 ),
             )
         )
@@ -277,7 +279,10 @@ def _build_ranking_trace_entries(
                 weight="low",
                 impact_areas=["audit_only"],
                 mechanism="auxiliary",
-                explanation="Uma única fraqueza API declarada não aplica boost — requer confirmação cruzada (≥2 eixos).",
+                explanation=(
+                    "Uma única fraqueza API declarada não aplica boost — "
+                    "requer confirmação cruzada (≥2 eixos)."
+                ),
             )
         )
     mit = _admin_mitigators(signals)
@@ -290,7 +295,10 @@ def _build_ranking_trace_entries(
                     weight="low",
                     impact_areas=["mitigation_note"],
                     mechanism="auxiliary",
-                    explanation="Mitigador declarado no assistente — documentado para auditoria; pode bloquear boost de ranking.",
+                    explanation=(
+                        "Mitigador declarado no assistente — documentado para auditoria; "
+                        "pode bloquear boost de ranking."
+                    ),
                 ),
             )
     return trace
@@ -341,7 +349,8 @@ def apply_wizard_context_to_heuristics(
 
     if admin:
         notes.append(
-            "Assistente: ≥2 lacunas admin declaradas (sem mitigador de aprovação) — reforço conservador em achados admin/privilégio."
+            "Assistente: ≥2 lacunas admin declaradas (sem mitigador de aprovação) — "
+            "reforço conservador em achados admin/privilégio."
         )
     if file_r:
         notes.append(

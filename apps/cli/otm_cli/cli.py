@@ -19,8 +19,8 @@ from otm_core_schema import (
     diff_documents,
     dump_document_to_yaml,
 )
-from otm_core_schema.model_quality_precheck import assess_model_precheck
 from otm_core_schema.enums import ThreatModelMethodology
+from otm_core_schema.model_quality_precheck import assess_model_precheck
 from otm_diagram_engine import export_flowchart_mermaid
 from otm_exporters import (
     export_comparison_markdown,
@@ -50,9 +50,9 @@ from otm_report_premium import (
 from otm_report_premium.enums import ReportFormat as PremiumReportFormat
 from otm_report_premium.enums import ReportLevel as PremiumReportLevel
 from otm_threat_engine import AnalysisResult, analyze_document, build_remediation_backlog
-from otm_threat_engine.methodology_completeness import assess_methodology_completeness
 from otm_threat_engine.analysis_diff import diff_analysis_results
 from otm_threat_engine.methodologies import recommend_methodology
+from otm_threat_engine.methodology_completeness import assess_methodology_completeness
 from otm_threat_engine.threat_model_comparison import compare_threat_models
 from pydantic import ValidationError
 from rich.console import Console
@@ -711,15 +711,15 @@ def cmd_diff(
         lines.append("")
     if with_analysis and full.meta:
         meta = full.meta
-        disc = meta.get("interpretation_disclaimer") if isinstance(meta, dict) else None
+        disc = meta.interpretation_disclaimer
         if isinstance(disc, str) and disc.strip():
             lines.append("Aviso inferencial:")
             lines.append(f"  {disc.strip()}")
             lines.append("")
-        sem = meta.get("semantic_diff_sections") if isinstance(meta, dict) else None
-        if isinstance(sem, dict):
-            scs = sem.get("structural_change_summary") or []
-            imp, wor, risk = sem.get("improved") or [], sem.get("worsened") or [], sem.get("risk_impact") or []
+        sem = meta.semantic_diff_sections
+        if sem is not None:
+            scs = sem.structural_change_summary or []
+            imp, wor, risk = sem.improved or [], sem.worsened or [], sem.risk_impact or []
             if scs or imp or wor or risk:
                 lines.append("Diff semântico (heurístico):")
                 for x in scs[:5]:
@@ -731,18 +731,24 @@ def cmd_diff(
                 for x in risk[:5]:
                     lines.append(f"  ~ {x}")
                 lines.append("")
-        refs = meta.get("semantic_structural_refs") if isinstance(meta, dict) else None
-        if isinstance(refs, list) and refs:
-            lines.append("Refs estrutura→interpretação (correlacional):")
+        refs = meta.semantic_structural_refs
+        if refs:
+            lines.append("Refs estrutura→interpretação (ancoradas, não causais):")
             for item in refs[:12]:
-                if not isinstance(item, dict):
-                    continue
+                lines.append(f"  {item.ref} · {item.entity_kind} `{item.entity_id}`")
+            lines.append("")
+        ilinks = meta.semantic_interpretation_links
+        if ilinks:
+            lines.append("Correspondência ref → interpretação (v1.4, proxies de leitura):")
+            for item in ilinks[:10]:
                 lines.append(
-                    f"  {item.get('ref', '')} · {item.get('entity_kind', '')} `{item.get('entity_id', '')}`"
+                    f"  {item.structural_ref} → {item.related_section} "
+                    f"[{item.link_kind}/{item.inference_strength}]: "
+                    f"{str(item.summary)[:120]}"
                 )
             lines.append("")
-        si = meta.get("semantic_insights") if isinstance(meta, dict) else None
-        if isinstance(si, list) and si:
+        si = meta.semantic_insights
+        if si:
             lines.append("Insights semânticos:")
             for x in si[:10]:
                 lines.append(f"- {x}")
@@ -903,7 +909,13 @@ def cmd_precheck(
         _write_json_file(payload=payload, output=json_out)
         console.print(f"[green]Pré-check gravado em[/green] {json_out.resolve()}")
     else:
-        console.print(Panel.fit(json.dumps(payload, indent=2, ensure_ascii=False), title="precheck", border_style="cyan"))
+        console.print(
+            Panel.fit(
+                json.dumps(payload, indent=2, ensure_ascii=False),
+                title="precheck",
+                border_style="cyan",
+            )
+        )
 
 
 @app.command("analyze")

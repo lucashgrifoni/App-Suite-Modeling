@@ -12,9 +12,9 @@ from otm_core_schema.document import ThreatModelDocument
 
 from otm_threat_engine.analysis_diff import diff_analysis_results
 from otm_threat_engine.comparison_explanations import build_comparison_explanations
-from otm_threat_engine.semantic_comparison import enrich_comparison_meta
 from otm_threat_engine.comparison_models import (
     AnalysisDiff,
+    ComparisonResultMeta,
     ComparisonSummary,
     DiffAggregate,
     HeuristicThreatDeltaSection,
@@ -24,6 +24,7 @@ from otm_threat_engine.comparison_models import (
     ThreatModelComparisonResult,
 )
 from otm_threat_engine.result import AnalysisResult
+from otm_threat_engine.semantic_comparison import enrich_comparison_meta
 
 
 def _agg_from_structural(d: ThreatModelDiff) -> DiffAggregate:
@@ -243,18 +244,20 @@ def compare_threat_models(
         methodology_in_model_changed=meth_model_changed,
     )
 
-    meta = {
-        "comparison_contract_version": "1.2",
-        **enrich_comparison_meta(
-            baseline,
-            revised,
-            baseline_analysis=baseline_analysis,
-            revised_analysis=revised_analysis,
-            aggregate=aggregate,
-        ),
-    }
+    meta = ComparisonResultMeta.model_validate(
+        {
+            "comparison_contract_version": "1.4",
+            **enrich_comparison_meta(
+                baseline,
+                revised,
+                baseline_analysis=baseline_analysis,
+                revised_analysis=revised_analysis,
+                aggregate=aggregate,
+            ),
+        }
+    )
     # Inclui insights semânticos (estrutura + análise) na lista principal para CLI/Markdown legível.
-    sem_list = list(meta.get("semantic_insights") or [])
+    sem_list = list(meta.semantic_insights or [])
     seen_ki: set[str] = set(key_insights)
     for s in sem_list:
         if s not in seen_ki and len(key_insights) < 48:

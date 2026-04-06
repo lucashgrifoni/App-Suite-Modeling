@@ -186,7 +186,12 @@ def render_premium_markdown(payload: PremiumReportPayload) -> str:
         lines.append(f"- Novos: {', '.join(payload.baseline_diff.threats_added[:20])}\n")
         lines.append(f"- Removidos: {', '.join(payload.baseline_diff.threats_removed[:20])}\n")
         bd = payload.baseline_diff
-        if bd.semantic_insights_from_analysis or bd.semantic_improved or bd.semantic_worsened or bd.semantic_risk_impact:
+        if (
+            bd.semantic_insights_from_analysis
+            or bd.semantic_improved
+            or bd.semantic_worsened
+            or bd.semantic_risk_impact
+        ):
             lines.append("\n### Diff semântico (entre execuções de análise)\n")
             lines.append(
                 "_Heurística sobre pré-check, anti-patterns e ranking — não atribui causa a alterações no YAML._\n"

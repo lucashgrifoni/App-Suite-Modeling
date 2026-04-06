@@ -24,17 +24,17 @@ def export_comparison_markdown(result: ThreatModelComparisonResult) -> str:
         lines.append(f"{i}. {ins}")
     if not result.key_insights:
         lines.append("_Nenhum insight automático._")
-    meta = result.meta or {}
-    disc = meta.get("interpretation_disclaimer") if isinstance(meta, dict) else None
+    meta = result.meta
+    disc = meta.interpretation_disclaimer
     if isinstance(disc, str) and disc.strip():
         lines.extend(["", "### Aviso inferencial (diff)", "", f"_{disc}_", ""])
 
-    sem = meta.get("semantic_diff_sections")
-    if isinstance(sem, dict):
-        improved = sem.get("improved") or []
-        worsened = sem.get("worsened") or []
-        risk_impact = sem.get("risk_impact") or []
-        scs = sem.get("structural_change_summary") or []
+    sem = meta.semantic_diff_sections
+    if sem is not None:
+        improved = sem.improved or []
+        worsened = sem.worsened or []
+        risk_impact = sem.risk_impact or []
+        scs = sem.structural_change_summary or []
         if improved or worsened or risk_impact or scs:
             lines.extend(["", "### Diff semântico (resumo)", ""])
             lines.append(
@@ -61,20 +61,36 @@ def export_comparison_markdown(result: ThreatModelComparisonResult) -> str:
                 for item in risk_impact[:6]:
                     lines.append(f"- {item}")
                 lines.append("")
-    refs = meta.get("semantic_structural_refs") if isinstance(meta, dict) else None
-    if isinstance(refs, list) and refs:
+    refs = meta.semantic_structural_refs
+    if refs:
         lines.extend(["", "### Ligação estrutura → interpretação (refs estáveis)", ""])
         for item in refs[:20]:
-            if not isinstance(item, dict):
-                continue
-            r = item.get("ref", "")
-            ek = item.get("entity_kind", "")
-            eid = item.get("entity_id", "")
-            note = item.get("note", "")
-            lines.append(f"- `{r}` · {ek} `{eid}` — {note}")
+            cc = f" · `{item.change_category}`" if item.change_category else ""
+            lines.append(f"- `{item.ref}` · {item.entity_kind} `{item.entity_id}`{cc} — {item.note}")
         lines.append("")
-    si = meta.get("semantic_insights") if isinstance(meta, dict) else None
-    if isinstance(si, list) and si:
+    links = meta.semantic_interpretation_links
+    if links:
+        lines.extend(
+            [
+                "",
+                "### Correspondência ref → interpretação (v1.4)",
+                "",
+                (
+                    "_`lexical_token_overlap` ou `entity_topic_correlation`; "
+                    "força inferencial sempre «low» — sem causalidade provada._"
+                ),
+                "",
+            ]
+        )
+        for item in links[:16]:
+            tok = ", ".join(item.shared_tokens) if item.shared_tokens else "—"
+            lines.append(
+                f"- `{item.structural_ref}` → **{item.related_section}** "
+                f"(`{item.link_kind}`, {item.inference_strength}; tokens: {tok}): {item.summary}"
+            )
+        lines.append("")
+    si = meta.semantic_insights
+    if si:
         lines.extend(["", "### Insights semânticos (narrativa)", ""])
         for item in si[:14]:
             lines.append(f"- {item}")

@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-from otm_core_schema import load_document_from_yaml_path
-from otm_industry_packs.loader import load_pack, load_template_yaml
-from otm_core_schema.io import load_document_from_yaml
-from otm_threat_engine.recommendation_gate import filter_pack_control_hints
-
 from pathlib import Path
+
+from otm_core_schema import load_document_from_yaml_path
+from otm_core_schema.io import load_document_from_yaml
+from otm_industry_packs.loader import load_pack, load_template_yaml
+from otm_threat_engine.recommendation_gate import filter_pack_control_hints
 
 _ROOT = Path(__file__).resolve().parents[1]
 

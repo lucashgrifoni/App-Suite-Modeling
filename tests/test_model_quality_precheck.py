@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from otm_core_schema import assess_model_precheck, load_document_from_yaml, load_document_from_yaml_path
-
 from pathlib import Path
+
+from otm_core_schema import assess_model_precheck, load_document_from_yaml, load_document_from_yaml_path
 
 _ROOT = Path(__file__).resolve().parents[1]
 

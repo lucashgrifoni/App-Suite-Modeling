@@ -9,6 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from otm_core_schema import ThreatModelDocument
+
 from otm_threat_engine.result import AnalysisResult
 
 

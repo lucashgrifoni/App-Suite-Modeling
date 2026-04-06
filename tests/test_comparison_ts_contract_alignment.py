@@ -36,11 +36,11 @@ def test_comparison_result_model_includes_ts_contract_fields() -> None:
 def test_comparison_meta_semantic_keys_stable() -> None:
     """Garante que chaves de meta usadas na UI/export continuam no modelo dict livre."""
     # enrich_comparison_meta devolve estes keys; falha se renomear sem actualizar TS/CLI/markdown.
-    from otm_core_schema import load_document_from_yaml_path
     from pathlib import Path
 
-    from otm_threat_engine.semantic_comparison import enrich_comparison_meta
+    from otm_core_schema import load_document_from_yaml_path
     from otm_threat_engine.comparison_models import DiffAggregate
+    from otm_threat_engine.semantic_comparison import enrich_comparison_meta
 
     root = Path(__file__).resolve().parents[1]
     doc = load_document_from_yaml_path(root / "examples" / "minimal.otm.yaml")
@@ -59,6 +59,8 @@ def test_comparison_meta_semantic_keys_stable() -> None:
         "semantic_insights_version",
         "semantic_diff_sections",
         "semantic_structural_refs",
+        "semantic_interpretation_links",
         "interpretation_disclaimer",
     ):
         assert key in meta, f"meta missing stable key {key}"
+    assert meta.get("semantic_insights_version") == "1.4"
