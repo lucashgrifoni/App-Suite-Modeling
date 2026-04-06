@@ -1,15 +1,15 @@
+import { useTranslation } from "react-i18next";
 import { Card } from "../ui/Card";
 import type { AnalysisResult } from "../../types/api";
 
 export function MethodologyInsightsSection({ analysis }: Readonly<{ analysis: AnalysisResult }>) {
+  const { t } = useTranslation();
   const blocks = analysis.methodology_insights?.blocks;
   if (!blocks?.length) return null;
   return (
     <Card
-      title="Insights da metodologia"
-      subtitle={
-        analysis.methodology_insights?.profile ?? "Complementos específicos da metodologia escolhida."
-      }
+      title={t("methodologyInsights.title")}
+      subtitle={analysis.methodology_insights?.profile ?? t("methodologyInsights.fallbackProfile")}
       variant="elevated"
     >
       <div className="grid gap-3 sm:grid-cols-2">

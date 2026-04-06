@@ -128,6 +128,10 @@ class ExportBody(DocumentBody):
         default=None,
         description="Resultado de análise já calculado (opcional); evita reexecutar o motor.",
     )
+    locale: str | None = Field(
+        default=None,
+        description="Idioma para texto user-facing em Markdown (pt-BR | en). Omitido = pt-BR (retrocompatível).",
+    )
 
 
 class ExportResponse(BaseModel):
@@ -199,4 +203,8 @@ class PremiumReportBody(DocumentBody):
     output_format: Literal["markdown", "pdf"] = Field(
         default="markdown",
         description="markdown = texto; pdf = binário application/pdf.",
+    )
+    locale: str | None = Field(
+        default=None,
+        description="Idioma dos textos estruturais do relatório (pt-BR | en). Omitido = pt-BR.",
     )

@@ -19,8 +19,8 @@
     ]
   },
   "compare_same_document": {
-    "comparison_contract_version": "1.4",
-    "semantic_insights_version": "1.4",
+    "comparison_contract_version": "1.5",
+    "semantic_insights_version": "1.5",
     "meta_keys": [
       "comparison_contract_version",
       "semantic_insights",
@@ -28,7 +28,8 @@
       "semantic_diff_sections",
       "semantic_structural_refs",
       "semantic_interpretation_links",
-      "interpretation_disclaimer"
+      "interpretation_disclaimer",
+      "extensions"
     ]
   }
 }

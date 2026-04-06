@@ -13,7 +13,54 @@ e versionamento semântico quando aplicável.
 
 ### Fixed
 
+### Removed
+
 <!-- Compare links: atualizar com URL do repositório remoto após primeiro push de tag. -->
+
+## [7.1.0] — 2026-04-08
+
+Release **v7.1** (i18n pt-BR/en, exports e premium localizados, CLI modular, observabilidade e CORS na API, CI com mypy/pip-audit/npm audit/E2E crítico, diff semântico v1.5, higiene documental).
+
+### Removed
+
+- Higiene **round 3** (documentação): removido o pacote disperso `docs/I18N_*.md` (substituído por **`docs/I18N.md`**). Relatórios `docs/PROJECT_HYGIENE_ROUND3_*`.
+
+- Higiene de repositório (release readiness): removido arquivo versionado `docs/archive/legacy-md-2026-03-24/` (29 ficheiros Markdown já marcados como legados e sem referências no código, CI ou documentação viva). Rastreio no histórico Git; sumário consolidado na round 2 (`docs/PROJECT_HYGIENE_ROUND2_*`).
+
+- Higiene **round 2** (documentação): removidos dezenas de Markdown redundantes ou puramente operacionais (pacotes `BRUTAL_*` paralelos, trilhos UI plano/validação/handoff, relatórios de execução CI dispersos, fechos/rounds históricos, ficheiros da higiene round 1). Conteúdo durável fundido em `docs/FULL_PROJECT_REMEDIATION_BACKLOG.md`, `docs/FULL_PROJECT_REMEDIATION_PLAN.md`, `docs/FULL_PROJECT_QUALITY_SCORECARD.md`, `docs/CI_AND_SECURITY_EVIDENCE.md`, `docs/EXPLAINABILITY.md`, `docs/THREAT_MODEL_DIFF.md`, `docs/STRIDE_GENERICITY_REDUCTION_DECISION.md`, `docs/GITHUB_README_AND_METADATA.md`, `docs/FRONTEND_UI_ROLLOUT_HISTORY.md`. Rastreio em `docs/PROJECT_HYGIENE_ROUND2_*`.
+
+### Added
+
+- Documentação consolidada (higiene round 2): `docs/CI_AND_SECURITY_EVIDENCE.md`, `docs/GITHUB_README_AND_METADATA.md`, `docs/FRONTEND_UI_ROLLOUT_HISTORY.md`; relatórios `docs/PROJECT_HYGIENE_ROUND2_AUDIT_REPORT.md`, `docs/PROJECT_HYGIENE_ROUND2_EXECUTION_LOG.md`, `docs/PROJECT_HYGIENE_ROUND2_FINAL_SUMMARY.md`.
+- Documentação consolidada (higiene round 3): `docs/I18N.md`; relatórios `docs/PROJECT_HYGIENE_ROUND3_AUDIT_REPORT.md`, `docs/PROJECT_HYGIENE_ROUND3_EXECUTION_LOG.md`, `docs/PROJECT_HYGIENE_ROUND3_FINAL_SUMMARY.md`.
+
+- Web (`apps/web`): internacionalização **pt-BR** / **en** com **i18next** + **react-i18next**; `LanguageSwitcher` no header; locales em `src/i18n/locales/`; persistência `otm.web.locale`; testes Vitest (`localePolicy`); E2E `e2e/i18n.spec.ts`; `playwright.config.ts` com `locale: "pt-BR"` para estabilizar cópia PT nos testes.
+- i18n de **artefactos**: `POST /v1/exports` com `locale` opcional validado (`pt-BR` \| `en`); exportadores Markdown com rótulos bilíngues; PDF no cliente (`generateReportPdf`) com chaves `artifactPdf.*`; resolução centralizada em `exportArtifactLocale.ts`; `ExportPage` com `export-artifact-locale`; testes `tests/test_export_locale.py`, `tests/test_api.py::test_export_document_markdown_locale_en`, Vitest `exportArtifactLocale.test.ts`.
+- i18n **report premium** (Fase 3): `PremiumReportPayload.locale`, `report_i18n.py`, `i18n_locale.py`, builder/render MD/HTML bilíngues; `POST /v1/reports/premium` + `PremiumReportBody.locale`; web `fetchPremiumReport({ locale })`; CLI `otm report --locale`; testes `tests/test_premium_i18n_locale.py`, `test_premium_report.py`, `test_api.py::test_reports_premium_markdown_locale_en`.
+- Documentação i18n: **`docs/I18N.md`** (canónico: política, API/exports, premium, limitações, glossário, verificação); `docs/PREMIUM_REPORTS.md` atualizado. *(Nota: ficheiros `docs/I18N_*.md` dispersos foram fundidos neste documento na higiene round 3.)*
+- Auditoria final i18n (implementação): normalização única export/premium + variantes BCP47 em `export_locale.py`; placeholders i18n em `RunEngineCard`, `ReviewPage`, `WizardPage`. Evidência editorial consolidada em `docs/I18N.md` secção 9.
+
+- CLI modular: `apps/cli/otm_cli/commands/`, `application/`, `shared/`; `cli.py` só bootstrap Typer; testes `tests/test_cli_application.py`.
+- API: observabilidade JSON (`request_id`, duração, eventos HTTP) em `otm_api.observability`; CORS por `OTM_ENV` / `OTM_CORS_ORIGINS` em `otm_api.cors_settings`.
+- CI: job **mypy** (core-schema + API), **pip-audit** no ambiente do projeto, **npm audit --audit-level=critical** em `apps/web`, job **web-e2e-critical** (`e2e:critical`); Dependabot pip + npm.
+- Relatórios e gates DevSecOps: evidência **consolidada** em [`docs/CI_AND_SECURITY_EVIDENCE.md`](docs/CI_AND_SECURITY_EVIDENCE.md); [`docs/DEPLOYMENT_INVARIANTS.md`](docs/DEPLOYMENT_INVARIANTS.md); [`docs/E2E_GATE_DECISION.md`](docs/E2E_GATE_DECISION.md); [`docs/SONAR_DECISION_REPORT.md`](docs/SONAR_DECISION_REPORT.md). *(Relatórios pontuais `*_EXECUTION_REPORT.md` com o mesmo tema foram fundidos em `CI_AND_SECURITY_EVIDENCE.md` na higiene docs.)*
+- Documentação de fecho: `docs/RELEASE_ENGINEERING_CHECKLIST.md` (gates de release), `docs/DEFINITION_OF_DONE.md`, `docs/ENGINEERING_CLOSEOUT_SCOPE.md`; índice e alinhamento de versão em `docs/README.md`, `RELEASE_SCOPE_FREEZE.md`, `LAUNCH_CHECKLIST.md`, `GO_NO_GO_v0.1.0.md`, `KNOWN_LIMITATIONS.md`.
+
+- Diff semântico **v1.5**: `anchoring_rationale` em cada ligação; `inference_strength` **medium** quando ≥2 tokens lexicais coincidem; `comparison_contract_version` / `semantic_insights_version` **1.5**.
+- `ComparisonResultMeta`: raiz **`extra=forbid`** + campo **`extensions`** para evolução controlada (OpenAPI sem `additionalProperties` soltas na raiz).
+- Repo scan Python: rotas `@app/@router.*`, `UploadFile`/multipart, `Depends`/OAuth2/sessão, clientes **httpx/requests/aiohttp**, `/admin`/`/debug`; `modeling_hints` alinhados (`python_upload`, `python_external_http`, `python_auth_layer`, `python_route`).
+- `scripts/check_hybrid_prereqs.py`; `npm run e2e:hybrid:check`; `e2e:hybrid` corre a verificação antes do Playwright.
+
+### Changed
+
+- Web: páginas e blocos de análise (incl. `ExportPage`, `HistoryPage`, `TemplatesPage`, `DiffPage`) e componentes associados passam a usar `t()` / `Trans` em vez de strings fixas na UI.
+- Removido `sonar-project.properties` órfão (sem job Sonar no CI); ver `docs/SONAR_DECISION_REPORT.md`.
+- UI diff, Markdown e CLI mostram racional de ancoragem (v1.5).
+- Documentação: `docs/THREAT_MODEL_DIFF.md`, `docs/CONTRACTS_CI_HYBRID.md` (fluxo híbrido + `meta` fechado).
+
+### Fixed
+
+- API: ordem de imports em `apps/api/otm_api/observability.py` (Ruff **I001**) para o gate `ruff check` passar.
 
 ## [7.0.0] — 2026-04-07
 
@@ -25,7 +72,7 @@ Release **v7.0** (OpenAPI como contrato vivo, diff semântico v1.4, E2E híbrido
 - Goldens HTTP semânticos: `tests/test_http_response_goldens.py` + `tests/fixtures/golden/http_api_semantic_expectations.json`.
 - E2E **híbrido**: `playwright.hybrid.config.ts`, `e2e/hybrid.spec.ts`, `npm run e2e:hybrid`, job CI `hybrid-e2e`.
 - `e2e/fixtures/minimal-document.json` (documento canónico para testes híbridos).
-- Documentação: `docs/CONTRACTS_CI_HYBRID.md`, `docs/ROUND2_INTEGRATED_CLOSEOUT.md`.
+- Documentação: `docs/CONTRACTS_CI_HYBRID.md`, `docs/ROUND2_INTEGRATED_CLOSEOUT.md`. *(Nota editorial 2026-04: `ROUND2_INTEGRATED_CLOSEOUT.md` foi removido na higiene docs; ver `docs/THREAT_MODEL_DIFF.md` e `docs/CI_AND_SECURITY_EVIDENCE.md`.)*
 - OpenAPI como fonte de tipos TS: `contracts/openapi.json`, `scripts/export_openapi.py`, `openapi-typescript`, `apps/web/src/types/generated/openapi.d.ts`, scripts `contracts:sync` no pacote web.
 - `response_model` explícito em `POST /v1/models/analyze` e `/compare` para esquemas reais no OpenAPI.
 - Schemas OpenAPI **`ComparisonResultMeta`**, **`SemanticInterpretationLinkModel`**, **`SemanticStructuralRefModel`**, **`SemanticDiffSectionsModel`** — `meta` tipado no contrato exportado (com `additionalProperties` para extensões).
@@ -59,7 +106,7 @@ Release **v6.0** (contratos TS alinhados ao motor, diff semântico v1.2, E2E cr�
 - Diff semântico v1.2: contagens estruturais em `semantic_diff_sections.structural_change_summary`, refs `semantic_structural_refs`, disclaimer explícito; `comparison_contract_version` 1.2.
 - E2E crítico: `apps/web/e2e/journeys.spec.ts`, `e2e/cockpit.spec.ts`; script `npm run e2e:critical`.
 - Repo scan: deteções reforçadas (multer/express.file/busboy, sessão, child_process/fork, rotas debug), `modeling_hints` e `import_signals_corpus_snippets`; `repo_ast_optional`; tags `import:signal:` no corpus de anti-patterns.
-- Documentação: `docs/FINAL_CLOSEOUT_ROUND.md`, `audit-gpt.md`, pacote de auditoria (`docs/BRUTAL_*.md`, `docs/FULL_PROJECT_*.md`, `docs/CONSOLIDATION_ELITE_ROUND.md`).
+- Documentação: `docs/FINAL_CLOSEOUT_ROUND.md`, limitações do produto (`docs/KNOWN_LIMITATIONS.md`; em comunicações antigas também `audit-gpt.md`), pacote de auditoria (`docs/BRUTAL_*.md`, `docs/FULL_PROJECT_*.md`, `docs/CONSOLIDATION_ELITE_ROUND.md`). *(Nota editorial 2026-04: vários destes ficheiros foram fundidos ou removidos; estado canónico em `docs/README.md`, `docs/FULL_PROJECT_CLEAN_ARCHITECTURE_AUDIT.md`, `docs/FULL_PROJECT_REMEDIATION_BACKLOG.md`, `docs/CI_AND_SECURITY_EVIDENCE.md`.)*
 - `exportArtifactHelpers.ts` (extensão/MIME de export) e `sonar-project.properties` alargado para SonarQube local (`gitpage`, `examples`, `sonar.tests`, `coverage.xml`, exclusões de artefactos/fixtures).
 - `pytest-cov` e `[tool.coverage.run]` para cobertura em `packages` + `apps`.
 - Gate decisivo GO/NO-GO de uma página para publicação (`docs/GO_NO_GO_v0.1.0.md`).
@@ -91,7 +138,7 @@ Release **v5.0** (cockpit de decisão na análise, sinais adaptativos do wizard,
 - UI: `DecisionCockpit`, `ModelQualityStrip`, constantes de wizard adaptativo (`adaptiveWizard`).
 - Engine: biblioteca de anti-patterns, métricas de benchmark, comparação semântica de threat models, sinais de wizard e dados de referência.
 - Importação: `repo_scan` para varredura de repositório (`packages/artifact-import`).
-- Documentação: `docs/ADVANCED_PRODUCT_ROUND.md`; testes e fixtures de benchmark e análise.
+- Documentação: `docs/ADVANCED_PRODUCT_ROUND.md`; testes e fixtures de benchmark e análise. *(Nota editorial 2026-04: `ADVANCED_PRODUCT_ROUND.md` removido na higiene docs; conteúdo de produto coberto por `docs/README.md`, `docs/EXPLAINABILITY.md`, `docs/MODELING_QUALITY.md`.)*
 
 ### Changed
 

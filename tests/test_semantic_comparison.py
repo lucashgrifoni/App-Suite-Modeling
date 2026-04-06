@@ -5,13 +5,15 @@ from __future__ import annotations
 from copy import deepcopy
 from pathlib import Path
 
+import pytest
 from otm_core_schema import load_document_from_yaml_path
 from otm_core_schema.document import TrustBoundary
 from otm_exporters.comparison_markdown import export_comparison_markdown
 from otm_threat_engine import analyze_document
-from otm_threat_engine.comparison_models import DiffAggregate
+from otm_threat_engine.comparison_models import ComparisonResultMeta, DiffAggregate
 from otm_threat_engine.semantic_comparison import enrich_comparison_meta, semantic_diff_from_analyses_only
 from otm_threat_engine.threat_model_comparison import compare_threat_models
+from pydantic import ValidationError
 
 _ROOT = Path(__file__).resolve().parents[1]
 _MIN = _ROOT / "examples" / "minimal.otm.yaml"
@@ -36,16 +38,31 @@ def test_enrich_comparison_meta_includes_semantic_insights_version() -> None:
         revised_analysis=None,
         aggregate=agg,
     )
-    assert meta.get("semantic_insights_version") == "1.4"
+    assert meta.get("semantic_insights_version") == "1.5"
     assert "semantic_diff_sections" in meta
     assert any("dmz" in s for s in meta.get("semantic_insights", []))
     assert meta.get("semantic_structural_refs")
     assert any(r.get("ref", "").startswith("struct:trust_boundary_added:") for r in meta["semantic_structural_refs"])
     links = meta.get("semantic_interpretation_links")
     assert isinstance(links, list)
-    assert links, "v1.4 espera pelo menos uma ligação quando há boundary + bullets com tokens em comum"
-    assert all("link_kind" in x and "inference_strength" in x for x in links)
+    assert links, "v1.5 espera pelo menos uma ligação quando há boundary + bullets com tokens em comum"
+    assert all(
+        "link_kind" in x and "inference_strength" in x and "anchoring_rationale" in x for x in links
+    )
     assert any(x.get("link_kind") == "lexical_token_overlap" for x in links)
+    assert all(x.get("inference_strength") in ("low", "medium") for x in links)
+
+
+def test_comparison_result_meta_rejects_unknown_root_keys() -> None:
+    with pytest.raises(ValidationError):
+        ComparisonResultMeta.model_validate({"comparison_contract_version": "1.5", "unknown_future_flag": True})
+
+
+def test_comparison_result_meta_accepts_extensions_bucket() -> None:
+    m = ComparisonResultMeta.model_validate(
+        {"comparison_contract_version": "1.5", "extensions": {"lab": {"x": 1}}}
+    )
+    assert m.extensions == {"lab": {"x": 1}}
 
 
 def test_compare_merges_meta_insights() -> None:
@@ -53,7 +70,7 @@ def test_compare_merges_meta_insights() -> None:
     b = load_document_from_yaml_path(_MIN)
     ra = analyze_document(b)
     r = compare_threat_models(a, b, baseline_analysis=ra, revised_analysis=ra)
-    assert r.meta.comparison_contract_version == "1.4"
+    assert r.meta.comparison_contract_version == "1.5"
     assert isinstance(r.meta.semantic_insights, list)
 
 
@@ -84,4 +101,4 @@ def test_comparison_markdown_includes_semantic_diff_summary() -> None:
     if sem is not None and sem.risk_impact:
         assert any("Segmentação" in x or "perímetro" in x for x in sem.risk_impact)
     assert "### Insights semânticos (narrativa)" in md
-    assert "### Correspondência ref → interpretação (v1.4)" in md
+    assert "### Correspondência ref → interpretação (v1.5)" in md

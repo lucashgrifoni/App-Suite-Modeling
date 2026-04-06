@@ -30,3 +30,28 @@ Prioridade: **P0** (imediato) · **P1** (curto prazo) · **P2** (médio) · **P3
 2. BL-03 + BL-04 (cadeia + UI)  
 3. BL-05 + BL-06 (se houver deployment não local)  
 4. BL-07, BL-08, BL-09, BL-10
+
+---
+
+## Itens adicionais (consolidação documental — ex-identificadores B-xx)
+
+| ID | Categoria | Título | Prioridade | Notas |
+|----|-----------|--------|------------|-------|
+| BL-16 | Código | `except` largos em import AST opcional | P3 | `packages/artifact-import/.../repo_ast_optional.py` — estreitar exceções; telemetria de falha. |
+| BL-17 | Código / Exporters | Exporters e report premium volumosos | P2 | Secções menores; testes de caracterização. |
+| BL-18 | Manutenção | Catálogo `registry_data` extenso | P2 | Split ou geração em CI / checksum. |
+
+---
+
+## Registo de mitigações (ex-backlog paralelo, transparência)
+
+| Tema | Estado | Onde ver |
+|------|--------|----------|
+| OpenAPI desatualizado sem falhar CI | Mitigado | `scripts/verify_openapi_up_to_date.py`, job CI |
+| E2E só contra mock | Parcial | `e2e:hybrid`, API real + Vite |
+| Tipos TS vs API | Parcial | `openapi-typescript`, `npm run contracts:sync` |
+| API sem observabilidade | Mitigado | `otm_api.observability` — ver [`CI_AND_SECURITY_EVIDENCE.md`](CI_AND_SECURITY_EVIDENCE.md) |
+| CLI monolítica | Mitigado | `commands/` + `application/` — idem |
+| `mypy` fora do CI | Mitigado | Job CI + `pyproject.toml` |
+| SCA obrigatório | Mitigado | pip-audit, npm audit, Dependabot |
+| CORS “sempre dev” | Mitigado | `OTM_ENV` / `OTM_CORS_ORIGINS` — idem |

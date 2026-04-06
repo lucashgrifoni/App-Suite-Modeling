@@ -2,13 +2,15 @@
 
 Marque cada item no dia do publish. Um único “não” bloqueia a tag de produção até correção ou nota explícita de exceção.
 
-**Versão enxuta (só decisões):** use [`GO_NO_GO_v0.1.0.md`](GO_NO_GO_v0.1.0.md).
+**Gates de engenharia (comandos):** [`RELEASE_ENGINEERING_CHECKLIST.md`](RELEASE_ENGINEERING_CHECKLIST.md) — typecheck, build web, pytest, `contracts:verify`, `e2e:critical`, `e2e:hybrid`, etc.
+
+**Versão enxuta (só decisões):** use [`GO_NO_GO_v0.1.0.md`](GO_NO_GO_v0.1.0.md) (confirmar número em `pyproject.toml` / `apps/web/package.json`; hoje **`7.0.0`**).
 
 ## Escopo e documentação
 
 - [ ] **Escopo congelado** — [`RELEASE_SCOPE_FREEZE.md`](RELEASE_SCOPE_FREEZE.md) lido e aceite para esta tag.
-- [ ] **Versão definida** — `0.1.0` em `pyproject.toml` e `apps/web/package.json` (já alinhados).
-- [ ] **CHANGELOG** — entrada `[0.1.0]` publicada; secção `[Unreleased]` pronta para trabalho futuro.
+- [ ] **Versão definida** — mesma versão em `pyproject.toml` e `apps/web/package.json` (ex.: `7.0.0`).
+- [ ] **CHANGELOG** — entrada da versão a publicar (ex. `[7.0.0]`) coerente; secção `[Unreleased]` pronta para trabalho futuro.
 - [ ] **Release notes** — [`RELEASE_NOTES_v0.1.0.md`](RELEASE_NOTES_v0.1.0.md) final.
 - [ ] **Limitações** — [`KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md) revisto.
 - [ ] **Docs alinhadas** — README raiz + [`docs/README.md`](README.md) coerentes com a realidade.
@@ -23,7 +25,7 @@ Marque cada item no dia do publish. Um único “não” bloqueia a tag de produ
 
 ## Artefactos
 
-- [ ] **Wheel/sdist** — `python -m build` gera `open_threat_model-0.1.0-*.whl` (não commitar `dist/`).
+- [ ] **Wheel/sdist** — `python -m build` gera `open_threat_model-<versão>-*.whl` (não commitar `dist/`).
 - [ ] **Assets UI** — build de `apps/web` produz `dist/` (ignorado pelo git; anexar à release se desejado).
 - [ ] **Docker API** — opcional: `docker build -f apps/api/Dockerfile` conforme o seu registry.
 
@@ -34,7 +36,7 @@ Marque cada item no dia do publish. Um único “não” bloqueia a tag de produ
 
 ## Tag e publicação
 
-- [ ] **Tag anotada** — `v0.1.0` (ver [`VERSIONING_AND_TAGS.md`](VERSIONING_AND_TAGS.md)).
+- [ ] **Tag anotada** — alinhada à versão (ex. `v7.0.0`) (ver [`VERSIONING_AND_TAGS.md`](VERSIONING_AND_TAGS.md)).
 - [ ] **Release GitHub/GitLab** — notas copiadas ou linkadas para `RELEASE_NOTES_v0.1.0.md`.
 - [ ] **PyPI** (se aplicável) — upload do wheel com a mesma versão.
 

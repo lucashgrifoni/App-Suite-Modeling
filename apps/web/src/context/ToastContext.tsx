@@ -8,6 +8,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { useTranslation } from "react-i18next";
 import { usePrefersReducedMotion } from "../hooks/usePrefersReducedMotion";
 
 export type ToastVariant = "success" | "error" | "warning" | "info";
@@ -41,11 +42,15 @@ function ToastViewport({
   onDismiss,
   reducedMotion,
   titleId,
+  regionLabel,
+  closeLabel,
 }: Readonly<{
   toasts: ToastItem[];
   onDismiss: (id: string) => void;
   reducedMotion: boolean;
   titleId: string;
+  regionLabel: string;
+  closeLabel: string;
 }>) {
   if (toasts.length === 0) return null;
   return (
@@ -55,7 +60,7 @@ function ToastViewport({
       role="region"
     >
       <span id={titleId} className="sr-only">
-        Notificações
+        {regionLabel}
       </span>
       <ul className="pointer-events-auto flex flex-col gap-2" aria-live="polite" aria-relevant="additions text">
         {toasts.map((t) => (
@@ -71,7 +76,7 @@ function ToastViewport({
                 type="button"
                 className="shrink-0 rounded p-0.5 text-xs opacity-80 hover:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--otm-ring)]"
                 onClick={() => onDismiss(t.id)}
-                aria-label="Fechar notificação"
+                aria-label={closeLabel}
               >
                 ×
               </button>
@@ -84,6 +89,7 @@ function ToastViewport({
 }
 
 export function ToastProvider({ children }: Readonly<{ children: ReactNode }>) {
+  const { t } = useTranslation();
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const timers = useRef<Map<string, number>>(new Map());
   const reducedMotion = usePrefersReducedMotion();
@@ -126,7 +132,14 @@ export function ToastProvider({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <ToastContext.Provider value={api}>
       {children}
-      <ToastViewport toasts={toasts} onDismiss={dismiss} reducedMotion={reducedMotion} titleId={titleId} />
+      <ToastViewport
+        toasts={toasts}
+        onDismiss={dismiss}
+        reducedMotion={reducedMotion}
+        titleId={titleId}
+        regionLabel={t("toast.regionLabel")}
+        closeLabel={t("toast.close")}
+      />
     </ToastContext.Provider>
   );
 }

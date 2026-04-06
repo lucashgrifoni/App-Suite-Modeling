@@ -1,0 +1,145 @@
+"""`import` command group."""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+from typing import Annotated
+
+import typer
+from rich.panel import Panel
+
+from otm_cli.application import import_service as import_app
+from otm_cli.commands.bootstrap import console
+from otm_cli.commands.handle_errors import exit_on_cli_error
+from otm_cli.shared.emit import write_json_file
+from otm_cli.shared.errors import CliUserError
+
+
+def build_import_app() -> typer.Typer:
+    import_cmd = typer.Typer(
+        name="import",
+        help=(
+            "Assisted import: build a canonical [bold]draft[/bold] "
+            "from artifacts (OpenAPI, Terraform, K8s) or [cyan]repo[/cyan] (Node/Express signals)."
+        ),
+        no_args_is_help=True,
+    )
+
+    @import_cmd.command("openapi")
+    def cmd_import_openapi(
+        spec: Annotated[Path, typer.Argument(help="OpenAPI/Swagger file (YAML or JSON).")],
+        output: Annotated[
+            Path | None,
+            typer.Option("--output", "-o", help="Write draft `.otm.yaml`."),
+        ] = None,
+        explain_out: Annotated[
+            Path | None,
+            typer.Option(
+                "--explain-out",
+                help="Write document + inferences + unknowns to JSON (transparency).",
+            ),
+        ] = None,
+    ) -> None:
+        """Draft from OpenAPI 3 or Swagger 2 specification."""
+        try:
+            yaml_text, explain_payload, inferences = import_app.import_openapi(spec)
+        except CliUserError as e:
+            exit_on_cli_error(console, e)
+
+        if output:
+            output.write_text(yaml_text, encoding="utf-8")
+            console.print(f"[green]Draft[/green] → {output.resolve()}")
+        else:
+            print(yaml_text, end="")
+        if explain_out and explain_payload:
+            write_json_file(payload=explain_payload, output=explain_out)
+            console.print(f"[green]Inferences[/green] → {explain_out.resolve()}")
+        if inferences and output:
+            console.print(
+                Panel.fit(
+                    "\n".join(f"• ({i.confidence}) {i.message}" for i in inferences[:12]),
+                    title="Inferences (summary)",
+                    border_style="cyan",
+                )
+            )
+
+    @import_cmd.command("terraform")
+    def cmd_import_terraform(
+        target: Annotated[Path, typer.Argument(help="`.tf` file or directory containing `.tf`.")],
+        output: Annotated[
+            Path | None,
+            typer.Option("--output", "-o", help="Write draft `.otm.yaml`."),
+        ] = None,
+        explain_out: Annotated[
+            Path | None,
+            typer.Option("--explain-out", help="JSON with structured inferences."),
+        ] = None,
+    ) -> None:
+        """Draft from Terraform resources (conservative parser)."""
+        try:
+            yaml_text, explain_payload, _inf = import_app.import_terraform(target)
+        except CliUserError as e:
+            exit_on_cli_error(console, e)
+
+        if output:
+            output.write_text(yaml_text, encoding="utf-8")
+            console.print(f"[green]Draft[/green] → {output.resolve()}")
+        else:
+            print(yaml_text, end="")
+        if explain_out and explain_payload:
+            write_json_file(payload=explain_payload, output=explain_out)
+            console.print(f"[green]Inferences[/green] → {explain_out.resolve()}")
+
+    @import_cmd.command("k8s")
+    def cmd_import_k8s(
+        target: Annotated[
+            Path,
+            typer.Argument(help="Multi-doc YAML or directory with `.yaml`/`.yml`."),
+        ],
+        output: Annotated[
+            Path | None,
+            typer.Option("--output", "-o", help="Write draft `.otm.yaml`."),
+        ] = None,
+        explain_out: Annotated[
+            Path | None,
+            typer.Option("--explain-out", help="JSON with structured inferences."),
+        ] = None,
+    ) -> None:
+        """Draft from Kubernetes manifests."""
+        try:
+            yaml_text, explain_payload, _inf = import_app.import_kubernetes(target)
+        except CliUserError as e:
+            exit_on_cli_error(console, e)
+
+        if output:
+            output.write_text(yaml_text, encoding="utf-8")
+            console.print(f"[green]Draft[/green] → {output.resolve()}")
+        else:
+            print(yaml_text, end="")
+        if explain_out and explain_payload:
+            write_json_file(payload=explain_payload, output=explain_out)
+            console.print(f"[green]Inferences[/green] → {explain_out.resolve()}")
+
+    @import_cmd.command("repo")
+    def cmd_import_repo(
+        root: Annotated[Path, typer.Argument(help="Repository root (e.g. Node/Express service).")],
+        json_out: Annotated[
+            Path | None,
+            typer.Option("--json-out", help="Write JSON with inferences and corpus excerpt."),
+        ] = None,
+    ) -> None:
+        """Pragmatic scan: routes, upload, session, external fetch, eval."""
+        try:
+            payload = import_app.scan_repo(root)
+        except CliUserError as e:
+            exit_on_cli_error(console, e)
+
+        if json_out:
+            write_json_file(payload=payload, output=json_out)
+            console.print(f"[green]Scan repo[/green] → {json_out.resolve()}")
+        else:
+            txt = json.dumps(payload, indent=2, ensure_ascii=False)
+            console.print(Panel.fit(txt[:14000], title="repo-scan", border_style="cyan"))
+
+    return import_cmd

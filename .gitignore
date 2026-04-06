@@ -37,6 +37,7 @@ Thumbs.db
 # Test / coverage artefacts
 .coverage
 coverage/
+htmlcov/
 coverage-output.txt
 coverage.xml
 artifacts/

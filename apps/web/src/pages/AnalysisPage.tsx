@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Trans, useTranslation } from "react-i18next";
 import { Navigate } from "react-router-dom";
 import { analyzeDocument, fetchRemediationBacklog, recommendMethodology } from "../api/otmApi";
 import { ApiError } from "../api/client";
@@ -28,6 +29,7 @@ import type {
 import type { MethodologyId } from "../types/methodology";
 
 export function AnalysisPage() {
+  const { t } = useTranslation();
   const { document, analysis, setAnalysis } = useSession();
   const { appendSnapshot } = useAnalysisHistory();
   const toast = useToast();
@@ -89,9 +91,9 @@ export function AnalysisPage() {
       });
       setAnalysis(r);
       appendSnapshot("analysis");
-      toast.success("Análise gerada. Revise métricas e ameaças abaixo.");
+      toast.success(t("analysis.toastOk"));
     } catch (e) {
-      const msg = e instanceof ApiError ? e.message : "Falha na análise.";
+      const msg = e instanceof ApiError ? e.message : t("analysis.toastFail");
       setError(msg);
       toast.error(msg);
     } finally {
@@ -106,9 +108,9 @@ export function AnalysisPage() {
     try {
       const b = await fetchRemediationBacklog({ document: doc, analysis });
       setBacklog(b);
-      toast.success("Backlog de remediação disponível.");
+      toast.success(t("analysis.toastBacklog"));
     } catch (e) {
-      const msg = e instanceof ApiError ? e.message : "Falha ao gerar backlog.";
+      const msg = e instanceof ApiError ? e.message : t("analysis.toastBacklogFail");
       setError(msg);
       toast.error(msg);
     } finally {
@@ -124,9 +126,9 @@ export function AnalysisPage() {
       const rec = await recommendMethodology(doc);
       setRecommendation(rec);
       setMethodology(rec.methodology);
-      toast.info(`Metodologia sugerida: ${rec.methodology}.`);
+      toast.info(t("analysis.toastRecommend", { methodology: rec.methodology }));
     } catch (e) {
-      const msg = e instanceof ApiError ? e.message : "Falha ao recomendar metodologia.";
+      const msg = e instanceof ApiError ? e.message : t("analysis.toastRecommendFail");
       setError(msg);
       toast.error(msg);
     } finally {
@@ -137,21 +139,21 @@ export function AnalysisPage() {
   return (
     <div className="space-y-8">
       <PageHeader
-        eyebrow="Motor de análise"
-        title="Análise"
-        description={
-          <>
-            Motor STRIDE, fronteiras de confiança e risco (L×I). Referências a frameworks vêm do
-            servidor.
-          </>
-        }
+        eyebrow={t("analysis.eyebrow")}
+        title={t("analysis.title")}
+        description={t("analysis.description")}
       />
 
       <div className="space-y-2 rounded-otm-lg border border-otm-border/80 bg-otm-surface-1/50 px-4 py-3">
         <WorkflowGuide variant="compact" />
         <ContextHint>
-          O motor corre no servidor com o documento atual; depois pode <strong>exportar</strong> ou comparar versões no{" "}
-          <strong>diff</strong>.
+          <Trans
+            i18nKey="analysis.contextHintRich"
+            components={{
+              0: <strong className="font-medium text-otm-text-muted" />,
+              1: <strong className="font-medium text-otm-text-muted" />,
+            }}
+          />
         </ContextHint>
       </div>
 
@@ -177,7 +179,7 @@ export function AnalysisPage() {
           <Plot4aiContextCard analysis={analysis} />
           {analysis.methodology_recommendation_reason && (
             <Alert variant="info">
-              Recomendação aplicada: {analysis.methodology_recommendation_reason}
+              {t("analysis.recommendationApplied", { reason: analysis.methodology_recommendation_reason })}
             </Alert>
           )}
           {analysis.explanations && analysis.explanations.length > 0 ? (
@@ -209,13 +211,12 @@ export function AnalysisPage() {
 
       {analysis === null && (
         <EmptyState
-          title="Motor ainda não executado"
+          title={t("analysis.emptyTitle")}
           description={
-            <>
-              Confirme o modelo no assistente e no diagrama, escolha metodologia e use{" "}
-              <strong className="text-otm-text">Gerar análise</strong> para obter heurísticas STRIDE, métricas L×I e
-              referências a frameworks — tudo calculado no servidor.
-            </>
+            <Trans
+              i18nKey="analysis.emptyDescRich"
+              components={{ 0: <strong className="text-otm-text" /> }}
+            />
           }
         />
       )}

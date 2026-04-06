@@ -1,14 +1,15 @@
 # Congelamento de escopo — v0.1.0
 
 **Data do freeze:** 2026-04-01  
-**Versão alvo:** `v0.1.0` (semver `0.1.0`)  
+**Versão coordenada do monorepo (atual):** `7.0.0` em `pyproject.toml` e `apps/web/package.json` (ver [`CHANGELOG.md`](../CHANGELOG.md)).  
 **Nome do produto:** App Suite Modeling (`open-threat-model` no PyPI/metadata Python)
+
+**Fecho de engenharia (fronteira explícita):** [`ENGINEERING_CLOSEOUT_SCOPE.md`](ENGINEERING_CLOSEOUT_SCOPE.md).
 
 ## Decisão de versão
 
-- `pyproject.toml` e `apps/web/package.json` declaram **`0.1.0`**, alinhados a uma primeira entrega pública incremental séria (pós-fases RC documentadas).
-- **Semver:** `0.y.z` comunica API e superfície ainda em evolução; dentro disso, `0.1.0` marca o primeiro marco de publicação coordenada (docs, validação, artefatos).
-- **Antes de criar a tag `v0.1.0`:** confirmar com `git tag -l v0.1.0` (e no remoto) que não existe conflito; não reutilizar nem sobrescrever tag publicada — ver [`VERSIONING_AND_TAGS.md`](VERSIONING_AND_TAGS.md) e [`GO_NO_GO_v0.1.0.md`](GO_NO_GO_v0.1.0.md).
+- O repositório evoluiu para a série **`7.x`**; `0.1.0` abaixo descreve o **primeiro marco documentado** (notas e gates históricos com sufixo `v0.1.0`).
+- **Antes de criar a tag (ex.: `v7.0.0`):** confirmar com `git tag -l` (e no remoto) que não há conflito; não reutilizar nem sobrescrever tag publicada — ver [`VERSIONING_AND_TAGS.md`](VERSIONING_AND_TAGS.md) e [`GO_NO_GO_v0.1.0.md`](GO_NO_GO_v0.1.0.md) (aplicar a **versão declarada** nos ficheiros de projeto).
 
 ## O que entra nesta release
 
@@ -61,3 +62,4 @@ Valores: **Mature** | **Evolving** | **Specialized** | **Experimental**
 - Limitações: [`KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md)
 - Gate GO/NO-GO: [`GO_NO_GO_v0.1.0.md`](GO_NO_GO_v0.1.0.md)
 - Checklist de lançamento: [`LAUNCH_CHECKLIST.md`](LAUNCH_CHECKLIST.md)
+- Checklist técnica (gates): [`RELEASE_ENGINEERING_CHECKLIST.md`](RELEASE_ENGINEERING_CHECKLIST.md)

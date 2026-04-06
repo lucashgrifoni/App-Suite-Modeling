@@ -21,6 +21,25 @@ _PY_FASTAPI = re.compile(
 )
 _PY_FLASK = re.compile(r"(?:Flask\s*\(|Blueprint\s*\(|@app\.route\s*\()", re.IGNORECASE)
 _PY_UVICORN = re.compile(r"uvicorn\b|hypercorn\b", re.IGNORECASE)
+_PY_DECORATOR_ROUTE = re.compile(
+    r"@(?:app|router)\.(?:get|post|put|delete|patch)\s*\(\s*[\"']([^\"']+)[\"']",
+    re.IGNORECASE,
+)
+_PY_UPLOAD = re.compile(
+    r"\bUploadFile\b|\bFile\s*\(\s*|FileStorage|request\.files\b",
+    re.IGNORECASE,
+)
+_PY_AUTH_DEPS = re.compile(
+    r"Depends\s*\(\s*|OAuth2PasswordBearer|HTTPBearer|HTTPAuthorizationCredentials|"
+    r"SessionMiddleware|itsdangerous\b",
+    re.IGNORECASE,
+)
+_PY_HTTP_OUT = re.compile(
+    r"\bhttpx\.(?:get|post|request)|requests\.(?:get|post|put|delete)|aiohttp\.|urllib\.request\b",
+    re.IGNORECASE,
+)
+_PY_ADMIN_PATH = re.compile(r"[\"']/admin(?:/|[\"'])", re.IGNORECASE)
+_PY_DEBUG_PATH = re.compile(r"[\"']/(?:debug|__debug__?)[\"']", re.IGNORECASE)
 
 
 def _read_text_files(root: Path, *, max_files: int = 200) -> list[tuple[Path, str]]:
@@ -110,6 +129,73 @@ def scan_node_express_repo(root: Path) -> dict[str, Any]:
                         "confidence": "low",
                         "inference_source": "regex_heuristic",
                         "stack_hint": "python_asgi",
+                    }
+                )
+            for rm in _PY_DECORATOR_ROUTE.finditer(text):
+                path_bit = rm.group(1).strip()[:120]
+                inferences.append(
+                    {
+                        "kind": "python_route",
+                        "message": f"Rota FastAPI/Starlette provável `{path_bit}` em `{rel}`",
+                        "evidence": path_bit,
+                        "confidence": "medium",
+                        "inference_source": "regex_heuristic",
+                        "stack_hint": "python_fastapi" if _PY_FASTAPI.search(text) else "python_web",
+                    }
+                )
+            if _PY_UPLOAD.search(text):
+                inferences.append(
+                    {
+                        "kind": "python_upload",
+                        "message": f"Upload multipart / `UploadFile` / ficheiros em `{rel}`",
+                        "evidence": "UploadFile|File(|request.files",
+                        "confidence": "medium",
+                        "inference_source": "regex_heuristic",
+                        "stack_hint": "python_fastapi" if _PY_FASTAPI.search(text) else "python_web",
+                    }
+                )
+            if _PY_AUTH_DEPS.search(text):
+                inferences.append(
+                    {
+                        "kind": "python_auth_layer",
+                        "message": f"Dependências de auth/sessão (Depends/OAuth2/sessão) em `{rel}`",
+                        "evidence": "Depends|OAuth2|Bearer|Session",
+                        "confidence": "low",
+                        "inference_source": "regex_heuristic",
+                        "stack_hint": "python_fastapi" if _PY_FASTAPI.search(text) else "python_web",
+                    }
+                )
+            if _PY_HTTP_OUT.search(text):
+                inferences.append(
+                    {
+                        "kind": "python_external_http",
+                        "message": f"Cliente HTTP externo (httpx/requests/aiohttp) em `{rel}` — rever SSRF/exfiltração",
+                        "evidence": "httpx|requests|aiohttp",
+                        "confidence": "medium",
+                        "inference_source": "regex_heuristic",
+                        "stack_hint": "python_web",
+                    }
+                )
+            if _PY_ADMIN_PATH.search(text):
+                inferences.append(
+                    {
+                        "kind": "admin_route",
+                        "message": f"Possível caminho `/admin` em `{rel}`",
+                        "evidence": "/admin",
+                        "confidence": "medium",
+                        "inference_source": "regex_heuristic",
+                        "stack_hint": "python_web",
+                    }
+                )
+            if _PY_DEBUG_PATH.search(text):
+                inferences.append(
+                    {
+                        "kind": "debug_route",
+                        "message": f"Possível rota de debug em `{rel}`",
+                        "evidence": "/debug",
+                        "confidence": "low",
+                        "inference_source": "regex_heuristic",
+                        "stack_hint": "python_web",
                     }
                 )
             if len(corpus_chunks) < 40:
@@ -325,6 +411,42 @@ def scan_node_express_repo(root: Path) -> dict[str, Any]:
                 "hint": "Modelar boundary explícito entre cliente/API e workers Python quando usar FastAPI.",
                 "confidence": "low",
                 "basis": "repo_inference:python_fastapi",
+            }
+        )
+    if "python_upload" in kinds_present:
+        modeling_hints.append(
+            {
+                "target": "data_flow",
+                "hint": "Fluxos com `supports_file_upload: true` onde FastAPI/Flask aceita multipart.",
+                "confidence": "medium",
+                "basis": "repo_inference:python_upload",
+            }
+        )
+    if "python_external_http" in kinds_present:
+        modeling_hints.append(
+            {
+                "target": "data_flow",
+                "hint": "Marcar chamadas externas e rever superfície SSRF no threat model.",
+                "confidence": "medium",
+                "basis": "repo_inference:python_external_http",
+            }
+        )
+    if "python_auth_layer" in kinds_present:
+        modeling_hints.append(
+            {
+                "target": "component",
+                "hint": "Explicitar identity/session na fronteira API (Depends/OAuth2) como componente ou controlos.",
+                "confidence": "low",
+                "basis": "repo_inference:python_auth_layer",
+            }
+        )
+    if any(inf.get("kind") == "python_route" for inf in unique):
+        modeling_hints.append(
+            {
+                "target": "asset",
+                "hint": "Cada rota HTTP inferida pode mapear endpoints expostos — cruzar com dados sensíveis modelados.",
+                "confidence": "low",
+                "basis": "repo_inference:python_route",
             }
         )
 

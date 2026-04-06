@@ -1684,7 +1684,7 @@
         "properties": {
           "file": {
             "type": "string",
-            "format": "binary",
+            "contentMediaType": "application/octet-stream",
             "title": "File"
           }
         },
@@ -1698,7 +1698,7 @@
         "properties": {
           "file": {
             "type": "string",
-            "format": "binary",
+            "contentMediaType": "application/octet-stream",
             "title": "File"
           }
         },
@@ -1712,7 +1712,7 @@
         "properties": {
           "file": {
             "type": "string",
-            "format": "binary",
+            "contentMediaType": "application/octet-stream",
             "title": "File"
           }
         },
@@ -1854,12 +1854,18 @@
               }
             ],
             "title": "Interpretation Disclaimer"
+          },
+          "extensions": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Extensions",
+            "description": "Mapa opt-in para chaves ainda não promovidas ao schema principal."
           }
         },
-        "additionalProperties": true,
+        "additionalProperties": false,
         "type": "object",
         "title": "ComparisonResultMeta",
-        "description": "Metadados semânticos do compare — chaves estáveis para OpenAPI/TS.\n\n`model_config.extra` permite chaves futuras sem quebrar clientes."
+        "description": "Metadados semânticos do compare — chaves estáveis para OpenAPI/TS.\n\nRaiz **fechada** (`extra=forbid`): evita bolha contratual genérica. Extensões experimentais\ndevem ir para `extensions` até serem promovidas a campos tipados."
       },
       "ComparisonSummary": {
         "properties": {
@@ -2173,6 +2179,18 @@
             ],
             "title": "Analysis",
             "description": "Resultado de análise já calculado (opcional); evita reexecutar o motor."
+          },
+          "locale": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Locale",
+            "description": "Idioma para texto user-facing em Markdown (pt-BR | en). Omitido = pt-BR (retrocompatível)."
           }
         },
         "type": "object",
@@ -3017,6 +3035,18 @@
             "title": "Output Format",
             "description": "markdown = texto; pdf = binário application/pdf.",
             "default": "markdown"
+          },
+          "locale": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Locale",
+            "description": "Idioma dos textos estruturais do relatório (pt-BR | en). Omitido = pt-BR."
           }
         },
         "type": "object",
@@ -3468,10 +3498,19 @@
           },
           "inference_strength": {
             "type": "string",
-            "const": "low",
+            "enum": [
+              "low",
+              "medium"
+            ],
             "title": "Inference Strength",
-            "description": "Proxy de leitura — não prova causalidade nem impacto real.",
+            "description": "`medium` só para sobreposição lexical com ≥2 tokens partilhados; correlação por tópico permanece `low`. Nunca implica causalidade.",
             "default": "low"
+          },
+          "anchoring_rationale": {
+            "type": "string",
+            "maxLength": 400,
+            "title": "Anchoring Rationale",
+            "description": "Uma frase curta: por que esta ligação foi proposta (auditável)."
           },
           "shared_tokens": {
             "items": {
@@ -3498,10 +3537,11 @@
         "required": [
           "structural_ref",
           "related_section",
-          "summary"
+          "summary",
+          "anchoring_rationale"
         ],
         "title": "SemanticInterpretationLinkModel",
-        "description": "Liga ref estrutural a bullet interpretativo.\n\n`link_kind` e `inference_strength` deixam explícito que não há causalidade provada."
+        "description": "Liga ref estrutural a bullet interpretativo.\n\n`link_kind`, `inference_strength` e `anchoring_rationale` documentam o porquê da ligação\nsem afirmar causalidade operacional."
       },
       "SemanticStructuralRefModel": {
         "properties": {
@@ -3773,7 +3813,7 @@
           },
           "meta": {
             "$ref": "#/components/schemas/ComparisonResultMeta",
-            "description": "Metadados semânticos + extensões (`extra`) para evolução controlada."
+            "description": "Metadados semânticos; extensões em `meta.extensions` até versão de contrato."
           },
           "explanations": {
             "items": {
@@ -4025,6 +4065,13 @@
           "type": {
             "type": "string",
             "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
           }
         },
         "type": "object",

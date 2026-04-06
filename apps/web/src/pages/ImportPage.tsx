@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Trans, useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router-dom";
 import { importArtifact } from "../api/otmApi";
 import { ApiError } from "../api/client";
@@ -16,22 +17,18 @@ import { useToast } from "../context/ToastContext";
 import type { ArtifactImportKind, ArtifactInference, ExplanationRecord } from "../types/api";
 import type { OtmDocument } from "../types/document";
 
-const KINDS: { value: ArtifactImportKind; label: string; accept: string }[] = [
-  { value: "openapi", label: "OpenAPI / Swagger (YAML ou JSON)", accept: ".yaml,.yml,.json" },
-  { value: "terraform", label: "Terraform (.tf)", accept: ".tf" },
-  { value: "kubernetes", label: "Kubernetes (YAML)", accept: ".yaml,.yml" },
-];
-
-function confidenceLabel(c: ArtifactInference["confidence"]): string {
-  if (c === "high") return "Alta";
-  if (c === "medium") return "Média";
-  return "Baixa";
-}
-
 export function ImportPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { setDocument } = useSession();
   const toast = useToast();
+
+  const KINDS: { value: ArtifactImportKind; labelKey: string; accept: string }[] = [
+    { value: "openapi", labelKey: "import.kindOpenapi", accept: ".yaml,.yml,.json" },
+    { value: "terraform", labelKey: "import.kindTerraform", accept: ".tf" },
+    { value: "kubernetes", labelKey: "import.kindKubernetes", accept: ".yaml,.yml" },
+  ];
+
   const [kind, setKind] = useState<ArtifactImportKind>("openapi");
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
@@ -40,10 +37,16 @@ export function ImportPage() {
   const [unknowns, setUnknowns] = useState<string[] | null>(null);
   const [structuredExplanations, setStructuredExplanations] = useState<ExplanationRecord[] | null>(null);
 
+  function confidenceLabel(c: ArtifactInference["confidence"]): string {
+    if (c === "high") return t("import.confidenceHigh");
+    if (c === "medium") return t("import.confidenceMedium");
+    return t("import.confidenceLow");
+  }
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!file) {
-      const msg = "Escolha um ficheiro.";
+      const msg = t("import.pickFile");
       setError(msg);
       toast.warning(msg);
       return;
@@ -59,9 +62,9 @@ export function ImportPage() {
       setInferences(res.inferences);
       setUnknowns(res.unknowns);
       setStructuredExplanations(res.explanations ?? null);
-      toast.success("Rascunho importado. Revise inferências antes da análise.");
+      toast.success(t("import.toastImported"));
     } catch (err) {
-      const msg = err instanceof ApiError ? err.message : "Falha no envio ao servidor.";
+      const msg = err instanceof ApiError ? err.message : t("import.toastFail");
       setError(msg);
       toast.error(msg);
     } finally {
@@ -74,35 +77,41 @@ export function ImportPage() {
   return (
     <div className="space-y-8">
       <PageHeader
-        eyebrow="Ingestão segura"
-        title="Importar artefacto"
+        eyebrow={t("import.eyebrow")}
+        title={t("import.title")}
         description={
-          <>
-            Gera um <strong className="text-otm-text">rascunho</strong> canónico com inferências explícitas. Não
-            substitui revisão nem análise de ameaças.
-          </>
+          <Trans
+            i18nKey="import.description"
+            components={{ 0: <strong className="text-otm-text" /> }}
+          />
         }
       />
 
       <div className="space-y-2 rounded-otm-lg border border-otm-border/80 bg-otm-surface-1/50 px-4 py-3">
         <WorkflowGuide variant="compact" />
         <ContextHint>
-          Depois do rascunho, use o <strong>assistente</strong> para ajustar IDs e fluxos antes do motor.
+          <Trans
+            i18nKey="import.contextAfterDraft"
+            components={{ 0: <strong className="font-medium text-otm-text-muted" /> }}
+          />
         </ContextHint>
       </div>
 
       <Alert variant="info">
-        O resultado inclui componentes e fluxos prováveis. Confira a lista de inferências antes de ir a{" "}
-        <Link to="/analysis" className="font-medium text-otm-accent underline-offset-4 hover:underline">
-          análise
-        </Link>
-        .
+        <Trans
+          i18nKey="import.alertResult"
+          components={{
+            0: (
+              <Link to="/analysis" className="font-medium text-otm-accent underline-offset-4 hover:underline" />
+            ),
+          }}
+        />
       </Alert>
 
-      <Card title="Envio" subtitle="O ficheiro é processado no servidor; nada é persistido na API (MVP)." variant="glass">
+      <Card title={t("import.cardTitle")} subtitle={t("import.cardSubtitle")} variant="glass">
         <form onSubmit={onSubmit} className="space-y-4" aria-busy={loading}>
           <div>
-            <Label htmlFor="kind">Tipo de artefacto</Label>
+            <Label htmlFor="kind">{t("import.artifactType")}</Label>
             <Select
               id="kind"
               value={kind}
@@ -111,7 +120,7 @@ export function ImportPage() {
             >
               {KINDS.map((k) => (
                 <option key={k.value} value={k.value}>
-                  {k.label}
+                  {t(k.labelKey)}
                 </option>
               ))}
             </Select>
@@ -120,11 +129,11 @@ export function ImportPage() {
           <FileDropZone
             disabled={loading}
             onFile={(f) => setFile(f)}
-            description={`Tipos aceites: ${meta?.accept ?? "—"}`}
+            description={`${t("import.acceptedTypes")} ${meta?.accept ?? "—"}`}
           >
             <div className="mt-4">
               <Label htmlFor="file" className="sr-only">
-                Ficheiro
+                {t("import.fileLabel")}
               </Label>
               <input
                 id="file"
@@ -135,7 +144,7 @@ export function ImportPage() {
               />
               {file ? (
                 <p className="mt-2 text-xs text-otm-accent">
-                  Selecionado: <span className="font-mono">{file.name}</span>
+                  {t("import.selected")} <span className="font-mono">{file.name}</span>
                 </p>
               ) : null}
             </div>
@@ -143,10 +152,10 @@ export function ImportPage() {
 
           <div className="flex flex-wrap gap-2">
             <Button type="submit" disabled={loading}>
-              {loading ? "A importar…" : "Gerar rascunho"}
+              {loading ? t("import.submitLoading") : t("import.submit")}
             </Button>
             <Button type="button" variant="secondary" onClick={() => navigate("/wizard")}>
-              Ir para assistente
+              {t("import.goWizard")}
             </Button>
           </div>
         </form>
@@ -155,7 +164,7 @@ export function ImportPage() {
       {error && <Alert>{error}</Alert>}
 
       {inferences && inferences.length > 0 && (
-        <Card title="Inferências" subtitle="Transparência — cada linha explica o raciocínio do assistente." variant="elevated">
+        <Card title={t("import.inferencesTitle")} subtitle={t("import.inferencesSubtitle")} variant="elevated">
           <ul className="list-inside list-disc space-y-2 text-sm text-otm-text-muted">
             {inferences.map((i) => (
               <li key={i.id}>
@@ -165,10 +174,14 @@ export function ImportPage() {
           </ul>
           {structuredExplanations && structuredExplanations.length > 0 ? (
             <details className="mt-4 rounded-otm-md border border-otm-border bg-otm-surface-1 p-3 text-xs text-otm-text-muted">
-              <summary className="cursor-pointer font-medium text-otm-text">Mesmo conteúdo (contrato JSON)</summary>
+              <summary className="cursor-pointer font-medium text-otm-text">{t("import.jsonContractSummary")}</summary>
               <p className="mt-2">
-                Útil para relatórios e API: campo <code className="rounded bg-otm-surface-3 px-1 text-otm-accent">explanations</code>{" "}
-                espelha as inferências com tipo e categoria.
+                <Trans
+                  i18nKey="import.jsonContractBody"
+                  components={{
+                    0: <code className="rounded bg-otm-surface-3 px-1 text-otm-accent" />,
+                  }}
+                />
               </p>
             </details>
           ) : null}
@@ -176,7 +189,7 @@ export function ImportPage() {
       )}
 
       {unknowns && unknowns.length > 0 && (
-        <Card title="Não inferido" subtitle="Limitações explícitas deste lote." variant="glass">
+        <Card title={t("import.unknownTitle")} subtitle={t("import.unknownSubtitle")} variant="glass">
           <ul className="list-inside list-disc space-y-1 text-sm text-amber-100">
             {unknowns.map((u) => (
               <li key={u}>{u}</li>

@@ -1,4 +1,5 @@
 import type { DragEvent, ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 
 export function FileDropZone({
   onFile,
@@ -13,6 +14,8 @@ export function FileDropZone({
   children?: ReactNode;
   className?: string;
 }>) {
+  const { t } = useTranslation();
+
   function handleDrop(e: DragEvent<HTMLDivElement>) {
     e.preventDefault();
     e.stopPropagation();
@@ -39,7 +42,7 @@ export function FileDropZone({
         aria-hidden
       />
       <div className="relative space-y-2">
-        <p className="font-display text-sm font-semibold text-otm-text">Arraste e largue o ficheiro aqui</p>
+        <p className="font-display text-sm font-semibold text-otm-text">{t("fileDrop.dragHere")}</p>
         {description ? <p className="text-xs text-otm-text-muted">{description}</p> : null}
         {children}
       </div>

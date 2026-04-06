@@ -1,4 +1,4 @@
-"""Ponto de entrada do comando `otm` (console_scripts)."""
+"""Entry point for the `otm` command (console_scripts)."""
 
 from __future__ import annotations
 

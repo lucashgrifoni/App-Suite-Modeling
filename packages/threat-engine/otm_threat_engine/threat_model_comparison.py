@@ -246,7 +246,7 @@ def compare_threat_models(
 
     meta = ComparisonResultMeta.model_validate(
         {
-            "comparison_contract_version": "1.4",
+            "comparison_contract_version": "1.5",
             **enrich_comparison_meta(
                 baseline,
                 revised,

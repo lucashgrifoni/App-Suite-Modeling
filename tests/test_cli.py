@@ -227,8 +227,8 @@ def test_validate_invalid_document_cli_error_pattern(tmp_path: Path, runner: Cli
     r = runner.invoke(app, ["validate", str(bad)])
     assert r.exit_code == 1
     combined = (r.stdout or "") + (r.stderr or "")
-    assert "Falha:" in combined
-    assert "Possível causa:" in combined
+    assert "Failure:" in combined
+    assert "Likely cause:" in combined
 
 
 def test_init_unknown_template_exits_1(runner: CliRunner, tmp_path: Path) -> None:
@@ -236,4 +236,4 @@ def test_init_unknown_template_exits_1(runner: CliRunner, tmp_path: Path) -> Non
     r = runner.invoke(app, ["init", str(out), "-t", "template_id_inexistente_xyz"])
     assert r.exit_code == 1
     combined = (r.stdout or "") + (r.stderr or "")
-    assert "Template desconhecido" in combined
+    assert "unknown template" in combined.lower()

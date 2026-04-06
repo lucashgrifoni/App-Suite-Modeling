@@ -31,6 +31,7 @@ def build_exports(
     formats: list[ExportFormat],
     analysis: AnalysisResult | None = None,
     pack_id: str | None = None,
+    locale: str | None = None,
 ) -> dict[str, str]:
     """
     Devolve mapa formato → texto.
@@ -50,13 +51,13 @@ def build_exports(
             case ExportFormat.document_json:
                 out[fmt.value] = export_document_json(doc)
             case ExportFormat.document_markdown:
-                out[fmt.value] = export_document_markdown(doc)
+                out[fmt.value] = export_document_markdown(doc, locale=locale)
             case ExportFormat.flowchart_mermaid:
                 out[fmt.value] = export_flowchart_mermaid(doc)
             case ExportFormat.analysis_json:
                 out[fmt.value] = export_analysis_json(_require_analysis(resolved))
             case ExportFormat.analysis_markdown:
-                out[fmt.value] = export_analysis_markdown(_require_analysis(resolved))
+                out[fmt.value] = export_analysis_markdown(_require_analysis(resolved), locale=locale)
             case ExportFormat.bundle_json:
                 out[fmt.value] = export_threat_model_bundle_json(doc, _require_analysis(resolved))
     return out

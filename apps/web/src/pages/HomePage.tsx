@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Trans, useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router-dom";
 import { createBlankModel } from "../api/otmApi";
 import { ApiError } from "../api/client";
@@ -15,6 +16,7 @@ import { useSession } from "../context/SessionContext";
 import { useToast } from "../context/ToastContext";
 
 export function HomePage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { setDocument, document } = useSession();
   const toast = useToast();
@@ -27,10 +29,10 @@ export function HomePage() {
     try {
       const { document: doc } = await createBlankModel();
       setDocument(doc);
-      toast.success("Modelo criado. A abrir o assistente.");
+      toast.success(t("home.toastCreated"));
       navigate("/wizard");
     } catch (e) {
-      const msg = e instanceof ApiError ? e.message : "Não foi possível criar o modelo.";
+      const msg = e instanceof ApiError ? e.message : t("home.createError");
       setError(msg);
       toast.error(msg);
     } finally {
@@ -49,70 +51,61 @@ export function HomePage() {
           <div>
             <PageHeader
               className="!border-b-0 !pb-0"
-              eyebrow="Threat modeling orientado a engenharia"
-              title="Threat modeling, passo a passo"
-              description={
-                <>
-                  Modelo canónico validado no servidor, motor STRIDE com referências a normas (OWASP, NIST CSF, ISO
-                  27001) e artefactos exportáveis — desenhado para equipas que precisam de evidência técnica, não só
-                  diagramas.
-                </>
-              }
+              eyebrow={t("home.eyebrow")}
+              title={t("home.title")}
+              description={t("home.description")}
             />
             <div className="mt-8 flex flex-wrap gap-3">
               <Button disabled={loading} onClick={startBlank}>
-                {loading ? "A criar…" : "Criar novo modelo"}
+                {loading ? t("home.createLoading") : t("home.createCta")}
               </Button>
               <Link to="/import">
-                <Button variant="secondary">Importar artefacto</Button>
+                <Button variant="secondary">{t("home.importArtifact")}</Button>
               </Link>
               <Link to="/templates">
-                <Button variant="ghost">Explorar templates</Button>
+                <Button variant="ghost">{t("home.exploreTemplates")}</Button>
               </Link>
             </div>
             <ContextHint className="mt-5 max-w-xl">
-              <strong>Validação e análise no backend</strong> — a UI orquestra o fluxo; regras e motor não correm no
-              browser.
+              <strong className="font-medium text-otm-text-muted">{t("home.contextHintStrong")}</strong>{" "}
+              {t("home.contextHintTail")}
             </ContextHint>
           </div>
 
           <div className="rounded-otm-lg border border-otm-border bg-otm-surface-1/70 p-5 shadow-otm-md backdrop-blur-sm">
-            <p className="font-display text-sm font-semibold text-otm-text">Porquê usar</p>
+            <p className="font-display text-sm font-semibold text-otm-text">{t("home.whyTitle")}</p>
             <ul className="mt-3 space-y-2.5 text-sm text-otm-text-muted">
               <li className="flex gap-2">
                 <span className="mt-0.5 text-otm-accent" aria-hidden>
                   ✓
                 </span>
-                <span>Importação com inferências explícitas — revê antes de correr o motor.</span>
+                <span>{t("home.why1")}</span>
               </li>
               <li className="flex gap-2">
                 <span className="mt-0.5 text-otm-accent" aria-hidden>
                   ✓
                 </span>
-                <span>Diff semântico entre versões do modelo (estrutura + opcionalmente análise).</span>
+                <span>{t("home.why2")}</span>
               </li>
               <li className="flex gap-2">
                 <span className="mt-0.5 text-otm-accent" aria-hidden>
                   ✓
                 </span>
-                <span>Exportação alinhada ao documento canónico — adequado a CI e revisão de pares.</span>
+                <span>{t("home.why3")}</span>
               </li>
             </ul>
           </div>
         </div>
       </section>
 
-      <Alert variant="info">
-        Este MVP guarda o rascunho localmente no navegador (sessão atual). Exporte o resultado para manter um artefacto
-        persistente.
-      </Alert>
+      <Alert variant="info">{t("home.mvpAlert")}</Alert>
 
       {error && <Alert>{error}</Alert>}
 
       <section className="space-y-4">
         <div>
-          <h2 className="font-display text-lg font-semibold text-otm-text">Começar agora</h2>
-          <p className="mt-1 text-sm text-otm-text-muted">Três entradas comuns — a mesma base canónica em todos os casos.</p>
+          <h2 className="font-display text-lg font-semibold text-otm-text">{t("home.startTitle")}</h2>
+          <p className="mt-1 text-sm text-otm-text-muted">{t("home.startSubtitle")}</p>
         </div>
         <QuickStartPanel onBlank={startBlank} loading={loading} />
       </section>
@@ -121,30 +114,35 @@ export function HomePage() {
         <WorkflowGuide />
         <GlowDivider className="mt-8" />
         <div className="mt-8 grid gap-6 lg:grid-cols-2">
-          <HelpCallout title="Fluxo em uma frase">
+          <HelpCallout title={t("home.flowOneLinerTitle")}>
             <p>
-              <strong className="text-otm-text">Importar ou criar</strong> → <strong className="text-otm-text">assistente</strong>{" "}
-              → <strong className="text-otm-text">diagrama</strong> → <strong className="text-otm-text">análise</strong> →{" "}
-              <strong className="text-otm-text">exportar</strong> ou <strong className="text-otm-text">diff</strong> entre
-              revisões.
+              <Trans
+                i18nKey="home.flowOneLinerRich"
+                components={{
+                  0: <strong className="text-otm-text" />,
+                  1: <strong className="text-otm-text" />,
+                  2: <strong className="text-otm-text" />,
+                  3: <strong className="text-otm-text" />,
+                  4: <strong className="text-otm-text" />,
+                  5: <strong className="text-otm-text" />,
+                }}
+              />
             </p>
           </HelpCallout>
-          <Card variant="elevated" title="Documento em sessão" subtitle="Retoma onde parou quando já existe modelo.">
+          <Card variant="elevated" title={t("home.sessionCardTitle")} subtitle={t("home.sessionCardSubtitle")}>
             {document ? (
               <p className="text-sm text-otm-text-muted">
-                Já tem um modelo carregado.{" "}
+                {t("home.hasDoc")}{" "}
                 <Link to="/wizard" className="font-medium text-otm-accent underline-offset-4 hover:underline">
-                  Continuar assistente
+                  {t("home.continueWizard")}
                 </Link>
                 {" · "}
                 <Link to="/analysis" className="font-medium text-otm-accent underline-offset-4 hover:underline">
-                  Ir para análise
+                  {t("home.goAnalysis")}
                 </Link>
               </p>
             ) : (
-              <p className="text-sm text-otm-text-muted">
-                Sem modelo ativo — use &quot;Criar novo modelo&quot;, importação ou um template para iniciar.
-              </p>
+              <p className="text-sm text-otm-text-muted">{t("home.noDoc")}</p>
             )}
           </Card>
         </div>

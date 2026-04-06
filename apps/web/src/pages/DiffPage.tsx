@@ -1,4 +1,5 @@
 import { useCallback, useState } from "react";
+import { Trans, useTranslation } from "react-i18next";
 import { Navigate } from "react-router-dom";
 import { compareThreatModels } from "../api/otmApi";
 import { ApiError } from "../api/client";
@@ -16,14 +17,24 @@ import { RiskScoreBar } from "../components/analytics/RiskScoreBar";
 import { StatusPill } from "../components/ui/StatusPill";
 import { useSession } from "../context/SessionContext";
 import { useToast } from "../context/ToastContext";
+import i18n from "../i18n/i18n";
 import type { ComparisonMeta, DiffAggregateSection, ThreatModelComparisonResult } from "../types/api";
 import type { OtmDocument } from "../types/document";
 
 function parseRevisedJson(raw: string): OtmDocument {
-  const data = JSON.parse(raw) as unknown;
-  if (!data || typeof data !== "object") throw new Error("JSON inválido.");
+  let data: unknown;
+  try {
+    data = JSON.parse(raw);
+  } catch {
+    throw new Error(i18n.t("diff.invalidJson"));
+  }
+  if (!data || typeof data !== "object") {
+    throw new Error(i18n.t("diff.invalidJson"));
+  }
   const d = data as OtmDocument;
-  if (!d.model || !d.metadata) throw new Error("Esperado objeto com `model` e `metadata` (documento canónico).");
+  if (!d.model || !d.metadata) {
+    throw new Error(i18n.t("diff.expectedDoc"));
+  }
   return d;
 }
 
@@ -39,23 +50,25 @@ function AggregateBlock({
   title: string;
   section: DiffAggregateSection | undefined;
 }>) {
+  const { t } = useTranslation();
   const added = section?.added ?? [];
   const removed = section?.removed ?? [];
   const changed = section?.changed ?? [];
   if (added.length === 0 && removed.length === 0 && changed.length === 0) return null;
+  const total = added.length + removed.length + changed.length;
   return (
     <div className="rounded-otm-lg border border-otm-border bg-gradient-to-br from-otm-surface-1/95 to-otm-surface-2/80 p-4 text-xs text-otm-text shadow-otm-sm">
       <div className="flex items-center justify-between gap-2 border-b border-otm-border/80 pb-2 font-display text-sm font-semibold text-otm-text">
         {title}
         <span className="text-[10px] font-normal uppercase tracking-wide text-otm-text-subtle">
-          {added.length + removed.length + changed.length} alterações
+          {total} {t("diff.changes")}
         </span>
       </div>
       <div className="mt-3 space-y-2.5">
         {added.length ? (
           <div className="rounded-otm-md border border-emerald-500/25 bg-emerald-950/20 px-2.5 py-2">
             <p className="flex flex-wrap items-baseline gap-2">
-              <StatusPill tone="success">+{added.length} adicionados</StatusPill>
+              <StatusPill tone="success">{t("diff.added", { count: added.length })}</StatusPill>
               <span className="text-otm-text-muted">{previewIds(added)}</span>
             </p>
           </div>
@@ -63,7 +76,7 @@ function AggregateBlock({
         {removed.length ? (
           <div className="rounded-otm-md border border-red-500/25 bg-red-950/20 px-2.5 py-2">
             <p className="flex flex-wrap items-baseline gap-2">
-              <StatusPill tone="danger">−{removed.length} removidos</StatusPill>
+              <StatusPill tone="danger">{t("diff.removed", { count: removed.length })}</StatusPill>
               <span className="text-otm-text-muted">{previewIds(removed)}</span>
             </p>
           </div>
@@ -71,7 +84,7 @@ function AggregateBlock({
         {changed.length ? (
           <div className="rounded-otm-md border border-amber-500/25 bg-amber-950/15 px-2.5 py-2">
             <p className="flex flex-wrap items-baseline gap-2">
-              <StatusPill tone="warning">~{changed.length} alterados</StatusPill>
+              <StatusPill tone="warning">{t("diff.changed", { count: changed.length })}</StatusPill>
               <span className="text-otm-text-muted">{previewIds(changed)}</span>
             </p>
           </div>
@@ -94,24 +107,25 @@ function DiffSummaryCard({
   maxRev: number | null | undefined;
   maxBase: number | null | undefined;
 }>) {
+  const { t } = useTranslation();
   return (
     <Card className="space-y-4 p-5" variant="glass">
-      <h2 className="font-display text-sm font-semibold text-otm-text">Resumo</h2>
+      <h2 className="font-display text-sm font-semibold text-otm-text">{t("diff.summary")}</h2>
       <p className="text-base font-medium leading-relaxed text-otm-text">{summary.headline}</p>
       <p className="text-sm text-otm-text-muted">{structuralLine}</p>
       <div className="flex flex-wrap gap-2">
-        {summary.has_structural_changes ? <Badge tone="accent">Estrutura</Badge> : null}
-        {summary.has_analysis_changes ? <Badge tone="accent">Análise</Badge> : null}
-        {summary.methodology_in_model_changed ? <Badge tone="warn">Metodologia (modelo)</Badge> : null}
+        {summary.has_structural_changes ? <Badge tone="accent">{t("diff.structural")}</Badge> : null}
+        {summary.has_analysis_changes ? <Badge tone="accent">{t("diff.analysis")}</Badge> : null}
+        {summary.methodology_in_model_changed ? <Badge tone="warn">{t("diff.methodologyModel")}</Badge> : null}
       </div>
       {runAnalysis && typeof maxRev === "number" ? (
         <div className="rounded-otm-md border border-otm-border bg-otm-surface-1/70 p-3">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-otm-text-subtle">Maior L×I (revisão)</p>
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-otm-text-subtle">{t("diff.maxLi")}</p>
           <p className="mt-1 font-display text-2xl font-semibold tabular-nums text-otm-text">{maxRev}</p>
           {typeof maxBase === "number" ? (
-            <p className="mt-0.5 text-xs text-otm-text-muted">Baseline: {maxBase}</p>
+            <p className="mt-0.5 text-xs text-otm-text-muted">{t("diff.baseline", { value: maxBase })}</p>
           ) : null}
-          <RiskScoreBar score={maxRev} className="mt-3" caption="Leitura rápida do pico de risco na revisão." />
+          <RiskScoreBar score={maxRev} className="mt-3" caption={t("diff.riskCaption")} />
         </div>
       ) : null}
     </Card>
@@ -125,38 +139,51 @@ function DiffRiskDeltaCard({
   rd: ThreatModelComparisonResult["risk_delta"];
   runAnalysis: boolean;
 }>) {
+  const { t } = useTranslation();
   const hasDelta =
     runAnalysis &&
     (typeof rd.analysis_max_score_delta === "number" ||
       (rd.heuristic_increased_ids?.length ?? 0) > 0 ||
       (rd.heuristic_decreased_ids?.length ?? 0) > 0);
   if (!hasDelta) return null;
+  let deltaVal = "";
+  if (typeof rd.analysis_max_score_delta === "number") {
+    const n = rd.analysis_max_score_delta;
+    const sign = n >= 0 ? "+" : "";
+    deltaVal = `${sign}${n.toFixed(2)}`;
+  }
   return (
     <Card className="space-y-3 p-5" variant="elevated">
-      <h2 className="font-display text-sm font-semibold text-otm-text">Top deltas de risco (análise)</h2>
+      <h2 className="font-display text-sm font-semibold text-otm-text">{t("diff.riskDeltas")}</h2>
       {typeof rd.analysis_max_score_delta === "number" ? (
         <p className="text-sm text-otm-text-muted">
-          Δ score máximo (revisão − baseline):{" "}
-          <strong className="text-otm-text">
-            {rd.analysis_max_score_delta >= 0 ? "+" : ""}
-            {rd.analysis_max_score_delta.toFixed(2)}
-          </strong>{" "}
-          (antes {rd.analysis_max_score_baseline ?? "—"} → depois {rd.analysis_max_score_revised ?? "—"})
+          <Trans
+            i18nKey="diff.deltaScore"
+            values={{
+              delta: deltaVal,
+              before: String(rd.analysis_max_score_baseline ?? "—"),
+              after: String(rd.analysis_max_score_revised ?? "—"),
+            }}
+            components={{ strong: <strong className="text-otm-text" /> }}
+          />
         </p>
       ) : null}
       {(rd.heuristic_increased_ids?.length ?? 0) > 0 ? (
         <p className="text-xs text-red-200">
-          Scores que subiram (heurísticas): {previewIds(rd.heuristic_increased_ids ?? [])}
+          {t("diff.scoresUp", { ids: previewIds(rd.heuristic_increased_ids ?? []) })}
         </p>
       ) : null}
       {(rd.heuristic_decreased_ids?.length ?? 0) > 0 ? (
-        <p className="text-xs text-emerald-200">Scores que desceram: {previewIds(rd.heuristic_decreased_ids ?? [])}</p>
+        <p className="text-xs text-emerald-200">
+          {t("diff.scoresDown", { ids: previewIds(rd.heuristic_decreased_ids ?? []) })}
+        </p>
       ) : null}
     </Card>
   );
 }
 
 function SemanticDiffSectionsBlock({ meta }: Readonly<{ meta: ComparisonMeta }>) {
+  const { t } = useTranslation();
   const raw = meta.semantic_diff_sections;
   if (!raw || typeof raw !== "object") return null;
   const sec = raw as {
@@ -174,7 +201,7 @@ function SemanticDiffSectionsBlock({ meta }: Readonly<{ meta: ComparisonMeta }>)
     <div className="grid gap-3 sm:grid-cols-3">
       {scs.length ? (
         <div className="rounded-otm-md border border-otm-border bg-otm-surface-1/80 p-3 text-xs text-otm-text-muted sm:col-span-3">
-          <p className="font-semibold text-otm-text">Mudança estrutural (contagens)</p>
+          <p className="font-semibold text-otm-text">{t("diff.structuralCounts")}</p>
           <ul className="mt-2 list-inside list-disc space-y-1">
             {scs.map((x) => (
               <li key={x}>{x}</li>
@@ -184,7 +211,7 @@ function SemanticDiffSectionsBlock({ meta }: Readonly<{ meta: ComparisonMeta }>)
       ) : null}
       {imp.length ? (
         <div className="rounded-otm-md border border-emerald-500/20 bg-emerald-950/15 p-3 text-xs text-otm-text-muted">
-          <p className="font-semibold text-emerald-100">Melhorou</p>
+          <p className="font-semibold text-emerald-100">{t("diff.improved")}</p>
           <ul className="mt-2 list-inside list-disc space-y-1">
             {imp.map((x) => (
               <li key={x}>{x}</li>
@@ -194,7 +221,7 @@ function SemanticDiffSectionsBlock({ meta }: Readonly<{ meta: ComparisonMeta }>)
       ) : null}
       {wor.length ? (
         <div className="rounded-otm-md border border-amber-500/20 bg-amber-950/15 p-3 text-xs text-otm-text-muted">
-          <p className="font-semibold text-amber-100">Piorou / atenção</p>
+          <p className="font-semibold text-amber-100">{t("diff.worsened")}</p>
           <ul className="mt-2 list-inside list-disc space-y-1">
             {wor.map((x) => (
               <li key={x}>{x}</li>
@@ -204,7 +231,7 @@ function SemanticDiffSectionsBlock({ meta }: Readonly<{ meta: ComparisonMeta }>)
       ) : null}
       {risk.length ? (
         <div className="rounded-otm-md border border-otm-border bg-otm-surface-1/80 p-3 text-xs text-otm-text-muted sm:col-span-3 lg:col-span-1">
-          <p className="font-semibold text-otm-text">Impacto de risco</p>
+          <p className="font-semibold text-otm-text">{t("diff.riskImpact")}</p>
           <ul className="mt-2 list-inside list-disc space-y-1">
             {risk.map((x) => (
               <li key={x}>{x}</li>
@@ -217,16 +244,23 @@ function SemanticDiffSectionsBlock({ meta }: Readonly<{ meta: ComparisonMeta }>)
 }
 
 function InterpretationLinksBlock({ meta }: Readonly<{ meta: ComparisonMeta }>) {
+  const { t } = useTranslation();
   const links = meta.semantic_interpretation_links ?? [];
   if (!links.length) return null;
   return (
     <div data-testid="diff-interpretation-links">
       <Card className="space-y-2 p-4" variant="glass">
-        <h2 className="font-display text-sm font-semibold text-otm-text">Ref → secção interpretativa</h2>
+        <h2 className="font-display text-sm font-semibold text-otm-text">{t("diff.interpretationLinks")}</h2>
         <p className="text-xs text-otm-text-muted">
-          v1.4: cada ligação indica o tipo (<code className="text-otm-accent">lexical_token_overlap</code> ou{" "}
-          <code className="text-otm-accent">entity_topic_correlation</code>) e força inferencial{" "}
-          <strong>low</strong> — leitura auxiliar, sem causalidade provada.
+          <Trans
+            i18nKey="diff.interpretationNote"
+            components={{
+              strong: <strong />,
+              0: <code className="text-otm-accent" />,
+              1: <code className="text-otm-accent" />,
+              2: <code className="text-otm-accent" />,
+            }}
+          />
         </p>
         <ul className="list-inside list-disc space-y-1.5 text-xs text-otm-text-muted">
           {links.slice(0, 10).map((l) => (
@@ -241,6 +275,11 @@ function InterpretationLinksBlock({ meta }: Readonly<{ meta: ComparisonMeta }>) 
                 </span>
               ) : null}
               : {l.summary}
+              {l.anchoring_rationale ? (
+                <span className="mt-0.5 block italic text-otm-text-subtle">
+                  {l.anchoring_rationale}
+                </span>
+              ) : null}
             </li>
           ))}
         </ul>
@@ -250,15 +289,14 @@ function InterpretationLinksBlock({ meta }: Readonly<{ meta: ComparisonMeta }>) 
 }
 
 function StructuralRefsBlock({ meta }: Readonly<{ meta: ComparisonMeta }>) {
+  const { t } = useTranslation();
   const refs = meta.semantic_structural_refs ?? [];
   if (!refs.length) return null;
   return (
     <div data-testid="diff-structural-refs">
       <Card className="space-y-2 p-4" variant="glass">
-        <h2 className="font-display text-sm font-semibold text-otm-text">Estrutura → interpretação</h2>
-        <p className="text-xs text-otm-text-muted">
-          Referências correlacionais (ref:struct:*). Não implicam causalidade provada entre mudança e incidente.
-        </p>
+        <h2 className="font-display text-sm font-semibold text-otm-text">{t("diff.structureInterpretation")}</h2>
+        <p className="text-xs text-otm-text-muted">{t("diff.structureNote")}</p>
         <ul className="list-inside list-disc space-y-1.5 text-xs text-otm-text-muted">
           {refs.slice(0, 12).map((r) => (
             <li key={r.ref}>
@@ -276,8 +314,9 @@ function StructuralRefsBlock({ meta }: Readonly<{ meta: ComparisonMeta }>) {
 }
 
 function SemanticInsightsBlock({ meta }: Readonly<{ meta: ComparisonMeta }>) {
+  const { t } = useTranslation();
   const raw = meta.semantic_insights;
-  const insights = Array.isArray(raw) ? (raw as string[]) : [];
+  const insights: string[] = Array.isArray(raw) ? raw.filter((item): item is string => typeof item === "string") : [];
   const ver = typeof meta.semantic_insights_version === "string" ? meta.semantic_insights_version : "";
   const disc = typeof meta.interpretation_disclaimer === "string" ? meta.interpretation_disclaimer : "";
   const hasSections =
@@ -285,21 +324,21 @@ function SemanticInsightsBlock({ meta }: Readonly<{ meta: ComparisonMeta }>) {
   if (insights.length === 0 && !hasSections) return null;
   return (
     <div data-testid="diff-semantic-panel">
-    <Card className="space-y-2 p-4" variant="elevated">
-      <h2 className="font-display text-sm font-semibold text-otm-text">Diff semântico</h2>
-      {ver ? (
-        <p className="text-[10px] uppercase tracking-wide text-otm-text-subtle">Versão {ver}</p>
-      ) : null}
-      {disc ? <p className="text-xs italic text-otm-text-muted">{disc}</p> : null}
-      <SemanticDiffSectionsBlock meta={meta} />
-      {insights.length > 0 ? (
-        <ul className="list-inside list-disc space-y-1.5 text-sm text-otm-text-muted">
-          {insights.map((line) => (
-            <li key={line}>{line}</li>
-          ))}
-        </ul>
-      ) : null}
-    </Card>
+      <Card className="space-y-2 p-4" variant="elevated">
+        <h2 className="font-display text-sm font-semibold text-otm-text">{t("diff.semanticDiff")}</h2>
+        {ver ? (
+          <p className="text-[10px] uppercase tracking-wide text-otm-text-subtle">{t("diff.version", { ver })}</p>
+        ) : null}
+        {disc ? <p className="text-xs italic text-otm-text-muted">{disc}</p> : null}
+        <SemanticDiffSectionsBlock meta={meta} />
+        {insights.length > 0 ? (
+          <ul className="list-inside list-disc space-y-1.5 text-sm text-otm-text-muted">
+            {insights.map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
+        ) : null}
+      </Card>
     </div>
   );
 }
@@ -311,6 +350,7 @@ function ComparisonResultPanel({
   result: ThreatModelComparisonResult;
   runAnalysis: boolean;
 }>) {
+  const { t } = useTranslation();
   const rd = result.risk_delta;
   const maxRev = rd.analysis_max_score_revised;
   const maxBase = rd.analysis_max_score_baseline;
@@ -326,7 +366,7 @@ function ComparisonResultPanel({
 
       {result.key_insights.length ? (
         <Card className="space-y-2 p-4" variant="elevated">
-          <h2 className="font-display text-sm font-semibold text-otm-text">Insights principais</h2>
+          <h2 className="font-display text-sm font-semibold text-otm-text">{t("diff.keyInsights")}</h2>
           <ul className="list-inside list-disc space-y-1 text-sm text-otm-text-muted">
             {result.key_insights.map((line) => (
               <li key={line}>{line}</li>
@@ -336,7 +376,7 @@ function ComparisonResultPanel({
       ) : null}
       {result.explanations && result.explanations.length > 0 ? (
         <details className="rounded-otm-lg border border-otm-border bg-otm-surface-2 p-4 text-sm text-otm-text">
-          <summary className="cursor-pointer font-semibold">Porquê (diff estruturado)</summary>
+          <summary className="cursor-pointer font-semibold">{t("diff.whyStructured")}</summary>
           <ul className="mt-2 list-inside list-disc space-y-1 text-xs text-otm-text-muted">
             {result.explanations.slice(0, 6).map((e) => (
               <li key={e.id}>
@@ -348,14 +388,14 @@ function ComparisonResultPanel({
       ) : null}
 
       <Card className="space-y-3 p-5" variant="glass">
-        <h2 className="font-display text-sm font-semibold text-otm-text">Mudanças por secção (IDs)</h2>
+        <h2 className="font-display text-sm font-semibold text-otm-text">{t("diff.changesBySection")}</h2>
         <div className="grid gap-3 sm:grid-cols-2">
-          <AggregateBlock title="Componentes" section={result.aggregate.components} />
-          <AggregateBlock title="Ativos" section={result.aggregate.assets} />
-          <AggregateBlock title="Fluxos de dados" section={result.aggregate.data_flows} />
-          <AggregateBlock title="Trust boundaries" section={result.aggregate.trust_boundaries} />
-          <AggregateBlock title="Ameaças (canónicas)" section={result.aggregate.threats} />
-          <AggregateBlock title="Mitigações" section={result.aggregate.mitigations} />
+          <AggregateBlock title={t("diff.aggComponents")} section={result.aggregate.components} />
+          <AggregateBlock title={t("diff.aggAssets")} section={result.aggregate.assets} />
+          <AggregateBlock title={t("diff.aggFlows")} section={result.aggregate.data_flows} />
+          <AggregateBlock title={t("diff.aggTrust")} section={result.aggregate.trust_boundaries} />
+          <AggregateBlock title={t("diff.aggThreats")} section={result.aggregate.threats} />
+          <AggregateBlock title={t("diff.aggMitigations")} section={result.aggregate.mitigations} />
         </div>
       </Card>
 
@@ -368,7 +408,7 @@ function ComparisonResultPanel({
       <InterpretationLinksBlock meta={result.meta as ComparisonMeta} />
 
       <Card className="space-y-2 p-4" variant="glass">
-        <h2 className="font-display text-sm font-semibold text-otm-text">JSON completo</h2>
+        <h2 className="font-display text-sm font-semibold text-otm-text">{t("diff.fullJson")}</h2>
         <pre className="max-h-[360px] overflow-auto rounded-otm-md bg-otm-green-950 p-3 text-xs text-otm-mint-300">
           {JSON.stringify(result, null, 2)}
         </pre>
@@ -378,6 +418,7 @@ function ComparisonResultPanel({
 }
 
 export function DiffPage() {
+  const { t } = useTranslation();
   const { document: baseline } = useSession();
   const toast = useToast();
   const [revisedText, setRevisedText] = useState("");
@@ -409,7 +450,7 @@ export function DiffPage() {
     try {
       revised = parseRevisedJson(revisedText.trim() || "{}");
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Falha ao interpretar JSON da revisão.";
+      const msg = e instanceof Error ? e.message : t("diff.parseFail");
       setError(msg);
       toast.error(msg);
       return;
@@ -421,9 +462,9 @@ export function DiffPage() {
         packId: packId.trim() || null,
       });
       setResult(d);
-      toast.success("Comparação concluída.");
+      toast.success(t("diff.toastOk"));
     } catch (e) {
-      const msg = e instanceof ApiError ? e.message : "Falha ao pedir comparação à API.";
+      const msg = e instanceof ApiError ? e.message : t("diff.toastFail");
       setError(msg);
       toast.error(msg);
     } finally {
@@ -434,52 +475,55 @@ export function DiffPage() {
   return (
     <div className="space-y-8">
       <PageHeader
-        eyebrow="Comparação semântica"
-        title="Diff entre versões"
+        eyebrow={t("diff.eyebrow")}
+        title={t("diff.title")}
         description={
-          <>
-            A <strong className="text-otm-text">baseline</strong> é o modelo atual da sessão. Cole ou carregue a{" "}
-            <strong className="text-otm-text">revisão</strong> em JSON (mesmo formato que exportação{" "}
-            <code className="rounded bg-otm-surface-3 px-1 text-xs text-otm-accent">document_json</code>). O servidor
-            devolve diff estrutural semântico, agregados e — se pedido — deltas de análise.
-          </>
+          <Trans
+            i18nKey="diff.description"
+            components={{
+              strong: <strong className="text-otm-text" />,
+              0: <code className="rounded bg-otm-surface-3 px-1 text-xs text-otm-accent" />,
+            }}
+          />
         }
       />
 
       <div className="space-y-3 rounded-otm-lg border border-otm-border/80 bg-otm-surface-1/50 px-4 py-3">
         <WorkflowGuide variant="compact" />
-        <HelpCallout title="Baseline vs revisão">
-          A sessão atual é a <strong className="text-otm-text">baseline</strong>. Cole JSON exportado como revisão
-          para comparar evolução estrutural e, opcionalmente, deltas do motor.
+        <HelpCallout title={t("diff.helpTitle")}>
+          <Trans
+            i18nKey="diff.helpBody"
+            components={{ strong: <strong className="text-otm-text" /> }}
+          />
         </HelpCallout>
       </div>
 
       <Card className="space-y-3 p-4" variant="elevated">
         <div>
-          <Label htmlFor="revised-json">Revisão (JSON)</Label>
+          <Label htmlFor="revised-json">{t("diff.revisionJson")}</Label>
           <textarea
             id="revised-json"
             className="mt-1 min-h-[180px] w-full rounded-otm-md border border-otm-border bg-otm-surface-1 px-3 py-2 font-mono text-xs text-otm-text placeholder:text-otm-text-subtle focus:border-otm-mint-400/50 focus:outline-none focus:ring-2 focus:ring-[color:var(--otm-ring)]"
             value={revisedText}
             onChange={(ev) => setRevisedText(ev.target.value)}
-            placeholder='{ "model": { ... }, "metadata": { ... }, ... }'
+            placeholder={t("diff.revisionPlaceholder")}
           />
         </div>
         <div className="flex flex-wrap items-center gap-4">
           <label className="flex cursor-pointer items-center gap-2 text-sm text-otm-text-muted">
             <Checkbox checked={runAnalysis} onChange={(e) => setRunAnalysis(e.target.checked)} />
-            Incluir análise (executa o motor nos dois documentos no servidor)
+            {t("diff.includeAnalysis")}
           </label>
         </div>
         {runAnalysis ? (
           <div>
-            <Label htmlFor="pack-id">Pack (opcional)</Label>
+            <Label htmlFor="pack-id">{t("diff.packOptional")}</Label>
             <Input
               id="pack-id"
               className="mt-1 max-w-md font-mono text-sm"
               value={packId}
               onChange={(e) => setPackId(e.target.value)}
-              placeholder="ex.: healthcare"
+              placeholder={t("diff.packPlaceholder")}
             />
           </div>
         ) : null}
@@ -491,7 +535,7 @@ export function DiffPage() {
             onChange={(ev) => onFile(ev.target.files?.[0] ?? null)}
           />
           <Button type="button" onClick={() => void runDiff()} disabled={loading || !revisedText.trim()}>
-            {loading ? "A comparar…" : "Comparar"}
+            {loading ? t("diff.comparing") : t("diff.compare")}
           </Button>
         </div>
       </Card>

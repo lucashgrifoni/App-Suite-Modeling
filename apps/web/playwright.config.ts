@@ -9,6 +9,8 @@ export default defineConfig({
   use: {
     baseURL: "http://127.0.0.1:4173",
     trace: "retain-on-failure",
+    /* E2E fixtures assert PT-BR copy; pin locale so host browser language does not flip expected strings. */
+    locale: "pt-BR",
   },
   webServer: {
     command: "node ./node_modules/vite/bin/vite.js --host 127.0.0.1 --port 4173",

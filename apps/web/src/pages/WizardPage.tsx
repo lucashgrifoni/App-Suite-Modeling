@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Trans, useTranslation } from "react-i18next";
 import { Link, Navigate } from "react-router-dom";
 import { validateDocument } from "../api/otmApi";
 import { ApiError } from "../api/client";
@@ -18,7 +19,6 @@ import { useToast } from "../context/ToastContext";
 import { removeArrayItem, updateArrayItem } from "../utils/collections";
 import {
   getAdaptiveAnswer,
-  methodologyFocusHint,
   promptsForProfile,
   setAdaptiveAnswer,
   type AdaptiveAnswer,
@@ -32,19 +32,25 @@ import {
   type OtmDataFlow,
 } from "../types/document";
 
-const STEPS = [
-  { id: 0, label: "Contexto" },
-  { id: 1, label: "Componentes" },
-  { id: 2, label: "Fluxos" },
-  { id: 3, label: "Concluir" },
-] as const;
+const STEP_DEFS = [
+  { id: 0, labelKey: "wizard.stepContext" as const },
+  { id: 1, labelKey: "wizard.stepComponents" as const },
+  { id: 2, labelKey: "wizard.stepFlows" as const },
+  { id: 3, labelKey: "wizard.stepDone" as const },
+];
 
 export function WizardPage() {
+  const { t, i18n } = useTranslation();
   const { document, setDocument } = useSession();
   const toast = useToast();
   const [step, setStep] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [validating, setValidating] = useState(false);
+
+  const stepsForStepper = useMemo(
+    () => STEP_DEFS.map((s) => ({ id: s.id, label: t(s.labelKey) })),
+    [t],
+  );
 
   const componentIds = useMemo(
     () => document?.components.map((c) => c.id).filter(Boolean) ?? [],
@@ -62,10 +68,28 @@ export function WizardPage() {
 
   const methodology: MethodologyId = doc.model.methodology ?? "stride";
 
+  function methodologyHintText(): string {
+    const key = `wizard.methodologyHints.${methodology}`;
+    return i18n.exists(key) ? t(key) : t("wizard.methodologyHints.default");
+  }
+
+  function adaptivePromptLabel(p: AdaptivePrompt): string {
+    const key = `adaptive.${templateProfile}.${p.id}.label`;
+    const tr = t(key);
+    return tr === key ? p.label : tr;
+  }
+
+  function adaptivePromptHint(p: AdaptivePrompt): string | undefined {
+    if (!p.hint) return undefined;
+    const key = `adaptive.${templateProfile}.${p.id}.hint`;
+    const tr = t(key);
+    return tr === key ? p.hint : tr;
+  }
+
   function formatAnswer(a: AdaptiveAnswer | null): string {
-    if (a === "yes") return "Sim";
-    if (a === "no") return "Não";
-    if (a === "unk") return "Não sei";
+    if (a === "yes") return t("wizard.adaptiveYes");
+    if (a === "no") return t("wizard.adaptiveNo");
+    if (a === "unk") return t("wizard.adaptiveUnk");
     return "—";
   }
 
@@ -73,7 +97,7 @@ export function WizardPage() {
     if (!templateProfile || !prompts.length) return [];
     return prompts.map((p) => {
       const v = getAdaptiveAnswer(doc.metadata.tags, templateProfile, p.id);
-      return `${p.label} → ${formatAnswer(v)}`;
+      return `${adaptivePromptLabel(p)} → ${formatAnswer(v)}`;
     });
   }
 
@@ -104,12 +128,9 @@ export function WizardPage() {
     setValidating(true);
     try {
       await validateDocument(doc);
-      setStep((s) => Math.min(s + 1, STEPS.length - 1));
+      setStep((s) => Math.min(s + 1, STEP_DEFS.length - 1));
     } catch (e) {
-      const msg =
-        e instanceof ApiError
-          ? e.message
-          : "O modelo não passou na validação. Corrija os campos obrigatórios.";
+      const msg = e instanceof ApiError ? e.message : t("wizard.validationFail");
       setError(msg);
       toast.error(msg);
     } finally {
@@ -120,31 +141,40 @@ export function WizardPage() {
   return (
     <div className="space-y-8">
       <PageHeader
-        eyebrow="Assistente guiado"
-        title="Assistente"
+        eyebrow={t("wizard.eyebrow")}
+        title={t("wizard.title")}
         description={
-          <>
-            Quatro passos curtos. Os IDs devem ser únicos (letras, números,{" "}
-            <code className="rounded bg-otm-surface-3 px-1 text-xs text-otm-accent">_</code> e{" "}
-            <code className="rounded bg-otm-surface-3 px-1 text-xs text-otm-accent">-</code>).
-          </>
+          <Trans
+            i18nKey="wizard.description"
+            components={{
+              0: <code className="rounded bg-otm-surface-3 px-1 text-xs text-otm-accent" />,
+              1: <code className="rounded bg-otm-surface-3 px-1 text-xs text-otm-accent" />,
+            }}
+          />
         }
       />
 
       <div className="space-y-3">
         <WorkflowGuide variant="compact" />
-        <HelpCallout title="Próximo passo natural" tone="tip">
-          Conclua os passos e valide — depois abra o <strong className="text-otm-text">diagrama</strong> e a{" "}
-          <strong className="text-otm-text">análise</strong> quando o modelo estiver coerente.
+        <HelpCallout title={t("wizard.helpNext")} tone="tip">
+          <p>
+            <Trans
+              i18nKey="wizard.helpNextBody"
+              components={{
+                0: <strong className="text-otm-text" />,
+                1: <strong className="text-otm-text" />,
+              }}
+            />
+          </p>
         </HelpCallout>
       </div>
 
       <Panel>
         <Stepper
-          steps={STEPS}
+          steps={stepsForStepper}
           currentIndex={step}
           onStepClick={(i) => {
-            if (i <= step) setStep(STEPS[i].id);
+            if (i <= step) setStep(STEP_DEFS[i].id);
           }}
         />
       </Panel>
@@ -152,10 +182,10 @@ export function WizardPage() {
       {error && <Alert>{error}</Alert>}
 
       {step === 0 && (
-        <Card title="Contexto do sistema" variant="glass">
+        <Card title={t("wizard.cardContext")} variant="glass">
           <div className="space-y-4">
             <div>
-              <Label htmlFor="title">Título do modelo</Label>
+              <Label htmlFor="title">{t("wizard.modelTitle")}</Label>
               <Input
                 id="title"
                 value={doc.metadata.title}
@@ -163,7 +193,7 @@ export function WizardPage() {
               />
             </div>
             <div>
-              <Label htmlFor="summary">Resumo (opcional)</Label>
+              <Label htmlFor="summary">{t("wizard.summaryOptional")}</Label>
               <Input
                 id="summary"
                 value={doc.metadata.summary ?? ""}
@@ -171,7 +201,7 @@ export function WizardPage() {
               />
             </div>
             <div>
-              <Label htmlFor="stype">Tipo de sistema</Label>
+              <Label htmlFor="stype">{t("wizard.systemType")}</Label>
               <Select
                 id="stype"
                 value={doc.model.system_type}
@@ -179,13 +209,13 @@ export function WizardPage() {
               >
                 {SYSTEM_TYPES.map((o) => (
                   <option key={o.value} value={o.value}>
-                    {o.label}
+                    {t(`document.systemTypes.${o.value}`)}
                   </option>
                 ))}
               </Select>
             </div>
             <div>
-              <Label htmlFor="methodology">Metodologia (alvo da análise)</Label>
+              <Label htmlFor="methodology">{t("wizard.methodology")}</Label>
               <Select
                 id="methodology"
                 value={methodology}
@@ -199,15 +229,19 @@ export function WizardPage() {
                 <option value="cia_die">CIA / CIA-DIE</option>
                 <option value="plot4ai">PLOT4ai</option>
               </Select>
-              <p className="mt-1 text-xs text-otm-text-muted">{methodologyFocusHint(methodology)}</p>
+              <p className="mt-1 text-xs text-otm-text-muted">{methodologyHintText()}</p>
             </div>
             <details className="rounded-otm-md border border-otm-border/80 bg-otm-surface-2/40 px-3 py-2 text-sm">
-              <summary className="cursor-pointer font-medium text-otm-text">Perfil semântico do template (opcional)</summary>
+              <summary className="cursor-pointer font-medium text-otm-text">{t("wizard.semanticProfile")}</summary>
               <p className="mt-2 text-xs text-otm-text-muted">
-                Preencha se usar um template da galeria ou quiser desbloquear perguntas adaptativas. Ex.:{" "}
-                <code className="text-otm-accent">internal_admin_portal</code>,{" "}
-                <code className="text-otm-accent">file_handling_application</code>,{" "}
-                <code className="text-otm-accent">api_backend_rest</code>.
+                <Trans
+                  i18nKey="wizard.semanticProfileBody"
+                  components={{
+                    0: <code className="text-otm-accent" />,
+                    1: <code className="text-otm-accent" />,
+                    2: <code className="text-otm-accent" />,
+                  }}
+                />
               </p>
               <div className="mt-2">
                 <Label htmlFor="tprofile">template_semantic_profile</Label>
@@ -220,25 +254,22 @@ export function WizardPage() {
                       template_semantic_profile: e.target.value.trim() || null,
                     })
                   }
-                  placeholder="ex.: api_backend_rest"
+                  placeholder={t("wizard.templateSemanticProfilePlaceholder")}
                 />
               </div>
             </details>
             {templateProfile && adaptivePrompts.length > 0 ? (
               <details className="rounded-otm-md border border-otm-mint-500/20 bg-emerald-950/10 px-3 py-2 text-sm" open>
-                <summary className="cursor-pointer font-medium text-emerald-100">
-                  Perguntas adaptativas ao contexto
-                </summary>
-                <p className="mt-2 text-xs text-otm-text-muted">
-                  Respostas são guardadas como etiquetas no modelo (export JSON inclui). Não substituem validação no
-                  servidor.
-                </p>
+                <summary className="cursor-pointer font-medium text-emerald-100">{t("wizard.adaptiveTitle")}</summary>
+                <p className="mt-2 text-xs text-otm-text-muted">{t("wizard.adaptiveBody")}</p>
                 <ul className="mt-3 space-y-3">
                   {adaptivePrompts.map((p) => (
                     <li key={p.id} className="grid gap-1 sm:grid-cols-[1fr_auto] sm:items-center">
                       <div>
-                        <p className="text-otm-text">{p.label}</p>
-                        {p.hint ? <p className="text-xs text-otm-text-muted">{p.hint}</p> : null}
+                        <p className="text-otm-text">{adaptivePromptLabel(p)}</p>
+                        {adaptivePromptHint(p) ? (
+                          <p className="text-xs text-otm-text-muted">{adaptivePromptHint(p)}</p>
+                        ) : null}
                       </div>
                       <Select
                         className="max-w-[140px] justify-self-end font-mono text-xs"
@@ -251,9 +282,9 @@ export function WizardPage() {
                           });
                         }}
                       >
-                        <option value="unk">Não sei</option>
-                        <option value="yes">Sim</option>
-                        <option value="no">Não</option>
+                        <option value="unk">{t("wizard.adaptiveUnk")}</option>
+                        <option value="yes">{t("wizard.adaptiveYes")}</option>
+                        <option value="no">{t("wizard.adaptiveNo")}</option>
                       </Select>
                     </li>
                   ))}
@@ -265,11 +296,7 @@ export function WizardPage() {
       )}
 
       {step === 1 && (
-        <Card
-          title="Componentes"
-          subtitle="Elementos do diagrama (processos, dados, utilizadores…)."
-          variant="glass"
-        >
+        <Card title={t("wizard.componentsTitle")} subtitle={t("wizard.componentsSubtitle")} variant="glass">
           <div className="space-y-3">
             {doc.components.map((c, idx) => (
               <div
@@ -277,7 +304,7 @@ export function WizardPage() {
                 className="grid gap-2 rounded-otm-md border border-otm-border bg-otm-surface-1/80 p-3 sm:grid-cols-12 sm:items-end"
               >
                 <div className="sm:col-span-3">
-                  <Label htmlFor={`comp-${idx}-id`}>ID</Label>
+                  <Label htmlFor={`comp-${idx}-id`}>{t("wizard.id")}</Label>
                   <Input
                     id={`comp-${idx}-id`}
                     value={c.id}
@@ -287,7 +314,7 @@ export function WizardPage() {
                   />
                 </div>
                 <div className="sm:col-span-4">
-                  <Label htmlFor={`comp-${idx}-name`}>Nome</Label>
+                  <Label htmlFor={`comp-${idx}-name`}>{t("wizard.name")}</Label>
                   <Input
                     id={`comp-${idx}-name`}
                     value={c.name}
@@ -297,7 +324,7 @@ export function WizardPage() {
                   />
                 </div>
                 <div className="sm:col-span-3">
-                  <Label htmlFor={`comp-${idx}-kind`}>Tipo</Label>
+                  <Label htmlFor={`comp-${idx}-kind`}>{t("wizard.type")}</Label>
                   <Select
                     id={`comp-${idx}-kind`}
                     value={c.kind}
@@ -307,7 +334,7 @@ export function WizardPage() {
                   >
                     {COMPONENT_KINDS.map((k) => (
                       <option key={k.value} value={k.value}>
-                        {k.label}
+                        {t(`document.componentKinds.${k.value}`)}
                       </option>
                     ))}
                   </Select>
@@ -318,7 +345,7 @@ export function WizardPage() {
                     className="w-full text-red-300"
                     onClick={() => setComponents(removeArrayItem(doc.components, idx))}
                   >
-                    Remover
+                    {t("wizard.remove")}
                   </Button>
                 </div>
               </div>
@@ -328,22 +355,22 @@ export function WizardPage() {
               onClick={() =>
                 setComponents([
                   ...doc.components,
-                  { id: `comp_${doc.components.length + 1}`, name: "Novo", kind: "process" },
+                  {
+                    id: `comp_${doc.components.length + 1}`,
+                    name: t("wizard.newComponentShort"),
+                    kind: "process",
+                  },
                 ])
               }
             >
-              Adicionar componente
+              {t("wizard.addComponent")}
             </Button>
           </div>
         </Card>
       )}
 
       {step === 2 && (
-        <Card
-          title="Fluxos de dados"
-          subtitle="Ligações entre componentes (origem e destino = IDs dos componentes)."
-          variant="glass"
-        >
+        <Card title={t("wizard.flowsTitle")} subtitle={t("wizard.flowsSubtitle")} variant="glass">
           <div className="space-y-3">
             {doc.data_flows.map((f, idx) => (
               <div
@@ -351,7 +378,7 @@ export function WizardPage() {
                 className="grid gap-2 rounded-otm-md border border-otm-border bg-otm-surface-1/80 p-3 sm:grid-cols-12 sm:items-end"
               >
                 <div className="sm:col-span-2">
-                  <Label htmlFor={`flow-${idx}-id`}>ID fluxo</Label>
+                  <Label htmlFor={`flow-${idx}-id`}>{t("wizard.flowId")}</Label>
                   <Input
                     id={`flow-${idx}-id`}
                     value={f.id}
@@ -361,7 +388,7 @@ export function WizardPage() {
                   />
                 </div>
                 <div className="sm:col-span-3">
-                  <Label htmlFor={`flow-${idx}-from`}>De</Label>
+                  <Label htmlFor={`flow-${idx}-from`}>{t("wizard.from")}</Label>
                   <Select
                     id={`flow-${idx}-from`}
                     value={f.from_component}
@@ -380,7 +407,7 @@ export function WizardPage() {
                   </Select>
                 </div>
                 <div className="sm:col-span-3">
-                  <Label htmlFor={`flow-${idx}-to`}>Para</Label>
+                  <Label htmlFor={`flow-${idx}-to`}>{t("wizard.to")}</Label>
                   <Select
                     id={`flow-${idx}-to`}
                     value={f.to_component}
@@ -399,7 +426,7 @@ export function WizardPage() {
                   </Select>
                 </div>
                 <div className="sm:col-span-2">
-                  <Label htmlFor={`flow-${idx}-name`}>Nome (opcional)</Label>
+                  <Label htmlFor={`flow-${idx}-name`}>{t("wizard.flowNameOptional")}</Label>
                   <Input
                     id={`flow-${idx}-name`}
                     value={f.name ?? ""}
@@ -414,7 +441,7 @@ export function WizardPage() {
                     className="w-full text-red-300"
                     onClick={() => setFlows(removeArrayItem(doc.data_flows, idx))}
                   >
-                    Remover
+                    {t("wizard.remove")}
                   </Button>
                 </div>
               </div>
@@ -433,29 +460,30 @@ export function WizardPage() {
                 ])
               }
             >
-              Adicionar fluxo
+              {t("wizard.addFlow")}
             </Button>
           </div>
         </Card>
       )}
 
       {step === 3 && (
-        <Card title="Pronto para rever" variant="elevated">
-          <p className="text-sm text-otm-text-muted">
-            Valide no servidor e avance para a vista de componentes e fluxos. Pode voltar a qualquer
-            passo para ajustar.
-          </p>
+        <Card title={t("wizard.reviewTitle")} variant="elevated">
+          <p className="text-sm text-otm-text-muted">{t("wizard.reviewBody")}</p>
           <ul className="mt-3 list-inside list-disc text-sm text-otm-text-muted">
-            <li>{doc.components.length} componentes</li>
-            <li>{doc.data_flows.length} fluxos</li>
-            <li>Metodologia alvo: {methodology}</li>
+            <li>{t("wizard.reviewCountComponents", { count: doc.components.length })}</li>
+            <li>{t("wizard.reviewCountFlows", { count: doc.data_flows.length })}</li>
+            <li>{t("wizard.reviewMethodology", { methodology })}</li>
           </ul>
           {wizardSummaryLines(adaptivePrompts).length > 0 ? (
             <details className="mt-4 rounded-otm-md border border-otm-border/80 bg-otm-surface-2/50 px-3 py-2 text-sm">
-              <summary className="cursor-pointer font-medium text-otm-text">Resumo do contexto (assistente)</summary>
+              <summary className="cursor-pointer font-medium text-otm-text">{t("wizard.contextSummary")}</summary>
               <p className="mt-2 text-xs text-otm-text-muted">
-                Estas respostas são enviadas ao motor como etiquetas <code className="text-otm-accent">wz:</code> e
-                influenciam ranking e anti-patterns de forma explicável.
+                <Trans
+                  i18nKey="wizard.contextSummaryBody"
+                  components={{
+                    0: <code className="text-otm-accent" />,
+                  }}
+                />
               </p>
               <ul className="mt-2 list-inside list-disc space-y-1 text-xs text-otm-text-muted">
                 {wizardSummaryLines(adaptivePrompts).map((line) => (
@@ -470,17 +498,17 @@ export function WizardPage() {
       <div className="flex flex-wrap gap-2">
         {step > 0 && (
           <Button variant="secondary" onClick={() => setStep((s) => s - 1)}>
-            Anterior
+            {t("wizard.prev")}
           </Button>
         )}
-        {step < STEPS.length - 1 && (
+        {step < STEP_DEFS.length - 1 && (
           <Button onClick={() => void validateAndNext()} disabled={validating}>
-            {validating ? "A validar…" : "Seguinte"}
+            {validating ? t("wizard.validating") : t("wizard.next")}
           </Button>
         )}
-        {step === STEPS.length - 1 && (
+        {step === STEP_DEFS.length - 1 && (
           <Link to="/review">
-            <Button>Ver diagrama lógico</Button>
+            <Button>{t("wizard.viewDiagram")}</Button>
           </Link>
         )}
       </div>

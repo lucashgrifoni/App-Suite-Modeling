@@ -55,3 +55,15 @@ Parar após Etapas 1 e 2 se:
 - STRIDE **permanece genérico por construção**; a meta é reduzir sua dominância narrativa quando `biz_*` é mais explicativo.
 - A supressão é **apenas de apresentação** e baseada em clusters semânticos controlados; não é “prova” de equivalência perfeita.
 
+---
+
+## Anexo — plano e validação (consolidado)
+
+**Escopo:** alterações cirúrgicas no exporter Markdown (`packages/exporters/otm_exporters/analysis_markdown.py`); evidência em fixtures **finance** e **ecommerce-subscription**. Fora de escopo: refactor amplo do motor, alteração de schema OTM, novos fixtures dedicados só para este fim.
+
+**Testes:** regressão com `python -m pytest`. Evidência before/after reproduzível:
+
+```bash
+python scripts/run_stride_genericity_before_after.py
+```
+

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Link, Navigate } from "react-router-dom";
 import { validateDocument } from "../api/otmApi";
 import { ApiError } from "../api/client";
@@ -17,6 +18,7 @@ import { updateArrayItem } from "../utils/collections";
 import type { OtmAsset, OtmTrustBoundary } from "../types/document";
 
 export function ReviewPage() {
+  const { t } = useTranslation();
   const { document, setDocument } = useSession();
   const toast = useToast();
   const [showJson, setShowJson] = useState(false);
@@ -49,12 +51,16 @@ export function ReviewPage() {
     try {
       const v = await validateDocument(doc);
       setMeta(
-        `Válido · schema ${v.schema_version} · ${v.component_count} componentes · ${v.threat_count} ameaças no documento`,
+        t("review.validMeta", {
+          schema: v.schema_version,
+          components: v.component_count,
+          threats: v.threat_count,
+        }),
       );
-      toast.success("Documento válido no servidor.");
+      toast.success(t("review.validOk"));
     } catch (e) {
       setMeta(null);
-      const msg = e instanceof ApiError ? e.message : "Erro de validação.";
+      const msg = e instanceof ApiError ? e.message : t("review.validationError");
       setErr(msg);
       toast.error(msg);
     }
@@ -63,16 +69,16 @@ export function ReviewPage() {
   return (
     <div className="space-y-8">
       <PageHeader
-        eyebrow="Revisão estrutural"
-        title="Diagrama lógico"
-        description="Editor visual (React Flow) com edição activa por omissão: arraste nós, ligue componentes e use Delete. «Visualizar» desativa alterações estruturais. A lista abaixo reflecte o modelo em sessão."
+        eyebrow={t("review.eyebrow")}
+        title={t("review.title")}
+        description={t("review.description")}
         actions={
           <>
             <Button variant="secondary" onClick={() => void quickValidate()}>
-              Validar no servidor
+              {t("review.validateServer")}
             </Button>
             <Link to="/analysis">
-              <Button>Correr análise</Button>
+              <Button>{t("review.runAnalysis")}</Button>
             </Link>
           </>
         }
@@ -82,15 +88,19 @@ export function ReviewPage() {
       {err && <Alert>{err}</Alert>}
 
       <Card
-        title="Diagrama interativo"
-        subtitle="Por omissão: Editar (arrastar, ligar, apagar, rótulos). Botão «Visualizar» = só leitura."
+        title={t("review.diagramCardTitle")}
+        subtitle={t("review.diagramCardSubtitle")}
         variant="glass"
       >
         <ThreatModelDiagram document={doc} setDocument={setDocument} />
       </Card>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <Card title="Componentes" subtitle={`${doc.components.length} itens`} variant="glass">
+        <Card
+          title={t("review.componentsTitle")}
+          subtitle={t("review.items", { count: doc.components.length })}
+          variant="glass"
+        >
           <ul className="divide-y divide-otm-border">
             {doc.components.map((c) => (
               <li key={c.id} className="flex flex-wrap items-center gap-2 py-2 text-sm">
@@ -101,7 +111,11 @@ export function ReviewPage() {
             ))}
           </ul>
         </Card>
-        <Card title="Fluxos" subtitle={`${doc.data_flows.length} ligações`} variant="glass">
+        <Card
+          title={t("review.flowsTitle")}
+          subtitle={t("review.links", { count: doc.data_flows.length })}
+          variant="glass"
+        >
           <ul className="divide-y divide-otm-border">
             {doc.data_flows.map((f) => (
               <li key={f.id} className="py-2 text-sm text-otm-text-muted">
@@ -121,11 +135,7 @@ export function ReviewPage() {
       </div>
 
       {doc.trust_boundaries.length > 0 ? (
-        <Card
-          title="Trust boundaries"
-          subtitle="Notas de inferência, fluxos que cruzam e validação manual (sem editar JSON)."
-          variant="glass"
-        >
+        <Card title={t("review.trustTitle")} subtitle={t("review.trustSubtitle")} variant="glass">
           <ul className="divide-y divide-otm-border">
             {doc.trust_boundaries.map((b, idx) => (
               <li key={b.id} className="space-y-2 py-4 first:pt-0">
@@ -135,25 +145,25 @@ export function ReviewPage() {
                 </div>
                 {b.inference_note ? (
                   <p className="text-xs text-otm-text-muted">
-                    <span className="font-semibold text-otm-text-subtle">Porquê: </span>
+                    <span className="font-semibold text-otm-text-subtle">{t("review.whyPrefix")} </span>
                     {b.inference_note}
                   </p>
                 ) : null}
                 {(b.crossing_flow_ids?.length ?? 0) > 0 ? (
                   <p className="text-xs text-otm-text-muted">
-                    <span className="font-semibold text-otm-text-subtle">Fluxos cruzando: </span>
+                    <span className="font-semibold text-otm-text-subtle">{t("review.crossingFlows")} </span>
                     {(b.crossing_flow_ids ?? []).join(", ")}
                   </p>
                 ) : null}
                 <div className="grid gap-2 sm:grid-cols-2">
                   <div>
-                    <Label htmlFor={`inf-${b.id}`}>Nota / override</Label>
+                    <Label htmlFor={`inf-${b.id}`}>{t("review.noteOverride")}</Label>
                     <Input
                       id={`inf-${b.id}`}
                       className="mt-1 text-sm"
                       value={b.inference_note ?? ""}
                       onChange={(e) => updateTrustBoundary(idx, { inference_note: e.target.value || null })}
-                      placeholder="Ex.: confirmar segmentação DMZ"
+                      placeholder={t("review.trustPlaceholder")}
                     />
                   </div>
                   <label className="flex cursor-pointer items-center gap-2 pt-6 text-sm text-otm-text-muted">
@@ -161,7 +171,7 @@ export function ReviewPage() {
                       checked={b.user_validated === true}
                       onChange={(e) => updateTrustBoundary(idx, { user_validated: e.target.checked })}
                     />
-                    Validada pelo modelador
+                    {t("review.validatedByModeler")}
                   </label>
                 </div>
               </li>
@@ -171,7 +181,7 @@ export function ReviewPage() {
       ) : null}
 
       {doc.assets.length > 0 ? (
-        <Card title="Ativos" subtitle="Criticidade e ligações a componentes/fluxos." variant="glass">
+        <Card title={t("review.assetsTitle")} subtitle={t("review.assetsSubtitle")} variant="glass">
           <ul className="divide-y divide-otm-border">
             {doc.assets.map((a, idx) => {
               return (
@@ -183,17 +193,17 @@ export function ReviewPage() {
                   </div>
                   <div className="grid gap-2 sm:grid-cols-2">
                     <div>
-                      <Label htmlFor={`bc-${a.id}`}>Criticidade</Label>
+                      <Label htmlFor={`bc-${a.id}`}>{t("review.criticality")}</Label>
                       <Input
                         id={`bc-${a.id}`}
                         className="mt-1 text-sm"
                         value={a.business_criticality ?? ""}
                         onChange={(e) => updateAsset(idx, { business_criticality: e.target.value || undefined })}
-                        placeholder="ex.: high"
+                        placeholder={t("review.placeholderCriticality")}
                       />
                     </div>
                     <div>
-                      <Label htmlFor={`cl-${a.id}`}>Classificação</Label>
+                      <Label htmlFor={`cl-${a.id}`}>{t("review.classification")}</Label>
                       <Input
                         id={`cl-${a.id}`}
                         className="mt-1 text-sm"
@@ -204,7 +214,7 @@ export function ReviewPage() {
                             sensitivity: e.target.value || undefined,
                           })
                         }
-                        placeholder="ex.: confidential"
+                        placeholder={t("review.placeholderClassification")}
                       />
                     </div>
                   </div>
@@ -213,14 +223,18 @@ export function ReviewPage() {
                     <p className="text-xs text-otm-text-muted">
                       {(a.related_component_ids?.length ?? 0) > 0 ? (
                         <>
-                          <span className="font-semibold text-otm-text-subtle">Componentes: </span>
+                          <span className="font-semibold text-otm-text-subtle">
+                            {t("review.relatedComponentsLabel")}{" "}
+                          </span>
                           {(a.related_component_ids ?? []).join(", ")}
                         </>
                       ) : null}
                       {(a.related_data_flow_ids?.length ?? 0) > 0 ? (
                         <>
                           {" "}
-                          <span className="font-semibold text-otm-text-subtle">Fluxos: </span>
+                          <span className="font-semibold text-otm-text-subtle">
+                            {t("review.relatedFlowsLabel")}{" "}
+                          </span>
                           {(a.related_data_flow_ids ?? []).join(", ")}
                         </>
                       ) : null}
@@ -233,9 +247,9 @@ export function ReviewPage() {
         </Card>
       ) : null}
 
-      <Card title="Avançado" subtitle="JSON canónico (perfil técnico)." variant="elevated">
+      <Card title={t("review.advancedTitle")} subtitle={t("review.advancedSubtitle")} variant="elevated">
         <Button variant="ghost" className="mb-2 !px-0" onClick={() => setShowJson((v) => !v)}>
-          {showJson ? "Ocultar JSON" : "Mostrar JSON"}
+          {showJson ? t("review.hideJson") : t("review.showJson")}
         </Button>
         {showJson && (
           <pre className="max-h-80 overflow-auto rounded-otm-md bg-otm-green-950 p-3 text-xs text-otm-mint-300">

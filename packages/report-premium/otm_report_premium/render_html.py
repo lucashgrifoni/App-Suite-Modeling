@@ -6,6 +6,12 @@ import html
 import re
 
 from .models import PremiumReportPayload
+from .report_i18n import premium_render_copy
+
+
+def _esc(s: str) -> str:
+    return html.escape(s, quote=True)
+
 
 _PREMIUM_CSS = """
 @page { size: A4; margin: 14mm; }
@@ -50,53 +56,56 @@ footer { font-size: 8pt; color: #64748b; margin-top: 24px; border-top: 1px solid
 """
 
 
-def _esc(s: str) -> str:
-    return html.escape(s, quote=True)
-
-
 def render_premium_html(payload: PremiumReportPayload) -> str:
     """HTML completo (uma página fluida) para conversão PDF."""
+    r = premium_render_copy(payload.locale)
     c = payload.cover
     parts: list[str] = [
-        "<!DOCTYPE html><html lang='pt-BR'><head><meta charset='utf-8'/>",
+        f"<!DOCTYPE html><html lang='{r.html_lang}'><head><meta charset='utf-8'/>",
         f"<title>{_esc(c.title)}</title><style>{_PREMIUM_CSS}</style></head><body>",
         "<header class='cover'>",
         "<span class='badge'>App Suite Modeling</span>",
         f"<h1>{_esc(c.title)}</h1>",
         "<p class='meta'>",
-        f"Schema {_esc(c.schema_version)} · Metodologia {_esc(c.primary_methodology)} · ",
-        f"Data {_esc(c.analysis_date_iso)} · Versão produto {_esc(c.app_suite_version)}",
+        f"{_esc(r.html_meta_schema)} {_esc(c.schema_version)} · {_esc(r.html_meta_methodology)} "
+        f"{_esc(c.primary_methodology)} · ",
+        f"{_esc(r.html_meta_date)} {_esc(c.analysis_date_iso)} · {_esc(r.html_meta_product_version)} "
+        f"{_esc(c.app_suite_version)}",
         "</p>",
-        f"<p><strong>Estado:</strong> {_esc(c.overall_status_display)} · ",
-        f"<strong>Risco (heurístico):</strong> {_esc(c.overall_risk_label)}</p>",
+        f"<p><strong>{_esc(r.html_state)}</strong> {_esc(c.overall_status_display)} · ",
+        f"<strong>{_esc(r.html_risk_heuristic)}</strong> {_esc(c.overall_risk_label)}</p>",
         "</header>",
         "<div class='disclaimer'>",
-        f"<strong>Inferência.</strong> {_esc(payload.disclaimer.summary)}",
+        f"<strong>{_esc(r.html_inference)}</strong> {_esc(payload.disclaimer.summary)}",
         "</div>",
-        "<section class='section'><h2>Executive summary</h2>",
+        f"<section class='section'><h2>{_esc(r.html_exec_summary)}</h2>",
         f"<p>{_esc(payload.executive_summary.executive_conclusion)}</p>",
-        "<p><strong>Ameaças totais:</strong> "
-        f"{payload.executive_summary.threat_count} · <strong>Urgência:</strong> "
+        f"<p><strong>{_esc(r.html_total_threats)}</strong> "
+        f"{payload.executive_summary.threat_count} · <strong>{_esc(r.html_urgency)}</strong> "
         f"{_esc(payload.executive_summary.urgency_level)}</p>",
         "</section>",
     ]
 
-    parts.append("<section class='section'><h2>Top riscos</h2><table><tr>")
-    parts.append("<th>#</th><th>ID</th><th>Título</th><th>Tier</th><th>P</th></tr>")
-    for r in payload.top_risks:
+    parts.append(f"<section class='section'><h2>{_esc(r.html_top_risks)}</h2><table><tr>")
+    parts.append(
+        f"<th>{_esc(r.html_th_rank)}</th><th>{_esc(r.html_th_id)}</th>"
+        f"<th>{_esc(r.html_th_title)}</th><th>{_esc(r.html_th_tier)}</th>"
+        f"<th>{_esc(r.html_th_p)}</th></tr>"
+    )
+    for rk in payload.top_risks:
         parts.append(
             "<tr>"
-            f"<td>{r.rank}</td>"
-            f"<td>{_esc(r.threat_id)}</td>"
-            f"<td>{_esc(r.title[:200])}</td>"
-            f"<td>{_esc(r.priority_tier)}</td>"
-            f"<td>{r.composite_score:.2f}</td>"
+            f"<td>{rk.rank}</td>"
+            f"<td>{_esc(rk.threat_id)}</td>"
+            f"<td>{_esc(rk.title[:200])}</td>"
+            f"<td>{_esc(rk.priority_tier)}</td>"
+            f"<td>{rk.composite_score:.2f}</td>"
             "</tr>"
         )
     parts.append("</table></section>")
 
     if payload.root_cause_groups:
-        parts.append("<section class='section'><h2>Causas raiz</h2><ul>")
+        parts.append(f"<section class='section'><h2>{_esc(r.html_root_causes)}</h2><ul>")
         for g in payload.root_cause_groups[:12]:
             parts.append(
                 f"<li><strong>{_esc(g.display_name)}</strong> ({g.threat_count}) — "
@@ -105,7 +114,7 @@ def render_premium_html(payload: PremiumReportPayload) -> str:
         parts.append("</ul></section>")
 
     if payload.roadmap:
-        parts.append("<section class='section'><h2>Roadmap</h2>")
+        parts.append(f"<section class='section'><h2>{_esc(r.html_roadmap)}</h2>")
         for ph in payload.roadmap:
             parts.append(f"<h3>{_esc(ph.title)}</h3><ul>")
             for it in ph.items[:15]:
@@ -115,15 +124,10 @@ def render_premium_html(payload: PremiumReportPayload) -> str:
 
     if payload.baseline_diff and payload.baseline_diff.has_baseline:
         parts.append(
-            "<section class='section'><h2>Baseline / diff</h2>"
+            f"<section class='section'><h2>{_esc(r.html_baseline)}</h2>"
             f"<p>{_esc(payload.baseline_diff.narrative)}</p></section>"
         )
 
-    parts.append(
-        "<footer>Relatório premium — App Suite Modeling. "
-        "Conteúdo técnico completo disponível em Markdown exportado.</footer>"
-        "</body></html>"
-    )
-    # Remove newlines that break very old parsers
+    parts.append(f"<footer>{_esc(r.html_footer)}</footer></body></html>")
     raw = "".join(parts)
     return re.sub(r">\s+<", "><", raw)

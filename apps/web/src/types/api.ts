@@ -84,22 +84,23 @@ export interface SemanticStructuralRef {
 }
 
 /**
- * Ligação explícita entre ref estrutural e secção interpretativa (v1.4).
- * Proxy de leitura — não implica causalidade.
+ * Ligação explícita entre ref estrutural e secção interpretativa (v1.5).
+ * Inclui `anchoring_rationale`; `medium` só com ≥2 tokens lexicais.
  */
 export interface SemanticInterpretationLink {
   structural_ref: string;
   related_section: "insights" | "improved" | "worsened" | "risk_impact";
   summary: string;
   link_kind?: "lexical_token_overlap" | "entity_topic_correlation";
-  inference_strength?: "low";
+  inference_strength?: "low" | "medium";
+  anchoring_rationale?: string;
   shared_tokens?: string[];
   entity_kind?: string | null;
 }
 
 /**
  * Metadados de comparação semântica — chaves estáveis documentadas no motor.
- * O OpenAPI tipa `meta` como objeto livre; aqui restringimos o consumo na SPA.
+ * OpenAPI: `ComparisonResultMeta` com raiz fechada e `extensions` para evolução.
  */
 export type ComparisonMeta = NonNullable<Schemas["ThreatModelComparisonResult"]["meta"]> & {
   semantic_insights?: string[];
@@ -109,6 +110,7 @@ export type ComparisonMeta = NonNullable<Schemas["ThreatModelComparisonResult"][
   semantic_interpretation_links?: SemanticInterpretationLink[];
   interpretation_disclaimer?: string;
   comparison_contract_version?: string;
+  extensions?: Record<string, unknown>;
 };
 
 /** Resposta de `/compare` com campos que a API preenche de forma estável. */

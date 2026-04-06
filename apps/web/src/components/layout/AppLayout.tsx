@@ -1,9 +1,11 @@
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useSession } from "../../context/SessionContext";
 import { ErrorBoundary } from "../error/ErrorBoundary";
 import { Button } from "../ui/Button";
 import { FadeIn } from "../motion/FadeIn";
 import { ThemeToggle } from "./ThemeToggle";
+import { LanguageSwitcher } from "./LanguageSwitcher";
 
 const navLinkClass = ({ isActive }: { isActive: boolean }) =>
   `rounded-full px-3 py-1.5 text-sm font-medium transition duration-otm ease-otm ${
@@ -13,6 +15,7 @@ const navLinkClass = ({ isActive }: { isActive: boolean }) =>
   }`;
 
 export function AppLayout() {
+  const { t } = useTranslation();
   const { document, reset } = useSession();
   const location = useLocation();
 
@@ -47,54 +50,55 @@ export function AppLayout() {
             <span className="flex flex-col leading-tight">
               <span>App Suite Modeling</span>
               <span className="text-[11px] font-normal text-otm-text-subtle">
-                Threat modeling profissional
+                {t("layout.brandSubtitle")}
               </span>
             </span>
           </Link>
 
           <nav
             className="flex flex-1 flex-wrap items-center justify-center gap-1 sm:gap-2"
-            aria-label="Principal"
+            aria-label={t("layout.ariaMainNav")}
           >
             {!document && (
               <>
                 <NavLink to="/templates" className={navLinkClass}>
-                  Templates
+                  {t("nav.templates")}
                 </NavLink>
                 <NavLink to="/import" className={navLinkClass}>
-                  Importar
+                  {t("nav.import")}
                 </NavLink>
               </>
             )}
             {document && (
               <>
                 <NavLink to="/wizard" className={navLinkClass}>
-                  Assistente
+                  {t("nav.wizard")}
                 </NavLink>
                 <NavLink to="/review" className={navLinkClass}>
-                  Diagrama
+                  {t("nav.review")}
                 </NavLink>
                 <NavLink to="/analysis" className={navLinkClass}>
-                  Análise
+                  {t("nav.analysis")}
                 </NavLink>
                 <NavLink to="/export" className={navLinkClass}>
-                  Exportar
+                  {t("nav.export")}
                 </NavLink>
                 <NavLink to="/history" className={navLinkClass}>
-                  Histórico
+                  {t("nav.history")}
                 </NavLink>
                 <NavLink to="/diff" className={navLinkClass}>
-                  Diff
+                  {t("nav.diff")}
                 </NavLink>
               </>
             )}
           </nav>
 
           <div className="flex items-center justify-end gap-2">
+            <LanguageSwitcher />
             <ThemeToggle />
             {document && (
               <Button variant="ghost" className="!py-1.5 !text-xs" onClick={() => reset()}>
-                Novo modelo
+                {t("nav.newModel")}
               </Button>
             )}
           </div>
@@ -111,7 +115,7 @@ export function AppLayout() {
 
       <footer className="border-t border-otm-border py-8 text-center text-xs text-otm-text-subtle">
         <p className="mx-auto max-w-2xl leading-relaxed">
-          A validação e o motor executam no servidor — a UI não duplica regras de negócio.
+          {t("layout.footerNote")}
         </p>
       </footer>
     </div>

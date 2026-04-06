@@ -1,4 +1,9 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { Trans, useTranslation } from "react-i18next";
+import {
+  resolveExportArtifactLocale,
+  type ExportArtifactLocale,
+} from "../i18n/exportArtifactLocale";
 import { Navigate } from "react-router-dom";
 import { exportArtifacts, fetchPremiumReport, type PremiumReportLevel } from "../api/otmApi";
 import { ApiError } from "../api/client";
@@ -17,13 +22,17 @@ import { downloadPdfBlob, generateReportPdfBlob } from "../lib/generateReportPdf
 import { extFor, mimeFor } from "../utils/exportArtifactHelpers";
 import type { ExportFormat } from "../types/api";
 
-const FORMATS: { id: ExportFormat; label: string; hint: string }[] = [
-  { id: "document_json", label: "Documento (JSON)", hint: "Modelo canónico" },
-  { id: "document_markdown", label: "Documento (Markdown)", hint: "Relatório legível" },
-  { id: "flowchart_mermaid", label: "Diagrama Mermaid", hint: "Flowchart LR" },
-  { id: "analysis_json", label: "Análise (JSON)", hint: "Resultado completo do motor" },
-  { id: "analysis_markdown", label: "Análise (Markdown)", hint: "Secção de relatório" },
-  { id: "bundle_json", label: "Bundle (JSON)", hint: "Documento + análise num ficheiro" },
+const FORMAT_DEFS: ReadonlyArray<{
+  id: ExportFormat;
+  labelKey: string;
+  hintKey: string;
+}> = [
+  { id: "document_json", labelKey: "export.fmtJson", hintKey: "export.fmtJsonHint" },
+  { id: "document_markdown", labelKey: "export.fmtMd", hintKey: "export.fmtMdHint" },
+  { id: "flowchart_mermaid", labelKey: "export.fmtMermaid", hintKey: "export.fmtMermaidHint" },
+  { id: "analysis_json", labelKey: "export.fmtAnalysisJson", hintKey: "export.fmtAnalysisJsonHint" },
+  { id: "analysis_markdown", labelKey: "export.fmtAnalysisMd", hintKey: "export.fmtAnalysisMdHint" },
+  { id: "bundle_json", labelKey: "export.fmtBundle", hintKey: "export.fmtBundleHint" },
 ];
 
 function downloadArtifact(name: string, content: string, mime: string) {
@@ -36,7 +45,10 @@ function downloadArtifact(name: string, content: string, mime: string) {
   URL.revokeObjectURL(url);
 }
 
+type ArtifactLocaleChoice = "ui" | ExportArtifactLocale;
+
 export function ExportPage() {
+  const { t, i18n } = useTranslation();
   const { document: otmDoc, analysis } = useSession();
   const { appendSnapshot } = useAnalysisHistory();
   const toast = useToast();
@@ -49,6 +61,18 @@ export function ExportPage() {
   const [premiumLevel, setPremiumLevel] = useState<PremiumReportLevel>("standard");
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<Record<string, string> | null>(null);
+  const [artifactLocaleChoice, setArtifactLocaleChoice] = useState<ArtifactLocaleChoice>("ui");
+
+  const resolvedArtifactLocale = (): ExportArtifactLocale =>
+    resolveExportArtifactLocale(
+      artifactLocaleChoice === "ui" ? undefined : artifactLocaleChoice,
+      i18n.language,
+    );
+
+  const formats = useMemo(
+    () => FORMAT_DEFS.map((f) => ({ ...f, label: t(f.labelKey), hint: t(f.hintKey) })),
+    [t],
+  );
 
   if (!otmDoc) return <Navigate to="/" replace />;
   const model = otmDoc;
@@ -66,7 +90,7 @@ export function ExportPage() {
     setError(null);
     setResult(null);
     if (selected.size === 0) {
-      const msg = "Escolha pelo menos um formato.";
+      const msg = t("export.pickOne");
       setError(msg);
       toast.warning(msg);
       return;
@@ -80,12 +104,13 @@ export function ExportPage() {
         document: model,
         formats: [...selected],
         analysis: needsAnalysis ? analysis : null,
+        locale: resolvedArtifactLocale(),
       });
       setResult(artifacts);
       appendSnapshot("export");
-      toast.success("Artefactos prontos para descarga.");
+      toast.success(t("export.toastReady"));
     } catch (e) {
-      const msg = e instanceof ApiError ? e.message : "Exportação falhou.";
+      const msg = e instanceof ApiError ? e.message : t("export.toastFail");
       setError(msg);
       toast.error(msg);
     } finally {
@@ -100,13 +125,15 @@ export function ExportPage() {
       await new Promise<void>((r) => {
         queueMicrotask(r);
       });
-      const blob = await generateReportPdfBlob(model, analysis);
+      const blob = await generateReportPdfBlob(model, analysis, {
+        locale: resolvedArtifactLocale(),
+      });
       const safe = model.metadata.title.replaceAll(/[^\w-]+/g, "_").slice(0, 40);
       downloadPdfBlob(blob, `otm-report-${safe}.pdf`);
       appendSnapshot("export");
-      toast.success("PDF gerado.");
+      toast.success(t("export.toastPdf"));
     } catch {
-      const msg = "Falha ao gerar PDF.";
+      const msg = t("export.toastPdfFail");
       setError(msg);
       toast.error(msg);
     } finally {
@@ -123,12 +150,13 @@ export function ExportPage() {
         analysis,
         level: premiumLevel,
         outputFormat: kind,
+        locale: resolvedArtifactLocale(),
       });
       downloadPdfBlob(blob, filename);
       appendSnapshot("export");
-      toast.success(kind === "pdf" ? "PDF premium gerado." : "Markdown premium descarregado.");
+      toast.success(kind === "pdf" ? t("export.toastPremiumPdf") : t("export.toastPremiumMd"));
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Falha no report premium.";
+      const msg = e instanceof Error ? e.message : t("export.toastPremiumFail");
       setError(msg);
       toast.error(msg);
     } finally {
@@ -138,28 +166,21 @@ export function ExportPage() {
 
   return (
     <div className="space-y-8">
-      <PageHeader
-        eyebrow="Entrega e evidências"
-        title="Exportar"
-        description={
-          <>
-            Gera ficheiros no browser. Formatos que incluem análise usam o último resultado em sessão;
-            se faltar, o servidor corre o motor automaticamente.
-          </>
-        }
-      />
+      <PageHeader eyebrow={t("export.eyebrow")} title={t("export.title")} description={t("export.description")} />
 
       <div className="space-y-2 rounded-otm-lg border border-otm-border/80 bg-otm-surface-1/50 px-4 py-3">
         <WorkflowGuide variant="compact" />
         <ContextHint>
-          Formatos com análise usam o último resultado em sessão; o <strong>diff</strong> compara JSON exportado com
-          outra revisão.
+          <Trans
+            i18nKey="export.contextHint"
+            components={{ strong: <strong className="text-otm-text-muted" /> }}
+          />
         </ContextHint>
       </div>
 
-      <Card title="Formatos" subtitle="Selecione o que precisa para relatório ou integração." variant="glass">
+      <Card title={t("export.formatsTitle")} subtitle={t("export.formatsSubtitle")} variant="glass">
         <ul className="space-y-3">
-          {FORMATS.map((f) => (
+          {formats.map((f) => (
             <li
               key={f.id}
               className="flex items-start gap-3 rounded-otm-md border border-transparent px-2 py-2 transition hover:border-otm-border hover:bg-otm-surface-1/60"
@@ -179,20 +200,30 @@ export function ExportPage() {
             </li>
           ))}
         </ul>
+        <div className="mt-3 max-w-xs">
+          <Label htmlFor="artifact-locale">{t("export.artifactLanguage")}</Label>
+          <select
+            id="artifact-locale"
+            data-testid="export-artifact-locale"
+            value={artifactLocaleChoice}
+            onChange={(e) => setArtifactLocaleChoice(e.target.value as ArtifactLocaleChoice)}
+            className="mt-1 flex h-10 w-full rounded-otm-md border border-otm-border bg-otm-surface px-3 text-sm text-otm-text shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-otm-accent"
+          >
+            <option value="ui">{t("export.artifactLangUi")}</option>
+            <option value="pt-BR">{t("export.artifactLangPtBR")}</option>
+            <option value="en">{t("export.artifactLangEn")}</option>
+          </select>
+        </div>
         <Button className="mt-4" onClick={() => void runExport()} disabled={loading || pdfLoading || premiumLoading}>
-          {loading ? "A gerar…" : "Gerar ficheiros"}
+          {loading ? t("export.generating") : t("export.generateFiles")}
         </Button>
       </Card>
 
-      <Card
-        title="Report premium (API)"
-        subtitle="Executive / Standard / Deep — Markdown ou PDF alinhados ao motor e backlog (requer API em execução)."
-        variant="elevated"
-      >
+      <Card title={t("export.premiumTitle")} subtitle={t("export.premiumSubtitle")} variant="elevated">
         <div className="flex flex-wrap items-end gap-3">
           <div>
             <Label htmlFor="premium-level" className="text-xs text-otm-text-muted">
-              Nível
+              {t("export.level")}
             </Label>
             <select
               id="premium-level"
@@ -200,9 +231,9 @@ export function ExportPage() {
               value={premiumLevel}
               onChange={(e) => setPremiumLevel(e.target.value as PremiumReportLevel)}
             >
-              <option value="executive">Executive</option>
-              <option value="standard">Standard</option>
-              <option value="deep">Deep technical</option>
+              <option value="executive">{t("export.optExecutive")}</option>
+              <option value="standard">{t("export.optStandard")}</option>
+              <option value="deep">{t("export.optDeep")}</option>
             </select>
           </div>
           <Button
@@ -211,36 +242,28 @@ export function ExportPage() {
             onClick={() => void runPremium("markdown")}
             disabled={premiumLoading || loading || pdfLoading}
           >
-            {premiumLoading ? "A gerar…" : "Markdown premium"}
+            {premiumLoading ? t("export.generating") : t("export.premiumMd")}
           </Button>
           <Button
             data-testid="export-premium-pdf"
             onClick={() => void runPremium("pdf")}
             disabled={premiumLoading || loading || pdfLoading}
           >
-            {premiumLoading ? "A gerar…" : "PDF premium"}
+            {premiumLoading ? t("export.generating") : t("export.premiumPdf")}
           </Button>
         </div>
-        <p className="mt-3 text-xs text-otm-text-muted">
-          Se não houver análise em sessão, a API executa o motor automaticamente. O PDF usa o mesmo pipeline que a CLI.
-        </p>
+        <p className="mt-3 text-xs text-otm-text-muted">{t("export.premiumNote")}</p>
       </Card>
 
-      <Card
-        title="Relatório (PDF)"
-        subtitle="Gerado no browser (jsPDF) — modelo e análise em sessão, sem chamada extra de API."
-        variant="elevated"
-      >
-        <p className="text-sm text-otm-text-muted">
-          Inclui título, resumo, métricas e ameaças (amostra). Conteúdo em texto plano para leitura segura.
-        </p>
+      <Card title={t("export.pdfCardTitle")} subtitle={t("export.pdfCardSubtitle")} variant="elevated">
+        <p className="text-sm text-otm-text-muted">{t("export.pdfCardBody")}</p>
         <Button
           className="mt-4"
           data-testid="export-pdf"
           onClick={() => void runPdf()}
           disabled={pdfLoading || loading || premiumLoading}
         >
-          {pdfLoading ? "A gerar PDF…" : "Gerar PDF"}
+          {pdfLoading ? t("export.generatingPdf") : t("export.generatePdf")}
         </Button>
       </Card>
 
@@ -248,42 +271,40 @@ export function ExportPage() {
 
       {result && (
         <div data-testid="export-download-section">
-        <Card title="Descarregar" subtitle="Ficheiros prontos para arquivo ou revisão." variant="elevated">
-          <ul className="space-y-2">
+          <Card title={t("export.downloadTitle")} subtitle={t("export.downloadSubtitle")} variant="elevated">
+            <ul className="space-y-2">
+              {Object.entries(result).map(([key, text]) => (
+                <li key={key} className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                  <span className="font-mono text-otm-accent">{key}</span>
+                  <Button
+                    variant="secondary"
+                    className="!py-1.5 !text-xs"
+                    onClick={() =>
+                      downloadArtifact(
+                        `otm-export-${key}.${extFor(key)}`,
+                        text,
+                        mimeFor(key),
+                      )
+                    }
+                  >
+                    {t("export.download")}
+                  </Button>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-3 text-xs text-otm-text-muted">{t("export.copyPreview")}</p>
             {Object.entries(result).map(([key, text]) => (
-              <li key={key} className="flex flex-wrap items-center justify-between gap-2 text-sm">
-                <span className="font-mono text-otm-accent">{key}</span>
-                <Button
-                  variant="secondary"
-                  className="!py-1.5 !text-xs"
-                  onClick={() =>
-                    downloadArtifact(
-                      `otm-export-${key}.${extFor(key)}`,
-                      text,
-                      mimeFor(key),
-                    )
-                  }
-                >
-                  Descarregar
-                </Button>
-              </li>
+              <details key={`d-${key}`} className="mt-2 rounded-otm-md border border-otm-border bg-otm-surface-1/50 p-2">
+                <summary className="cursor-pointer text-sm font-medium text-otm-text">
+                  {key}
+                </summary>
+                <pre className="mt-2 max-h-48 overflow-auto rounded-otm-md bg-otm-green-950 p-3 text-xs text-otm-mint-300">
+                  {text.slice(0, 8000)}
+                  {text.length > 8000 ? "\n…" : ""}
+                </pre>
+              </details>
             ))}
-          </ul>
-          <p className="mt-3 text-xs text-otm-text-muted">
-            Também pode copiar do preview técnico abaixo.
-          </p>
-          {Object.entries(result).map(([key, text]) => (
-            <details key={`d-${key}`} className="mt-2 rounded-otm-md border border-otm-border bg-otm-surface-1/50 p-2">
-              <summary className="cursor-pointer text-sm font-medium text-otm-text">
-                {key}
-              </summary>
-              <pre className="mt-2 max-h-48 overflow-auto rounded-otm-md bg-otm-green-950 p-3 text-xs text-otm-mint-300">
-                {text.slice(0, 8000)}
-                {text.length > 8000 ? "\n…" : ""}
-              </pre>
-            </details>
-          ))}
-        </Card>
+          </Card>
         </div>
       )}
     </div>

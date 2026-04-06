@@ -1,6 +1,8 @@
 # Gate GO / NO-GO — v0.1.0
 
-**Uma página.** Usar no dia da publicação. Detalhes operacionais: [`LAUNCH_CHECKLIST.md`](LAUNCH_CHECKLIST.md) · passo a passo: [`PUBLISH_PLAYBOOK.md`](PUBLISH_PLAYBOOK.md).
+**Atualização:** O monorepo está na série **`7.x`** (`pyproject.toml`, `apps/web/package.json`). Onde este documento cita **`0.1.0`**, tratar como **“versão declarada nos ficheiros de projeto no branch a publicar”** (hoje **`7.0.0`**) salvo release histórica explícita.
+
+**Uma página.** Usar no dia da publicação. Detalhes operacionais: [`LAUNCH_CHECKLIST.md`](LAUNCH_CHECKLIST.md) · gates técnicos: [`RELEASE_ENGINEERING_CHECKLIST.md`](RELEASE_ENGINEERING_CHECKLIST.md) · passo a passo: [`PUBLISH_PLAYBOOK.md`](PUBLISH_PLAYBOOK.md).
 
 ## Regra de decisão
 
@@ -9,26 +11,26 @@
 | **GO** | Todos os itens **decisivos** abaixo estão assinalados. |
 | **NO-GO** | Falha em **qualquer** item decisivo **ou** bloqueador aberto não aceite por escrito. |
 
-**Não bloqueiam a tag v0.1.0:** limitações documentadas em [`KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md) (MVP sem persistência/auth, heurísticas, consola Windows/Unicode, etc.) — desde que não escondam um defeito **novo** de última hora no branch a publicar.
+**Não bloqueiam a tag alvo:** limitações documentadas em [`KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md) (MVP sem persistência/auth, heurísticas, consola Windows/Unicode, etc.) — desde que não escondam um defeito **novo** de última hora no branch a publicar.
 
 ---
 
 ## Checklist decisivo (marcar no dia D)
 
 - [ ] **Escopo da release congelado** — [`RELEASE_SCOPE_FREEZE.md`](RELEASE_SCOPE_FREEZE.md) aceite para esta tag.
-- [ ] **Versão `0.1.0` confirmada** em `pyproject.toml` e `apps/web/package.json`.
-- [ ] **`CHANGELOG.md`** com entrada `[0.1.0]` coerente com o que se publica.
+- [ ] **Versão confirmada** — mesma em `pyproject.toml` e `apps/web/package.json` (ex.: `7.0.0`).
+- [ ] **`CHANGELOG.md`** com entrada da versão a publicar coerente com o que se publica.
 - [ ] **Release notes** — [`RELEASE_NOTES_v0.1.0.md`](RELEASE_NOTES_v0.1.0.md) prontas para copiar/resumir na release.
 - [ ] **Limitações** — [`KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md) lidas; sem promessas novas no README.
 - [ ] **README / docs** — alinhados com a realidade ([`README.md`](../README.md), [`docs/README.md`](README.md)).
 - [ ] **Suíte Python** — `python -m pytest` na raiz **verde** (última execução no branch a publicar).
 - [ ] **Smoke RC** — `tests/test_smoke_release_candidate.py` **verde** nessa execução.
 - [ ] **Build UI** — `npm run ci:build` ou `npm run ci:build:portable` **verde**.
-- [ ] **E2E smoke UI** — `npm run e2e:smoke` (ou `e2e:smoke:portable` alinhado ao CI) **verde**.
+- [ ] **E2E smoke UI** — `npm run e2e:smoke` (ou `e2e:smoke:portable` alinhado ao CI) **verde**; para marcos atuais considerar também `npm run e2e:critical` e `npm run e2e:hybrid` ([`RELEASE_ENGINEERING_CHECKLIST.md`](RELEASE_ENGINEERING_CHECKLIST.md)).
 - [ ] **Artefactos** — wheel gerado com `python -m build` quando for anexar (`dist/*.whl` não vai para o git).
 - [ ] **CI remoto verde** — workflow em `.github/workflows/ci.yml`: jobs `python`, `web` (Ubuntu + Windows), `web-e2e-smoke` concluídos com sucesso no **commit** que receberá a tag.
 - [ ] **Sem bloqueadores abertos** — issues/PRs críticos não resolvidos só se houver **decisão explícita** de aceitar risco.
-- [ ] **Pronto para criar a tag `v0.1.0`** — `git tag -l v0.1.0` vazio **ou** política de tag já acordada se existir conflito.
+- [ ] **Pronto para criar a tag** (ex. `v7.0.0`) — `git tag -l` sem conflito com tag já publicada **ou** política de tag já acordada.
 
 ---
 
@@ -50,14 +52,14 @@
 2. **Tag anotada** (ajustar `origin` ao remoto real):
 
    ```bash
-   git tag -a v0.1.0 -m "App Suite Modeling v0.1.0"
-   git push origin v0.1.0
+   git tag -a v7.0.0 -m "App Suite Modeling v7.0.0"
+   git push origin v7.0.0
    ```
 
 3. **Release no GitHub/GitLab:** criar release a partir da tag; colar/resumir [`RELEASE_NOTES_v0.1.0.md`](RELEASE_NOTES_v0.1.0.md); anexar wheel se desejado.
 4. **PyPI (opcional):** `python -m build` + `twine upload` com credenciais fora do repositório.
 5. **Pós-publicação:** smoke rápido (`GET /health`, `otm validate`/`analyze` em `examples/minimal.otm.yaml`) conforme [`PUBLISH_PLAYBOOK.md`](PUBLISH_PLAYBOOK.md) secção 6.
-6. **Rollback:** não apagar tags públicas; preferir `v0.1.1` ou marcar release como pre-release + nota — ver [`PUBLISH_PLAYBOOK.md`](PUBLISH_PLAYBOOK.md) secção 7.
+6. **Rollback:** não apagar tags públicas; preferir patch seguinte (ex. `v7.0.1`) ou marcar release como pre-release + nota — ver [`PUBLISH_PLAYBOOK.md`](PUBLISH_PLAYBOOK.md) secção 7.
 
 ---
 

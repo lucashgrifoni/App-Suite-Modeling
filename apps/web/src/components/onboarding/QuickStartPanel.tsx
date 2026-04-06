@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Button } from "../ui/Button";
 
 export function QuickStartPanel({
@@ -8,33 +9,37 @@ export function QuickStartPanel({
   onBlank: () => void;
   loading: boolean;
 }>) {
+  const { t } = useTranslation();
+
   return (
     <div className="grid gap-3 sm:grid-cols-3">
       <div className="rounded-otm-md border border-otm-border bg-otm-surface-1/80 p-4">
-        <p className="text-xs font-semibold uppercase tracking-wider text-otm-text-subtle">Rápido</p>
-        <p className="mt-1 font-display text-sm font-semibold text-otm-text">Modelo em branco</p>
-        <p className="mt-1 text-xs text-otm-text-muted">API cria documento canónico; edita no assistente.</p>
+        <p className="text-xs font-semibold uppercase tracking-wider text-otm-text-subtle">{t("quickStart.fast")}</p>
+        <p className="mt-1 font-display text-sm font-semibold text-otm-text">{t("quickStart.blankTitle")}</p>
+        <p className="mt-1 text-xs text-otm-text-muted">{t("quickStart.blankDesc")}</p>
         <Button className="mt-3 w-full" disabled={loading} onClick={onBlank}>
-          {loading ? "A criar…" : "Iniciar modelo em branco"}
+          {loading ? t("quickStart.blankCtaLoading") : t("quickStart.blankCta")}
         </Button>
       </div>
       <div className="rounded-otm-md border border-otm-border bg-otm-surface-1/80 p-4">
-        <p className="text-xs font-semibold uppercase tracking-wider text-otm-text-subtle">Infra como código</p>
-        <p className="mt-1 font-display text-sm font-semibold text-otm-text">Importar artefacto</p>
-        <p className="mt-1 text-xs text-otm-text-muted">Inferências explícitas — revê antes da análise.</p>
+        <p className="text-xs font-semibold uppercase tracking-wider text-otm-text-subtle">{t("quickStart.infra")}</p>
+        <p className="mt-1 font-display text-sm font-semibold text-otm-text">{t("quickStart.importTitle")}</p>
+        <p className="mt-1 text-xs text-otm-text-muted">{t("quickStart.importDesc")}</p>
         <Link to="/import" className="mt-3 block">
           <Button variant="secondary" className="w-full">
-            Ir para importação
+            {t("quickStart.importBtn")}
           </Button>
         </Link>
       </div>
       <div className="rounded-otm-md border border-otm-border bg-otm-surface-1/80 p-4">
-        <p className="text-xs font-semibold uppercase tracking-wider text-otm-text-subtle">Acelerador</p>
-        <p className="mt-1 font-display text-sm font-semibold text-otm-text">Template</p>
-        <p className="mt-1 text-xs text-otm-text-muted">Ponto de partida com componentes típicos.</p>
+        <p className="text-xs font-semibold uppercase tracking-wider text-otm-text-subtle">
+          {t("quickStart.accelerator")}
+        </p>
+        <p className="mt-1 font-display text-sm font-semibold text-otm-text">{t("quickStart.templateTitle")}</p>
+        <p className="mt-1 text-xs text-otm-text-muted">{t("quickStart.templateDesc")}</p>
         <Link to="/templates" className="mt-3 block">
           <Button variant="secondary" className="w-full">
-            Ver templates
+            {t("quickStart.templateBtn")}
           </Button>
         </Link>
       </div>

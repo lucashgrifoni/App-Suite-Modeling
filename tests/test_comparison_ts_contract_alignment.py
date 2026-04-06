@@ -34,7 +34,7 @@ def test_comparison_result_model_includes_ts_contract_fields() -> None:
 
 
 def test_comparison_meta_semantic_keys_stable() -> None:
-    """Garante que chaves de meta usadas na UI/export continuam no modelo dict livre."""
+    """Garante que chaves de meta usadas na UI/export permanecem estáveis (raiz fechada + `extensions`)."""
     # enrich_comparison_meta devolve estes keys; falha se renomear sem actualizar TS/CLI/markdown.
     from pathlib import Path
 
@@ -63,4 +63,4 @@ def test_comparison_meta_semantic_keys_stable() -> None:
         "interpretation_disclaimer",
     ):
         assert key in meta, f"meta missing stable key {key}"
-    assert meta.get("semantic_insights_version") == "1.4"
+    assert meta.get("semantic_insights_version") == "1.5"

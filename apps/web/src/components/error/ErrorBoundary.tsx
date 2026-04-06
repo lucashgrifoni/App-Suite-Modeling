@@ -1,4 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
+import i18n from "../../i18n/i18n";
 import { Button } from "../ui/Button";
 
 interface Props {
@@ -38,17 +39,17 @@ export class ErrorBoundary extends Component<Props, State> {
           className="rounded-otm-xl border border-red-500/30 bg-red-950/40 px-6 py-8 text-center shadow-otm-md"
           role="alert"
         >
-          <p className="font-display text-lg font-semibold text-red-100">Algo correu mal na interface</p>
+          <p className="font-display text-lg font-semibold text-red-100">{i18n.t("errorBoundary.title")}</p>
           <p className="mt-2 text-sm text-red-200/90">
-            {this.state.error.message || "Erro inesperado ao renderizar este ecrã."}
+            {this.state.error.message || i18n.t("errorBoundary.fallback")}
           </p>
           <div className="mt-6 flex flex-wrap justify-center gap-2">
             <Button type="button" onClick={this.reload}>
-              Recarregar página
+              {i18n.t("errorBoundary.reload")}
             </Button>
             <a href="/">
               <Button variant="secondary" type="button">
-                Voltar ao início
+                {i18n.t("errorBoundary.home")}
               </Button>
             </a>
           </div>

@@ -12,6 +12,13 @@ from otm_core_schema import FrameworkRef, ThreatModelDocument
 from otm_framework_mappings import framework_display_name
 from otm_threat_engine import AnalysisResult
 
+from otm_exporters.analysis_markdown_i18n import (
+    AnalysisMarkdownMessages,
+    analysis_markdown_messages,
+    risk_category_key,
+    risk_category_title,
+)
+
 
 def _target_of(h) -> str:
     return h.target_component_id or h.target_data_flow_id or "—"
@@ -172,125 +179,96 @@ def _build_harmonized(active: list) -> tuple[list, int, dict[str, int]]:
     return harmonized, suppressed, suppressed_by_cluster
 
 
-def _risk_category(h) -> str:
-    """Categorias funcionais (curtas) para coesão narrativa no Markdown."""
-    t = f"{h.id} {h.title} {h.description}".lower()
-    if _is_business_specific(h):
-        if any(
-            k in t
-            for k in (
-                "economic_fraud",
-                "coupon",
-                "cupom",
-                "discount",
-                "billing",
-                "entitlement",
-                "premium",
-            )
-        ):
-            return "Fraude econômica"
-        if "state_inconsistency" in t or any(
-            k in t for k in ("out_of_order", "regression", "inconsist", "cancel")
-        ):
-            return "Inconsistência de estado"
-        return "Abuso de processo / lógica de negócio"
-    return "Técnico clássico (STRIDE)"
-
-
-def _append_risk_categories_block(lines: list[str], harmonized: list, *, top_n: int = 2) -> None:
+def _append_risk_categories_block(
+    lines: list[str],
+    harmonized: list,
+    *,
+    top_n: int,
+    msgs: AnalysisMarkdownMessages,
+) -> None:
     if _markdown_view_mode() != "harmonized":
         return
     if not harmonized:
         return
-    cats = [
-        "Fraude econômica",
-        "Abuso de processo / lógica de negócio",
-        "Inconsistência de estado",
-        "Técnico clássico (STRIDE)",
-    ]
-    buckets: dict[str, list] = {c: [] for c in cats}
+    order = ("economic", "abuse", "state", "stride")
+    buckets: dict[str, list] = {k: [] for k in order}
     for h in sorted(harmonized, key=_priority_score, reverse=True):
-        c = _risk_category(h)
-        if c in buckets and len(buckets[c]) < top_n:
-            buckets[c].append(h)
-    if not any(buckets[c] for c in cats):
+        k = risk_category_key(h)
+        if k in buckets and len(buckets[k]) < top_n:
+            buckets[k].append(h)
+    if not any(buckets[k] for k in order):
         return
-    lines.append("### Categorias de risco (top)")
+    lines.append(msgs.risk_categories_title)
     lines.append("")
-    lines.append(
-        "Bloco curto para leitura humana; a lista completa permanece abaixo "
-        "(com rastreabilidade no JSON)."
-    )
+    lines.append(msgs.risk_categories_blurb)
     lines.append("")
-    for c in cats:
-        items = buckets[c]
+    for key in order:
+        items = buckets[key]
         if not items:
             continue
-        lines.append(f"#### {c}")
+        lines.append(f"#### {risk_category_title(key, msgs)}")
         lines.append("")
         for h in items:
             tgt = _target_of(h)
             sc = h.risk.score if h.risk.score is not None else "—"
-            lines.append(f"- {h.title} (`{h.id}`) em `{tgt}` — score {sc}")
+            lines.append(
+                f"- {h.title} (`{h.id}`) {msgs.risk_item_in_target} `{tgt}` — score {sc}"
+            )
         lines.append("")
 
 
-def _append_root_cause_recommendations(lines: list[str], active: list) -> None:
+def _append_root_cause_recommendations(
+    lines: list[str],
+    active: list,
+    msgs: AnalysisMarkdownMessages,
+) -> None:
     text = " ".join(f"{h.id} {h.title} {h.description}".lower() for h in active)
     recs: list[str] = []
     if any(k in text for k in ("webhook", "replay", "idempot")):
-        recs.append(
-            "Padronizar idempotência por `event_id/request_id` e bloquear replay "
-            "com armazenamento de eventos processados."
-        )
+        recs.append(msgs.rec_webhook)
     if any(k in text for k in ("owner", "entitlement", "payment")):
-        recs.append(
-            "Exigir correlação `payment -> owner -> plano -> entitlement` antes de ativação "
-            "de benefício."
-        )
+        recs.append(msgs.rec_payment)
     if any(k in text for k in ("cancel", "revoga", "revog")):
-        recs.append(
-            "Aplicar revogação atômica de entitlement no cancelamento com reconciliação "
-            "periódica de estado."
-        )
+        recs.append(msgs.rec_cancel)
     if any(k in text for k in ("coupon", "cupom", "discount", "desconto")):
-        recs.append(
-            "Aplicar política anti-abuso de cupom: unicidade por owner/período, "
-            "anti-stacking e anti-reuso."
-        )
+        recs.append(msgs.rec_coupon)
     if any(k in text for k in ("authorization", "autorizacao", "ownership", "vínculo", "vinculo")):
-        recs.append(
-            "Implementar autorização contextual (ownership, vínculo e escopo econômico), "
-            "além de autenticação técnica."
-        )
+        recs.append(msgs.rec_auth)
     if not recs:
         return
-    lines.append("### Recomendações consolidadas por causa raiz")
+    lines.append(msgs.consolidated_recs_title)
     lines.append("")
     for r in recs:
         lines.append(f"- {r}")
     lines.append("")
 
 
-def _format_framework_refs_compact(refs: list[FrameworkRef], *, max_items: int = 8) -> str:
+def _format_framework_refs_compact(
+    refs: list[FrameworkRef],
+    msgs: AnalysisMarkdownMessages,
+    *,
+    max_items: int = 8,
+) -> str:
     if not refs:
-        return "—"
+        return msgs.ref_none
     parts = [f"`{r.framework}:{r.control_id}`" for r in refs[:max_items]]
     if len(refs) > max_items:
-        parts.append(f"… (+{len(refs) - max_items})")
+        parts.append(msgs.ref_more.format(n=len(refs) - max_items))
     return ", ".join(parts)
 
 
-def _append_framework_aggregate(lines: list[str], result: AnalysisResult) -> None:
+def _append_framework_aggregate(
+    lines: list[str],
+    result: AnalysisResult,
+    msgs: AnalysisMarkdownMessages,
+) -> None:
     s = result.summary
     if not s.framework_ref_counts_by_catalog:
         return
     lines.append("")
-    lines.append("### Referências a frameworks (agregado)")
+    lines.append(msgs.framework_agg_title)
     lines.append("")
-    lines.append(
-        "Contagem de referências `framework:control_id` nas heurísticas (por catálogo canónico):"
-    )
+    lines.append(msgs.framework_agg_intro)
     lines.append("")
     for fw, n in sorted(s.framework_ref_counts_by_catalog.items()):
         label = framework_display_name(fw)
@@ -304,78 +282,78 @@ def _append_heuristic_block(
     *,
     suppressed: int,
     max_heuristic_rows: int,
+    msgs: AnalysisMarkdownMessages,
 ) -> None:
     if not harmonized:
         return
-    lines.append("### Ameaças sugeridas (harmonizadas)")
+    lines.append(msgs.threats_harmonized_title)
     lines.append("")
-    lines.append(
-        "Visualização priorizada por especificidade (`biz_*`) com redução de redundância semântica."
-    )
+    lines.append(msgs.threats_harmonized_blurb)
     lines.append("")
     for h in harmonized[:max_heuristic_rows]:
         tgt = _target_of(h)
         sc = h.risk.score if h.risk.score is not None else "—"
-        refs = _format_framework_refs_compact(h.framework_refs)
+        refs = _format_framework_refs_compact(h.framework_refs, msgs)
         lines.append(
-            f"- **{h.title}** (`{h.id}`) → alvo `{tgt}` — score {sc}  \n  - Frameworks: {refs}"
+            f"- **{h.title}** (`{h.id}`) → {msgs.threat_target_label} `{tgt}` — score {sc}  \n"
+            f"  - {msgs.threat_line_fw_label}: {refs}"
         )
     if len(harmonized) > max_heuristic_rows:
-        lines.append(f"\n… e mais {len(harmonized) - max_heuristic_rows} entradas.")
+        lines.append(msgs.more_entries.format(n=len(harmonized) - max_heuristic_rows))
     if suppressed > 0:
-        lines.append(
-            f"\nNotas de harmonização: {suppressed} "
-            "achados STRIDE genéricos foram ocultados nesta visão "
-            "por sobreposição com achados específicos `biz_*` "
-            "(rastreáveis no JSON)."
-        )
+        lines.append(msgs.harmonization_notes.format(suppressed=suppressed))
     lines.append("")
 
 
-def _append_plot4ai_ai_context_block(lines: list[str], result: AnalysisResult) -> None:
+def _append_plot4ai_ai_context_block(
+    lines: list[str],
+    result: AnalysisResult,
+    msgs: AnalysisMarkdownMessages,
+) -> None:
     ctx = result.ai_system_context
     if result.methodology.value != "plot4ai" or ctx is None:
         return
-    lines.append("### PLOT4ai — relatório de contexto IA")
+    lines.append(msgs.plot4ai_title)
     lines.append("")
     lines.append(ctx.synopsis)
     lines.append("")
     if ctx.pattern_tags:
-        lines.append(f"- **Padrões (heurístico):** {', '.join(ctx.pattern_tags)}")
+        lines.append(f"{msgs.plot_patterns} {', '.join(ctx.pattern_tags)}")
     if ctx.primary_risk_surfaces:
-        lines.append("- **Superfícies de risco:**")
+        lines.append(msgs.plot_surfaces)
         for p in ctx.primary_risk_surfaces[:6]:
             lines.append(f"  - {p}")
     if ctx.prioritized_recommendations:
-        lines.append("- **Recomendações prioritárias:**")
+        lines.append(msgs.plot_recs)
         for rec in ctx.prioritized_recommendations[:7]:
             lines.append(f"  - {rec}")
     if ctx.sensitive_data_notes:
-        lines.append("- **Dados sensíveis / contexto:**")
+        lines.append(msgs.plot_sensitive)
         for n in ctx.sensitive_data_notes[:5]:
             lines.append(f"  - {n}")
     if ctx.heuristic_ids_by_layer:
-        lines.append("- **Agrupamento por camada (`plot4ai_*`):**")
+        lines.append(msgs.plot_layer_group)
         for lid, hid in list(ctx.heuristic_ids_by_layer.items())[:10]:
             preview = ", ".join(hid[:5])
             tail = "…" if len(hid) > 5 else ""
             lines.append(f"  - `{lid}`: {preview}{tail}")
     lines.append("")
-    lines.append(
-        "Interpretação: sinais derivam do texto e da estrutura do modelo OTM — "
-        "validar sempre com arquitectura e artefactos reais."
-    )
+    lines.append(msgs.plot4ai_footer)
     lines.append("")
 
 
-def _append_methodology_insights_block(lines: list[str], result: AnalysisResult) -> None:
+def _append_methodology_insights_block(
+    lines: list[str],
+    result: AnalysisResult,
+    msgs: AnalysisMarkdownMessages,
+) -> None:
     insights = result.methodology_insights
     if not insights or not insights.blocks:
         return
-    lines.append("### Insights metodológicos")
+    lines.append(msgs.methodology_insights_title)
     lines.append("")
     if insights.profile:
-        lines.append(f"- Perfil: **{insights.profile}**")
+        lines.append(f"{msgs.profile_prefix} **{insights.profile}**")
         lines.append("")
     for b in insights.blocks:
         lines.append(f"#### {b.title}")
@@ -391,105 +369,136 @@ def _append_executive_summary_from_harmonized(
     *,
     active: list,
     harmonized: list,
+    msgs: AnalysisMarkdownMessages,
 ) -> None:
     s = result.summary
     top = sorted(harmonized, key=_priority_score, reverse=True)[:3]
-    lines.append("### Resumo executivo")
+    lines.append(msgs.exec_summary_title)
     lines.append("")
     lines.append(
-        f"- Total de ameaças ativas: **{len(active)}** · "
-        f"Maior score: **{s.max_risk_score if s.max_risk_score is not None else '—'}**"
+        msgs.total_active_line.format(
+            active=len(active),
+            max_score=s.max_risk_score if s.max_risk_score is not None else "—",
+        )
     )
-    lines.append(f"- Metodologia aplicada: **{result.methodology.value}**")
+    lines.append(f"{msgs.methodology_applied} **{result.methodology.value}**")
     if top:
-        lines.append("- Prioridade imediata:")
+        lines.append(msgs.immediate_priority)
         for h in top:
-            tgt = _target_of(h) or "escopo geral"
-            lines.append(f"  - {h.title} (score {h.risk.score}) em `{tgt}`")
+            tgt = _target_of(h) or msgs.scope_general
+            lines.append(
+                msgs.priority_item.format(
+                    title=h.title,
+                    score=h.risk.score,
+                    tgt=tgt,
+                    prep=msgs.risk_item_in_target,
+                )
+            )
     lines.append("")
 
 
-def _append_explainability_compact(lines: list[str], result: AnalysisResult, *, max_items: int = 12) -> None:
+def _append_explainability_compact(
+    lines: list[str],
+    result: AnalysisResult,
+    *,
+    max_items: int,
+    msgs: AnalysisMarkdownMessages,
+) -> None:
     """Secção curta: não duplica o JSON completo de `explanations`."""
     if not result.explanations:
         return
-    lines.append("### Explicabilidade (resumo)")
+    lines.append(msgs.explain_title)
     lines.append("")
-    lines.append(
-        "Motivos estruturados gerados pelo motor (metodologia, achados, risco). "
-        "Detalhe completo no JSON do resultado."
-    )
+    lines.append(msgs.explain_blurb)
     lines.append("")
     for ex in result.explanations[:max_items]:
         cat = getattr(ex.category, "value", ex.category)
         typ = getattr(ex.type, "value", ex.type)
         lines.append(f"- **[{typ}/{cat}]** {ex.subject} — {ex.message}")
     if len(result.explanations) > max_items:
-        lines.append(f"\n… e mais {len(result.explanations) - max_items} entradas no JSON.")
+        lines.append(msgs.explain_more.format(n=len(result.explanations) - max_items))
     lines.append("")
 
 
-def _append_guided_context_and_audit(lines: list[str], result: AnalysisResult) -> None:
+def _append_guided_context_and_audit(
+    lines: list[str],
+    result: AnalysisResult,
+    msgs: AnalysisMarkdownMessages,
+) -> None:
     """Propaga notas do assistente, audit trail, lacunas do pré-check e anti-padrões (fora da UI)."""
     pq = result.model_quality_precheck
     mc = result.methodology_completeness
     if pq is not None or mc is not None:
-        lines.append("### Qualidade do modelo e metodologia (resumo)")
+        lines.append(msgs.quality_title)
         lines.append("")
         if pq is not None:
             lines.append(
-                f"- **Pré-check:** score **{pq.score_0_100}/100** (banda `{pq.band}`) · "
-                f"confiança nas recomendações: `{pq.recommendation_confidence}` · "
-                f"fit STRIDE: `{pq.methodology_fit_matrix.get('stride', pq.methodology_fit)}`."
+                msgs.precheck_line.format(
+                    score=pq.score_0_100,
+                    band=pq.band,
+                    conf=pq.recommendation_confidence,
+                    fit=pq.methodology_fit_matrix.get("stride", pq.methodology_fit),
+                )
             )
         if mc is not None:
             reasons = "; ".join(mc.reasons[:3]) if mc.reasons else "—"
             note = mc.note or ""
+            note_suffix = f" · _{note}_" if note else ""
             lines.append(
-                f"- **Completude metodológica:** `{mc.state.value}` — {reasons}"
-                + (f" · _{note}_" if note else "")
+                msgs.completeness_line.format(
+                    state=mc.state.value,
+                    reasons=reasons,
+                    note=note_suffix,
+                )
             )
         lines.append("")
 
     if result.wizard_context_notes:
-        lines.append("### Contexto do assistente (modelação guiada)")
+        lines.append(msgs.wizard_context_title)
         lines.append("")
-        lines.append("Notas derivadas de respostas `wz:` alinhadas ao perfil semântico do modelo.")
+        lines.append(msgs.wizard_context_blurb)
         lines.append("")
         for note in result.wizard_context_notes[:8]:
             lines.append(f"- {note}")
         lines.append("")
 
     if result.wizard_signal_trace:
-        lines.append("### Rastreabilidade do assistente (audit trail)")
+        lines.append(msgs.audit_title)
         lines.append("")
-        lines.append(
-            "Ligação compacta entre declarações no questionário e efeitos no motor (ranking, corpus, observações)."
-        )
+        lines.append(msgs.audit_blurb)
         lines.append("")
         for entry in result.wizard_signal_trace[:12]:
             areas = ", ".join(entry.impact_areas) if entry.impact_areas else "—"
             lines.append(
-                f"- `{entry.source_tag}` — **{entry.effect}** ({entry.weight}; {entry.mechanism}) → "
-                f"{areas}: {entry.explanation}"
+                msgs.audit_entry.format(
+                    tag=entry.source_tag,
+                    effect=entry.effect,
+                    weight=entry.weight,
+                    mechanism=entry.mechanism,
+                    areas=areas,
+                    explanation=entry.explanation,
+                )
             )
         lines.append("")
 
     if pq and pq.checks:
         failed = [c for c in pq.checks if not c.passed][:6]
         if failed:
-            lines.append("### Lacunas do modelo (pré-check)")
+            lines.append(msgs.model_gaps_title)
             lines.append("")
             for c in failed:
                 lines.append(f"- [{c.code}] {c.message}")
             lines.append("")
 
     if result.anti_pattern_hits:
-        lines.append("### Anti-padrões de modelagem (destaque)")
+        lines.append(msgs.anti_patterns_title)
         lines.append("")
         for hit in result.anti_pattern_hits[:10]:
             conf = getattr(hit, "confidence_hint", None) or "medium"
-            lines.append(f"- **{hit.name}** (`{hit.id}`) · confiança _{conf}_ — {hit.message}")
+            lines.append(
+                f"- **{hit.name}** (`{hit.id}`)"
+                f"{msgs.anti_pattern_confidence.format(conf=conf)}{hit.message}"
+            )
         lines.append("")
 
 
@@ -498,100 +507,113 @@ def _append_next_steps_from_harmonized(
     result: AnalysisResult,
     *,
     harmonized: list,
+    msgs: AnalysisMarkdownMessages,
 ) -> None:
     top = sorted(harmonized, key=_priority_score, reverse=True)[:5]
-    lines.append("### Próximos passos sugeridos")
+    lines.append(msgs.next_steps_title)
     lines.append("")
     if not top:
-        lines.append("- Sem ameaças ativas de alta prioridade nesta execução.")
+        lines.append(msgs.next_no_high_priority)
         lines.append("")
         return
-    lines.append("- Validar os 3 maiores riscos em workshop curto com engenharia e segurança.")
-    lines.append("- Converter os achados críticos em backlog com owner e prazo.")
-    lines.append(
-        "- Revisar controles de acesso, integridade de fluxo e proteção de dados sensíveis."
-    )
-    _append_root_cause_recommendations(lines, top)
+    lines.append(msgs.next_workshop)
+    lines.append(msgs.next_backlog)
+    lines.append(msgs.next_controls)
+    _append_root_cause_recommendations(lines, top, msgs)
     if result.methodology_insights and result.methodology_insights.profile:
         lines.append(
-            f"- Usar os insights do perfil **{result.methodology_insights.profile}** "
-            "para priorização contextual."
+            msgs.next_use_insights.format(profile=result.methodology_insights.profile)
         )
     lines.append("")
 
 
-def export_analysis_markdown(result: AnalysisResult, *, max_heuristic_rows: int = 50) -> str:
+def export_analysis_markdown(
+    result: AnalysisResult,
+    *,
+    max_heuristic_rows: int = 50,
+    locale: str | None = None,
+) -> str:
     """
     Relatório da análise heurística: totais, frameworks, achados e ameaças sugeridas.
     Não inclui o documento canónico — use `export_document_and_analysis_markdown`
     para o pacote completo.
     """
+    msgs = analysis_markdown_messages(locale)
     s = result.summary
     lines: list[str] = [
-        "## Análise automática (motor)",
+        msgs.heading_automatic,
         "",
-        f"- Versão do motor: `{result.engine_version}`",
-        f"- Metodologia: `{result.methodology.value}`",
+        f"{msgs.bullet_engine} `{result.engine_version}`",
+        f"{msgs.bullet_methodology} `{result.methodology.value}`",
     ]
     if result.methodology_recommendation_reason:
-        lines.append(f"- Recomendação aplicada: {result.methodology_recommendation_reason}")
+        lines.append(f"{msgs.bullet_recommendation} {result.methodology_recommendation_reason}")
     if result.industry_pack_id:
-        lines.append(f"- Industry pack: `{result.industry_pack_id}`")
+        lines.append(f"{msgs.bullet_industry_pack} `{result.industry_pack_id}`")
     lines.extend(
         [
-            f"- Avisos estruturais: {s.structural_findings}",
-            f"- Achados de fronteira: {s.trust_boundary_findings}",
-            f"- Heurísticas base novas: {s.heuristic_threats_generated}",
-            f"- Heurísticas base já cobertas: {s.heuristic_threats_skipped_duplicate}",
-            f"- Ameaças do pack (novas): {s.pack_threats_generated}",
-            f"- Ameaças do pack (já cobertas): {s.pack_threats_skipped_duplicate}",
+            f"{msgs.bullet_structural} {s.structural_findings}",
+            f"{msgs.bullet_trust_boundary} {s.trust_boundary_findings}",
+            f"{msgs.bullet_heuristic_new} {s.heuristic_threats_generated}",
+            f"{msgs.bullet_heuristic_covered} {s.heuristic_threats_skipped_duplicate}",
+            f"{msgs.bullet_pack_new} {s.pack_threats_generated}",
+            f"{msgs.bullet_pack_covered} {s.pack_threats_skipped_duplicate}",
         ]
     )
     if s.max_risk_score is not None:
-        lines.append(f"- Maior score heurístico (L×I): **{s.max_risk_score}**")
-    _append_framework_aggregate(lines, result)
+        lines.append(f"{msgs.bullet_max_score} **{s.max_risk_score}**")
+    _append_framework_aggregate(lines, result, msgs)
     lines.append("")
     if result.pack_control_hints:
-        lines.append("### Controlo sugerido (pack)")
+        lines.append(msgs.pack_control_title)
         lines.append("")
         for hint in result.pack_control_hints:
             lines.append(f"- {hint}")
         lines.append("")
     if result.structural_findings:
-        lines.append("### Avisos estruturais")
+        lines.append(msgs.section_structural)
         lines.append("")
         for f in result.structural_findings:
             lines.append(f"- [{f.severity}] {f.message}")
         lines.append("")
     if result.trust_boundary_findings:
-        lines.append("### Fluxos entre fronteiras")
+        lines.append(msgs.section_trust_flows)
         lines.append("")
         for f in result.trust_boundary_findings:
             lines.append(f"- {f.message}")
         lines.append("")
-    _append_guided_context_and_audit(lines, result)
+    _append_guided_context_and_audit(lines, result, msgs)
     active = _active_threats(result)
     harmonized, suppressed, _ = _build_harmonized(active)
-    _append_executive_summary_from_harmonized(lines, result, active=active, harmonized=harmonized)
-    _append_methodology_insights_block(lines, result)
-    _append_plot4ai_ai_context_block(lines, result)
-    _append_risk_categories_block(lines, harmonized, top_n=2)
+    _append_executive_summary_from_harmonized(
+        lines, result, active=active, harmonized=harmonized, msgs=msgs
+    )
+    _append_methodology_insights_block(lines, result, msgs)
+    _append_plot4ai_ai_context_block(lines, result, msgs)
+    _append_risk_categories_block(lines, harmonized, top_n=2, msgs=msgs)
     _append_heuristic_block(
         lines,
         harmonized,
         suppressed=suppressed,
         max_heuristic_rows=max_heuristic_rows,
+        msgs=msgs,
     )
-    _append_explainability_compact(lines, result)
-    _append_next_steps_from_harmonized(lines, result, harmonized=harmonized)
+    _append_explainability_compact(lines, result, max_items=12, msgs=msgs)
+    _append_next_steps_from_harmonized(lines, result, harmonized=harmonized, msgs=msgs)
     return "\n".join(lines)
 
 
 def export_document_and_analysis_markdown(
     doc: ThreatModelDocument,
     result: AnalysisResult,
+    *,
+    locale: str | None = None,
 ) -> str:
     """Concatena Markdown do documento e da análise (atalho para relatórios)."""
     from otm_exporters.document_markdown import export_document_markdown
 
-    return export_document_markdown(doc) + "\n" + export_analysis_markdown(result)
+    return (
+        export_document_markdown(doc, locale=locale)
+        + "\n"
+        + export_analysis_markdown(result, locale=locale)
+    )

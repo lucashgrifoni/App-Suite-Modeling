@@ -73,21 +73,24 @@ def export_comparison_markdown(result: ThreatModelComparisonResult) -> str:
         lines.extend(
             [
                 "",
-                "### Correspondência ref → interpretação (v1.4)",
+                "### Correspondência ref → interpretação (v1.5)",
                 "",
                 (
-                    "_`lexical_token_overlap` ou `entity_topic_correlation`; "
-                    "força inferencial sempre «low» — sem causalidade provada._"
+                    "_Cada linha inclui `anchoring_rationale`. `inference_strength=medium` só com ≥2 tokens "
+                    "lexicais; tópico = `low`. Sem causalidade provada._"
                 ),
                 "",
             ]
         )
         for item in links[:16]:
             tok = ", ".join(item.shared_tokens) if item.shared_tokens else "—"
+            rationale = (item.anchoring_rationale or "").replace("\n", " ")
             lines.append(
                 f"- `{item.structural_ref}` → **{item.related_section}** "
                 f"(`{item.link_kind}`, {item.inference_strength}; tokens: {tok}): {item.summary}"
             )
+            if rationale:
+                lines.append(f"  - _Porquê:_ {rationale}")
         lines.append("")
     si = meta.semantic_insights
     if si:

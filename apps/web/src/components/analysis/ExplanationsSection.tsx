@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Label } from "../ui/Label";
 import { Select } from "../ui/Select";
 import type { AnalysisResult } from "../../types/api";
@@ -15,21 +16,20 @@ export function ExplanationsSection({
   visibleExplanations: NonNullable<AnalysisResult["explanations"]>;
   explanationCategories: string[];
 }>) {
+  const { t } = useTranslation();
   if (!analysis.explanations?.length) return null;
   return (
     <details className="rounded-otm-lg border border-otm-border bg-otm-surface-2/80 p-4 text-sm text-otm-text">
-      <summary className="cursor-pointer font-medium">Explicabilidade do resultado</summary>
-      <p className="mt-2 text-xs text-otm-text-muted">
-        Motivos estruturados gerados pelo motor (máx. 8 linhas; o JSON completo tem o resto).
-      </p>
+      <summary className="cursor-pointer font-medium">{t("explanations.sectionTitle")}</summary>
+      <p className="mt-2 text-xs text-otm-text-muted">{t("explanations.sectionBody")}</p>
       <div className="mt-2 max-w-xs">
-        <Label htmlFor="expCategory">Categoria</Label>
+        <Label htmlFor="expCategory">{t("explanations.category")}</Label>
         <Select
           id="expCategory"
           value={explanationCategoryFilter}
           onChange={(e) => onExplanationCategoryChange(e.target.value)}
         >
-          <option value="">Todas</option>
+          <option value="">{t("explanations.allCategories")}</option>
           {explanationCategories.map((c) => (
             <option key={c} value={c}>
               {c}
@@ -45,7 +45,7 @@ export function ExplanationsSection({
         ))}
       </ul>
       {visibleExplanations.length === 0 ? (
-        <p className="mt-2 text-xs text-otm-text-subtle">Sem explicações para esta categoria.</p>
+        <p className="mt-2 text-xs text-otm-text-subtle">{t("explanations.emptyCategory")}</p>
       ) : null}
     </details>
   );

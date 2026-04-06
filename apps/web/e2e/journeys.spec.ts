@@ -191,9 +191,10 @@ test("jornada diff enriquecido: semantic panel + refs estruturais", async ({ pag
         },
         key_insights: ["E2E: componente novo no perímetro."],
         meta: {
-          comparison_contract_version: "1.4",
+          comparison_contract_version: "1.5",
           semantic_insights: ["Novo componente no grafo — rever superfície."],
-          semantic_insights_version: "1.4",
+          semantic_insights_version: "1.5",
+          extensions: {},
           semantic_diff_sections: {
             structural_change_summary: ["Componentes: +1 / −0 / ~0"],
             improved: [],
@@ -215,7 +216,9 @@ test("jornada diff enriquecido: semantic panel + refs estruturais", async ({ pag
               related_section: "risk_impact",
               summary: "Superfície de gateway alterada no diff E2E.",
               link_kind: "lexical_token_overlap",
-              inference_strength: "low",
+              inference_strength: "medium",
+              anchoring_rationale:
+                "Vários tokens em comum entre a nota da ref estrutural e o bullet (gateway, perímetro).",
               shared_tokens: ["gateway", "perímetro"],
               entity_kind: "component",
             },

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "open-threat-model"
-version = "7.0.0"
+version = "7.1.0"
 description = "Plataforma open source de Threat Modeling as Code (core, API, CLI, UI)."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -17,8 +17,8 @@ dependencies = [
 
 [project.optional-dependencies]
 api = [
-  "fastapi>=0.109",
-  "python-multipart>=0.0.9",
+  "fastapi>=0.115",
+  "python-multipart>=0.0.18",
   "uvicorn[standard]>=0.27",
   "sqlalchemy>=2.0",
 ]
@@ -31,6 +31,7 @@ dev = [
   "httpx>=0.26",
   "ruff>=0.3",
   "mypy>=1.8",
+  "types-PyYAML>=6.0.12",
   "xhtml2pdf>=0.2.15",
 ]
 # AST leve opcional para `scan_node_express_repo` (env `OTM_REPO_ESPRIMA=1`). Sem isto, mantém-se só heurística regex.
@@ -87,6 +88,13 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP"]
+
+[tool.mypy]
+python_version = "3.11"
+warn_unused_ignores = true
+show_error_codes = true
+# Pacotes irmãos sem stubs: foco inicial em core-schema + API; expandir gradualmente.
+ignore_missing_imports = true
 
 [tool.ruff.lint.per-file-ignores]
 # Mensagens de inferência e docstrings PT-PT tendem a ultrapassar 100 carateres.

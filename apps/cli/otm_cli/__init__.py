@@ -1,1 +1,1 @@
-"""CLI de primeira classe — comandos finos sobre o core compartilhado."""
+"""First-class CLI — thin commands over the shared core."""

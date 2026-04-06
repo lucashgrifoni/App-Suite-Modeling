@@ -1,11 +1,16 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 from fastapi import HTTPException, status
 from otm_core_schema import ThreatModelDocument
 from pydantic import ValidationError as PydanticValidationError
 
+from otm_api.api_error_messages import (
+    msg_analysis_validation_error,
+    msg_document_validation_error,
+    msg_template_invalid,
+)
 from otm_api.services.documents import document_from_payload
 
 
@@ -27,8 +32,8 @@ def raise_document_validation_error(exc: PydanticValidationError) -> HTTPExcepti
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         detail=error_detail(
             code="DOCUMENT_VALIDATION_ERROR",
-            message="The document does not satisfy the canonical schema.",
-            errors=exc.errors(),
+            message=msg_document_validation_error(),
+            errors=cast(list[dict[str, Any]], exc.errors()),
         ),
     )
 
@@ -39,8 +44,8 @@ def raise_analysis_validation_error(exc: PydanticValidationError) -> HTTPExcepti
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         detail=error_detail(
             code="ANALYSIS_VALIDATION_ERROR",
-            message="The analysis field is not a valid AnalysisResult.",
-            errors=exc.errors(),
+            message=msg_analysis_validation_error(),
+            errors=cast(list[dict[str, Any]], exc.errors()),
         ),
     )
 
@@ -67,8 +72,8 @@ def raise_template_invalid(exc: PydanticValidationError) -> HTTPException:
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         detail=error_detail(
             code="TEMPLATE_INVALID",
-            message="The template does not produce a valid canonical document.",
-            errors=exc.errors(),
+            message=msg_template_invalid(),
+            errors=cast(list[dict[str, Any]], exc.errors()),
         ),
     )
 

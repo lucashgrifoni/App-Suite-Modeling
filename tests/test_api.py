@@ -28,6 +28,19 @@ def test_health(client: TestClient) -> None:
     assert r.json() == {"status": "ok"}
 
 
+def test_x_request_id_echo(client: TestClient) -> None:
+    r = client.get("/health", headers={"X-Request-ID": "trace-cli-e2e"})
+    assert r.status_code == 200
+    assert r.headers.get("x-request-id") == "trace-cli-e2e"
+
+
+def test_x_request_id_generated(client: TestClient) -> None:
+    r = client.get("/health")
+    assert r.status_code == 200
+    rid = r.headers.get("x-request-id")
+    assert rid and len(rid) >= 8
+
+
 def test_openapi_available(client: TestClient) -> None:
     r = client.get("/openapi.json")
     assert r.status_code == 200
@@ -81,6 +94,24 @@ def test_reports_premium_markdown(client: TestClient) -> None:
     )
     assert r.status_code == 200
     assert "Executive summary" in r.text
+
+
+def test_reports_premium_markdown_locale_en(client: TestClient) -> None:
+    doc = load_document_from_yaml_path(_MINIMAL)
+    d = doc.model_dump(mode="json", by_alias=True)
+    ar = client.post("/v1/models/analyze", json={"document": d}).json()
+    r = client.post(
+        "/v1/reports/premium",
+        json={
+            "document": d,
+            "analysis": ar,
+            "level": "executive",
+            "output_format": "markdown",
+            "locale": "en",
+        },
+    )
+    assert r.status_code == 200
+    assert "## Executive cover" in r.text
 
 
 def test_reports_premium_pdf(client: TestClient) -> None:
@@ -157,6 +188,56 @@ def test_validate_invalid_document(client: TestClient) -> None:
     assert set(detail.keys()) == {"code", "message", "errors"}
 
 
+def test_validate_invalid_document_message_pt_br_accept_language(client: TestClient) -> None:
+    r = client.post(
+        "/v1/models/validate",
+        json={"document": {"invalid": True}},
+        headers={"Accept-Language": "pt-BR"},
+    )
+    assert r.status_code == 422
+    detail = r.json()["detail"]
+    assert "não satisfaz" in detail["message"].lower()
+
+
+def test_validate_invalid_document_message_en_default(client: TestClient) -> None:
+    r = client.post("/v1/models/validate", json={"document": {"invalid": True}})
+    assert r.status_code == 422
+    assert "does not satisfy" in r.json()["detail"]["message"].lower()
+
+
+def test_validate_invalid_document_message_en_when_accept_language_unlisted(client: TestClient) -> None:
+    """Only pt* and en* map to localized messages; other tags fall back to English."""
+    r = client.post(
+        "/v1/models/validate",
+        json={"document": {"invalid": True}},
+        headers={"Accept-Language": "fr-CA, de-DE;q=0.9"},
+    )
+    assert r.status_code == 422
+    assert "does not satisfy" in r.json()["detail"]["message"].lower()
+    assert "não satisfaz" not in r.json()["detail"]["message"].lower()
+
+
+def test_request_validation_error_message_en_when_accept_language_unlisted(client: TestClient) -> None:
+    r = client.post(
+        "/v1/models/validate",
+        json={},
+        headers={"Accept-Language": "xx-Invalid, fr;q=0.8"},
+    )
+    assert r.status_code == 422
+    body = r.json()
+    assert body["code"] == "REQUEST_VALIDATION_ERROR"
+    assert "invalid" in body["message"].lower()
+    assert "inválidos" not in body["message"].lower()
+
+
+def test_request_validation_error_message_pt_br_accept_language(client: TestClient) -> None:
+    r = client.post("/v1/models/validate", json={}, headers={"Accept-Language": "pt,en;q=0.5"})
+    assert r.status_code == 422
+    body = r.json()
+    assert body["code"] == "REQUEST_VALIDATION_ERROR"
+    assert "inválidos" in body["message"].lower()
+
+
 def test_validate_missing_body_field_uses_request_validation_handler(client: TestClient) -> None:
     """Corpo que falha na validação Pydantic do FastAPI (campos em falta no envelope)."""
     r = client.post("/v1/models/validate", json={})
@@ -166,6 +247,32 @@ def test_validate_missing_body_field_uses_request_validation_handler(client: Tes
     assert body["message"]
     assert body["status"] == 422
     assert isinstance(body["errors"], list) and body["errors"]
+    assert "invalid" in body["message"].lower()
+
+
+def test_remediation_input_error_message_pt_br_accept_language(client: TestClient) -> None:
+    doc = load_document_from_yaml_path(_MINIMAL)
+    r = client.post(
+        "/v1/remediation/backlog",
+        json={"document": doc.model_dump(mode="json", by_alias=True), "run_analysis": False},
+        headers={"Accept-Language": "pt-BR"},
+    )
+    assert r.status_code == 400
+    detail = r.json()["detail"]
+    assert detail["code"] == "REMEDIATION_INPUT"
+    assert "forneça" in detail["message"].lower() or "defina" in detail["message"].lower()
+
+
+def test_remediation_input_error_message_en_default(client: TestClient) -> None:
+    doc = load_document_from_yaml_path(_MINIMAL)
+    r = client.post(
+        "/v1/remediation/backlog",
+        json={"document": doc.model_dump(mode="json", by_alias=True), "run_analysis": False},
+    )
+    assert r.status_code == 400
+    detail = r.json()["detail"]
+    assert detail["code"] == "REMEDIATION_INPUT"
+    assert "provide" in detail["message"].lower()
 
 
 def test_analyze_minimal(client: TestClient) -> None:
@@ -295,6 +402,21 @@ def test_export_mermaid(client: TestClient) -> None:
     arts = r.json()["artifacts"]
     assert "flowchart_mermaid" in arts
     assert arts["flowchart_mermaid"].startswith("flowchart LR")
+
+
+def test_export_document_markdown_locale_en(client: TestClient) -> None:
+    doc = load_document_from_yaml_path(_MINIMAL)
+    r = client.post(
+        "/v1/exports",
+        json={
+            "document": doc.model_dump(mode="json", by_alias=True),
+            "formats": ["document_markdown"],
+            "locale": "en",
+        },
+    )
+    assert r.status_code == 200
+    md = r.json()["artifacts"]["document_markdown"]
+    assert "## Components" in md
 
 
 def test_export_bundle_runs_analysis(client: TestClient) -> None:

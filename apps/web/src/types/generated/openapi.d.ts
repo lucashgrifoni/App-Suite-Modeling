@@ -800,26 +800,17 @@ export interface components {
         };
         /** Body_import_kubernetes_route_v1_imports_kubernetes_post */
         Body_import_kubernetes_route_v1_imports_kubernetes_post: {
-            /**
-             * File
-             * Format: binary
-             */
+            /** File */
             file: string;
         };
         /** Body_import_openapi_route_v1_imports_openapi_post */
         Body_import_openapi_route_v1_imports_openapi_post: {
-            /**
-             * File
-             * Format: binary
-             */
+            /** File */
             file: string;
         };
         /** Body_import_terraform_route_v1_imports_terraform_post */
         Body_import_terraform_route_v1_imports_terraform_post: {
-            /**
-             * File
-             * Format: binary
-             */
+            /** File */
             file: string;
         };
         /**
@@ -871,7 +862,8 @@ export interface components {
          * ComparisonResultMeta
          * @description Metadados semânticos do compare — chaves estáveis para OpenAPI/TS.
          *
-         *     `model_config.extra` permite chaves futuras sem quebrar clientes.
+         *     Raiz **fechada** (`extra=forbid`): evita bolha contratual genérica. Extensões experimentais
+         *     devem ir para `extensions` até serem promovidas a campos tipados.
          */
         ComparisonResultMeta: {
             /** Comparison Contract Version */
@@ -887,8 +879,13 @@ export interface components {
             semantic_interpretation_links?: components["schemas"]["SemanticInterpretationLinkModel"][];
             /** Interpretation Disclaimer */
             interpretation_disclaimer?: string | null;
-        } & {
-            [key: string]: unknown;
+            /**
+             * Extensions
+             * @description Mapa opt-in para chaves ainda não promovidas ao schema principal.
+             */
+            extensions?: {
+                [key: string]: unknown;
+            };
         };
         /** ComparisonSummary */
         ComparisonSummary: {
@@ -1063,6 +1060,11 @@ export interface components {
             analysis?: {
                 [key: string]: unknown;
             } | null;
+            /**
+             * Locale
+             * @description Idioma para texto user-facing em Markdown (pt-BR | en). Omitido = pt-BR (retrocompatível).
+             */
+            locale?: string | null;
         };
         /**
          * ExportFormat
@@ -1458,6 +1460,11 @@ export interface components {
              * @enum {string}
              */
             output_format: "markdown" | "pdf";
+            /**
+             * Locale
+             * @description Idioma dos textos estruturais do relatório (pt-BR | en). Omitido = pt-BR.
+             */
+            locale?: string | null;
         };
         /**
          * QualityCheckItem
@@ -1645,7 +1652,8 @@ export interface components {
          * SemanticInterpretationLinkModel
          * @description Liga ref estrutural a bullet interpretativo.
          *
-         *     `link_kind` e `inference_strength` deixam explícito que não há causalidade provada.
+         *     `link_kind`, `inference_strength` e `anchoring_rationale` documentam o porquê da ligação
+         *     sem afirmar causalidade operacional.
          */
         SemanticInterpretationLinkModel: {
             /** Structural Ref */
@@ -1665,11 +1673,16 @@ export interface components {
             link_kind: "lexical_token_overlap" | "entity_topic_correlation";
             /**
              * Inference Strength
-             * @description Proxy de leitura — não prova causalidade nem impacto real.
+             * @description `medium` só para sobreposição lexical com ≥2 tokens partilhados; correlação por tópico permanece `low`. Nunca implica causalidade.
              * @default low
-             * @constant
+             * @enum {string}
              */
-            inference_strength: "low";
+            inference_strength: "low" | "medium";
+            /**
+             * Anchoring Rationale
+             * @description Uma frase curta: por que esta ligação foi proposta (auditável).
+             */
+            anchoring_rationale: string;
             /**
              * Shared Tokens
              * @description Tokens que motivaram `lexical_token_overlap` (vazio se outro kind).
@@ -1804,7 +1817,7 @@ export interface components {
              * @description Lista priorizada para humanos (estrutura + análise).
              */
             key_insights?: string[];
-            /** @description Metadados semânticos + extensões (`extra`) para evolução controlada. */
+            /** @description Metadados semânticos; extensões em `meta.extensions` até versão de contrato. */
             meta?: components["schemas"]["ComparisonResultMeta"];
             /**
              * Explanations
@@ -1927,6 +1940,10 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
+            /** Input */
+            input?: unknown;
+            /** Context */
+            ctx?: Record<string, never>;
         };
         /**
          * WizardSignalTraceEntry

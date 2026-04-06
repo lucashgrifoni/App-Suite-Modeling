@@ -21,6 +21,7 @@ from otm_threat_engine.semantic_comparison import semantic_diff_from_analyses_on
 
 from .dedupe import build_dedupe_groups
 from .enums import ReportLevel
+from .i18n_locale import PremiumReportLocale, normalize_premium_locale
 from .methodology import methodology_voice_lines
 from .models import (
     ArchitectureSummary,
@@ -42,25 +43,12 @@ from .models import (
     TopRiskItem,
 )
 from .prioritize import assign_priority_tier, composite_priority_score, horizon_for_tier
+from .report_i18n import PremiumBuilderCopy, premium_builder_copy, root_cause_display_name
 from .risk_context import (
     ai_business_labels_if_applicable,
     build_business_impact_row,
     infer_exploitability,
 )
-
-ROOT_CAUSE_LABELS: dict[str, str] = {
-    "identity_and_authorization_gaps": "Autenticação / autorização",
-    "data_exposure_and_classification": "Dados sensíveis sem proteção suficiente",
-    "integrity_and_supply_chain": "Integridade / cadeia de fornecimento",
-    "availability_and_resilience": "Disponibilidade e resiliência",
-    "non_repudiation_and_audit": "Não repúdio e auditoria",
-    "third_party_trust": "Integrações third-party",
-    "ai_governance_and_model_risk": "Governança e risco de modelo (AI/LLM)",
-    "general_mitigation": "Mitigação geral",
-    "trust_perimeter_crossing": "Cruzamento de trust boundary",
-    "threat_model_hygiene": "Higiene do artefacto de threat model",
-    "industry_pack_recommendation": "Recomendações do industry pack",
-}
 
 
 def _app_version() -> str:
@@ -81,26 +69,26 @@ def _severity_band(t: HeuristicThreat) -> str:
     return "low"
 
 
-def _overall_status(max_score: float | None) -> tuple[str, str]:
+def _overall_status(max_score: float | None, b: PremiumBuilderCopy) -> tuple[str, str]:
     if max_score is None:
-        return "acceptable_with_follow_up", "Aceitável com acompanhamento (sem score agregado)"
+        return "acceptable_with_follow_up", b.status_acceptable_no_aggregate
     if max_score >= 20:
-        return "requires_immediate_attention", "Requer atenção imediata"
+        return "requires_immediate_attention", b.status_requires_immediate
     if max_score >= 12:
-        return "action_recommended", "Acção recomendada"
-    return "acceptable_with_follow_up", "Aceitável com acompanhamento"
+        return "action_recommended", b.status_action_recommended
+    return "acceptable_with_follow_up", b.status_acceptable_plain
 
 
-def _risk_label(max_score: float | None) -> str:
+def _risk_label(max_score: float | None, b: PremiumBuilderCopy) -> str:
     if max_score is None:
-        return "não calculado"
+        return b.risk_not_calculated
     if max_score >= 20:
-        return "elevado"
+        return b.risk_elevated
     if max_score >= 15:
-        return "alto"
+        return b.risk_high
     if max_score >= 9:
-        return "médio"
-    return "baixo a moderado"
+        return b.risk_medium
+    return b.risk_low_moderate
 
 
 def _component_name(doc: ThreatModelDocument, cid: str | None) -> str | None:
@@ -138,10 +126,15 @@ def build_premium_report_payload(
     baseline: AnalysisResult | None = None,
     app_version: str | None = None,
     include_mermaid: bool = True,
+    locale: str | None = None,
 ) -> PremiumReportPayload:
     """
     Constrói o payload premium. `baseline` opcional alimenta secção de diff/trend.
+
+    ``locale`` opcional: ``pt-BR`` (omissão) ou ``en`` após normalização na API.
     """
+    loc: PremiumReportLocale = normalize_premium_locale(locale)
+    b = premium_builder_copy(loc)
     meth = result.methodology
     active: list[HeuristicThreat] = [h for h in result.heuristic_threats if not h.skipped_as_duplicate]
     backlog = build_remediation_backlog(result, doc)
@@ -149,7 +142,7 @@ def build_premium_report_payload(
     app_v = app_version or _app_version()
 
     max_score = result.summary.max_risk_score
-    status_key, status_display = _overall_status(max_score)
+    status_key, status_display = _overall_status(max_score, b)
 
     comp_names = {c.id: c.name for c in doc.components}
     tb_by_component: dict[str, str] = {}
@@ -211,25 +204,25 @@ def build_premium_report_payload(
     urgency: str = "high" if (max_score or 0) >= 15 else "medium" if (max_score or 0) >= 9 else "low"
 
     readiness = [
-        "O modelo indica risco elevado à luz das heurísticas actuais?"
-        if (max_score or 0) >= 15
-        else "Os scores são moderados — validar com testes e contexto de negócio.",
-        "O sistema parece pronto para release com estes achados em aberto?",
-        "Existem controlos compensatórios ou aceitação formal de risco documentada?",
+        b.readiness_high if (max_score or 0) >= 15 else b.readiness_moderate,
+        b.readiness_release,
+        b.readiness_compensating,
     ]
 
-    exec_conclusion = (
-        f"Foram identificadas {total_threats} ameaças (canónicas + heurísticas activas). "
-        f"O score máximo observado é {_risk_label(max_score)}. "
-        "Esta conclusão é heurística e não substitui testes de segurança ou auditoria."
+    exec_conclusion = b.exec_conclusion.format(
+        total_threats=total_threats,
+        risk_label=_risk_label(max_score, b),
     )
 
     arch_narrative_parts: list[str] = []
     if doc.business_context and doc.business_context.description:
         arch_narrative_parts.append(doc.business_context.description)
     arch_narrative_parts.append(
-        f"Componentes: {len(doc.components)} · Fluxos: {len(doc.data_flows)} · "
-        f"Fronteiras: {len(doc.trust_boundaries)}."
+        b.arch_counts.format(
+            n_comp=len(doc.components),
+            n_flows=len(doc.data_flows),
+            n_tb=len(doc.trust_boundaries),
+        )
     )
     arch = ArchitectureSummary(
         narrative=" ".join(arch_narrative_parts),
@@ -289,7 +282,11 @@ def build_premium_report_payload(
             (b for b in backlog.items if any(r.id == t.id for r in b.related_findings if r.kind == "heuristic_threat")),
             None,
         )
-        action = backlog_match.next_step if backlog_match else f"Tratar ameaça `{t.id}` conforme controlos sugeridos."
+        action = (
+            backlog_match.next_step
+            if backlog_match
+            else b.default_threat_action.format(threat_id=t.id)
+        )
         top_risks.append(
             TopRiskItem(
                 rank=i + 1,
@@ -323,7 +320,7 @@ def build_premium_report_payload(
         rc_groups.append(
             RootCauseGroup(
                 key=root_key,
-                display_name=ROOT_CAUSE_LABELS.get(root_key, root_key.replace("_", " ").title()),
+                display_name=root_cause_display_name(root_key, loc),
                 threat_count=len(items),
                 component_ids=sorted(comps)[:20],
                 suggested_controls=controls,
@@ -354,28 +351,29 @@ def build_premium_report_payload(
         role = it.recommended_owner or "a_definir"
         owner_buckets[role].append(it.id)
     for role, ids in sorted(owner_buckets.items(), key=lambda x: -len(x[1])):
+        display_role = b.owner_pending_display if role == "a_definir" else role
         ownership_rows.append(
             OwnershipRow(
-                scope=f"Itens sugeridos para `{role}`",
+                scope=b.ownership_scope.format(role=display_role),
                 suggested_owner_role=None if role == "a_definir" else role,
-                explanation="Owner sugerido pelo motor — validar com a governança interna.",
+                explanation=b.ownership_explanation,
                 backlog_item_ids=ids[:30],
             )
         )
 
     strategic: list[StrategicRecommendation] = [
         StrategicRecommendation(
-            title="Baseline de secure architecture",
-            detail="Documentar padrões de fronteiras, identidade e dados sensíveis alinhados ao vosso catálogo.",
+            title=b.strategic_baseline_title,
+            detail=b.strategic_baseline_detail,
         ),
         StrategicRecommendation(
-            title="Política de integrações",
-            detail="Definir requisitos mínimos para webhooks, callbacks e integrações third-party.",
+            title=b.strategic_integrations_title,
+            detail=b.strategic_integrations_detail,
         ),
     ]
     for hint in result.pack_control_hints[:5]:
         strategic.append(
-            StrategicRecommendation(title="Pack / controlo", detail=hint[:400]),
+            StrategicRecommendation(title=b.strategic_pack_title, detail=hint[:400]),
         )
 
     immediate: list[str] = []
@@ -391,9 +389,9 @@ def build_premium_report_payload(
             medium.append(line)
 
     roadmap = [
-        RoadmapPhase(phase="immediate", title="Imediato", items=immediate[:12]),
-        RoadmapPhase(phase="short", title="Curto prazo", items=short_term[:12]),
-        RoadmapPhase(phase="medium", title="Médio prazo", items=medium[:12]),
+        RoadmapPhase(phase="immediate", title=b.roadmap_immediate, items=immediate[:12]),
+        RoadmapPhase(phase="short", title=b.roadmap_short, items=short_term[:12]),
+        RoadmapPhase(phase="medium", title=b.roadmap_medium, items=medium[:12]),
     ]
 
     baseline_section: BaselineDiffSection | None = None
@@ -409,20 +407,25 @@ def build_premium_report_payload(
             threats_modified=[x.threat_id for x in adiff.heuristic_threats.modified],
             recurring_signatures=adiff.signature_remap_hints,
             trust_boundary_delta_summary=(
-                f"Achados de fronteira: {adiff.trust_boundary_findings.count_before} → "
-                f"{adiff.trust_boundary_findings.count_after}"
+                b.tb_delta.format(
+                    before=adiff.trust_boundary_findings.count_before,
+                    after=adiff.trust_boundary_findings.count_after,
+                )
                 if adiff.trust_boundary_findings
                 else ""
             ),
             structural_delta_summary=(
-                f"Estruturais: {adiff.structural_findings.count_before} → {adiff.structural_findings.count_after}"
+                b.struct_delta.format(
+                    before=adiff.structural_findings.count_before,
+                    after=adiff.structural_findings.count_after,
+                )
                 if adiff.structural_findings
                 else ""
             ),
-            narrative=(
-                f"Delta de score máximo: {adiff.max_risk_delta}; "
-                f"ameaças adicionadas {len(adiff.heuristic_threats.added)}, "
-                f"removidas {len(adiff.heuristic_threats.removed)}."
+            narrative=b.baseline_narrative.format(
+                delta=adiff.max_risk_delta,
+                added=len(adiff.heuristic_threats.added),
+                removed=len(adiff.heuristic_threats.removed),
             ),
             semantic_improved=sem_imp[:12],
             semantic_worsened=sem_wor[:12],
@@ -448,29 +451,20 @@ def build_premium_report_payload(
         for t in active:
             lines.append(f"### {t.id} — {t.title}\n{t.description}\n")
         for t in doc.threats:
-            lines.append(f"### [canónica] {t.id} — {t.title}\n{t.description or ''}\n")
+            lines.append(
+                f"### {b.threat_canonical_prefix} {t.id} — {t.title}\n{t.description or ''}\n"
+            )
         tech_appendix = TechnicalAppendix(
             full_threat_listing="\n".join(lines)[:120000],
-            methodology_outputs_note=(
-                "Outputs específicos do engine por metodologia estão em `analysis_json` e em "
-                "`methodology_insights` / `ai_system_context` quando aplicável."
-            ),
+            methodology_outputs_note=b.tech_methodology_outputs,
             import_evidence_note=(
-                "Texto de importação presente em `import_signals_corpus` no documento canónico."
-                if doc.import_signals_corpus
-                else None
+                b.tech_import_evidence if doc.import_signals_corpus else None
             ),
         )
 
     disclaimer = InferenceDisclaimer(
-        summary=(
-            "Ownership, exploitability e impacto de negócio são inferências heurísticas para acelerar decisão. "
-            "Não representam auditoria nem garantia de exploração real."
-        ),
-        bullets=[
-            "Priorização composta (P1/P2/P3) combina score, exposição e esforço estimado.",
-            "Recomendações estratégicas devem ser validadas contra políticas internas.",
-        ],
+        summary=b.disclaimer_summary,
+        bullets=[b.disclaimer_b1, b.disclaimer_b2],
     )
 
     cover = CoverPage(
@@ -484,7 +478,7 @@ def build_premium_report_payload(
         industry_sector=doc.model_info.industry_sector.value,
         analysis_date_iso=date.today().isoformat(),
         app_suite_version=app_v,
-        overall_risk_label=_risk_label(max_score),
+        overall_risk_label=_risk_label(max_score, b),
         overall_status=status_key,
         overall_status_display=status_display,
     )
@@ -496,10 +490,7 @@ def build_premium_report_payload(
         top_trust_boundaries=top_boundaries,
         top_attack_surfaces=[str(x) for x in top_surfaces if x],
         top5_risk_titles=top5_titles,
-        business_impact_summary=(
-            "Principais vectores: confidencialidade, integridade e disponibilidade — "
-            "ver secção de impacto por ameaça."
-        ),
+        business_impact_summary=b.business_impact_summary,
         urgency_level=urgency,
         executive_conclusion=exec_conclusion,
         readiness_questions=readiness,
@@ -507,7 +498,12 @@ def build_premium_report_payload(
 
     guided_audit: GuidedModelingAuditBlock | None = None
     trace_lines = [
-        f"{e.source_tag} → {e.effect} ({e.weight}): {e.explanation[:220]}"
+        b.wizard_trace.format(
+            source_tag=e.source_tag,
+            effect=e.effect,
+            weight=e.weight,
+            explanation=e.explanation[:220],
+        )
         for e in result.wizard_signal_trace[:14]
     ]
     gap_msgs: list[str] = []
@@ -520,14 +516,15 @@ def build_premium_report_payload(
     mq_line = None
     if result.model_quality_precheck:
         pqx = result.model_quality_precheck
-        mq_line = (
-            f"Pré-check {pqx.score_0_100}/100 ({pqx.band}); "
-            f"confiança recomendações: {pqx.recommendation_confidence}."
+        mq_line = b.mq_line.format(
+            score=pqx.score_0_100,
+            band=pqx.band,
+            conf=pqx.recommendation_confidence,
         )
     mc_line = None
     if result.methodology_completeness:
         mc = result.methodology_completeness
-        mc_line = f"Completude metodológica: {mc.state.value}."
+        mc_line = f"{b.mc_line_prefix} {mc.state.value}."
         if mc.note:
             mc_line += f" {mc.note[:160]}"
 
@@ -549,6 +546,7 @@ def build_premium_report_payload(
         )
 
     return PremiumReportPayload(
+        locale=loc,
         level=level,
         disclaimer=disclaimer,
         cover=cover,
@@ -567,7 +565,7 @@ def build_premium_report_payload(
         deduplication=dedupe,
         explainability=explain_snippets,
         technical_appendix=tech_appendix,
-        methodology_voice=methodology_voice_lines(meth),
+        methodology_voice=methodology_voice_lines(meth, loc),
         guided_modeling_audit=guided_audit,
     )
 

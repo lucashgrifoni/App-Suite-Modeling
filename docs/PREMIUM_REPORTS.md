@@ -37,6 +37,7 @@ otm report modelo.otm.yaml --level standard --baseline analise_anterior.json
 
 - `--analysis-json`: evita reexecutar o motor.
 - `--baseline`: JSON de `AnalysisResult` anterior para a secção de diff.
+- `--locale`: `pt-BR` (omissão) ou `en` — textos estruturais do relatório (Markdown/HTML/PDF).
 
 **PDF:** requer `pip install -e ".[report]"` (ou `xhtml2pdf`).
 
@@ -51,12 +52,17 @@ Corpo (resumo):
 - `baseline_analysis` — opcional.
 - `level`: `executive` | `standard` | `deep`.
 - `output_format`: `markdown` | `pdf`.
+- `locale` (opcional): `pt-BR` | `en` — textos estruturais; omitido = `pt-BR` (retrocompat); valor inválido → `en`.
 
 Resposta: `text/markdown` ou `application/pdf`.
 
 ## UI
 
-Na página **Exportar**, secção **Report premium (API)** — escolha o nível e descarregue Markdown ou PDF (API em execução). O PDF rápido no browser (jsPDF) permanece como pré-visualização leve.
+Na página **Exportar**, secção **Report premium (API)** — escolha o nível e descarregue Markdown ou PDF (API em execução). O idioma do relatório premium segue o mesmo controlo **Idioma do artefacto** usado para exports Markdown/PDF da sessão. O PDF rápido no browser (jsPDF) permanece como pré-visualização leve.
+
+## Internacionalização (pt-BR / en)
+
+Rótulos de secções, disclaimers, tabelas, roadmap e mensagens de template do payload são gerados em **pt-BR** ou **en** conforme `locale`. Conteúdo dinâmico do motor (títulos de ameaças, `next_step` do backlog, etc.) não é traduzido automaticamente. Ver [`docs/I18N.md`](I18N.md).
 
 ## Limitações atuais
 
@@ -67,5 +73,4 @@ Na página **Exportar**, secção **Report premium (API)** — escolha o nível 
 ## Próxima rodada (sugestão)
 
 - Diagramas raster embutidos no PDF (opcional).
-- Internacionalização (i18n) do texto do relatório.
 - Mais métricas por metodologia quando o motor expuser campos adicionais por lente.

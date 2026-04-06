@@ -1,3 +1,5 @@
+import { Trans, useTranslation } from "react-i18next";
+import { resolveExportArtifactLocale } from "../i18n/exportArtifactLocale";
 import { useNavigate } from "react-router-dom";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
@@ -33,17 +35,6 @@ function compactSnapshotPreview(entry: AnalysisHistoryEntry): string {
   );
 }
 
-function formatWhen(ts: number): string {
-  try {
-    return new Date(ts).toLocaleString("pt-BR", {
-      dateStyle: "short",
-      timeStyle: "short",
-    });
-  } catch {
-    return String(ts);
-  }
-}
-
 function HistoryCard({
   entry,
   activeId,
@@ -59,30 +50,51 @@ function HistoryCard({
   onPdf: (id: string) => void;
   onRemove: (id: string) => void;
 }>) {
+  const { t, i18n } = useTranslation();
   const isActive = activeId === entry.id;
+  const locale = i18n.language.startsWith("pt") ? "pt-BR" : "en-US";
+  let whenStr: string;
+  try {
+    whenStr = new Date(entry.createdAt).toLocaleString(locale, {
+      dateStyle: "short",
+      timeStyle: "short",
+    });
+  } catch {
+    whenStr = String(entry.createdAt);
+  }
+  const triggerLabel =
+    entry.trigger === "analysis" ? t("history.triggerAnalysis") : t("history.triggerExport");
   return (
     <Card
       variant={isActive ? "elevated" : "glass"}
       className={isActive ? "ring-2 ring-[color:var(--otm-ring)]" : ""}
       title={entry.title}
-      subtitle={`${formatWhen(entry.createdAt)} · ${entry.trigger === "analysis" ? "Análise" : "Exportação"}`}
+      subtitle={`${whenStr} · ${triggerLabel}`}
     >
       <div className="flex flex-wrap items-center gap-2 text-sm text-otm-text-muted">
         <Badge tone="neutral">{entry.systemType}</Badge>
-        <span>L×I máx.: {entry.maxScore ?? "—"}</span>
+        <span>
+          {t("history.maxLi")} {entry.maxScore ?? "—"}
+        </span>
       </div>
       <p className="mt-2 text-xs text-otm-text-subtle">{entry.summaryLine}</p>
       <div
         className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-otm-text-muted"
         data-testid="history-snapshot-stats"
       >
-        <span>Componentes: {entry.document.components.length}</span>
-        <span>Fluxos: {entry.document.data_flows.length}</span>
-        <span>Ameaças heurísticas: {countActiveThreats(entry)}</span>
+        <span>
+          {t("history.components")} {entry.document.components.length}
+        </span>
+        <span>
+          {t("history.flows")} {entry.document.data_flows.length}
+        </span>
+        <span>
+          {t("history.heuristicThreats")} {countActiveThreats(entry)}
+        </span>
       </div>
       <details className="mt-3 rounded-otm-md border border-otm-border bg-otm-surface-1/50 p-2">
         <summary className="cursor-pointer text-xs font-medium text-otm-text">
-          Ver resumo do snapshot
+          {t("history.snapshotSummary")}
         </summary>
         <pre className="mt-2 max-h-40 overflow-auto rounded-otm-md bg-otm-green-950/80 p-2 font-mono text-[11px] text-otm-mint-300">
           {compactSnapshotPreview(entry)}
@@ -90,10 +102,10 @@ function HistoryCard({
       </details>
       <div className="mt-4 flex flex-wrap gap-2">
         <Button type="button" variant="secondary" className="!py-1.5 !text-xs" onClick={() => onRestore(entry.id)}>
-          Restaurar
+          {t("history.restore")}
         </Button>
         <Button type="button" variant="secondary" className="!py-1.5 !text-xs" onClick={() => onExport(entry.id)}>
-          Ir para exportar
+          {t("history.goExport")}
         </Button>
         <Button
           type="button"
@@ -101,10 +113,10 @@ function HistoryCard({
           className="!py-1.5 !text-xs"
           onClick={() => void onPdf(entry.id)}
         >
-          PDF deste snapshot
+          {t("history.pdfSnapshot")}
         </Button>
         <Button type="button" variant="ghost" className="!py-1.5 !text-xs" onClick={() => onRemove(entry.id)}>
-          Remover
+          {t("history.remove")}
         </Button>
       </div>
     </Card>
@@ -112,6 +124,7 @@ function HistoryCard({
 }
 
 export function HistoryPage() {
+  const { t, i18n } = useTranslation();
   const { entries, restore, remove } = useAnalysisHistory();
   const toast = useToast();
   const navigate = useNavigate();
@@ -120,26 +133,20 @@ export function HistoryPage() {
   const newestId = entries[0]?.id ?? null;
 
   function confirmRestore(id: string) {
-    if (
-      !window.confirm(
-        "Restaurar este snapshot substitui o modelo e a análise atuais na sessão. Continuar?",
-      )
-    ) {
+    if (!window.confirm(t("history.confirmRestore"))) {
       return;
     }
     restore(id);
-    toast.success("Snapshot restaurado.");
+    toast.success(t("history.toastRestored"));
     navigate("/analysis");
   }
 
   function handleExport(id: string) {
-    if (
-      !window.confirm("Restaurar e abrir a página de exportação com este snapshot?")
-    ) {
+    if (!window.confirm(t("history.confirmExport"))) {
       return;
     }
     restore(id);
-    toast.info("Sessão atualizada. Escolha os formatos em Exportar.");
+    toast.info(t("history.toastSession"));
     navigate("/export");
   }
 
@@ -147,31 +154,29 @@ export function HistoryPage() {
     const e = entries.find((x) => x.id === id);
     if (!e) return;
     try {
-      const blob = await generateReportPdfBlob(e.document, e.analysis);
+      const blob = await generateReportPdfBlob(e.document, e.analysis, {
+        locale: resolveExportArtifactLocale(undefined, i18n.language),
+      });
       const safe = e.title.replace(/[^\w\-]+/g, "_").slice(0, 40);
       downloadPdfBlob(blob, `otm-report-${safe}-${e.createdAt}.pdf`);
-      toast.success("PDF gerado a partir do snapshot.");
+      toast.success(t("history.toastPdfOk"));
     } catch {
-      toast.error("Falha ao gerar PDF.");
+      toast.error(t("history.toastPdfFail"));
     }
   }
 
   return (
     <div className="space-y-8">
-      <PageHeader
-        eyebrow="Sessão local"
-        title="Histórico"
-        description="Snapshots das últimas análises e exportações (localStorage, máx. 20). Cada entrada mostra métricas e um resumo JSON legível. Restaurar substitui o modelo e a análise em sessão."
-      />
+      <PageHeader eyebrow={t("history.eyebrow")} title={t("history.title")} description={t("history.description")} />
 
       {entries.length === 0 ? (
         <EmptyState
-          title="Sem histórico ainda"
+          title={t("history.emptyTitle")}
           description={
-            <>
-              Corra uma <strong className="text-otm-text">análise</strong> ou gere{" "}
-              <strong className="text-otm-text">exportação / PDF</strong> para criar entradas aqui.
-            </>
+            <Trans
+              i18nKey="history.emptyDesc"
+              components={{ strong: <strong className="text-otm-text" /> }}
+            />
           }
         />
       ) : (
@@ -186,7 +191,7 @@ export function HistoryPage() {
                 onPdf={handlePdf}
                 onRemove={(id) => {
                   remove(id);
-                  toast.info("Entrada removida.");
+                  toast.info(t("history.toastRemoved"));
                 }}
               />
             </li>

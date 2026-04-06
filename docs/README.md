@@ -4,12 +4,14 @@ Projeto oficial: **App Suite Modeling**.
 
 ## Release atual
 
-- **Versão:** `0.1.0` (tag Git sugerida: `v0.1.0`)
-- **Congelamento de escopo:** [RELEASE_SCOPE_FREEZE.md](RELEASE_SCOPE_FREEZE.md)
-- **Notas:** [RELEASE_NOTES_v0.1.0.md](RELEASE_NOTES_v0.1.0.md)
+- **Versão:** `7.0.0` (tag Git sugerida: `v7.0.0`; histórico `v0.1.0` em notas antigas)
+- **Congelamento de escopo:** [RELEASE_SCOPE_FREEZE.md](RELEASE_SCOPE_FREEZE.md) · [ENGINEERING_CLOSEOUT_SCOPE.md](ENGINEERING_CLOSEOUT_SCOPE.md)
+- **Definition of Done:** [DEFINITION_OF_DONE.md](DEFINITION_OF_DONE.md)
+- **Checklist técnico (gates):** [RELEASE_ENGINEERING_CHECKLIST.md](RELEASE_ENGINEERING_CHECKLIST.md)
+- **Notas:** [RELEASE_NOTES_v0.1.0.md](RELEASE_NOTES_v0.1.0.md) (marco inicial) + [CHANGELOG.md](../CHANGELOG.md) `[7.0.0]`
 - **Limitações:** [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md)
-- **Gate GO/NO-GO (1 página):** [GO_NO_GO_v0.1.0.md](GO_NO_GO_v0.1.0.md)
-- **Checklist de lançamento:** [LAUNCH_CHECKLIST.md](LAUNCH_CHECKLIST.md)
+- **Gate GO/NO-GO (1 página):** [GO_NO_GO_v0.1.0.md](GO_NO_GO_v0.1.0.md) (ler versão em `pyproject.toml` / `package.json`)
+- **Checklist de lançamento (dia D):** [LAUNCH_CHECKLIST.md](LAUNCH_CHECKLIST.md)
 - **Validação (evidência):** [VALIDATION_REPORT_v0.1.0.md](VALIDATION_REPORT_v0.1.0.md)
 
 ## Guia mínimo (primeiro uso)
@@ -119,18 +121,24 @@ Abra `http://localhost:5173`.
 | [CLI.md](CLI.md) | Comandos `otm`, exemplos e arquitetura da CLI |
 | [API.md](API.md) | Endpoints da API FastAPI |
 | [UI.md](UI.md) | Fluxos da UI web e integração com API |
+| [I18N.md](I18N.md) | Internacionalização (pt-BR / en): UI, exports, premium, limitações |
 | [MULTI_ENGINE_ARCHITECTURE.md](MULTI_ENGINE_ARCHITECTURE.md) | Base multi-metodologia (STRIDE, LINDDUN, NIST DC, OCTAVE, CIA-DIE) |
 | [BRANDING.md](BRANDING.md) | Identidade visual, paleta, tokens e sistema de marca |
 | [CHOOSE_METHODOLOGY.md](CHOOSE_METHODOLOGY.md) | Guia rápido para escolher metodologia |
 | [CONTRACT_AND_SNAPSHOTS.md](CONTRACT_AND_SNAPSHOTS.md) | Contratos de saída, códigos de erro API, snapshots e gate |
 | [RELEASE_CHECKLIST_RC.md](RELEASE_CHECKLIST_RC.md) | Checklist técnico de release candidate |
+| [RELEASE_ENGINEERING_CHECKLIST.md](RELEASE_ENGINEERING_CHECKLIST.md) | Gates de engenharia (typecheck, build, pytest, OpenAPI, E2E) |
+| [DEFINITION_OF_DONE.md](DEFINITION_OF_DONE.md) | Definition of Done para merge e manutenção |
+| [ENGINEERING_CLOSEOUT_SCOPE.md](ENGINEERING_CLOSEOUT_SCOPE.md) | Scope freeze do fecho atual (fronteiras explícitas) |
 | [SMOKE_VALIDATION.md](SMOKE_VALIDATION.md) | Fluxos de smoke validation e critérios |
 | [EXPLAINABILITY.md](EXPLAINABILITY.md) | Contrato de explicabilidade (`ExplanationRecord`) e interpretação |
 | [PLOT4AI_AI_SYSTEM.md](PLOT4AI_AI_SYSTEM.md) | Trilha especializada de AI/LLM com PLOT4ai |
-| [THREAT_MODEL_DIFF.md](THREAT_MODEL_DIFF.md) | Diff semântico de modelos e análise |
 | [ARTIFACT_IMPORT.md](ARTIFACT_IMPORT.md) | Importação assistida por artefatos reais |
 | [REMEDIATION_BACKLOG.md](REMEDIATION_BACKLOG.md) | Backlog inteligente de remediação |
-| [INNOVATION_PHASE_FINAL_INTEGRATION_RC.md](INNOVATION_PHASE_FINAL_INTEGRATION_RC.md) | Fecho da fase de inovação: integração, hardening e readiness |
+| [THREAT_MODEL_DIFF.md](THREAT_MODEL_DIFF.md) | Diff semântico de modelos e análise (inclui histórico resumido das frentes de inovação) |
+| [CI_AND_SECURITY_EVIDENCE.md](CI_AND_SECURITY_EVIDENCE.md) | Mypy, SCA, CLI modular, observabilidade e perímetro da API (evidência consolidada) |
+| [GITHUB_README_AND_METADATA.md](GITHUB_README_AND_METADATA.md) | README raiz, metadados OSS e publicação GitHub |
+| [FRONTEND_UI_ROLLOUT_HISTORY.md](FRONTEND_UI_ROLLOUT_HISTORY.md) | Histórico resumido da evolução da UI web (substitui trilhos plano/validação/handoff) |
 | [RELEASE_NOTES_RC1.md](RELEASE_NOTES_RC1.md) | Nota de release incremental (RC1) |
 | [RELEASE_NOTES_RC2.md](RELEASE_NOTES_RC2.md) | Nota histórica (RC2) |
 | [RELEASE_NOTES_v0.1.0.md](RELEASE_NOTES_v0.1.0.md) | Notas de release **v0.1.0** |
@@ -147,6 +155,4 @@ Abra `http://localhost:5173`.
 | [TEMPLATE_CATALOG.md](TEMPLATE_CATALOG.md) | Catálogo embutido: categorias, API/UI/CLI, manutenção |
 | [PRODUCT_POSITIONING.md](PRODUCT_POSITIONING.md) | Posicionamento do produto (AppSec / DevSecOps, OSS) |
 | [SCREENSHOT_GUIDE.md](SCREENSHOT_GUIDE.md) | Guia para capturas da UI (README e materiais) |
-| [README_RELEASE_VALIDATION.md](README_RELEASE_VALIDATION.md) | Validação da rodada README / metadata |
-| [README_RELEASE_HANDOFF.md](README_RELEASE_HANDOFF.md) | Handoff README / publicação GitHub |
 | [adr/](adr/) | Architecture Decision Records |

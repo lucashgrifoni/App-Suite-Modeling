@@ -4,6 +4,8 @@
 **Escopo:** monorepo Python (packages, `apps/api`, `apps/cli`) + SPA React/Vite (`apps/web`) + site estático (`gitpage`) + testes, CI, documentação.  
 **Metodologia:** revisão estática do código e da estrutura, cruzamento com práticas de Clean Code, Clean Architecture, AppSec/DevSecOps e estratégia de testes. **Nenhuma alteração de código** foi feita nesta fase — apenas diagnóstico.
 
+> **Nota (higiene docs 2026-04):** relatórios de auditoria paralelos com tom “brutal / Staff bar” foram **fundidos** no presente documento e no scorecard/plano de remediação (`FULL_PROJECT_QUALITY_SCORECARD.md`, `FULL_PROJECT_REMEDIATION_*`) para evitar duplicar o mesmo diagnóstico em ficheiros concorrentes.
+
 ---
 
 ## Resumo executivo

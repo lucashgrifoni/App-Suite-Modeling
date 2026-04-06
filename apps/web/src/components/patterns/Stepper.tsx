@@ -1,3 +1,5 @@
+import { useTranslation } from "react-i18next";
+
 export function Stepper({
   steps,
   currentIndex,
@@ -7,8 +9,9 @@ export function Stepper({
   currentIndex: number;
   onStepClick?: (index: number) => void;
 }>) {
+  const { t } = useTranslation();
   return (
-    <nav aria-label="Progresso do assistente" className="w-full">
+    <nav aria-label={t("wizard.stepperAria")} className="w-full">
       <ol className="flex flex-wrap gap-2">
         {steps.map((s, i) => {
           const done = i < currentIndex;

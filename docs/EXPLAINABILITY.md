@@ -50,3 +50,30 @@ Pacote: `otm_explainability`.
 - Explicações por *lens* metodológica com evidência do bloco activado.
 - Agregação de explicações de diff com remapeamento semântico de IDs.
 - Filtro padrão `max_explanations` por ambiente (dev vs relatório executivo).
+
+---
+
+## Audit trail do assistente (`wizard_signal_trace`) e propagação
+
+- **Modelo:** `WizardSignalTraceEntry` (`packages/threat-engine/otm_threat_engine/wizard_audit_models.py`).
+- **Produção:** `wizard_signals.apply_wizard_context_to_heuristics`, `build_corpus_mitigation_trace` → agregado em `AnalysisResult.wizard_signal_trace`.
+- **Consumo:** JSON de análise; export Markdown; report premium (`GuidedModelingAuditBlock`); resumo na CLI (`otm analyze`) quando há traço; diff Markdown com bloco semântico quando aplicável.
+
+### Calibração anti-overfitting (admin / API / e-commerce)
+
+- Boost em perfil **admin** exige **≥2** respostas negativas nos eixos `approval`/`segregation` e não coexistir com `approval=yes` como mitigador isolado.
+- Negativa isolada → `observation` (`wz:internal_admin_portal:isolated_no`, `wz:api_backend_rest:isolated_no`) sem alterar scores.
+- Testes: `tests/test_wizard_engine_integration.py`.
+
+### Import de repositório — AST opcional (Express)
+
+- `OTM_REPO_ESPRIMA=1` e extra `artifact_import_ast` (`esprima`). Função: `collect_express_routes_ast_lite` em `repo_ast_optional.py`.
+- Sem flag ou sem `esprima`: só heurística regex (comportamento anterior).
+
+### E2E cockpit
+
+- `apps/web/e2e/cockpit.spec.ts` — jornada Home → modelo → Análise com mock enriquecido.
+
+### Limitações
+
+- AST cobre padrões simples Express; TS ou rotas dinâmicas podem falhar silenciosamente (fallback).

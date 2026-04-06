@@ -10,8 +10,16 @@ from fastapi import APIRouter, FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 
+from otm_api.cors_settings import resolve_cors_profile
 from otm_api.errors import request_validation_handler
+from otm_api.observability import (
+    ObservabilityMiddleware,
+    register_unhandled_exception_handler,
+    setup_api_logging,
+)
 from otm_api.routers import analyses, exports, imports, models, remediation, reports_premium, system, templates
+
+setup_api_logging()
 
 app = FastAPI(
     title="App Suite Modeling API",
@@ -41,17 +49,17 @@ app = FastAPI(
     ],
 )
 
-app.add_exception_handler(RequestValidationError, request_validation_handler)
+app.add_exception_handler(RequestValidationError, request_validation_handler)  # type: ignore[arg-type]
+register_unhandled_exception_handler(app)
 
+_cors = resolve_cors_profile()
+app.add_middleware(ObservabilityMiddleware)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-    ],
+    allow_origins=_cors.origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=_cors.allow_methods,
+    allow_headers=_cors.allow_headers,
 )
 
 

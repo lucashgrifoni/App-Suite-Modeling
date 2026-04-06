@@ -9,22 +9,24 @@ from __future__ import annotations
 
 from otm_core_schema import ThreatModelDocument
 
+from otm_exporters.document_markdown_i18n import DocumentMarkdownMessages, document_markdown_messages
 
-def _append_header(lines: list[str], doc: ThreatModelDocument) -> None:
+
+def _append_header(lines: list[str], doc: ThreatModelDocument, msgs: DocumentMarkdownMessages) -> None:
     m = doc.metadata
     lines.extend([f"# {m.title}", ""])
     if m.summary:
         lines.extend([m.summary, ""])
     if m.owner:
-        lines.append(f"**Responsável:** {m.owner}")
+        lines.append(f"{msgs.owner_label} {m.owner}")
     if m.document_version:
-        lines.append(f"**Versão do documento:** {m.document_version}")
+        lines.append(f"{msgs.document_version_label} {m.document_version}")
     lines.extend(
         [
             "",
-            f"- **Schema:** {doc.model_info.schema_version}",
-            f"- **Tipo de sistema:** {doc.model_info.system_type.value}",
-            f"- **Setor:** {doc.model_info.industry_sector.value}",
+            f"{msgs.schema_bullet} {doc.model_info.schema_version}",
+            f"{msgs.system_type_bullet} {doc.model_info.system_type.value}",
+            f"{msgs.sector_bullet} {doc.model_info.industry_sector.value}",
             "",
         ]
     )
@@ -39,39 +41,43 @@ def _append_bulleted(lines: list[str], items: list[str]) -> None:
     lines.append("")
 
 
-def _append_business_context(lines: list[str], doc: ThreatModelDocument) -> None:
+def _append_business_context(lines: list[str], doc: ThreatModelDocument, msgs: DocumentMarkdownMessages) -> None:
     if not (doc.business_context and doc.business_context.description):
         return
-    _append_section(lines, "Contexto de negócio")
+    _append_section(lines, msgs.section_business)
     lines.extend([doc.business_context.description.strip(), ""])
 
 
-def _append_assets(lines: list[str], doc: ThreatModelDocument) -> None:
+def _append_assets(lines: list[str], doc: ThreatModelDocument, msgs: DocumentMarkdownMessages) -> None:
     if not doc.assets:
         return
-    _append_section(lines, "Ativos")
+    _append_section(lines, msgs.section_assets)
     _append_bulleted(
         lines,
         [f"- **{a.name}** (`{a.id}`) — {a.asset_kind.value}" for a in doc.assets],
     )
 
 
-def _append_components(lines: list[str], doc: ThreatModelDocument) -> None:
+def _append_components(lines: list[str], doc: ThreatModelDocument, msgs: DocumentMarkdownMessages) -> None:
     if not doc.components:
         return
-    _append_section(lines, "Componentes")
+    _append_section(lines, msgs.section_components)
     items: list[str] = []
     for c in doc.components:
-        tb = f", fronteira `{c.in_trust_boundary}`" if c.in_trust_boundary else ""
+        tb = (
+            msgs.component_trust_boundary.format(boundary=c.in_trust_boundary)
+            if c.in_trust_boundary
+            else ""
+        )
         tech = f" — {c.technology}" if c.technology else ""
         items.append(f"- **{c.name}** (`{c.id}`) — {c.kind.value}{tech}{tb}")
     _append_bulleted(lines, items)
 
 
-def _append_data_flows(lines: list[str], doc: ThreatModelDocument) -> None:
+def _append_data_flows(lines: list[str], doc: ThreatModelDocument, msgs: DocumentMarkdownMessages) -> None:
     if not doc.data_flows:
         return
-    _append_section(lines, "Fluxos de dados")
+    _append_section(lines, msgs.section_data_flows)
     items: list[str] = []
     for f in doc.data_flows:
         nm = f.name or f.id
@@ -79,48 +85,49 @@ def _append_data_flows(lines: list[str], doc: ThreatModelDocument) -> None:
     _append_bulleted(lines, items)
 
 
-def _append_trust_boundaries(lines: list[str], doc: ThreatModelDocument) -> None:
+def _append_trust_boundaries(lines: list[str], doc: ThreatModelDocument, msgs: DocumentMarkdownMessages) -> None:
     if not doc.trust_boundaries:
         return
-    _append_section(lines, "Fronteiras de confiança")
+    _append_section(lines, msgs.section_trust_boundaries)
     _append_bulleted(lines, [f"- **{b.name}** (`{b.id}`)" for b in doc.trust_boundaries])
 
 
-def _append_threats(lines: list[str], doc: ThreatModelDocument) -> None:
+def _append_threats(lines: list[str], doc: ThreatModelDocument, msgs: DocumentMarkdownMessages) -> None:
     if not doc.threats:
         return
-    _append_section(lines, "Ameaças")
+    _append_section(lines, msgs.section_threats)
     items: list[str] = []
     for t in doc.threats:
         risk = ""
         if t.risk:
-            risk = f" — risco L×I={t.risk.likelihood}×{t.risk.impact}"
+            risk = f"{msgs.threat_risk_li}{t.risk.likelihood}×{t.risk.impact}"
             if t.risk.score is not None:
-                risk += f" (score {t.risk.score})"
+                risk += f"{msgs.threat_risk_score}{t.risk.score})"
         items.append(f"- **{t.title}** (`{t.id}`) [{t.stride.value}]{risk}")
     _append_bulleted(lines, items)
 
 
-def _append_mitigations(lines: list[str], doc: ThreatModelDocument) -> None:
+def _append_mitigations(lines: list[str], doc: ThreatModelDocument, msgs: DocumentMarkdownMessages) -> None:
     if not doc.mitigations:
         return
-    _append_section(lines, "Mitigações")
+    _append_section(lines, msgs.section_mitigations)
     _append_bulleted(
         lines,
         [f"- **{m.title}** (`{m.id}`) — {m.status.value}" for m in doc.mitigations],
     )
 
 
-def export_document_markdown(doc: ThreatModelDocument) -> str:
+def export_document_markdown(doc: ThreatModelDocument, *, locale: str | None = None) -> str:
     """Markdown simples: cabeçalho e secções na ordem canónica (ver testes em `test_exporters`)."""
+    msgs = document_markdown_messages(locale)
     lines: list[str] = []
-    _append_header(lines, doc)
-    _append_business_context(lines, doc)
-    _append_assets(lines, doc)
-    _append_components(lines, doc)
-    _append_data_flows(lines, doc)
-    _append_trust_boundaries(lines, doc)
-    _append_threats(lines, doc)
-    _append_mitigations(lines, doc)
+    _append_header(lines, doc, msgs)
+    _append_business_context(lines, doc, msgs)
+    _append_assets(lines, doc, msgs)
+    _append_components(lines, doc, msgs)
+    _append_data_flows(lines, doc, msgs)
+    _append_trust_boundaries(lines, doc, msgs)
+    _append_threats(lines, doc, msgs)
+    _append_mitigations(lines, doc, msgs)
 
     return "\n".join(lines).rstrip() + "\n"

@@ -32,10 +32,6 @@
 | Export | `docs/screenshots/export.png` | Format checkboxes + PDF action |
 | Diff | `docs/screenshots/diff.png` | Side-by-side or summary of model diff |
 
-```text
-<!-- After capture, embed the Home screenshot using path docs/screenshots/home.png (no markdown link in this comment — avoids doc-link checks). -->
-```
-
 ---
 
 ## Key features

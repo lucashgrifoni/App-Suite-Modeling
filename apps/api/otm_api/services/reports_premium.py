@@ -29,6 +29,7 @@ def render_premium(
     level: ReportLevel,
     output_format: ReportFormat,
     baseline: AnalysisResult | None = None,
+    locale: str | None = None,
 ) -> tuple[str, bytes | None]:
     """
     Devolve (markdown, pdf_bytes ou None).
@@ -41,6 +42,7 @@ def render_premium(
         level=level,
         baseline=baseline,
         app_version=app_version(),
+        locale=locale,
     )
     if output_format == ReportFormat.MARKDOWN:
         return render_premium_markdown(payload), None

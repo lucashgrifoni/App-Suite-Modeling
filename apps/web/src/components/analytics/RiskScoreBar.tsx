@@ -1,3 +1,5 @@
+import { useTranslation } from "react-i18next";
+
 /**
  * Barra de risco L×I (0–maxScore) sem dependências — útil para demos e leitura rápida.
  */
@@ -15,14 +17,18 @@ export function RiskScoreBar({
   caption?: string | null;
   className?: string;
 }>) {
+  const { t } = useTranslation();
   const s = score ?? 0;
   const pct = Math.min(100, Math.max(0, (s / maxScore) * 100));
-  const label = score == null ? "Sem pontuação" : `L×I ${s} (máx. referência ${maxScore})`;
+  const label =
+    score == null
+      ? t("riskBar.noScore")
+      : t("riskBar.liAria", { score: s, max: maxScore });
   const footer =
     caption !== undefined
       ? caption
       : variant === "default"
-        ? "Escala 0–25 (L×I típico)."
+        ? t("riskBar.scaleFooter")
         : null;
   const showFooter =
     footer != null && String(footer).length > 0 && variant !== "compact" && variant !== "none";

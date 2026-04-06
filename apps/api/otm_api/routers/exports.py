@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter
+from otm_exporters.export_locale import normalize_export_locale
 from otm_threat_engine import AnalysisResult
 from pydantic import ValidationError as PydanticValidationError
 
@@ -40,6 +41,7 @@ def export_artifacts(body: ExportBody) -> ExportResponse:
             formats=body.formats,
             analysis=analysis,
             pack_id=body.pack_id,
+            locale=normalize_export_locale(body.locale),
         )
     except FileNotFoundError as e:
         raise raise_pack_not_found(e) from e

@@ -11,6 +11,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 from .enums import ReportLevel
+from .i18n_locale import PremiumReportLocale
 
 
 class InferenceDisclaimer(BaseModel):
@@ -261,6 +262,10 @@ class PremiumReportPayload(BaseModel):
     """Payload completo — entrada para Markdown/HTML/PDF."""
 
     schema_version: str = "1.0"
+    locale: PremiumReportLocale = Field(
+        default="pt-BR",
+        description="Locale dos textos estruturais (pt-BR | en).",
+    )
     level: ReportLevel
     disclaimer: InferenceDisclaimer
     cover: CoverPage

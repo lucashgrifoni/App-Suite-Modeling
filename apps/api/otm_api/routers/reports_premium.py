@@ -5,6 +5,8 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException, status
 from fastapi.responses import PlainTextResponse, Response
 from otm_report_premium.enums import ReportFormat, ReportLevel
+from otm_report_premium.i18n_locale import normalize_premium_locale
+from otm_report_premium.report_i18n import premium_error_analysis_required
 from otm_threat_engine import AnalysisResult
 from pydantic import ValidationError as PydanticValidationError
 
@@ -40,6 +42,7 @@ router = APIRouter(prefix="/reports", tags=["Reports"])
     },
 )
 def post_premium_report(body: PremiumReportBody) -> PlainTextResponse | Response:
+    loc = normalize_premium_locale(body.locale)
     doc = document_from_payload_or_422(body.document)
     analysis_obj: AnalysisResult | None = None
     if body.analysis is not None:
@@ -61,7 +64,7 @@ def post_premium_report(body: PremiumReportBody) -> PlainTextResponse | Response
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=error_detail(
                     code="PREMIUM_REPORT_INPUT",
-                    message="Forneça `analysis` ou defina `run_analysis: true`.",
+                    message=premium_error_analysis_required(loc),
                 ),
             )
         try:
@@ -84,6 +87,7 @@ def post_premium_report(body: PremiumReportBody) -> PlainTextResponse | Response
             level=level,
             output_format=fmt,
             baseline=baseline_obj,
+            locale=loc,
         )
     except ImportError as e:
         raise HTTPException(

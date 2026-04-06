@@ -129,6 +129,8 @@ export async function exportArtifacts(body: {
   formats: ExportFormat[];
   pack_id?: string | null;
   analysis?: AnalysisResult | null;
+  /** pt-BR | en — textos user-facing em Markdown; omitido = política do servidor (pt-BR). */
+  locale?: string | null;
 }): Promise<{ artifacts: Record<string, string> }> {
   return apiFetch("/v1/exports", {
     method: "POST",
@@ -137,6 +139,7 @@ export async function exportArtifacts(body: {
       formats: body.formats,
       pack_id: body.pack_id ?? null,
       analysis: body.analysis ?? null,
+      locale: body.locale ?? null,
     },
   });
 }
@@ -153,6 +156,8 @@ export async function fetchPremiumReport(args: {
   analysis: AnalysisResult | null;
   level: PremiumReportLevel;
   outputFormat: "markdown" | "pdf";
+  /** pt-BR | en — alinhado ao export Markdown e ao normalizador da API */
+  locale?: "pt-BR" | "en";
 }): Promise<{ blob: Blob; filename: string }> {
   const res = await fetch(`${API_PREFIX}/v1/reports/premium`, {
     method: "POST",
@@ -163,6 +168,7 @@ export async function fetchPremiumReport(args: {
       run_analysis: args.analysis === null,
       level: args.level,
       output_format: args.outputFormat,
+      ...(args.locale ? { locale: args.locale } : {}),
     }),
   });
   if (!res.ok) {

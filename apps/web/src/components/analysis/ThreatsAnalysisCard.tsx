@@ -1,4 +1,5 @@
 import { memo } from "react";
+import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
@@ -12,20 +13,30 @@ import { FRAMEWORK_LABELS } from "../../constants/frameworkLabels";
 import type { HeuristicThreat } from "../../types/api";
 
 const ThreatRow = memo(function ThreatRow({ h }: Readonly<{ h: HeuristicThreat }>) {
+  const { t } = useTranslation();
   const sc = h.risk.score;
+  const scoreLabel = sc == null ? "—" : String(sc);
   return (
     <li className="py-3">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <p className="font-medium text-otm-text">{h.title}</p>
           <p className="mt-0.5 text-xs text-otm-text-muted">
-            {h.target_component_id && <>Componente: {h.target_component_id} · </>}
-            {h.target_data_flow_id && <>Fluxo: {h.target_data_flow_id} · </>}
-            STRIDE: {h.stride}
+            {h.target_component_id && (
+              <>
+                {t("threatsCard.component")} {h.target_component_id} ·{" "}
+              </>
+            )}
+            {h.target_data_flow_id && (
+              <>
+                {t("threatsCard.flow")} {h.target_data_flow_id} ·{" "}
+              </>
+            )}
+            {t("threatsCard.stride")} {h.stride}
           </p>
         </div>
         <div className="flex w-full min-w-[140px] max-w-[200px] flex-col items-end gap-1 sm:w-auto">
-          <Badge tone="warn">L×I {sc ?? "—"}</Badge>
+          <Badge tone="warn">{t("threatsCard.liScore", { score: scoreLabel })}</Badge>
           {typeof sc === "number" ? <RiskScoreBar score={sc} variant="compact" className="w-full" /> : null}
         </div>
       </div>
@@ -60,15 +71,16 @@ export function ThreatsAnalysisCard({
   onFrameworkFilterChange: (v: string) => void;
   frameworks: string[];
 }>) {
+  const { t } = useTranslation();
   return (
     <Card
-      title="Ameaças sugeridas"
-      subtitle="Filtre por pontuação ou por catálogo de framework."
+      title={t("threatsCard.title")}
+      subtitle={t("threatsCard.subtitle")}
       variant="glass"
     >
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end">
         <div className="sm:w-48">
-          <Label htmlFor="minScore">Pontuação mínima (L×I)</Label>
+          <Label htmlFor="minScore">{t("threatsCard.minScore")}</Label>
           <Input
             id="minScore"
             type="number"
@@ -79,9 +91,9 @@ export function ThreatsAnalysisCard({
           />
         </div>
         <div className="sm:w-56">
-          <Label htmlFor="fw">Framework</Label>
+          <Label htmlFor="fw">{t("threatsCard.framework")}</Label>
           <Select id="fw" value={frameworkFilter} onChange={(e) => onFrameworkFilterChange(e.target.value)}>
-            <option value="">Todos</option>
+            <option value="">{t("threatsCard.allFrameworks")}</option>
             {frameworks.map((fw) => (
               <option key={fw} value={fw}>
                 {FRAMEWORK_LABELS[fw] ?? fw}
@@ -91,7 +103,7 @@ export function ThreatsAnalysisCard({
         </div>
       </div>
       <p className="mb-3 text-xs text-otm-text-muted">
-        A mostrar {filtered.length} de {activeThreatCount} ameaças ativas.
+        {t("threatsCard.showing", { shown: filtered.length, total: activeThreatCount })}
       </p>
       <ul className="divide-y divide-otm-border">
         {filtered.map((h) => (
@@ -99,11 +111,11 @@ export function ThreatsAnalysisCard({
         ))}
       </ul>
       {filtered.length === 0 && (
-        <p className="py-6 text-center text-sm text-otm-text-muted">Nenhuma ameaça corresponde aos filtros.</p>
+        <p className="py-6 text-center text-sm text-otm-text-muted">{t("threatsCard.noneMatch")}</p>
       )}
       <div className="mt-6 flex justify-end border-t border-otm-border pt-4">
         <Link to="/export">
-          <Button>Exportar resultados</Button>
+          <Button>{t("export.exportResults")}</Button>
         </Link>
       </div>
     </Card>

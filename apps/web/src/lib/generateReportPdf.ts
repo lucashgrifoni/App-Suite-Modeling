@@ -1,19 +1,31 @@
+import type { TFunction } from "i18next";
 import type { AnalysisResult } from "../types/api";
 import type { OtmDocument } from "../types/document";
+import { localeFromUiLanguage, type ExportArtifactLocale } from "../i18n/exportArtifactLocale";
+import i18n from "../i18n/i18n";
 import { sanitizeDiagramLabel } from "../utils/diagramSanitize";
 
 function safeText(s: string, max = 2000): string {
   return sanitizeDiagramLabel(s, max).replace(/[^\S\r\n]+/g, " ");
 }
 
+function pdfT(lng: ExportArtifactLocale): TFunction {
+  return i18n.getFixedT(lng);
+}
+
 /**
  * Gera PDF A4 no cliente (sem backend). Texto apenas — evita XSS ao não embeddar HTML.
  * Import dinâmico de `jspdf` para não inflar o chunk inicial.
+ *
+ * @param options.locale - Idioma dos rótulos do PDF; quando omitido, usa o idioma atual do i18n.
  */
 export async function generateReportPdfBlob(
   doc: OtmDocument,
   analysis: AnalysisResult | null,
+  options?: { locale?: ExportArtifactLocale },
 ): Promise<Blob> {
+  const lng: ExportArtifactLocale = options?.locale ?? localeFromUiLanguage(i18n.language);
+  const t = pdfT(lng);
   const { jsPDF } = await import("jspdf");
   const pdf = new jsPDF({ unit: "mm", format: "a4" });
   const margin = 16;
@@ -45,34 +57,54 @@ export async function generateReportPdfBlob(
   y += 10;
 
   if (doc.metadata.summary) {
-    addLines(`Resumo: ${safeText(doc.metadata.summary ?? "", 500)}`, 10);
+    addLines(`${t("artifactPdf.summary")} ${safeText(doc.metadata.summary ?? "", 500)}`, 10);
   }
 
   addLines(
-    `Sistema: ${safeText(doc.model.system_type)} · Metodologia: ${safeText(String(doc.model.methodology ?? "stride"))}`,
+    t("artifactPdf.systemMethodology", {
+      system: safeText(doc.model.system_type),
+      methodology: safeText(String(doc.model.methodology ?? "stride")),
+    }),
     9,
   );
-  addLines(`Componentes: ${doc.components.length} · Fluxos: ${doc.data_flows.length}`, 10);
+  addLines(
+    t("artifactPdf.counts", {
+      components: doc.components.length,
+      flows: doc.data_flows.length,
+    }),
+    10,
+  );
 
   if (analysis) {
     y += 4;
     ensureSpace(8);
     pdf.setFontSize(12);
-    pdf.text("Análise (motor)", margin, y);
+    pdf.text(t("artifactPdf.analysisHeading"), margin, y);
     y += 8;
     addLines(
-      `Motor: ${safeText(analysis.engine_version)} · Heurísticas novas: ${analysis.summary.heuristic_threats_generated} · Maior L×I: ${analysis.summary.max_risk_score ?? "—"}`,
+      t("artifactPdf.analysisLine", {
+        engine: safeText(analysis.engine_version),
+        new: analysis.summary.heuristic_threats_generated,
+        max: analysis.summary.max_risk_score ?? "—",
+      }),
     );
-    const threats = analysis.heuristic_threats.filter((t) => !t.skipped_as_duplicate).slice(0, 30);
+    const threats = analysis.heuristic_threats.filter((th) => !th.skipped_as_duplicate).slice(0, 30);
     if (threats.length) {
-      addLines("Ameaças (amostra):", 11);
-      for (const t of threats) {
-        addLines(`• ${safeText(t.title, 200)} — STRIDE ${t.stride} — L×I ${t.risk.score ?? "—"}`, 9);
+      addLines(t("artifactPdf.threatsSample"), 11);
+      for (const th of threats) {
+        addLines(
+          t("artifactPdf.threatBullet", {
+            title: safeText(th.title, 200),
+            stride: th.stride,
+            score: th.risk.score ?? "—",
+          }),
+          9,
+        );
       }
     }
   } else {
     y += 4;
-    addLines("Análise ainda não disponível neste relatório.", 10);
+    addLines(t("artifactPdf.noAnalysis"), 10);
   }
 
   return pdf.output("blob");

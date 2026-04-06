@@ -41,10 +41,11 @@ Campos úteis para CLI, API, UI e export:
 - `structural_insights`, `analysis_insights`, `key_insights` — texto acionável
 - `risk_delta`, `threat_delta`, `recommendation_delta` — deltas focados
 - `meta` — `ComparisonResultMeta` (OpenAPI + Pydantic; `extra` permitido para extensões futuras):
-  - `comparison_contract_version` **1.4**; `semantic_insights_version` **1.4**
+  - `comparison_contract_version` **1.5**; `semantic_insights_version` **1.5**
   - `semantic_structural_refs` — ref estável + `change_category` opcional (derivada do prefixo `struct:*`)
-  - `semantic_interpretation_links` — `link_kind` `lexical_token_overlap` ou `entity_topic_correlation`; `inference_strength` sempre `low`; `shared_tokens` quando aplicável
-  - `interpretation_disclaimer` — lembrete de que ligações são proxies de leitura, não causalidade
+  - `semantic_interpretation_links` — `link_kind`, `anchoring_rationale` (auditável); `inference_strength` `low` ou `medium` (≥2 tokens lexicais); `shared_tokens` quando aplicável
+  - `interpretation_disclaimer` — honestidade inferencial (sem causalidade provada)
+  - `extensions` — mapa opt-in; raiz de `meta` fechada no schema (sem `additionalProperties` soltas)
 
 ## Como interpretar
 
@@ -96,6 +97,20 @@ Regra: **`baseline_analysis` e `revised_analysis` devem vir os dois ou nenhum**.
 
 - `tests/test_document_diff.py`, `tests/test_threat_model_comparison.py`, `tests/test_api.py`, `tests/test_cli.py`
 
+## Histórico — fases de inovação (consolidado)
+
+### Frente inicial (diff estrutural v1)
+
+- Comparar duas versões válidas do `ThreatModelDocument` para revisão e governança, sem alterar o restante contrato.
+- **Domínio:** `otm_core_schema.diff.diff_documents`. **CLI:** `otm diff`. **API:** `POST /v1/models/diff`. **UI:** `/diff`.
+- **Semântica v1:** secções por `id` com `added` / `removed` / `modified`; alterações por campo no `model_dump(mode="json")`; opcionais ausentes → `FieldChange` com `field="*"`.
+- **Limitações v1:** sem diff de YAML cru; sem merge; listas sem `id` não comparadas por ordem; métricas do resumo são heurísticas.
+- Evolução posterior: `ThreatModelComparisonResult`, `compare`, `analyses/diff`, export Markdown — descrito nas secções anteriores deste documento.
+
+### Fecho integrado (várias frentes)
+
+Integração das frentes diff/compare, imports, remediation backlog, explainability e PLOT4ai no mesmo `AnalysisResult`; exporters com secções compactas; testes de cadeia e suite completa como gate. Riscos residuais: heurísticas AI/LLM, volume de explicações em modelos grandes, import assistido (sempre com revisão humana).
+
 ## Ver também
 
-- `docs/INNOVATION_PHASE_1_THREAT_MODEL_DIFF.md` — histórico da frente inicial (diff estrutural v1)
+- [`KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md) — limitações actuais do produto

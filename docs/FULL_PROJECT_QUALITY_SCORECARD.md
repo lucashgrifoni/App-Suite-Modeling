@@ -80,3 +80,9 @@ EXCELENTE (≥8,5) · BOM (7,0–8,4) · ACEITÁVEL (5,5–6,9) · FRACO (4,0–
 
 - **Simplicidade de desenvolvimento** (CORS localhost, sem auth) vs **segurança de deployment genérico** — trade-off razoável para MVP local, **desde que documentado**.
 - **Velocidade de CI** (smoke E2E apenas) vs **cobertura de regressão UI** — trade-off que aumenta risco de falhas visíveis ao utilizador.
+
+---
+
+## Nota histórica — perspectiva “bar Staff/Principal”
+
+Uma auditoria paralela destacou **observabilidade / operação** como dimensão mais fraca (~4,5/10) quando a API não tinha logging estruturado nem correlação de pedidos. **Estado atual:** `request_id`, logs JSON, mypy e SCA no CI, CORS por ambiente — ver [`CI_AND_SECURITY_EVIDENCE.md`](CI_AND_SECURITY_EVIDENCE.md). O veredicto qualitativo permanece: **excelente núcleo e contratos**; **deployment público** exige camada extra (gateway/auth) e disciplina documentada em [`DEPLOYMENT_INVARIANTS.md`](DEPLOYMENT_INVARIANTS.md).

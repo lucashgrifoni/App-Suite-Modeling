@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 from fastapi import Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+
+from otm_api.api_error_messages import msg_request_validation_error
 
 
 def problem_detail(
@@ -34,8 +36,8 @@ def request_validation_handler(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         content=problem_detail(
             code="REQUEST_VALIDATION_ERROR",
-            message="Invalid request body or parameters.",
+            message=msg_request_validation_error(),
             status_code=422,
-            errors=exc.errors(),
+            errors=cast(list[dict[str, Any]], exc.errors()),
         ),
     )

@@ -1,0 +1,61 @@
+"""Read `AnalysisResult` from a JSON file."""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+from otm_threat_engine import AnalysisResult
+from pydantic import ValidationError
+
+from otm_cli.io_util import format_validation_error
+from otm_cli.shared.errors import CliUserError
+
+_SCHEMA_INVALID = "the document is not valid for the canonical schema."
+
+
+def load_analysis_result_from_path(path: Path) -> AnalysisResult:
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as e:
+        raise CliUserError(
+            exit_code=1,
+            failed=f"reading `{path}`.",
+            cause=str(e),
+            next_step="confirm the file is valid JSON (`otm analyze --json-out`).",
+        ) from e
+    try:
+        return AnalysisResult.model_validate(raw)
+    except ValidationError as e:
+        raise CliUserError(
+            exit_code=1,
+            failed=f"AnalysisResult validation for `{path}`.",
+            cause="incompatible structure.",
+            next_step="regenerate with `otm analyze --json-out`.",
+            validation_detail=format_validation_error(e),
+        ) from e
+
+
+def load_two_analysis_results(baseline: Path, revised: Path) -> tuple[AnalysisResult, AnalysisResult]:
+    try:
+        b_obj = json.loads(baseline.read_text(encoding="utf-8"))
+        r_obj = json.loads(revised.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as e:
+        raise CliUserError(
+            exit_code=1,
+            failed=f"reading JSON at `{baseline}` / `{revised}`.",
+            cause=str(e),
+            next_step="confirm paths and that both files are valid JSON.",
+        ) from e
+    try:
+        return AnalysisResult.model_validate(b_obj), AnalysisResult.model_validate(r_obj)
+    except ValidationError as e:
+        raise CliUserError(
+            exit_code=1,
+            failed="AnalysisResult validation.",
+            cause=_SCHEMA_INVALID,
+            next_step="regenerate with `otm analyze --json-out`.",
+            validation_detail=format_validation_error(e),
+        ) from e
+
+

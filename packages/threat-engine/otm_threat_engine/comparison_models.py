@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, Literal
 
 from otm_core_schema.diff import FieldChange, IdListSectionDiff, ThreatModelDiff
 from otm_explainability import ExplanationRecord
@@ -161,16 +161,25 @@ class SemanticInterpretationLinkModel(BaseModel):
     """
     Liga ref estrutural a bullet interpretativo.
 
-    `link_kind` e `inference_strength` deixam explícito que não há causalidade provada.
+    `link_kind`, `inference_strength` e `anchoring_rationale` documentam o porquê da ligação
+    sem afirmar causalidade operacional.
     """
 
     structural_ref: str
     related_section: Literal["insights", "improved", "worsened", "risk_impact"]
     summary: str
     link_kind: Literal["lexical_token_overlap", "entity_topic_correlation"] = "lexical_token_overlap"
-    inference_strength: Literal["low"] = Field(
+    inference_strength: Literal["low", "medium"] = Field(
         default="low",
-        description="Proxy de leitura — não prova causalidade nem impacto real.",
+        description=(
+            "`medium` só para sobreposição lexical com ≥2 tokens partilhados; "
+            "correlação por tópico permanece `low`. Nunca implica causalidade."
+        ),
+    )
+    anchoring_rationale: str = Field(
+        ...,
+        description="Uma frase curta: por que esta ligação foi proposta (auditável).",
+        max_length=400,
     )
     shared_tokens: list[str] = Field(
         default_factory=list,
@@ -193,10 +202,11 @@ class ComparisonResultMeta(BaseModel):
     """
     Metadados semânticos do compare — chaves estáveis para OpenAPI/TS.
 
-    `model_config.extra` permite chaves futuras sem quebrar clientes.
+    Raiz **fechada** (`extra=forbid`): evita bolha contratual genérica. Extensões experimentais
+    devem ir para `extensions` até serem promovidas a campos tipados.
     """
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="forbid")
 
     comparison_contract_version: str | None = None
     semantic_insights: list[str] = Field(default_factory=list)
@@ -205,6 +215,10 @@ class ComparisonResultMeta(BaseModel):
     semantic_structural_refs: list[SemanticStructuralRefModel] = Field(default_factory=list)
     semantic_interpretation_links: list[SemanticInterpretationLinkModel] = Field(default_factory=list)
     interpretation_disclaimer: str | None = None
+    extensions: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Mapa opt-in para chaves ainda não promovidas ao schema principal.",
+    )
 
 
 class ThreatModelComparisonResult(BaseModel):
@@ -229,7 +243,7 @@ class ThreatModelComparisonResult(BaseModel):
     )
     meta: ComparisonResultMeta = Field(
         default_factory=ComparisonResultMeta,
-        description="Metadados semânticos + extensões (`extra`) para evolução controlada.",
+        description="Metadados semânticos; extensões em `meta.extensions` até versão de contrato.",
     )
     explanations: list[ExplanationRecord] = Field(
         default_factory=list,

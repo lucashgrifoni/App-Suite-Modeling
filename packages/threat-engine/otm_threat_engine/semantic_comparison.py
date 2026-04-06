@@ -15,9 +15,9 @@ from otm_threat_engine.comparison_models import DiffAggregate
 from otm_threat_engine.result import AnalysisResult
 
 _INTERP_DISCLAIMER = (
-    "Diff semântico v1.4: `semantic_interpretation_links` ancoram refs estruturais a bullets via "
-    "`lexical_token_overlap` ou `entity_topic_correlation` — ambos são proxies de leitura (força `low`), "
-    "sem causalidade provada entre mudança no modelo e risco operacional."
+    "Diff semântico v1.5: cada ligação inclui `anchoring_rationale` e `inference_strength` "
+    "(`medium` apenas quando ≥2 tokens lexicais coincidem; correlação por tópico permanece `low`). "
+    "Isto melhora a auditabilidade sem alegar causalidade entre mudança no modelo e incidente."
 )
 
 _LINK_TOKENS = (
@@ -58,7 +58,7 @@ def _interpretation_links(
     """
     Ancoragem em duas camadas: (1) tokens partilhados entre nota e bullet; (2) tópico por entity_kind.
 
-    Todas as ligações são `inference_strength: low` — honestidade técnica.
+    Força inferencial: `medium` só com ≥2 tokens lexicais partilhados; caso contrário `low`.
     """
     buckets: list[tuple[str, list[str]]] = [
         ("insights", insights),
@@ -81,14 +81,26 @@ def _interpretation_links(
                 line_tokens = {t for t in _LINK_TOKENS if t in low}
                 inter = note_tokens & line_tokens
                 if inter:
+                    st = sorted(inter)
+                    strength: str = "medium" if len(st) >= 2 else "low"
+                    rationale = (
+                        "Vários tokens em comum entre a nota da ref estrutural e o bullet "
+                        f"({', '.join(st)})."
+                        if strength == "medium"
+                        else (
+                            "Um token lexical em comum entre a nota da ref e o bullet "
+                            f"(`{st[0]}`) — ancoragem lexical única."
+                        )
+                    )
                     out.append(
                         {
                             "structural_ref": ref_id,
                             "related_section": section,
                             "summary": line[:280],
                             "link_kind": "lexical_token_overlap",
-                            "inference_strength": "low",
-                            "shared_tokens": sorted(inter),
+                            "inference_strength": strength,
+                            "anchoring_rationale": rationale[:400],
+                            "shared_tokens": st,
                             "entity_kind": ek,
                         }
                     )
@@ -110,6 +122,11 @@ def _interpretation_links(
             for line in lines:
                 low = line.lower()
                 if any(t in low for t in topics):
+                    ek_disp = r.get("entity_kind") or "?"
+                    rationale = (
+                        f"Alinhamento por tópico do entity_kind `{ek_disp}` ao vocabulário do bullet "
+                        "(sem tokens lexicais partilhados explícitos)."
+                    )
                     out.append(
                         {
                             "structural_ref": ref_id,
@@ -117,6 +134,7 @@ def _interpretation_links(
                             "summary": line[:280],
                             "link_kind": "entity_topic_correlation",
                             "inference_strength": "low",
+                            "anchoring_rationale": rationale[:400],
                             "shared_tokens": [],
                             "entity_kind": r.get("entity_kind"),
                         }
@@ -370,7 +388,7 @@ def enrich_comparison_meta(
 
     out: dict[str, Any] = {
         "semantic_insights": insights,
-        "semantic_insights_version": "1.4",
+        "semantic_insights_version": "1.5",
         "semantic_diff_sections": {
             "structural_change_summary": [
                 f"Componentes: +{len(aggregate.components.get('added', []))} "

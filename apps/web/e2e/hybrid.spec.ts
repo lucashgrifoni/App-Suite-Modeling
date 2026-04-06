@@ -27,7 +27,7 @@ test("híbrido: análise real — cockpit e pré-check a partir do motor", async
   await expect(page.getByTestId("cockpit-priorities")).toBeVisible();
 });
 
-test("híbrido: compare real — diff semântico e meta v1.4", async ({ page }) => {
+test("híbrido: compare real — diff semântico e meta v1.5", async ({ page }) => {
   const revised = {
     ...minimalDoc,
     components: [
@@ -47,7 +47,7 @@ test("híbrido: compare real — diff semântico e meta v1.4", async ({ page }) 
 
   await expect(page.getByTestId("diff-semantic-panel")).toBeVisible({ timeout: 60_000 });
   await expect(page.getByTestId("diff-structural-refs")).toBeVisible();
-  // `semantic_interpretation_links` pode estar vazio (v1.4) — validar mudança estrutural na UI.
+  // `semantic_interpretation_links` pode estar vazio (v1.5) — validar mudança estrutural na UI.
   await expect(page.getByText("Estrutura", { exact: true })).toBeVisible();
 });
 

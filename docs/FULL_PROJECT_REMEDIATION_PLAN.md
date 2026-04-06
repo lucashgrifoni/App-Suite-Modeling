@@ -100,3 +100,16 @@ BL-08 (Sonar) ideal após BL-02 (menos ruído inicial).
 
 - **Não** é obrigatório executar todas as fases se o produto permanecer estritamente local — nesse caso, BL-05 pode ser substituído por documentação forte e exemplos Docker com rede interna.
 - Reavaliar prioridades após cada release semestral.
+
+---
+
+## Suplemento — fases “auditoria agressiva” (consolidado)
+
+Texto equivalente ao antigo plano paralelo BRUTAL, fundido aqui para um **único** plano canónico:
+
+1. **Fase A — Risco crítico:** perímetro (auth/CORS documentado vs implementado), **observabilidade** (logs JSON + `request_id`), **tipos** (mypy nos pacotes-alvo). *Estado atual:* grande parte mitigada — evidência em [`CI_AND_SECURITY_EVIDENCE.md`](CI_AND_SECURITY_EVIDENCE.md).
+2. **Fase B — Arquitetura:** CLI modular (feito), estratégia explícita `gitpage` vs `apps/web`, `registry_data`/exporters sob controlo.
+3. **Fase C — Gates de confiança:** SCA (feito), Sonar integrado **ou** remoção justificada, `e2e:critical` como gate **ou** risco escrito aceite, Ruff alargado por fases.
+4. **Fase D — Hardening UX:** `sessionStorage`/CSP, extras `pyproject` coerentes, exceções estreitas em AST opcional.
+
+**Caminho mínimo até “excelência end-to-end” (definição histórica):** base de perímetro + tipos + observabilidade **estáveis**; CLI **não** monolítica; **decisão explícita** sobre `e2e:critical` vs risco documentado; SCA e política de dependências **visíveis** no CI.

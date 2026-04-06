@@ -20,6 +20,11 @@ jobs:
         run: pip install -e ".[dev,cli,api]"
       - name: Ruff
         run: ruff check packages apps tests
+      - name: Mypy (core-schema + API)
+        run: mypy packages/core-schema/otm_core_schema apps/api/otm_api
+      # pip-audit 2.x não expõe `--fail-on=critical`; qualquer CVE/OSV conhecido falha o job (gate estrito).
+      - name: pip-audit (supply chain)
+        run: pip install "pip-audit>=2.7" && python -m pip_audit --desc on -S .
       - name: Core vs adapter import boundary
         run: python scripts/check_core_adapter_boundary.py
       - name: OpenAPI contract not stale
@@ -46,6 +51,9 @@ jobs:
         working-directory: apps/web
         run: |
           npm ci
+      - name: npm audit (critical)
+        working-directory: apps/web
+        run: npm audit --audit-level=critical
       - name: UI build (standard)
         if: runner.os != 'Windows'
         working-directory: apps/web
@@ -73,6 +81,25 @@ jobs:
       - name: Run UI smoke E2E
         working-directory: apps/web
         run: npm run e2e:smoke:portable
+
+  web-e2e-critical:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - name: Install web dependencies
+        working-directory: apps/web
+        run: npm ci
+      - name: Install Playwright browser
+        working-directory: apps/web
+        run: node ./node_modules/@playwright/test/cli.js install chromium
+      - name: E2E critical (mock stack)
+        working-directory: apps/web
+        run: npm run e2e:critical
 
   hybrid-e2e:
     runs-on: ubuntu-latest

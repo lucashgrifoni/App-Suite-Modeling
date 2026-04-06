@@ -287,6 +287,15 @@ def test_export_document_markdown_snapshot_minimal() -> None:
     assert md == snap
 
 
+def test_export_document_markdown_en_uses_english_section_titles() -> None:
+    doc = load_document_from_yaml_path(_MINIMAL)
+    md = export_document_markdown(doc, locale="en")
+    assert "## Assets" in md
+    assert "## Components" in md
+    assert "## Data flows" in md
+    assert "## Trust boundaries" in md
+
+
 def test_export_flowchart_mermaid() -> None:
     doc = load_document_from_yaml_path(_MINIMAL)
     mmd = export_flowchart_mermaid(doc)
@@ -357,6 +366,15 @@ def test_export_analysis_json_and_markdown() -> None:
     assert "Motor" in md or "motor" in md
     assert "Resumo executivo" in md
     assert "Próximos passos sugeridos" in md
+
+
+def test_export_analysis_markdown_en_representative_strings() -> None:
+    doc = load_document_from_yaml_path(_MINIMAL)
+    result = analyze_document(doc)
+    md = export_analysis_markdown(result, locale="en")
+    assert "## Automated analysis (engine)" in md
+    assert "### Executive summary" in md
+    assert "### Suggested next steps" in md
 
 
 def test_export_analysis_json_minimal_top_level_key_order_stable() -> None:

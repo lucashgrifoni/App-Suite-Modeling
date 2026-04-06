@@ -1,6 +1,6 @@
-# Limitações conhecidas (v0.1.0)
+# Limitações conhecidas (série 7.x)
 
-Documento objetivo para utilizadores e mantenedores. Complementa o [congelamento de escopo](RELEASE_SCOPE_FREEZE.md).
+Documento objetivo para utilizadores e mantenedores. Complementa o [congelamento de escopo](RELEASE_SCOPE_FREEZE.md) e o [fecho de engenharia](ENGINEERING_CLOSEOUT_SCOPE.md).
 
 ## Produto e plataforma
 

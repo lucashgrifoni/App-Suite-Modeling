@@ -7,7 +7,9 @@ from otm_core_schema import ThreatModelDocument, ThreatModelMethodology
 from otm_threat_engine import AnalysisResult
 from otm_threat_engine.remediation import RemediationBacklog, build_remediation_backlog
 
+from otm_api.api_error_messages import msg_remediation_input
 from otm_api.routers._errors import error_detail
+from otm_api.services.analysis import run_analysis as execute_analysis
 
 
 def build_remediation_backlog_response(
@@ -27,10 +29,10 @@ def build_remediation_backlog_response(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=error_detail(
                 code="REMEDIATION_INPUT",
-                message="Forneça `analysis` ou defina `run_analysis: true`.",
+                message=msg_remediation_input(),
             ),
         )
-    analysis_out = run_analysis(
+    analysis_out = execute_analysis(
         doc,
         pack_id=pack_id,
         methodology=methodology,

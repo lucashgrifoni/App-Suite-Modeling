@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Background,
   Controls,
@@ -20,7 +21,7 @@ import {
   loadDiagramLayout,
   saveDiagramLayoutPatch,
 } from "../../utils/diagramLayoutStorage";
-import type { OtmDataFlow, OtmDocument } from "../../types/document";
+import { COMPONENT_KINDS, type OtmDataFlow, type OtmDocument } from "../../types/document";
 
 function gridPos(i: number): { x: number; y: number } {
   const col = i % 4;
@@ -72,6 +73,7 @@ function ThreatModelDiagramInner({
   className?: string;
   style?: CSSProperties;
 }>) {
+  const { t } = useTranslation();
   /** Por omissão: edição activa (drag-and-drop, ligações) — o utilizador pode passar a «Visualizar». */
   const [editMode, setEditMode] = useState(true);
   const [showGrid, setShowGrid] = useState(true);
@@ -189,12 +191,12 @@ function ThreatModelDiagramInner({
         ...document.components,
         {
           id,
-          name: sanitizeDiagramLabel("Novo componente"),
+          name: sanitizeDiagramLabel(t("wizard.newComponentDefault")),
           kind: "process",
         },
       ],
     });
-  }, [document, setDocument]);
+  }, [document, setDocument, t]);
 
   const removeSelected = useCallback(() => {
     if (!selectedId || !editMode) return;
@@ -230,7 +232,7 @@ function ThreatModelDiagramInner({
           className="rounded-full border border-otm-border bg-otm-surface-2 px-3 py-1.5 text-sm font-medium text-otm-text hover:border-otm-border-strong"
           onClick={() => setEditMode((v) => !v)}
         >
-          {editMode ? "Visualizar" : "Editar"}
+          {editMode ? t("diagram.view") : t("diagram.edit")}
         </button>
         {editMode ? (
           <>
@@ -240,7 +242,7 @@ function ThreatModelDiagramInner({
               className="rounded-full border border-otm-border bg-otm-primary-subtle px-3 py-1.5 text-sm font-medium text-otm-accent"
               onClick={addNode}
             >
-              Adicionar nó
+              {t("diagram.addNode")}
             </button>
             <button
               type="button"
@@ -249,7 +251,7 @@ function ThreatModelDiagramInner({
               onClick={removeSelected}
               disabled={!selectedId}
             >
-              Remover selecionado
+              {t("diagram.removeSelected")}
             </button>
             <button
               type="button"
@@ -257,7 +259,7 @@ function ThreatModelDiagramInner({
               className="rounded-full border border-otm-border px-3 py-1.5 text-sm text-otm-text-muted hover:bg-otm-surface-2"
               onClick={resetLayout}
             >
-              Repor layout
+              {t("diagram.resetLayout")}
             </button>
           </>
         ) : null}
@@ -268,7 +270,7 @@ function ThreatModelDiagramInner({
             onChange={(e) => setShowGrid(e.target.checked)}
             className="rounded border-otm-border"
           />
-          Grelha
+          {t("diagram.grid")}
         </label>
       </div>
 
@@ -308,7 +310,7 @@ function ThreatModelDiagramInner({
         <div className="grid gap-2 rounded-otm-md border border-otm-border bg-otm-surface-1/80 p-3 sm:grid-cols-2">
           <div>
             <label className="text-xs font-medium text-otm-text-muted" htmlFor="dm-label">
-              Nome (sem HTML)
+              {t("diagram.nameNoHtml")}
             </label>
             <input
               id="dm-label"
@@ -320,7 +322,7 @@ function ThreatModelDiagramInner({
           </div>
           <div>
             <label className="text-xs font-medium text-otm-text-muted" htmlFor="dm-kind">
-              Tipo
+              {t("diagram.kind")}
             </label>
             <select
               id="dm-kind"
@@ -328,13 +330,11 @@ function ThreatModelDiagramInner({
               value={selectedComponent.kind}
               onChange={(e) => updateSelectedKind(e.target.value)}
             >
-              <option value="process">process</option>
-              <option value="datastore">datastore</option>
-              <option value="external_entity">external_entity</option>
-              <option value="user">user</option>
-              <option value="gateway">gateway</option>
-              <option value="queue">queue</option>
-              <option value="other">other</option>
+              {COMPONENT_KINDS.map((k) => (
+                <option key={k.value} value={k.value}>
+                  {t(`document.componentKinds.${k.value}`)}
+                </option>
+              ))}
             </select>
           </div>
         </div>
