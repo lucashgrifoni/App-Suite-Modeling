@@ -13,6 +13,10 @@ e versionamento semântico quando aplicável.
 
 ### Fixed
 
+- CI: **`aquasecurity/trivy-action`** atualizado para **0.35.0** (advisory / Dependabot security job deixava de aplicar patch e falhava com `security_update_not_needed` com **0.28.0**).
+- **`deploy-gitpage.yml`:** passo **`actions/configure-pages@v5`** antes de `upload-pages-artifact` (requisito do fluxo GitHub Pages).
+- **Dependabot:** removida duplicata de entrada **`npm` / `gitpage`**; adicionado **`package-ecosystem: github-actions`** para atualizações semanais de actions.
+
 ### Removed
 
 <!-- Compare links: atualizar com URL do repositório remoto após primeiro push de tag. -->

@@ -39,6 +39,10 @@ jobs:
         working-directory: gitpage
         run: npm run build
 
+      # Obrigatório antes de upload-pages-artifact (contrato GitHub Pages / OIDC).
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:

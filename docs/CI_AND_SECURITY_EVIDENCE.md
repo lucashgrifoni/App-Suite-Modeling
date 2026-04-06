@@ -163,5 +163,5 @@ API keys/OAuth2/mTLS + testes de autorização + OpenAPI/UI alinhados ao fluxo c
 
 ## 7. Trivy (imagem API)
 
-- Job `trivy-image`: `docker build -f apps/api/Dockerfile -t otm-api:ci .` seguido de `aquasecurity/trivy-action@0.28.0` com `severity: CRITICAL,HIGH` e `exit-code: 1`.
+- Job `trivy-image`: `docker build -f apps/api/Dockerfile -t otm-api:ci .` seguido de `aquasecurity/trivy-action@0.35.0` com `severity: CRITICAL,HIGH` e `exit-code: 1`.
 - Complementa pip-audit (Python na host) com visão de **imagem** (OS + dependências instaladas na layer).

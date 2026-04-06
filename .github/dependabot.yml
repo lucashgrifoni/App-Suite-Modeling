@@ -7,18 +7,6 @@ updates:
       interval: weekly
     open-pull-requests-limit: 5
 
-  # Landing GitHub Pages (Vite 8 + plugin-react 6 exigem migração; manter 5.x até ajuste explícito).
-  - package-ecosystem: npm
-    directory: /gitpage
-    schedule:
-      interval: weekly
-    open-pull-requests-limit: 3
-    ignore:
-      - dependency-name: vite
-        update-types: ["version-update:semver-major"]
-      - dependency-name: "@vitejs/plugin-react"
-        update-types: ["version-update:semver-major"]
-
   - package-ecosystem: npm
     directory: /apps/web
     schedule:
@@ -48,3 +36,9 @@ updates:
         patterns:
           - "vite"
           - "@vitejs/plugin-react"
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
