@@ -26,6 +26,7 @@ e versionamento semântico quando aplicável.
 ### Fixed
 
 - Componentes TS: optional chaining / defaults onde o OpenAPI marca opcional mas o UI assume listas.
+- CI (Ubuntu): instalação de `libcairo2-dev` e `pkg-config` antes do `pip install`, para compilar `pycairo` (cadeia `xhtml2pdf` → `svglib`).
 
 <!-- Compare links: atualizar com URL do repositório remoto após primeiro push de tag. -->
 
