@@ -9,15 +9,29 @@ e versionamento semântico quando aplicável.
 
 ### Added
 
+- OpenAPI como fonte de tipos TS: `contracts/openapi.json`, `scripts/export_openapi.py`, `openapi-typescript`, `apps/web/src/types/generated/openapi.d.ts`, scripts `contracts:sync` no pacote web.
+- `response_model` explícito em `POST /v1/models/analyze` e `/compare` para esquemas reais no OpenAPI.
+- Diff semântico **v1.3**: `meta.semantic_interpretation_links` (correlacional); `comparison_contract_version` **1.3**; UI `diff-interpretation-links`; Markdown e CLI alinhados.
+- Anti-patterns **structural_primary** (admin, upload+`supports_file_upload`, API gateway, e-commerce) com `mitigating_keywords` / `missing_any_of` como filtro secundário.
+- Repo scan: ficheiros `.py`, deteção FastAPI/Flask/ASGI, `stack_hint` nas inferências, `detected_stacks`, hint de boundary para FastAPI.
+- Testes: `tests/test_openapi_contract_file.py`, `test_structural_primary_gateway_cross_boundary_without_rate_keywords`, `test_scan_detects_python_fastapi_signals`.
+- E2E: `e2e/import.spec.ts` (import mock + revisão); jornada diff com `semantic_interpretation_links`.
+
 ### Changed
 
+- `apps/web/src/types/api.ts`: tipos de motor reexportados a partir do OpenAPI gerado; `ComparisonMeta` com `semantic_interpretation_links`; endurecimento pontual (`AnalysisResult`, `ThreatModelComparisonResult`) para o SPA.
+- Benchmark golden: `min_model_completeness_score` **38** nos quatro templates wave principais.
+- Microcopy da faixa executiva no cockpit (costura compare/export).
+
 ### Fixed
+
+- Componentes TS: optional chaining / defaults onde o OpenAPI marca opcional mas o UI assume listas.
 
 <!-- Compare links: atualizar com URL do repositório remoto após primeiro push de tag. -->
 
 ## [6.0.0] — 2026-04-06
 
-Release **v6.0** (contratos TS alinhados ao motor, diff semântico v1.2, E2E crítico, SonarCloud + cobertura, anti-patterns e repo scan reforçados, relatório premium e exportadores multi-canal).
+Release **v6.0** (contratos TS alinhados ao motor, diff semântico v1.2, E2E crítico, SonarQube local + cobertura pytest, anti-patterns e repo scan reforçados, relatório premium e exportadores multi-canal).
 
 ### Added
 
@@ -26,8 +40,7 @@ Release **v6.0** (contratos TS alinhados ao motor, diff semântico v1.2, E2E cr�
 - E2E crítico: `apps/web/e2e/journeys.spec.ts`, `e2e/cockpit.spec.ts`; script `npm run e2e:critical`.
 - Repo scan: deteções reforçadas (multer/express.file/busboy, sessão, child_process/fork, rotas debug), `modeling_hints` e `import_signals_corpus_snippets`; `repo_ast_optional`; tags `import:signal:` no corpus de anti-patterns.
 - Documentação: `docs/FINAL_CLOSEOUT_ROUND.md`, `audit-gpt.md`, pacote de auditoria (`docs/BRUTAL_*.md`, `docs/FULL_PROJECT_*.md`, `docs/CONSOLIDATION_ELITE_ROUND.md`).
-- Workflow `sonarcloud.yml`: `pytest` com cobertura (`coverage.xml`) e scan SonarCloud (`SONAR_TOKEN`, variável `SONAR_ORGANIZATION`).
-- `exportArtifactHelpers.ts` (extensão/MIME de export) e `sonar-project.properties` alargado (`gitpage`, `examples`, `sonar.tests`, `coverage.xml`, exclusões de artefactos/fixtures).
+- `exportArtifactHelpers.ts` (extensão/MIME de export) e `sonar-project.properties` alargado para SonarQube local (`gitpage`, `examples`, `sonar.tests`, `coverage.xml`, exclusões de artefactos/fixtures).
 - `pytest-cov` e `[tool.coverage.run]` para cobertura em `packages` + `apps`.
 - Gate decisivo GO/NO-GO de uma página para publicação (`docs/GO_NO_GO_v0.1.0.md`).
 - Paridade multi-canal: `semantic_insights` fundidos em `key_insights` na comparação; secção narrativa no Markdown de diff; diff semântico entre análises no report premium com baseline; CLI `diff` texto com blocos semânticos.

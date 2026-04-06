@@ -13,6 +13,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      # xhtml2pdf (extra dev/report) → svglib → pycairo: precisa de headers Cairo no Linux (sem wheel manylinux).
+      - name: Install Cairo build deps (pycairo)
+        run: sudo apt-get update && sudo apt-get install -y libcairo2-dev pkg-config
       - name: Install
         run: pip install -e ".[dev,cli,api]"
       - name: Ruff
