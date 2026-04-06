@@ -25,6 +25,7 @@ e versionamento semântico quando aplicável.
 ### Fixed
 
 - `apps/web`: **Tailwind CSS** fixado em `3.4.19` (evita resolução para v4, que exige `@tailwindcss/postcss` e quebrava `postcss.config.js` + build Vite/E2E). Dependabot: ignorar **major** em `tailwindcss` até migração explícita para v4.
+- `apps/web`: **TypeScript** restrito a `~5.9.3` — `openapi-typescript@7.6.1` exige peer `typescript@^5.x`; TS 6 faz `npm ci` falhar com **ERESOLVE**. Dependabot: ignorar **major** em `typescript` até `openapi-typescript` suportar TS 6 (ou troca de ferramenta).
 
 ### Removed
 

@@ -16,3 +16,6 @@ updates:
     ignore:
       - dependency-name: tailwindcss
         update-types: ["version-update:semver-major"]
+      # openapi-typescript 7.x declara peer typescript@^5.x; TS 6 quebra npm ci (ERESOLVE).
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
