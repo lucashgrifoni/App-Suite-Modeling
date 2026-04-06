@@ -191,21 +191,33 @@ test("jornada diff enriquecido: semantic panel + refs estruturais", async ({ pag
         },
         key_insights: ["E2E: componente novo no perímetro."],
         meta: {
-          comparison_contract_version: "1.2",
+          comparison_contract_version: "1.4",
           semantic_insights: ["Novo componente no grafo — rever superfície."],
-          semantic_insights_version: "1.2",
+          semantic_insights_version: "1.4",
           semantic_diff_sections: {
             structural_change_summary: ["Componentes: +1 / −0 / ~0"],
             improved: [],
             worsened: [],
-            risk_impact: ["Alteração estrutural correlacionada com perímetro (heurístico)."],
+            risk_impact: ["Superfície de gateway alterada no diff E2E."],
           },
           semantic_structural_refs: [
             {
               ref: "struct:component_added:svc_x",
               entity_kind: "component",
               entity_id: "svc_x",
-              note: "Entrada estrutural nova (E2E).",
+              note: "Novo gateway no perímetro (E2E).",
+              change_category: "component_added",
+            },
+          ],
+          semantic_interpretation_links: [
+            {
+              structural_ref: "struct:component_added:svc_x",
+              related_section: "risk_impact",
+              summary: "Superfície de gateway alterada no diff E2E.",
+              link_kind: "lexical_token_overlap",
+              inference_strength: "low",
+              shared_tokens: ["gateway", "perímetro"],
+              entity_kind: "component",
             },
           ],
           interpretation_disclaimer: "Inferência correlacional — não causalidade provada (E2E).",
@@ -228,6 +240,8 @@ test("jornada diff enriquecido: semantic panel + refs estruturais", async ({ pag
   await expect(
     page.getByTestId("diff-structural-refs").getByText("struct:component_added:svc_x"),
   ).toBeVisible();
+  await expect(page.getByTestId("diff-interpretation-links")).toBeVisible();
+  await expect(page.getByTestId("diff-interpretation-links")).toContainText("lexical_token_overlap");
 });
 
 test("jornada export com análise enriquecida: markdown contém secções guiadas", async ({ page }) => {

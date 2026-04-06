@@ -4,6 +4,9 @@ import type { AnalysisResult } from "../../types/api";
 export function Plot4aiContextCard({ analysis }: Readonly<{ analysis: AnalysisResult }>) {
   if (analysis.methodology !== "plot4ai" || !analysis.ai_system_context) return null;
   const ctx = analysis.ai_system_context;
+  const patternTags = ctx.pattern_tags ?? [];
+  const riskSurfaces = ctx.primary_risk_surfaces ?? [];
+  const prioRecs = ctx.prioritized_recommendations ?? [];
   return (
     <Card
       title="PLOT4ai — sistema com IA"
@@ -11,26 +14,26 @@ export function Plot4aiContextCard({ analysis }: Readonly<{ analysis: AnalysisRe
       variant="elevated"
     >
       <p className="text-sm text-otm-text">{ctx.synopsis}</p>
-      {ctx.pattern_tags.length > 0 ? (
+      {patternTags.length > 0 ? (
         <p className="mt-2 text-xs text-otm-text-muted">
-          <span className="font-medium text-otm-text">Padrões:</span> {ctx.pattern_tags.join(", ")}
+          <span className="font-medium text-otm-text">Padrões:</span> {patternTags.join(", ")}
         </p>
       ) : null}
-      {ctx.primary_risk_surfaces.length > 0 ? (
+      {riskSurfaces.length > 0 ? (
         <div className="mt-3">
           <p className="text-xs font-medium text-otm-text">Superfícies de risco</p>
           <ul className="mt-1 list-inside list-disc text-xs text-otm-text-muted">
-            {ctx.primary_risk_surfaces.slice(0, 4).map((s) => (
+            {riskSurfaces.slice(0, 4).map((s) => (
               <li key={s}>{s}</li>
             ))}
           </ul>
         </div>
       ) : null}
-      {ctx.prioritized_recommendations.length > 0 ? (
+      {prioRecs.length > 0 ? (
         <details className="mt-3 text-xs text-otm-text-muted">
           <summary className="cursor-pointer font-medium text-otm-text">Acções prioritárias (IA)</summary>
           <ul className="mt-1 list-inside list-disc">
-            {ctx.prioritized_recommendations.slice(0, 5).map((r) => (
+            {prioRecs.slice(0, 5).map((r) => (
               <li key={r}>{r}</li>
             ))}
           </ul>

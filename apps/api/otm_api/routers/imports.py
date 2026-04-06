@@ -54,6 +54,7 @@ async def _read_limited(file: UploadFile) -> tuple[bytes, str]:
         "Body: `multipart/form-data` with field `file` (YAML/JSON). "
         "Returns canonical draft and inferences."
     ),
+    response_model=ArtifactImportResponse,
 )
 async def import_openapi_route(file: UploadFile = File(...)) -> ArtifactImportResponse:
     try:
@@ -70,6 +71,7 @@ async def import_openapi_route(file: UploadFile = File(...)) -> ArtifactImportRe
         "A single `.tf` file or aggregated HCL text. "
         "For directories, prefer the CLI: `otm import terraform`."
     ),
+    response_model=ArtifactImportResponse,
 )
 async def import_terraform_route(file: UploadFile = File(...)) -> ArtifactImportResponse:
     try:
@@ -83,6 +85,7 @@ async def import_terraform_route(file: UploadFile = File(...)) -> ArtifactImport
     "/kubernetes",
     summary="Draft from Kubernetes manifests",
     description="Multi-document YAML (multiple resources separated by `---`).",
+    response_model=ArtifactImportResponse,
 )
 async def import_kubernetes_route(file: UploadFile = File(...)) -> ArtifactImportResponse:
     try:

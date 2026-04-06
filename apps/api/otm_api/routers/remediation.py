@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Literal
 
 from fastapi import APIRouter, Query
 from fastapi.responses import PlainTextResponse
 from otm_threat_engine import AnalysisResult
+from otm_threat_engine.remediation import RemediationBacklog
 from pydantic import ValidationError as PydanticValidationError
 
 from otm_api.routers._errors import (
@@ -26,6 +27,18 @@ router = APIRouter(prefix="/remediation", tags=["Remediation"])
         "Body: canonical `document`; optional `analysis` (`AnalysisResult`). "
         "If `analysis` is omitted, set `run_analysis: true` to run the engine."
     ),
+    response_model=RemediationBacklog,
+    responses={
+        200: {
+            "description": "JSON (`format=json`, default) ou Markdown (`format=markdown`).",
+            "content": {
+                "text/markdown": {
+                    "schema": {"type": "string"},
+                    "example": "## Remediação\n\nItens priorizados…",
+                },
+            },
+        },
+    },
 )
 def post_remediation_backlog(
     body: RemediationBacklogRequest,
@@ -38,7 +51,7 @@ def post_remediation_backlog(
         default=None,
         description="For Markdown: root-cause | control | category.",
     ),
-) -> Any:
+) -> RemediationBacklog | PlainTextResponse:
     doc = document_from_payload_or_422(body.document)
     analysis_obj: AnalysisResult | None = None
     if body.analysis is not None:
@@ -60,4 +73,4 @@ def post_remediation_backlog(
 
         text = export_remediation_backlog_markdown(backlog, group_by=group_by)
         return PlainTextResponse(text, media_type="text/markdown; charset=utf-8")
-    return backlog.model_dump(mode="json")
+    return backlog

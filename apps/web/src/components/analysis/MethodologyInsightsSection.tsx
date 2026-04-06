@@ -20,7 +20,7 @@ export function MethodologyInsightsSection({ analysis }: Readonly<{ analysis: An
           >
             <p className="text-sm font-semibold text-otm-text">{b.title}</p>
             <ul className="mt-2 space-y-1 text-xs text-otm-text-muted">
-              {b.items.slice(0, 3).map((item) => (
+              {(b.items ?? []).slice(0, 3).map((item) => (
                 <li key={item}>• {item}</li>
               ))}
             </ul>

@@ -36,11 +36,16 @@ def test_enrich_comparison_meta_includes_semantic_insights_version() -> None:
         revised_analysis=None,
         aggregate=agg,
     )
-    assert meta.get("semantic_insights_version") == "1.2"
+    assert meta.get("semantic_insights_version") == "1.4"
     assert "semantic_diff_sections" in meta
     assert any("dmz" in s for s in meta.get("semantic_insights", []))
     assert meta.get("semantic_structural_refs")
     assert any(r.get("ref", "").startswith("struct:trust_boundary_added:") for r in meta["semantic_structural_refs"])
+    links = meta.get("semantic_interpretation_links")
+    assert isinstance(links, list)
+    assert links, "v1.4 espera pelo menos uma ligação quando há boundary + bullets com tokens em comum"
+    assert all("link_kind" in x and "inference_strength" in x for x in links)
+    assert any(x.get("link_kind") == "lexical_token_overlap" for x in links)
 
 
 def test_compare_merges_meta_insights() -> None:
@@ -48,7 +53,8 @@ def test_compare_merges_meta_insights() -> None:
     b = load_document_from_yaml_path(_MIN)
     ra = analyze_document(b)
     r = compare_threat_models(a, b, baseline_analysis=ra, revised_analysis=ra)
-    assert "semantic_insights" in r.meta or "comparison_contract_version" in r.meta
+    assert r.meta.comparison_contract_version == "1.4"
+    assert isinstance(r.meta.semantic_insights, list)
 
 
 def test_semantic_diff_from_analyses_only_detects_quality_delta() -> None:
@@ -74,7 +80,8 @@ def test_comparison_markdown_includes_semantic_diff_summary() -> None:
     assert "### Diff semântico (resumo)" in md
     assert "### Aviso inferencial (diff)" in md
     assert "### Ligação estrutura → interpretação (refs estáveis)" in md
-    sem = cmp.meta.get("semantic_diff_sections") or {}
-    if sem.get("risk_impact"):
-        assert any("Segmentação" in x or "perímetro" in x for x in sem["risk_impact"])
+    sem = cmp.meta.semantic_diff_sections
+    if sem is not None and sem.risk_impact:
+        assert any("Segmentação" in x or "perímetro" in x for x in sem.risk_impact)
     assert "### Insights semânticos (narrativa)" in md
+    assert "### Correspondência ref → interpretação (v1.4)" in md

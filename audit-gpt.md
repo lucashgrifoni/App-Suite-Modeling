@@ -1,144 +1,129 @@
-# App Suite Modeling — Relatório de entrega: rodada final de fechamento
+# App Suite Modeling — Relatório da rodada integrada (fecho elite)
 
-Documento gerado para auditoria interna/externa após implementação da rodada solicitada (contratos, E2E crítico, anti-patterns híbridos, repo import, semantic diff v1.2, benchmark, UX cockpit/diff). **Não substitui** o relatório técnico de estado anterior; descreve **o que foi feito nesta rodada** e o resultado dos gates.
+Entrega após execução das frentes: **superfície OpenAPI fechada para o SPA**, **gate CI anti-stale**, **E2E híbrido (API real)**, **goldens HTTP semânticos**, mantendo **semantic diff v1.4**, **benchmark 38**, e restante maturidade já existente.
 
 ---
 
 ## 1. Resumo executivo
 
-- **Contratos:** tipagem forte no SPA para comparação e análise embutida (`AnalysisDiff`, `ThreatDeltaSummary`, `ComparisonMeta`, campos completos de `AnalysisResult` incluindo achados estruturais); guardrails Python em `test_comparison_ts_contract_alignment.py` e teste de chaves estáveis em `meta`.
-- **Semantic diff:** versão **1.2** com separação explícita entre contagens estruturais (`structural_change_summary`), interpretação (`semantic_insights` / secções melhorou/piorou/risco), refs estáveis (`semantic_structural_refs`) e **disclaimer** único (`interpretation_disclaimer`); `comparison_contract_version` **1.2**.
-- **Anti-patterns:** camada **menos só textual** — gates por component kinds, ids, cross-boundary flows e volume de fluxos; tags `import:signal:` no corpus; cópia local de lógica de fluxos cross-boundary para evitar **import circular**.
-- **Repo import:** regex alargada, rota `debug`, saída com `modeling_hints` e `import_signals_corpus_snippets`.
-- **Benchmark:** limiar de completude do modelo nos quatro templates wave subiu de **35** para **37**.
-- **E2E:** `e2e/journeys.spec.ts` cobre análise enriquecida, diff com UI semântica/refs e export; `npm run e2e:critical` = smoke + cockpit + journeys.
-- **UX:** faixa **Leitura executiva** no cockpit com ligações para `/diff` e `/export`; diff com painel semântico e bloco de refs estruturais.
+| Frente | Resultado |
+|--------|-----------|
+| Contratos | **Precheck** (`ModelPrecheckResponse`), **diff** (`ThreatModelDiff`), **analyses/diff** (`AnalysisDiff`), **remediation/backlog** JSON (`RemediationBacklog`), **exports** / **imports** com `response_model`; **premium** documentado por media type; `contracts/openapi.json` + TS gerado. |
+| Gate OpenAPI | `scripts/verify_openapi_up_to_date.py` + CI Python; `npm run contracts:verify`. |
+| E2E | `e2e:critical` **6** testes (mocks); `e2e:hybrid` **3** testes (uvicorn + Vite); job CI `hybrid-e2e`. |
+| Goldens HTTP | `tests/test_http_response_goldens.py` + `http_api_semantic_expectations.json` para `/analyze` e `/compare`. |
+| Anti-patterns 3.0 | `structural_primary` + mensagens dedicadas; admin/API/upload/e-commerce com disparo ancorado no grafo. |
+| Repo import | `.py` + FastAPI/Flask/uvicorn; `detected_stacks`; `stack_hint`; hint de boundary para FastAPI. |
+| Semantic diff 1.4 | `link_kind`, `inference_strength` `low`, `shared_tokens`; `entity_topic_correlation` como segunda camada; `change_category` nas refs; `comparison_contract_version` **1.4**. |
+| Benchmark | `min_model_completeness_score` **38** nos quatro casos wave. |
+| UX | Diff: microcopy v1.4; exibição de tipo de ligação e categoria de mudança nas refs. |
 
 ---
 
-## 2. Uso das skills (disciplina, não decoração)
+## 2. Disciplina de skills (aplicação real)
 
-- **Arquitetura / dívida:** mantidos limites entre motor, exporters e UI; **evitado** acoplamento `anti_pattern_library` → `engine_support` via duplicação mínima de `_cross_boundary_flow_ids`.
-- **Priorização de dívida:** foco nos gaps P0/P1 explícitos (TS, E2E, anti-pattern híbrido, diff) sem reescrita do motor.
-- **AppSec / contratos:** disclaimers explícitos no diff; sem promessa de causalidade; tags `import:signal:` como opt-in do modelador.
-- **Testes / quality gates:** contratos adicionais, golden de markdown de compare, pytest verde, Playwright `e2e:critical` verde, `tsc` + build verdes.
-- **UI / design system:** componentes existentes (`Card`, links discretos); hierarquia cockpit → executivo → decisão técnica.
-- **Readiness:** `CHANGELOG.md`, `docs/FINAL_CLOSEOUT_ROUND.md`, este ficheiro.
-
----
-
-## 3. Arquitetura / abordagem
-
-- **Motor:** `semantic_comparison.py` enriquece `meta` sem alterar o contrato principal de `ThreatModelComparisonResult` (apenas versões e chaves novas em `dict`).
-- **SPA:** consome JSON da API com tipos alinhados aos modelos Pydantic de `comparison_models.py`.
-- **Persistência sessão:** normalização defensiva para análises antigas sem `structural_findings`.
+- **Arquitetura / dívida:** `meta` como modelo Pydantic com `extra="allow"` — fecho contratual sem bloquear evolução; sem parser pesado no import.
+- **Contratos / AppSec:** OpenAPI espelha campos semânticos; disclaimers explícitos em motor, Markdown e UI.
+- **Testes / quality gate:** OpenAPI verificado no CI; contract tests por `$ref`; goldens semânticos sem snapshot gigante; E2E híbrido honesto (links interpretativos opcionais).
+- **UI / design system:** blocos existentes (`InterpretationLinksBlock`, `StructuralRefsBlock`) com costura textual e dados estruturados.
+- **Readiness:** CHANGELOG, `docs/CONTRACTS_CI_HYBRID.md`, `docs/API.md` (ponte), `contracts:sync` / `contracts:verify`.
 
 ---
 
-## 4. Contratos / tipagem (alterações)
+## 3. Contratos e tipagem
 
-| Área | Ficheiro / artefacto |
-|------|----------------------|
-| TS | `apps/web/src/types/api.ts` — `StructuralFinding`, `TrustBoundaryFinding`, `HeuristicThreat` estendido, `AnalysisDiff`, `HeuristicThreatDelta*`, `ThreatDeltaSummary`, `SemanticDiffSections`, `SemanticStructuralRef`, `ComparisonMeta`, `ThreatModelComparisonResult` |
-| Sessão | `apps/web/src/context/SessionContext.tsx` — `normalizeAnalysis` |
-| Python | `tests/test_comparison_ts_contract_alignment.py` |
-| Motor meta | `comparison_contract_version` 1.2 em `threat_model_comparison.py` |
-
-**Intencionalmente fora de escopo desta rodada:** geração automática de tipos a partir de OpenAPI; paridade campo-a-campo de `ExplanationRecord` e todos os subtipos avançados, se não usados pelo SPA.
+- **Backend:** routers `models`, `analyses`, `remediation`, `exports`, `imports`, `reports_premium` (último: respostas por tipo MIME).
+- **Artefactos:** `contracts/openapi.json`, `export_openapi.py`, `verify_openapi_up_to_date.py`.
+- **Frontend:** `npm run contracts:sync` | `contracts:verify`.
+- **Testes:** `tests/test_openapi_contract_file.py` — schemas + `$ref` de precheck, diff, analyses/diff, remediation JSON.
 
 ---
 
-## 5. E2E (alterações)
+## 4. E2E
 
-| Ficheiro | Conteúdo |
-|----------|----------|
-| `apps/web/e2e/journeys.spec.ts` | 3 jornadas: análise enriquecida; compare com `meta` rica; export com análise em sessão |
-| `apps/web/e2e/cockpit.spec.ts` | Assert da faixa executiva |
-| `apps/web/e2e/smoke.spec.ts` | Mantém `structural_findings` / `trust_boundary` no mock de análise |
-| `apps/web/package.json` | `e2e:critical` |
+- **Mocks:** `e2e:critical` — **6 passed**.
+- **Híbrido:** `playwright.hybrid.config.ts`, `e2e/hybrid.spec.ts`, fixture `e2e/fixtures/minimal-document.json` — **3 passed**; `npm run e2e:hybrid`.
 
 ---
 
-## 6. Anti-patterns (alterações)
+## 5. Anti-patterns 3.0
 
-- **Código:** `anti_pattern_library.py` — novos campos no modelo + helpers; `_cross_boundary_flow_ids` local.
-- **Dados:** `catalog.yaml` — gates por perfil (admin, API, upload, e-commerce) conforme pedido.
-- **Testes:** `tests/test_anti_pattern_library.py` — mitigação CORS com grafo mínimo gateway+crossing; admin sem id admin não dispara; tag `import:signal:` suprime lacuna de quarentena.
-
----
-
-## 7. Repo import (alterações)
-
-- **Ficheiro:** `packages/artifact-import/otm_artifact_import/repo_scan.py`
-- **Melhorias:** padrões multer/file/busboy; sessão/cookie-session; child_process/fork/exec promisificado; HTTP clients adicionais; rota debug; **`modeling_hints`**, **`import_signals_corpus_snippets`**
-- **Testes:** `tests/test_repo_scan.py` assert dos novos campos
+- **Código:** `structural_primary`, `structural_primary_message`, `_bump_confidence`, ramo dedicado com `detection_sources` contendo `structural:primary`.
+- **Dados:** `catalog.yaml` — admin (trust boundary + id admin), upload (≥3 fluxos + `supports_file_upload`), API gateway + cross-boundary, e-commerce + cross-boundary.
+- **Teste:** `test_structural_primary_gateway_cross_boundary_without_rate_keywords`.
 
 ---
 
-## 8. Semantic diff (alterações)
+## 6. Repo import
 
-- **Motor:** `semantic_comparison.py` — refs + disclaimer + summary estrutural + versão 1.2
-- **Markdown:** `comparison_markdown.py` — secções “Aviso inferencial”, contagens, “Ligação estrutura → interpretação”
-- **CLI:** `apps/cli/otm_cli/cli.py` — mesmo conteúdo em texto
-- **UI:** `DiffPage.tsx` — `diff-semantic-panel`, `diff-structural-refs`, contagens no painel
+- **Ficheiro:** `repo_scan.py` — sufixo `.py`, regex FastAPI/Flask/ASGI, `detected_stacks`, `stack_hint`, hint `repo_inference:python_fastapi`.
+- **Teste:** `test_scan_detects_python_fastapi_signals`, extensão de `test_scan_node_express_repo_finds_route_and_signals` para `javascript_family`.
 
 ---
 
-## 9. Benchmark / golden (alterações)
+## 7. Semantic diff 1.4
 
-- `tests/fixtures/golden/benchmark_expectations_v1.json` — `min_model_completeness_score`: **37**
-- `tests/test_semantic_comparison.py` — asserts das novas secções no markdown de compare
-
----
-
-## 10. UX / cockpit (alterações)
-
-- `DecisionCockpit.tsx` — `cockpit-executive-strip`, microcopy executivo, links Compare / Export
-- `ExportPage.tsx` — wrapper `export-download-section` para E2E
+- **Motor:** `semantic_comparison.py` — `_interpretation_links` (lexical + tópico por `entity_kind`), `semantic_insights_version` **1.4**.
+- **Orquestração:** `threat_model_comparison.py` — `ComparisonResultMeta.model_validate`, `comparison_contract_version` **1.4**.
+- **Canais:** `comparison_markdown.py`, `cli.py`, `DiffPage.tsx` (`diff-interpretation-links`, `diff-structural-refs`).
+- **Testes:** `test_semantic_comparison.py`, `test_comparison_ts_contract_alignment.py`.
 
 ---
 
-## 11. Ficheiros criados ou alterados (lista principal)
+## 8. Benchmark / golden
 
-**Criados:** `tests/test_comparison_ts_contract_alignment.py`, `apps/web/e2e/journeys.spec.ts`, `docs/FINAL_CLOSEOUT_ROUND.md`
-
-**Alterados (entre outros):** `apps/web/src/types/api.ts`, `SessionContext.tsx`, `DecisionCockpit.tsx`, `DiffPage.tsx`, `ExportPage.tsx`, `package.json`, `semantic_comparison.py`, `threat_model_comparison.py`, `anti_pattern_library.py`, `catalog.yaml`, `comparison_markdown.py`, `cli.py`, `repo_scan.py`, `test_anti_pattern_library.py`, `test_semantic_comparison.py`, `test_repo_scan.py`, `benchmark_expectations_v1.json`, `CHANGELOG.md`, `e2e/smoke.spec.ts`, `e2e/cockpit.spec.ts`
+- `tests/fixtures/golden/benchmark_expectations_v1.json` — completude mínima **38** (quatro templates principais).
 
 ---
 
-## 12. Testes executados e resultado
+## 9. UX executiva
+
+- `DecisionCockpit.tsx` — texto que liga pré-check a **Comparar** / **Exportar**.
+- `DiffPage.tsx` — v1.4, tipo de ligação e força inferencial visíveis; categoria nas refs.
+
+---
+
+## 10. Ficheiros principais (criados ou alterados)
+
+**Alterados (esta continuação):** `comparison_models.py`, `semantic_comparison.py`, `threat_model_comparison.py`, `comparison_markdown.py`, `cli.py`, `test_semantic_comparison.py`, `test_comparison_ts_contract_alignment.py`, `test_openapi_contract_file.py`, `DiffPage.tsx`, `api.ts`, `journeys.spec.ts`, `contracts/openapi.json`, `openapi.d.ts`, `CHANGELOG.md`, `audit-gpt.md`, `docs/THREAT_MODEL_DIFF.md`.
+
+---
+
+## 11. Validação executada
 
 | Comando | Resultado |
 |---------|-----------|
-| `python -m pytest tests -q` | **354 passed** |
-| `npm run typecheck` (em `apps/web`) | **OK** |
-| `npm run build` (em `apps/web`) | **OK** |
-| `npm run e2e:critical` | **5 passed** |
+| `python -m pytest tests -q` | **367 passed** |
+| `python scripts/verify_openapi_up_to_date.py` | OK |
+| `npm run typecheck` / `build` (apps/web) | OK |
+| `npm run e2e:critical` | **6 passed** |
+| `npm run e2e:hybrid` | **3 passed** |
 
 ---
 
-## 13. Limitações remanescentes
+## 12. Limitações remanescentes
 
-- **10/10 comercial/elite global:** **não** alcançado — permanecem limites de multi-stack no import, ausência de OpenAPI→TS automático, e diff semântico ainda inferencial.
-- **Anti-patterns:** continuam dependentes de `missing_any_of` no texto para o disparo principal; os gates **reduzem** ruído mas não eliminam heurística.
-- **E2E:** cobertura **mínima** de jornadas críticas, não matriz completa de regressão visual ou PDF.
-
----
-
-## 14. Avaliação honesta: já bateu 10/10?
-
-**Não.** Esta rodada **reduz** drift TS, **fortalece** o diff semântico e a auditabilidade percebida, **endurece** anti-patterns e benchmark, e **adiciona** E2E real das jornadas pedidas. Para **10/10 produto integrado** faltaríam, entre outros: geração/validação sistemática de contratos API↔TS, E2E mais amplo (premium real, import UI), import multi-stack com provas em repositórios reais, e critérios de qualidade ainda mais exigentes sem custo de manutenção inaceitável.
+- **`ComparisonResultMeta`** permite `additionalProperties` — extensões não documentadas no schema podem existir; campos semânticos estáveis estão cobertos por testes + TS.
+- **Import Python** é heurística por regex (com sinais opcionais leves onde existirem), não AST completo.
+- **Ligações v1.4** permanecem proxies (`low`) — omitidas quando não há overlap lexical nem correlação por tópico.
+- **Premium** e **remediation Markdown** não têm um único schema JSON — por desenho (conteúdo textual/binário).
+- **E2E híbrido** exige Python com `otm_api` instalado no ambiente que corre Playwright.
 
 ---
 
-## 15. Matriz rápida de follow-up (opcional)
+## 13. Avaliação honesta: 9.5+?
 
-| Gap | Esforço | Risco | Nota |
-|-----|---------|-------|------|
-| OpenAPI / tipos gerados | Médio | Médio | Maior garantia anti-drift |
-| E2E premium + import página | Médio | Baixo | Cobertura de entrega |
-| Repo scan linguagens extra | Alto | Alto | Fora do “fechamento enxuto” |
+**Aproximação:** integração **motor ↔ OpenAPI ↔ TS ↔ UI ↔ E2E** para o diff semântico subiu um degrau (meta tipado, v1.4 ancorado, testes e E2E mais exigentes). **9.5+ “real”** no sentido de produto fechado de ponta a ponta ainda depende de: (1) `response_model` / OpenAPI para **todos** os payloads que o SPA consome em produção; (2) CI que falhe se `openapi.json` estiver stale; (3) E2E contra API real ou contract tests HTTP para rotas críticas; (4) import multi-stack com fixtures de repos mínimos verificáveis.
 
 ---
 
-*Última validação local: pytest 354 OK; e2e:critical 5 OK; build web OK.*
+## 14. O que ainda falta para nota elite máxima
+
+1. Cobertura OpenAPI + tipos gerados para **precheck, remediation, premium** e outros endpoints ainda genéricos.
+2. Gate CI em `python scripts/export_openapi.py` + diff do `contracts/openapi.json`.
+3. E2E híbrido (servidor de teste + UI) para fluxos que hoje usam só mocks.
+4. Goldens pequenos para respostas HTTP reais de `/compare` e `/analyze`.
+
+---
+
+*Última validação: pytest 367; verify_openapi OK; e2e:critical 6; e2e:hybrid 3; build/typecheck web OK.*

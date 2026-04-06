@@ -9,9 +9,27 @@ e versionamento semântico quando aplicável.
 
 ### Added
 
+### Changed
+
+### Fixed
+
+<!-- Compare links: atualizar com URL do repositório remoto após primeiro push de tag. -->
+
+## [7.0.0] — 2026-04-07
+
+Release **v7.0** (OpenAPI como contrato vivo, diff semântico v1.4, E2E híbrido API+UI, goldens HTTP, verificação anti-stale do contrato no CI).
+
+### Added
+
+- Gate **anti-stale** OpenAPI: `scripts/verify_openapi_up_to_date.py`, `npm run contracts:verify` (apps/web); passo no CI Python.
+- Goldens HTTP semânticos: `tests/test_http_response_goldens.py` + `tests/fixtures/golden/http_api_semantic_expectations.json`.
+- E2E **híbrido**: `playwright.hybrid.config.ts`, `e2e/hybrid.spec.ts`, `npm run e2e:hybrid`, job CI `hybrid-e2e`.
+- `e2e/fixtures/minimal-document.json` (documento canónico para testes híbridos).
+- Documentação: `docs/CONTRACTS_CI_HYBRID.md`, `docs/ROUND2_INTEGRATED_CLOSEOUT.md`.
 - OpenAPI como fonte de tipos TS: `contracts/openapi.json`, `scripts/export_openapi.py`, `openapi-typescript`, `apps/web/src/types/generated/openapi.d.ts`, scripts `contracts:sync` no pacote web.
 - `response_model` explícito em `POST /v1/models/analyze` e `/compare` para esquemas reais no OpenAPI.
-- Diff semântico **v1.3**: `meta.semantic_interpretation_links` (correlacional); `comparison_contract_version` **1.3**; UI `diff-interpretation-links`; Markdown e CLI alinhados.
+- Schemas OpenAPI **`ComparisonResultMeta`**, **`SemanticInterpretationLinkModel`**, **`SemanticStructuralRefModel`**, **`SemanticDiffSectionsModel`** — `meta` tipado no contrato exportado (com `additionalProperties` para extensões).
+- Diff semântico **v1.4**: `lexical_token_overlap` + `entity_topic_correlation`; `link_kind`, `inference_strength` `low`, `shared_tokens`; `change_category` nas refs; `comparison_contract_version` **1.4**; UI, Markdown e CLI alinhados.
 - Anti-patterns **structural_primary** (admin, upload+`supports_file_upload`, API gateway, e-commerce) com `mitigating_keywords` / `missing_any_of` como filtro secundário.
 - Repo scan: ficheiros `.py`, deteção FastAPI/Flask/ASGI, `stack_hint` nas inferências, `detected_stacks`, hint de boundary para FastAPI.
 - Testes: `tests/test_openapi_contract_file.py`, `test_structural_primary_gateway_cross_boundary_without_rate_keywords`, `test_scan_detects_python_fastapi_signals`.
@@ -19,16 +37,17 @@ e versionamento semântico quando aplicável.
 
 ### Changed
 
-- `apps/web/src/types/api.ts`: tipos de motor reexportados a partir do OpenAPI gerado; `ComparisonMeta` com `semantic_interpretation_links`; endurecimento pontual (`AnalysisResult`, `ThreatModelComparisonResult`) para o SPA.
+- `response_model` em **precheck**, **diff estrutural**, **analyses/diff**, **remediation/backlog** (JSON), **exports**, **imports**; premium documentado por media type.
+- `ThreatModelComparisonResult.meta` no motor: `ComparisonResultMeta` Pydantic (serialização estável); consumidores Markdown/CLI usam atributos tipados.
+- `apps/web/src/types/api.ts`: tipos de motor reexportados a partir do OpenAPI gerado; `ComparisonMeta` / `SemanticInterpretationLink` alinhados ao diff **v1.4**; endurecimento pontual (`AnalysisResult`, `ThreatModelComparisonResult`) para o SPA.
 - Benchmark golden: `min_model_completeness_score` **38** nos quatro templates wave principais.
 - Microcopy da faixa executiva no cockpit (costura compare/export).
+- CI: remoção do workflow SonarCloud em favor de SonarQube local documentado; `ci.yml` com verificação OpenAPI e job híbrido.
 
 ### Fixed
 
 - Componentes TS: optional chaining / defaults onde o OpenAPI marca opcional mas o UI assume listas.
 - CI (Ubuntu): instalação de `libcairo2-dev` e `pkg-config` antes do `pip install`, para compilar `pycairo` (cadeia `xhtml2pdf` → `svglib`).
-
-<!-- Compare links: atualizar com URL do repositório remoto após primeiro push de tag. -->
 
 ## [6.0.0] — 2026-04-06
 

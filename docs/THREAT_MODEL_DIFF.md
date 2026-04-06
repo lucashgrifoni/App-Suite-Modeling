@@ -40,7 +40,11 @@ Campos úteis para CLI, API, UI e export:
 - `structural` — mesmo formato que `/v1/models/diff`
 - `structural_insights`, `analysis_insights`, `key_insights` — texto acionável
 - `risk_delta`, `threat_delta`, `recommendation_delta` — deltas focados
-- `meta` — extensível (ex.: versão do contrato de diff)
+- `meta` — `ComparisonResultMeta` (OpenAPI + Pydantic; `extra` permitido para extensões futuras):
+  - `comparison_contract_version` **1.4**; `semantic_insights_version` **1.4**
+  - `semantic_structural_refs` — ref estável + `change_category` opcional (derivada do prefixo `struct:*`)
+  - `semantic_interpretation_links` — `link_kind` `lexical_token_overlap` ou `entity_topic_correlation`; `inference_strength` sempre `low`; `shared_tokens` quando aplicável
+  - `interpretation_disclaimer` — lembrete de que ligações são proxies de leitura, não causalidade
 
 ## Como interpretar
 

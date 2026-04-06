@@ -15,9 +15,9 @@ from otm_core_schema.document import ThreatModelDocument
 from otm_diagram_engine import export_flowchart_mermaid
 from otm_threat_engine import build_remediation_backlog
 from otm_threat_engine.analysis_diff import diff_analysis_results
-from otm_threat_engine.semantic_comparison import semantic_diff_from_analyses_only
 from otm_threat_engine.methodologies import recommend_methodology
 from otm_threat_engine.result import AnalysisResult, HeuristicThreat
+from otm_threat_engine.semantic_comparison import semantic_diff_from_analyses_only
 
 from .dedupe import build_dedupe_groups
 from .enums import ReportLevel

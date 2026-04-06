@@ -15,7 +15,7 @@
 
 ## Diff semântico
 
-- Motor: `semantic_comparison.enrich_comparison_meta` → `meta.semantic_insights`, `meta.semantic_diff_sections` (melhorou / piorou / impacto de risco), versão `1.2` (refs estruturais + disclaimer inferencial)
+- Motor: `semantic_comparison.enrich_comparison_meta` → `meta.semantic_insights`, `meta.semantic_diff_sections` (melhorou / piorou / impacto de risco), versão `1.3` (+ `semantic_interpretation_links` correlacionais)
 - UI: página **Diff** mostra secções e lista de insights quando a API as envia
 
 ## Import repo-level

@@ -216,6 +216,39 @@ function SemanticDiffSectionsBlock({ meta }: Readonly<{ meta: ComparisonMeta }>)
   );
 }
 
+function InterpretationLinksBlock({ meta }: Readonly<{ meta: ComparisonMeta }>) {
+  const links = meta.semantic_interpretation_links ?? [];
+  if (!links.length) return null;
+  return (
+    <div data-testid="diff-interpretation-links">
+      <Card className="space-y-2 p-4" variant="glass">
+        <h2 className="font-display text-sm font-semibold text-otm-text">Ref → secção interpretativa</h2>
+        <p className="text-xs text-otm-text-muted">
+          v1.4: cada ligação indica o tipo (<code className="text-otm-accent">lexical_token_overlap</code> ou{" "}
+          <code className="text-otm-accent">entity_topic_correlation</code>) e força inferencial{" "}
+          <strong>low</strong> — leitura auxiliar, sem causalidade provada.
+        </p>
+        <ul className="list-inside list-disc space-y-1.5 text-xs text-otm-text-muted">
+          {links.slice(0, 10).map((l) => (
+            <li key={`${l.structural_ref}-${l.related_section}-${l.summary.slice(0, 24)}`}>
+              <span className="font-mono text-otm-accent">{l.structural_ref}</span> →{" "}
+              <span className="text-otm-text">{l.related_section}</span>
+              {l.link_kind ? (
+                <span className="text-otm-text-subtle">
+                  {" "}
+                  · {l.link_kind}
+                  {l.inference_strength ? ` (${l.inference_strength})` : ""}
+                </span>
+              ) : null}
+              : {l.summary}
+            </li>
+          ))}
+        </ul>
+      </Card>
+    </div>
+  );
+}
+
 function StructuralRefsBlock({ meta }: Readonly<{ meta: ComparisonMeta }>) {
   const refs = meta.semantic_structural_refs ?? [];
   if (!refs.length) return null;
@@ -231,6 +264,9 @@ function StructuralRefsBlock({ meta }: Readonly<{ meta: ComparisonMeta }>) {
             <li key={r.ref}>
               <span className="font-mono text-otm-accent">{r.ref}</span> · {r.entity_kind}{" "}
               <span className="text-otm-text">{r.entity_id}</span>
+              {r.change_category ? (
+                <span className="text-otm-text-subtle"> · {r.change_category}</span>
+              ) : null}
             </li>
           ))}
         </ul>
@@ -325,9 +361,11 @@ function ComparisonResultPanel({
 
       <DiffRiskDeltaCard rd={rd} runAnalysis={runAnalysis} />
 
-      <SemanticInsightsBlock meta={result.meta} />
+      <SemanticInsightsBlock meta={result.meta as ComparisonMeta} />
 
-      <StructuralRefsBlock meta={result.meta} />
+      <StructuralRefsBlock meta={result.meta as ComparisonMeta} />
+
+      <InterpretationLinksBlock meta={result.meta as ComparisonMeta} />
 
       <Card className="space-y-2 p-4" variant="glass">
         <h2 className="font-display text-sm font-semibold text-otm-text">JSON completo</h2>

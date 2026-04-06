@@ -12,8 +12,15 @@ from typing import Any
 
 from otm_artifact_import.repo_ast_optional import collect_express_routes_ast_lite
 
-# Extensões consideradas para texto de aplicação
-_SUFFIXES = {".js", ".mjs", ".cjs", ".ts", ".tsx"}
+# Extensões consideradas para texto de aplicação (Node + Python leve)
+_SUFFIXES = {".js", ".mjs", ".cjs", ".ts", ".tsx", ".py"}
+
+_PY_FASTAPI = re.compile(
+    r"(?:FastAPI\s*\(|APIRouter\s*\(|@app\.(?:get|post|put|delete|patch)\s*\()",
+    re.IGNORECASE,
+)
+_PY_FLASK = re.compile(r"(?:Flask\s*\(|Blueprint\s*\(|@app\.route\s*\()", re.IGNORECASE)
+_PY_UVICORN = re.compile(r"uvicorn\b|hypercorn\b", re.IGNORECASE)
 
 
 def _read_text_files(root: Path, *, max_files: int = 200) -> list[tuple[Path, str]]:
@@ -67,8 +74,48 @@ def scan_node_express_repo(root: Path) -> dict[str, Any]:
         re.IGNORECASE,
     )
 
+    detected_stacks: list[str] = []
+
     for path, text in files:
         rel = path.relative_to(root)
+        if path.suffix.lower() == ".py":
+            if _PY_FASTAPI.search(text):
+                inferences.append(
+                    {
+                        "kind": "python_web_framework",
+                        "message": f"Padrões FastAPI/APIRouter/`@app.*` em `{rel}`",
+                        "evidence": "fastapi|APIRouter|@app.",
+                        "confidence": "medium",
+                        "inference_source": "regex_heuristic",
+                        "stack_hint": "python_fastapi",
+                    }
+                )
+            elif _PY_FLASK.search(text):
+                inferences.append(
+                    {
+                        "kind": "python_web_framework",
+                        "message": f"Padrões Flask/Blueprint/`@app.route` em `{rel}`",
+                        "evidence": "Flask|Blueprint|@app.route",
+                        "confidence": "medium",
+                        "inference_source": "regex_heuristic",
+                        "stack_hint": "python_flask",
+                    }
+                )
+            if _PY_UVICORN.search(text):
+                inferences.append(
+                    {
+                        "kind": "python_asgi_server",
+                        "message": f"Referência a servidor ASGI (uvicorn/hypercorn) em `{rel}`",
+                        "evidence": "uvicorn|hypercorn",
+                        "confidence": "low",
+                        "inference_source": "regex_heuristic",
+                        "stack_hint": "python_asgi",
+                    }
+                )
+            if len(corpus_chunks) < 40:
+                corpus_chunks.append(f"{rel}: {text[:400]}")
+            continue
+
         ast_routes = collect_express_routes_ast_lite(text)
         ast_paths = {p for _, p in ast_routes}
         route_matches = list(route_re.finditer(text))
@@ -260,6 +307,27 @@ def scan_node_express_repo(root: Path) -> dict[str, Any]:
         if isinstance(msg, str) and msg:
             import_signals_corpus_snippets.append(msg[:200])
 
+    stack_set: set[str] = set()
+    if any(p.suffix.lower() in {".js", ".mjs", ".cjs", ".ts", ".tsx"} for p, _ in files):
+        stack_set.add("javascript_family")
+    if any(p.suffix.lower() == ".py" for p, _ in files):
+        stack_set.add("python_family")
+    for inf in unique:
+        sh = inf.get("stack_hint")
+        if isinstance(sh, str) and sh:
+            stack_set.add(sh)
+    detected_stacks = sorted(stack_set)
+
+    if any(inf.get("stack_hint") == "python_fastapi" for inf in unique):
+        modeling_hints.append(
+            {
+                "target": "trust_boundary",
+                "hint": "Modelar boundary explícito entre cliente/API e workers Python quando usar FastAPI.",
+                "confidence": "low",
+                "basis": "repo_inference:python_fastapi",
+            }
+        )
+
     return {
         "root": str(root),
         "files_scanned": len(files),
@@ -268,4 +336,5 @@ def scan_node_express_repo(root: Path) -> dict[str, Any]:
         "corpus_excerpt": "\n\n".join(corpus_chunks)[:8000],
         "modeling_hints": modeling_hints[:20],
         "import_signals_corpus_snippets": import_signals_corpus_snippets,
+        "detected_stacks": detected_stacks,
     }

@@ -31,7 +31,7 @@ const ThreatRow = memo(function ThreatRow({ h }: Readonly<{ h: HeuristicThreat }
       </div>
       {(h.framework_refs?.length ?? 0) > 0 && (
         <div className="mt-2 flex flex-wrap gap-1">
-          {h.framework_refs.map((r) => (
+          {(h.framework_refs ?? []).map((r) => (
             <FrameworkTag
               key={`${h.id}:${r.framework}:${r.control_id}`}
               label={`${FRAMEWORK_LABELS[r.framework] ?? r.framework}:${r.control_id}`}

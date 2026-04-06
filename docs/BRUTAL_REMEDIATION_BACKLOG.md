@@ -10,7 +10,7 @@ Prioridade: **P0** (bloqueia credibilidade Staff) · **P1** · **P2** · **P3**
 | B-04 | CORS + métodos/headers `*` | Security | ALTO* | Alto | S | P1 | `apps/api/otm_api/main.py` | `allow_origins`/`methods`/`headers` por env; defaults restritivos fora de `dev`. |
 | B-05 | mypy fora do CI | DevOps + Test | ALTO | Médio | S | P0 | `pyproject.toml`, `.github/workflows/ci.yml` | Job `mypy` com strict gradual; falhar em erros novos. |
 | B-06 | Sem SCA obrigatório | DevOps + Security | ALTO | Alto | S | P1 | `.github/workflows/ci.yml` | `pip-audit` / advisory; `npm audit`; Dependabot. |
-| B-07 | Sonar órfão | DevOps | MÉDIO | Médio | S–M | P2 | `sonar-project.properties` vs `.github/workflows/ci.yml` | Integrar SonarCloud ou remover ficheiro (honestidade). |
+| B-07 | Sonar órfão | DevOps | MÉDIO | Médio | S–M | P2 | `sonar-project.properties` vs `.github/workflows/ci.yml` | SonarQube só em localhost (scan manual); opcional: job CI self-hosted ou documentar fluxo. |
 | B-08 | E2E smoke só no CI | Test + DevOps | ALTO | Alto | M | P1 | `.github/workflows/ci.yml`, `apps/web/package.json` | `e2e:critical` no PR ou em `main` com bloqueio de release. |
 | B-09 | sessionStorage com documento/análise | Security + UI | MÉDIO | Médio | M | P2 | `apps/web/src/context/SessionContext.tsx` | CSP estrita no deploy; revisão XSS; considerar não persistir análise completa. |
 | B-10 | Dois fronts (web + gitpage) | Architecture + UI | MÉDIO | Médio | L | P2 | `apps/web/`, `gitpage/` | Pacote partilhado de tokens/componentes ou boundary documentado “não duplicar”. |

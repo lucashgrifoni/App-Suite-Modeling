@@ -671,6 +671,133 @@ export interface components {
             /** Explanations */
             explanations?: components["schemas"]["ExplanationRecord"][];
         };
+        /**
+         * BacklogItem
+         * @description Uma ação de remediação sugerida — sempre com racional explícito.
+         *
+         *     `recommended_owner` é papel lógico (não pessoa); pode ser null se não houver base.
+         */
+        BacklogItem: {
+            /** Id */
+            id: string;
+            /** Title */
+            title: string;
+            /** Description */
+            description: string;
+            /**
+             * Rationale
+             * @description Porque esta ação foi gerada.
+             */
+            rationale: string;
+            /** Related Findings */
+            related_findings?: components["schemas"]["FindingRef"][];
+            /**
+             * Related Components
+             * @description IDs de componentes canónicos afectados.
+             */
+            related_components?: string[];
+            /**
+             * Component Labels
+             * @description Nomes humanos quando o documento está disponível.
+             */
+            component_labels?: string[];
+            /**
+             * Methodology Context
+             * @description Metodologia/pack que enquadra o achado.
+             */
+            methodology_context?: string | null;
+            /**
+             * Suggested Control Type
+             * @description Tipo de controlo sugerido (valor estável p.ex. identity_access).
+             */
+            suggested_control_type: string;
+            /**
+             * Control Category
+             * @description Dimensão para agrupamento (transversal, dados, exposição, etc.).
+             */
+            control_category: string;
+            /**
+             * Grouped Root Cause
+             * @description Chave de causa raiz heurística (ex.: weak_authentication_pattern).
+             */
+            grouped_root_cause: string;
+            /**
+             * Architecture Layer
+             * @description edge | application | data | integration | governance — quando inferível.
+             */
+            architecture_layer?: string | null;
+            /**
+             * Priority Rank
+             * @description 1 = mais prioritário neste lote.
+             */
+            priority_rank: number;
+            /**
+             * Priority Label
+             * @enum {string}
+             */
+            priority_label: "urgent" | "high" | "medium" | "low";
+            /** Priority Explanation */
+            priority_explanation: string;
+            /**
+             * Effort Estimate
+             * @enum {string}
+             */
+            effort_estimate: "low" | "medium" | "high";
+            /**
+             * Impact Estimate
+             * @enum {string}
+             */
+            impact_estimate: "low" | "medium" | "high";
+            /**
+             * Recommended Owner
+             * @description Papel lógico sugerido (ex.: application_team); null se incerto.
+             */
+            recommended_owner?: string | null;
+            /**
+             * Owner Explanation
+             * @description Porque este owner foi sugerido ou porque ficou em aberto.
+             */
+            owner_explanation: string;
+            /**
+             * Quick Win
+             * @default false
+             */
+            quick_win: boolean;
+            /**
+             * Foundational
+             * @default false
+             */
+            foundational: boolean;
+            /**
+             * Urgent
+             * @default false
+             */
+            urgent: boolean;
+            /**
+             * Quick Win Explanation
+             * @default
+             */
+            quick_win_explanation: string;
+            /**
+             * Foundational Explanation
+             * @default
+             */
+            foundational_explanation: string;
+            /** Next Step */
+            next_step: string;
+            /** Depends On Action Ids */
+            depends_on_action_ids?: string[];
+            /**
+             * Explainability
+             * @description Lista curta: cobertura, prioridade, limitações do raciocínio.
+             */
+            explainability?: string[];
+            /**
+             * Explanations
+             * @description Versão estruturada da explicabilidade (contrato partilhado).
+             */
+            explanations?: components["schemas"]["ExplanationRecord"][];
+        };
         /** Body_import_kubernetes_route_v1_imports_kubernetes_post */
         Body_import_kubernetes_route_v1_imports_kubernetes_post: {
             /**
@@ -739,6 +866,29 @@ export interface components {
              * @description Pack opcional quando `run_analysis` é true.
              */
             pack_id?: string | null;
+        };
+        /**
+         * ComparisonResultMeta
+         * @description Metadados semânticos do compare — chaves estáveis para OpenAPI/TS.
+         *
+         *     `model_config.extra` permite chaves futuras sem quebrar clientes.
+         */
+        ComparisonResultMeta: {
+            /** Comparison Contract Version */
+            comparison_contract_version?: string | null;
+            /** Semantic Insights */
+            semantic_insights?: string[];
+            /** Semantic Insights Version */
+            semantic_insights_version?: string | null;
+            semantic_diff_sections?: components["schemas"]["SemanticDiffSectionsModel"] | null;
+            /** Semantic Structural Refs */
+            semantic_structural_refs?: components["schemas"]["SemanticStructuralRefModel"][];
+            /** Semantic Interpretation Links */
+            semantic_interpretation_links?: components["schemas"]["SemanticInterpretationLinkModel"][];
+            /** Interpretation Disclaimer */
+            interpretation_disclaimer?: string | null;
+        } & {
+            [key: string]: unknown;
         };
         /** ComparisonSummary */
         ComparisonSummary: {
@@ -940,6 +1090,22 @@ export interface components {
             before?: unknown | null;
             /** After */
             after?: unknown | null;
+        };
+        /**
+         * FindingRef
+         * @description Referência a um achado na origem da análise.
+         */
+        FindingRef: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "heuristic_threat" | "structural" | "trust_boundary" | "pack_hint";
+            /**
+             * Id
+             * @description ID estável (ex.: id da ameaça heurística ou código estrutural).
+             */
+            id: string;
         };
         /**
          * FrameworkRef
@@ -1167,6 +1333,14 @@ export interface components {
             blocks_removed?: string[];
         };
         /**
+         * ModelPrecheckResponse
+         * @description Saída de `POST /v1/models/precheck` — sem executar o motor STRIDE completo.
+         */
+        ModelPrecheckResponse: {
+            precheck: components["schemas"]["ModelQualityPrecheck"];
+            methodology_completeness: components["schemas"]["MethodologyCompletenessInfo"];
+        };
+        /**
          * ModelQualityPrecheck
          * @description Resultado do pré-check — não substitui análise de risco.
          */
@@ -1332,6 +1506,61 @@ export interface components {
             entity_id: string;
         };
         /**
+         * RemediationBacklog
+         * @description Resultado agregado: itens + vistas de agrupamento + síntese acionável.
+         */
+        RemediationBacklog: {
+            /**
+             * Schema Version
+             * @default 1.0
+             */
+            schema_version: string;
+            /** Document Title */
+            document_title: string;
+            /** Methodology */
+            methodology: string;
+            /** Executive Summary */
+            executive_summary: string;
+            /**
+             * Synergy Notes
+             * @description Observações transversais (ex.: vários achados com mesma causa raiz).
+             */
+            synergy_notes?: string[];
+            /** Items */
+            items: components["schemas"]["BacklogItem"][];
+            /**
+             * By Root Cause
+             * @description grouped_root_cause → ids de itens.
+             */
+            by_root_cause?: {
+                [key: string]: string[];
+            };
+            /**
+             * By Control Type
+             * @description suggested_control_type → ids.
+             */
+            by_control_type?: {
+                [key: string]: string[];
+            };
+            /**
+             * By Control Category
+             * @description control_category → ids.
+             */
+            by_control_category?: {
+                [key: string]: string[];
+            };
+            /** Quick Win Ids */
+            quick_win_ids?: string[];
+            /** Foundational Ids */
+            foundational_ids?: string[];
+            /** High Impact Ids */
+            high_impact_ids?: string[];
+            /** High Effort Ids */
+            high_effort_ids?: string[];
+            /** Top 5 Action Ids */
+            top_5_action_ids?: string[];
+        };
+        /**
          * RemediationBacklogRequest
          * @description Entrada para gerar backlog: sempre `document`; `analysis` opcional se `run_analysis`.
          */
@@ -1400,6 +1629,76 @@ export interface components {
              * @default false
              */
             document_residual_aggregate_changed: boolean;
+        };
+        /** SemanticDiffSectionsModel */
+        SemanticDiffSectionsModel: {
+            /** Structural Change Summary */
+            structural_change_summary?: string[];
+            /** Improved */
+            improved?: string[];
+            /** Worsened */
+            worsened?: string[];
+            /** Risk Impact */
+            risk_impact?: string[];
+        };
+        /**
+         * SemanticInterpretationLinkModel
+         * @description Liga ref estrutural a bullet interpretativo.
+         *
+         *     `link_kind` e `inference_strength` deixam explícito que não há causalidade provada.
+         */
+        SemanticInterpretationLinkModel: {
+            /** Structural Ref */
+            structural_ref: string;
+            /**
+             * Related Section
+             * @enum {string}
+             */
+            related_section: "insights" | "improved" | "worsened" | "risk_impact";
+            /** Summary */
+            summary: string;
+            /**
+             * Link Kind
+             * @default lexical_token_overlap
+             * @enum {string}
+             */
+            link_kind: "lexical_token_overlap" | "entity_topic_correlation";
+            /**
+             * Inference Strength
+             * @description Proxy de leitura — não prova causalidade nem impacto real.
+             * @default low
+             * @constant
+             */
+            inference_strength: "low";
+            /**
+             * Shared Tokens
+             * @description Tokens que motivaram `lexical_token_overlap` (vazio se outro kind).
+             */
+            shared_tokens?: string[];
+            /**
+             * Entity Kind
+             * @description Kind da entidade referida em `structural_ref` (eco da ref estrutural).
+             */
+            entity_kind?: string | null;
+        };
+        /**
+         * SemanticStructuralRefModel
+         * @description Ref estável para mudança estrutural (OpenAPI / consumo tipado).
+         */
+        SemanticStructuralRefModel: {
+            /** Ref */
+            ref: string;
+            /** Entity Kind */
+            entity_kind: string;
+            /** Entity Id */
+            entity_id: string;
+            /** Note */
+            note: string;
+            /**
+             * Change Category
+             * @description Derivado do prefixo ref (ex.: component_added) — rastreio legível.
+             */
+            change_category?: string | null;
         };
         /**
          * StrideCategory
@@ -1505,13 +1804,8 @@ export interface components {
              * @description Lista priorizada para humanos (estrutura + análise).
              */
             key_insights?: string[];
-            /**
-             * Meta
-             * @description Metadados extensíveis (versão do contrato de diff, etc.).
-             */
-            meta?: {
-                [key: string]: unknown;
-            };
+            /** @description Metadados semânticos + extensões (`extra`) para evolução controlada. */
+            meta?: components["schemas"]["ComparisonResultMeta"];
             /**
              * Explanations
              * @description Explicabilidade estruturada (mudança principal, risco, metodologia).
@@ -1798,9 +2092,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["ModelPrecheckResponse"];
                 };
             };
             /** @description Validation Error */
@@ -1833,9 +2125,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["ThreatModelDiff"];
                 };
             };
             /** @description Validation Error */
@@ -1967,9 +2257,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["AnalysisDiff"];
                 };
             };
             /** @description Validation Error */
@@ -2235,13 +2523,14 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Successful Response */
+            /** @description JSON (`format=json`, default) ou Markdown (`format=markdown`). */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["RemediationBacklog"];
+                    "text/markdown": string;
                 };
             };
             /** @description Validation Error */
@@ -2268,13 +2557,15 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Successful Response */
+            /** @description Corpo = Markdown (`output_format=markdown`) ou PDF binário (`output_format=pdf`). */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": unknown;
+                    "text/markdown": string;
+                    "application/pdf": string;
                 };
             };
             /** @description Validation Error */

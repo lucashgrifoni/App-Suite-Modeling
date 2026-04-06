@@ -128,6 +128,57 @@ evidence_suggestions: []
     assert "ap_upload_quarantine_gap" not in {h.id for h in hits}
 
 
+def test_structural_primary_gateway_cross_boundary_without_rate_keywords() -> None:
+    """`structural_primary` dispara com grafo gateway + cross-boundary sem texto de política."""
+    raw = """
+model:
+  schema_version: "1.1.0"
+  methodology: stride
+  template_semantic_profile: api_backend_rest
+metadata:
+  title: API sem política textual
+  summary: Superfície REST mínima.
+components:
+  - id: user
+    name: Cliente
+    kind: user
+    in_trust_boundary: internet
+  - id: gw
+    name: Gateway
+    kind: gateway
+    in_trust_boundary: app_tier
+  - id: api
+    name: API
+    kind: process
+    in_trust_boundary: app_tier
+data_flows:
+  - id: u_gw
+    from_component: user
+    to_component: gw
+assets: []
+trust_boundaries:
+  - id: internet
+    name: Internet
+    member_component_ids: [user]
+    outside_component_ids: []
+    crossing_flow_ids: []
+  - id: app_tier
+    name: App
+    member_component_ids: [gw, api]
+    outside_component_ids: []
+    crossing_flow_ids: []
+threats: []
+mitigations: []
+evidence_suggestions: []
+"""
+    doc = load_document_from_yaml(raw)
+    hits = detect_anti_patterns(doc)
+    ids = {h.id for h in hits}
+    assert "ap_api_gateway_policy_gap" in ids
+    hit = next(h for h in hits if h.id == "ap_api_gateway_policy_gap")
+    assert "structural:primary" in (hit.detection_sources or [])
+
+
 def test_blank_profile_returns_no_hits() -> None:
     raw = """
 model:

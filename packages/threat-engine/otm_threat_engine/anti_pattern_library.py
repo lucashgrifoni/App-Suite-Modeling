@@ -13,11 +13,22 @@ import importlib.resources
 from pathlib import Path
 
 import yaml
+from otm_core_schema import ThreatModelDocument
 from pydantic import BaseModel, Field
 
-from otm_core_schema import ThreatModelDocument
-
 from otm_threat_engine.wizard_signals import signals_for_profile, synthetic_keyword_corpus
+
+
+def _bump_confidence(hint: str, reason: str) -> str:
+    """Ligeiro reforço quando o match é estrutural (auditável no grafo)."""
+    order = ("low", "medium", "high")
+    if hint not in order:
+        return hint
+    if reason == "structural_primary" and hint == "low":
+        return "medium"
+    if reason == "structural_primary" and hint == "medium":
+        return "high"
+    return hint
 
 
 def _cross_boundary_flow_ids(doc: ThreatModelDocument) -> set[str]:
@@ -84,6 +95,17 @@ class AntiPatternDefinition(BaseModel):
     require_flow_flag_any: list[str] = Field(
         default_factory=list,
         description="Só avalia se algum data_flow tem campo booleano True (ex.: supports_file_upload).",
+    )
+    structural_primary: bool = Field(
+        default=False,
+        description=(
+            "Se True, o disparo pode ocorrer só com gates estruturais (require_*) satisfeitos; "
+            "`missing_any_of` torna-se filtro adicional quando não vazio."
+        ),
+    )
+    structural_primary_message: str = Field(
+        default="",
+        description="Mensagem do hit quando `structural_primary`; se vazio, usa texto padrão.",
     )
     confidence_hint: str = Field(
         default="medium",
@@ -200,7 +222,7 @@ def detect_anti_patterns(doc: ThreatModelDocument) -> list[AntiPatternHit]:
         profiles = [p.lower() for p in dfn.semantic_profiles]
         if profile not in profiles:
             continue
-        if not dfn.missing_any_of:
+        if not dfn.missing_any_of and not dfn.structural_primary:
             continue
         if dfn.require_min_data_flows > 0 and n_flows < dfn.require_min_data_flows:
             continue
@@ -223,6 +245,51 @@ def detect_anti_patterns(doc: ThreatModelDocument) -> list[AntiPatternHit]:
         if dfn.require_flow_flag_any and not _any_flow_bool(doc, dfn.require_flow_flag_any):
             continue
         if any(mk.lower() in corpus for mk in dfn.mitigating_keywords):
+            continue
+
+        if dfn.structural_primary:
+            if dfn.missing_any_of:
+                missing_sp = [kw for kw in dfn.missing_any_of if kw.lower() not in corpus]
+                if len(missing_sp) != len(dfn.missing_any_of):
+                    continue
+            sources = ["structural:primary"]
+            if dfn.require_min_data_flows > 0:
+                sources.append(f"structural:min_data_flows>={dfn.require_min_data_flows}")
+            if dfn.require_min_trust_boundaries > 0:
+                sources.append(f"structural:min_trust_boundaries>={dfn.require_min_trust_boundaries}")
+            if dfn.require_any_component_kinds:
+                sources.append(f"structural:component_kinds={','.join(dfn.require_any_component_kinds)}")
+            if dfn.require_min_cross_boundary_flows > 0:
+                sources.append(f"structural:cross_boundary_flows>={dfn.require_min_cross_boundary_flows}")
+            if dfn.require_component_id_contains_any:
+                sources.append("structural:component_id_contains")
+            if dfn.require_asset_name_id_contains_any:
+                sources.append("structural:asset_name_id_contains")
+            if dfn.require_flow_flag_any:
+                sources.append(f"structural:flow_flags={','.join(dfn.require_flow_flag_any)}")
+            if dfn.missing_any_of:
+                sources.append("corpus:missing_any_of(secondary)")
+            msg = (dfn.structural_primary_message or "").strip()
+            if not msg:
+                msg = (
+                    f"Perfil `{profile}`: sinais estruturais do modelo indicam lacuna de controlos "
+                    f"({dfn.name})."
+                )
+            hits.append(
+                AntiPatternHit(
+                    id=dfn.id,
+                    name=dfn.name,
+                    severity_hint=dfn.severity_hint,
+                    confidence_hint=_bump_confidence(dfn.confidence_hint, "structural_primary"),
+                    message=msg,
+                    evidence=[
+                        f"semantic_profile={profile}",
+                        "disparo baseado principalmente em estrutura do grafo/campos",
+                    ],
+                    expected_controls=list(dfn.expected_controls),
+                    detection_sources=sources,
+                )
+            )
             continue
 
         missing = [kw for kw in dfn.missing_any_of if kw.lower() not in corpus]

@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Literal
 
 from otm_core_schema.diff import FieldChange, IdListSectionDiff, ThreatModelDiff
 from otm_explainability import ExplanationRecord
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class DiffAggregate(BaseModel):
@@ -144,6 +144,69 @@ class RecommendationDelta(BaseModel):
     methodology_insight_blocks_removed: list[str] = Field(default_factory=list)
 
 
+class SemanticStructuralRefModel(BaseModel):
+    """Ref estável para mudança estrutural (OpenAPI / consumo tipado)."""
+
+    ref: str
+    entity_kind: str
+    entity_id: str
+    note: str
+    change_category: str | None = Field(
+        default=None,
+        description="Derivado do prefixo ref (ex.: component_added) — rastreio legível.",
+    )
+
+
+class SemanticInterpretationLinkModel(BaseModel):
+    """
+    Liga ref estrutural a bullet interpretativo.
+
+    `link_kind` e `inference_strength` deixam explícito que não há causalidade provada.
+    """
+
+    structural_ref: str
+    related_section: Literal["insights", "improved", "worsened", "risk_impact"]
+    summary: str
+    link_kind: Literal["lexical_token_overlap", "entity_topic_correlation"] = "lexical_token_overlap"
+    inference_strength: Literal["low"] = Field(
+        default="low",
+        description="Proxy de leitura — não prova causalidade nem impacto real.",
+    )
+    shared_tokens: list[str] = Field(
+        default_factory=list,
+        description="Tokens que motivaram `lexical_token_overlap` (vazio se outro kind).",
+    )
+    entity_kind: str | None = Field(
+        default=None,
+        description="Kind da entidade referida em `structural_ref` (eco da ref estrutural).",
+    )
+
+
+class SemanticDiffSectionsModel(BaseModel):
+    structural_change_summary: list[str] = Field(default_factory=list)
+    improved: list[str] = Field(default_factory=list)
+    worsened: list[str] = Field(default_factory=list)
+    risk_impact: list[str] = Field(default_factory=list)
+
+
+class ComparisonResultMeta(BaseModel):
+    """
+    Metadados semânticos do compare — chaves estáveis para OpenAPI/TS.
+
+    `model_config.extra` permite chaves futuras sem quebrar clientes.
+    """
+
+    model_config = ConfigDict(extra="allow")
+
+    comparison_contract_version: str | None = None
+    semantic_insights: list[str] = Field(default_factory=list)
+    semantic_insights_version: str | None = None
+    semantic_diff_sections: SemanticDiffSectionsModel | None = None
+    semantic_structural_refs: list[SemanticStructuralRefModel] = Field(default_factory=list)
+    semantic_interpretation_links: list[SemanticInterpretationLinkModel] = Field(default_factory=list)
+    interpretation_disclaimer: str | None = None
+
+
 class ThreatModelComparisonResult(BaseModel):
     """
     Resultado unificado: estrutura canónica + opcional análise + agregados acionáveis.
@@ -164,9 +227,9 @@ class ThreatModelComparisonResult(BaseModel):
         default_factory=list,
         description="Lista priorizada para humanos (estrutura + análise).",
     )
-    meta: dict[str, Any] = Field(
-        default_factory=dict,
-        description="Metadados extensíveis (versão do contrato de diff, etc.).",
+    meta: ComparisonResultMeta = Field(
+        default_factory=ComparisonResultMeta,
+        description="Metadados semânticos + extensões (`extra`) para evolução controlada.",
     )
     explanations: list[ExplanationRecord] = Field(
         default_factory=list,

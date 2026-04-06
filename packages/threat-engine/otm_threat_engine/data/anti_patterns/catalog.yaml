@@ -6,14 +6,18 @@ patterns:
     name: "Fluxo admin sem evidência de aprovação / segregação"
     semantic_profiles:
       - internal_admin_portal
+    structural_primary: true
+    structural_primary_message: "Portal admin modelado com componente administrativo e trust boundaries, sem evidência textual de aprovação/segregação de funções."
     require_component_id_contains_any:
       - admin
-    missing_any_of:
+    require_min_trust_boundaries: 1
+    mitigating_keywords:
       - aprovação
       - approval
       - segregação
       - segregation
       - four-eyes
+    missing_any_of: []
     severity_hint: medium
     expected_controls:
       - "Workflow de aprovação para ações privilegiadas"
@@ -22,7 +26,11 @@ patterns:
     name: "Upload sem evidência de quarentena ou revalidação"
     semantic_profiles:
       - file_handling_application
+    structural_primary: true
+    structural_primary_message: "Fluxos com `supports_file_upload` e volume de dados modelado, sem menções explícitas a quarentena/revalidação/sandbox no contexto."
     require_min_data_flows: 3
+    require_flow_flag_any:
+      - supports_file_upload
     missing_any_of:
       - quarentena
       - quarantine
@@ -37,9 +45,16 @@ patterns:
     name: "API pública com gateway sem sinais de política/rate limit"
     semantic_profiles:
       - api_backend_rest
+    structural_primary: true
+    structural_primary_message: "Gateway com fluxos entre trust boundaries sem texto agregado sobre política de perímetro, rate limit ou WAF."
     require_any_component_kinds:
       - gateway
     require_min_cross_boundary_flows: 1
+    mitigating_keywords:
+      - rate limit
+      - ratelimit
+      - waf
+      - throttl
     missing_any_of:
       - rate limit
       - ratelimit
@@ -54,10 +69,20 @@ patterns:
     name: "E-commerce sem boundary ou PSP explícito no texto"
     semantic_profiles:
       - industry_ecommerce
+    structural_primary: true
+    structural_primary_message: "Componentes de pagamento/carrinho modelados com fluxos entre fronteiras, sem texto sobre PSP/checkout/pagamento explícito."
     require_component_id_contains_any:
       - pay
       - cart
       - shop
+    require_min_cross_boundary_flows: 1
+    mitigating_keywords:
+      - psp
+      - pagamento
+      - payment
+      - checkout
+      - terceiro
+      - third
     missing_any_of:
       - psp
       - pagamento

@@ -1,0 +1,256 @@
+{
+  "model": {
+    "schema_version": "1.1.0",
+    "system_type": "web_application",
+    "industry_sector": "saas",
+    "methodology": "stride",
+    "template_semantic_profile": null
+  },
+  "metadata": {
+    "title": "Exemplo — API de pedidos",
+    "summary": "Serviço REST com fila e banco.",
+    "owner": "equipe-plataforma",
+    "tags": [
+      "exemplo"
+    ],
+    "document_version": null
+  },
+  "business_context": null,
+  "assets": [
+    {
+      "id": "orders_data",
+      "name": "Registos de pedidos",
+      "asset_kind": "order_record",
+      "description": null,
+      "sensitivity": null,
+      "data_classification": "confidential",
+      "data_nature": null,
+      "business_criticality": "high",
+      "regulatory_relevance": null,
+      "owner": null,
+      "location": null,
+      "related_component_ids": [
+        "api",
+        "db"
+      ],
+      "related_data_flow_ids": [
+        "to_db"
+      ],
+      "metadata": {}
+    },
+    {
+      "id": "session_ctx",
+      "name": "Contexto de sessão utilizador",
+      "asset_kind": "session",
+      "description": null,
+      "sensitivity": "confidential",
+      "data_classification": null,
+      "data_nature": null,
+      "business_criticality": "medium",
+      "regulatory_relevance": null,
+      "owner": null,
+      "location": null,
+      "related_component_ids": [
+        "api"
+      ],
+      "related_data_flow_ids": [],
+      "metadata": {}
+    }
+  ],
+  "components": [
+    {
+      "id": "user",
+      "name": "Usuário",
+      "kind": "user",
+      "description": null,
+      "technology": null,
+      "in_trust_boundary": "internet",
+      "asset_ids": [],
+      "exposure_type": null,
+      "responsibility": null,
+      "privilege_level": null,
+      "handles_credentials": null,
+      "handles_sensitive_data": null,
+      "executes_code_or_commands": null,
+      "serves_user_content": null,
+      "has_direct_datastore_access": null,
+      "supports_admin_operations": null,
+      "supports_debug_features": null,
+      "technology_role": null,
+      "metadata": {}
+    },
+    {
+      "id": "api",
+      "name": "API",
+      "kind": "process",
+      "description": null,
+      "technology": "REST",
+      "in_trust_boundary": "vpc",
+      "asset_ids": [
+        "orders_data"
+      ],
+      "exposure_type": null,
+      "responsibility": "public_api",
+      "privilege_level": null,
+      "handles_credentials": null,
+      "handles_sensitive_data": null,
+      "executes_code_or_commands": null,
+      "serves_user_content": null,
+      "has_direct_datastore_access": null,
+      "supports_admin_operations": null,
+      "supports_debug_features": null,
+      "technology_role": null,
+      "metadata": {}
+    },
+    {
+      "id": "worker",
+      "name": "Worker",
+      "kind": "process",
+      "description": null,
+      "technology": null,
+      "in_trust_boundary": "vpc",
+      "asset_ids": [],
+      "exposure_type": null,
+      "responsibility": null,
+      "privilege_level": null,
+      "handles_credentials": null,
+      "handles_sensitive_data": null,
+      "executes_code_or_commands": null,
+      "serves_user_content": null,
+      "has_direct_datastore_access": null,
+      "supports_admin_operations": null,
+      "supports_debug_features": null,
+      "technology_role": null,
+      "metadata": {}
+    },
+    {
+      "id": "db",
+      "name": "Pedidos",
+      "kind": "datastore",
+      "description": null,
+      "technology": "PostgreSQL",
+      "in_trust_boundary": "vpc",
+      "asset_ids": [
+        "orders_data"
+      ],
+      "exposure_type": null,
+      "responsibility": null,
+      "privilege_level": null,
+      "handles_credentials": null,
+      "handles_sensitive_data": null,
+      "executes_code_or_commands": null,
+      "serves_user_content": null,
+      "has_direct_datastore_access": true,
+      "supports_admin_operations": null,
+      "supports_debug_features": null,
+      "technology_role": null,
+      "metadata": {}
+    }
+  ],
+  "data_flows": [
+    {
+      "id": "http_in",
+      "name": "HTTPS",
+      "from_component": "user",
+      "to_component": "api",
+      "protocol": "HTTPS",
+      "authenticated": true,
+      "encrypted": true,
+      "description": null,
+      "operation_type": null,
+      "data_types": [],
+      "auth_required": null,
+      "authorization_required": null,
+      "public_exposure": true,
+      "input_from_untrusted_source": null,
+      "stores_sensitive_data": null,
+      "affects_privileged_state": null,
+      "supports_file_upload": null,
+      "supports_redirect": null,
+      "supports_external_fetch": null,
+      "semantic_class": "public_api_ingress_flow",
+      "metadata": {}
+    },
+    {
+      "id": "to_worker",
+      "name": null,
+      "from_component": "api",
+      "to_component": "worker",
+      "protocol": "internal",
+      "authenticated": null,
+      "encrypted": null,
+      "description": null,
+      "operation_type": null,
+      "data_types": [],
+      "auth_required": null,
+      "authorization_required": null,
+      "public_exposure": null,
+      "input_from_untrusted_source": null,
+      "stores_sensitive_data": null,
+      "affects_privileged_state": null,
+      "supports_file_upload": null,
+      "supports_redirect": null,
+      "supports_external_fetch": null,
+      "semantic_class": "gateway_forwarding_flow",
+      "metadata": {}
+    },
+    {
+      "id": "to_db",
+      "name": null,
+      "from_component": "worker",
+      "to_component": "db",
+      "protocol": "TCP",
+      "authenticated": null,
+      "encrypted": null,
+      "description": null,
+      "operation_type": null,
+      "data_types": [],
+      "auth_required": null,
+      "authorization_required": null,
+      "public_exposure": null,
+      "input_from_untrusted_source": null,
+      "stores_sensitive_data": true,
+      "affects_privileged_state": null,
+      "supports_file_upload": null,
+      "supports_redirect": null,
+      "supports_external_fetch": null,
+      "semantic_class": "storage_processing_flow",
+      "metadata": {}
+    }
+  ],
+  "trust_boundaries": [
+    {
+      "id": "internet",
+      "name": "Internet",
+      "description": null,
+      "trust_level": null,
+      "inference_note": null,
+      "user_validated": null,
+      "boundary_scenario": "boundary_client_to_server",
+      "member_component_ids": [],
+      "outside_component_ids": [],
+      "crossing_flow_ids": []
+    },
+    {
+      "id": "vpc",
+      "name": "Conta cloud / VPC",
+      "description": null,
+      "trust_level": null,
+      "inference_note": null,
+      "user_validated": null,
+      "boundary_scenario": "boundary_app_to_database",
+      "member_component_ids": [
+        "api",
+        "worker",
+        "db"
+      ],
+      "outside_component_ids": [],
+      "crossing_flow_ids": []
+    }
+  ],
+  "threats": [],
+  "mitigations": [],
+  "evidence_suggestions": [],
+  "import_signals_corpus": null,
+  "residual_risk_summary": null
+}

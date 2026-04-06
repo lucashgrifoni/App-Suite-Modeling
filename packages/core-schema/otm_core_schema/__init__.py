@@ -40,6 +40,14 @@ from otm_core_schema.enums import (
     ThreatModelMethodology,
     TreatmentStatus,
 )
+from otm_core_schema.io import (
+    dump_document_to_json,
+    dump_document_to_yaml,
+    json_schema,
+    load_document_from_dict,
+    load_document_from_yaml,
+    load_document_from_yaml_path,
+)
 from otm_core_schema.methodology_fit_matrix import (
     build_methodology_fit_matrix,
     fit_for_methodology,
@@ -48,14 +56,6 @@ from otm_core_schema.model_quality_precheck import (
     ModelQualityPrecheck,
     QualityCheckItem,
     assess_model_precheck,
-)
-from otm_core_schema.io import (
-    dump_document_to_json,
-    dump_document_to_yaml,
-    json_schema,
-    load_document_from_dict,
-    load_document_from_yaml,
-    load_document_from_yaml_path,
 )
 from otm_core_schema.starters import BLANK_DOCUMENT_YAML, create_blank_document
 from otm_core_schema.version import CANONICAL_SCHEMA_VERSION

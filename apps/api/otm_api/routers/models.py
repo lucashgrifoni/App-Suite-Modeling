@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from typing import Any
-
 from fastapi import APIRouter, status
 from otm_core_schema import diff_documents
+from otm_core_schema.diff import ThreatModelDiff
 from otm_core_schema.model_quality_precheck import assess_model_precheck
 from otm_threat_engine import recommend_methodology
 from otm_threat_engine.comparison_models import ThreatModelComparisonResult
@@ -22,6 +21,7 @@ from otm_api.schemas.bodies import (
     CreateModelResponse,
     DiffBody,
     DocumentBody,
+    ModelPrecheckResponse,
     PrecheckBody,
     RecommendMethodologyResponse,
     ValidateResponse,
@@ -68,17 +68,16 @@ def validate_model(body: DocumentBody) -> ValidateResponse:
         "Avalia completude do modelo (score, banda, matriz de adequação metodológica) e, "
         "opcionalmente, estado de completude da metodologia escolhida — sem correr heurísticas STRIDE."
     ),
+    response_model=ModelPrecheckResponse,
     response_description="`precheck` + `methodology_completeness` serializados.",
 )
-def model_precheck(body: PrecheckBody) -> dict[str, Any]:
+def model_precheck(body: PrecheckBody) -> ModelPrecheckResponse:
     doc = document_from_payload_or_422(body.document)
     chosen = body.methodology or doc.model_info.methodology
-    return {
-        "precheck": assess_model_precheck(doc).model_dump(mode="json"),
-        "methodology_completeness": assess_methodology_completeness(doc, chosen).model_dump(
-            mode="json"
-        ),
-    }
+    return ModelPrecheckResponse(
+        precheck=assess_model_precheck(doc),
+        methodology_completeness=assess_methodology_completeness(doc, chosen),
+    )
 
 
 @router.post(
@@ -88,13 +87,13 @@ def model_precheck(body: PrecheckBody) -> dict[str, Any]:
         "Compares two canonical versions (baseline vs revised) and returns structured diff. "
         "Implemented in `otm_core_schema.diff_documents` — same semantics as `otm diff` in the CLI."
     ),
+    response_model=ThreatModelDiff,
     response_description="Serialized `ThreatModelDiff` JSON object.",
 )
-def diff_model_versions(body: DiffBody) -> dict[str, Any]:
+def diff_model_versions(body: DiffBody) -> ThreatModelDiff:
     baseline = document_from_payload_or_422(body.baseline)
     revised = document_from_payload_or_422(body.revised)
-    result = diff_documents(baseline, revised)
-    return result.model_dump(mode="json")
+    return diff_documents(baseline, revised)
 
 
 @router.post(

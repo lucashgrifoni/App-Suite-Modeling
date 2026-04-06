@@ -1,0 +1,34 @@
+{
+  "analyze": {
+    "methodology": "stride",
+    "document_title_substring": "pedidos",
+    "required_top_level": [
+      "methodology",
+      "document_title",
+      "summary",
+      "heuristic_threats",
+      "structural_findings",
+      "trust_boundary_findings",
+      "model_quality_precheck",
+      "anti_pattern_hits"
+    ],
+    "summary_numeric_fields": [
+      "structural_findings",
+      "trust_boundary_findings",
+      "heuristic_threats_generated"
+    ]
+  },
+  "compare_same_document": {
+    "comparison_contract_version": "1.4",
+    "semantic_insights_version": "1.4",
+    "meta_keys": [
+      "comparison_contract_version",
+      "semantic_insights",
+      "semantic_insights_version",
+      "semantic_diff_sections",
+      "semantic_structural_refs",
+      "semantic_interpretation_links",
+      "interpretation_disclaimer"
+    ]
+  }
+}

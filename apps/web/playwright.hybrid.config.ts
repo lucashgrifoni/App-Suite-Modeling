@@ -1,0 +1,44 @@
+import { defineConfig, devices } from "@playwright/test";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const repoRoot = path.resolve(__dirname, "..", "..");
+
+/**
+ * E2E híbrido: Vite (proxy /api → backend) + uvicorn real na porta 8000.
+ * Requer `pip install -e ".[api]"` e dependências do motor no PATH do Python.
+ */
+export default defineConfig({
+  testDir: "./e2e",
+  testMatch: /hybrid\.spec\.ts/,
+  timeout: 90_000,
+  fullyParallel: false,
+  workers: 1,
+  use: {
+    baseURL: "http://127.0.0.1:4173",
+    trace: "retain-on-failure",
+  },
+  webServer: [
+    {
+      command: "python -m uvicorn otm_api.main:app --host 127.0.0.1 --port 8000",
+      cwd: repoRoot,
+      url: "http://127.0.0.1:8000/health",
+      timeout: 120_000,
+      reuseExistingServer: !process.env.CI,
+    },
+    {
+      command: "node ./node_modules/vite/bin/vite.js --host 127.0.0.1 --port 4173",
+      cwd: __dirname,
+      url: "http://127.0.0.1:4173",
+      timeout: 120_000,
+      reuseExistingServer: !process.env.CI,
+    },
+  ],
+  projects: [
+    {
+      name: "chromium",
+      use: { ...devices["Desktop Chrome"] },
+    },
+  ],
+});

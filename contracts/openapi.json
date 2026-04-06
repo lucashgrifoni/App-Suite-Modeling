@@ -146,9 +146,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "type": "object",
-                  "title": "Response Model Precheck V1 Models Precheck Post"
+                  "$ref": "#/components/schemas/ModelPrecheckResponse"
                 }
               }
             }
@@ -190,9 +188,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "type": "object",
-                  "title": "Response Diff Model Versions V1 Models Diff Post"
+                  "$ref": "#/components/schemas/ThreatModelDiff"
                 }
               }
             }
@@ -360,9 +356,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "type": "object",
-                  "title": "Response Diff Analysis Results Route V1 Analyses Diff Post"
+                  "$ref": "#/components/schemas/AnalysisDiff"
                 }
               }
             }
@@ -804,12 +798,18 @@
         },
         "responses": {
           "200": {
-            "description": "Successful Response",
+            "description": "JSON (`format=json`, default) ou Markdown (`format=markdown`).",
             "content": {
               "application/json": {
                 "schema": {
-                  "title": "Response Post Remediation Backlog V1 Remediation Backlog Post"
+                  "$ref": "#/components/schemas/RemediationBacklog"
                 }
+              },
+              "text/markdown": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "## Remediação\n\nItens priorizados…"
               }
             }
           },
@@ -846,10 +846,21 @@
         },
         "responses": {
           "200": {
-            "description": "Successful Response",
+            "description": "Corpo = Markdown (`output_format=markdown`) ou PDF binário (`output_format=pdf`).",
             "content": {
               "application/json": {
                 "schema": {}
+              },
+              "text/markdown": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/pdf": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
               }
             }
           },
@@ -1460,6 +1471,215 @@
         "title": "ArtifactImportResponse",
         "description": "Rascunho canónico + lista estruturada de inferências (não é `AnalysisResult`)."
       },
+      "BacklogItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "rationale": {
+            "type": "string",
+            "title": "Rationale",
+            "description": "Porque esta ação foi gerada."
+          },
+          "related_findings": {
+            "items": {
+              "$ref": "#/components/schemas/FindingRef"
+            },
+            "type": "array",
+            "title": "Related Findings"
+          },
+          "related_components": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Related Components",
+            "description": "IDs de componentes canónicos afectados."
+          },
+          "component_labels": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Component Labels",
+            "description": "Nomes humanos quando o documento está disponível."
+          },
+          "methodology_context": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Methodology Context",
+            "description": "Metodologia/pack que enquadra o achado."
+          },
+          "suggested_control_type": {
+            "type": "string",
+            "title": "Suggested Control Type",
+            "description": "Tipo de controlo sugerido (valor estável p.ex. identity_access)."
+          },
+          "control_category": {
+            "type": "string",
+            "title": "Control Category",
+            "description": "Dimensão para agrupamento (transversal, dados, exposição, etc.)."
+          },
+          "grouped_root_cause": {
+            "type": "string",
+            "title": "Grouped Root Cause",
+            "description": "Chave de causa raiz heurística (ex.: weak_authentication_pattern)."
+          },
+          "architecture_layer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Architecture Layer",
+            "description": "edge | application | data | integration | governance — quando inferível."
+          },
+          "priority_rank": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Priority Rank",
+            "description": "1 = mais prioritário neste lote."
+          },
+          "priority_label": {
+            "type": "string",
+            "enum": [
+              "urgent",
+              "high",
+              "medium",
+              "low"
+            ],
+            "title": "Priority Label"
+          },
+          "priority_explanation": {
+            "type": "string",
+            "title": "Priority Explanation"
+          },
+          "effort_estimate": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "title": "Effort Estimate"
+          },
+          "impact_estimate": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "title": "Impact Estimate"
+          },
+          "recommended_owner": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recommended Owner",
+            "description": "Papel lógico sugerido (ex.: application_team); null se incerto."
+          },
+          "owner_explanation": {
+            "type": "string",
+            "title": "Owner Explanation",
+            "description": "Porque este owner foi sugerido ou porque ficou em aberto."
+          },
+          "quick_win": {
+            "type": "boolean",
+            "title": "Quick Win",
+            "default": false
+          },
+          "foundational": {
+            "type": "boolean",
+            "title": "Foundational",
+            "default": false
+          },
+          "urgent": {
+            "type": "boolean",
+            "title": "Urgent",
+            "default": false
+          },
+          "quick_win_explanation": {
+            "type": "string",
+            "title": "Quick Win Explanation",
+            "default": ""
+          },
+          "foundational_explanation": {
+            "type": "string",
+            "title": "Foundational Explanation",
+            "default": ""
+          },
+          "next_step": {
+            "type": "string",
+            "title": "Next Step"
+          },
+          "depends_on_action_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Depends On Action Ids"
+          },
+          "explainability": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Explainability",
+            "description": "Lista curta: cobertura, prioridade, limitações do raciocínio."
+          },
+          "explanations": {
+            "items": {
+              "$ref": "#/components/schemas/ExplanationRecord"
+            },
+            "type": "array",
+            "title": "Explanations",
+            "description": "Versão estruturada da explicabilidade (contrato partilhado)."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "description",
+          "rationale",
+          "suggested_control_type",
+          "control_category",
+          "grouped_root_cause",
+          "priority_rank",
+          "priority_label",
+          "priority_explanation",
+          "effort_estimate",
+          "impact_estimate",
+          "owner_explanation",
+          "next_step"
+        ],
+        "title": "BacklogItem",
+        "description": "Uma ação de remediação sugerida — sempre com racional explícito.\n\n`recommended_owner` é papel lógico (não pessoa); pode ser null se não houver base."
+      },
       "Body_import_kubernetes_route_v1_imports_kubernetes_post": {
         "properties": {
           "file": {
@@ -1568,6 +1788,78 @@
         ],
         "title": "CompareBody",
         "description": "Comparação completa: estrutura + opcional análise (payload explícito ou `run_analysis`)."
+      },
+      "ComparisonResultMeta": {
+        "properties": {
+          "comparison_contract_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comparison Contract Version"
+          },
+          "semantic_insights": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Semantic Insights"
+          },
+          "semantic_insights_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Semantic Insights Version"
+          },
+          "semantic_diff_sections": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SemanticDiffSectionsModel"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "semantic_structural_refs": {
+            "items": {
+              "$ref": "#/components/schemas/SemanticStructuralRefModel"
+            },
+            "type": "array",
+            "title": "Semantic Structural Refs"
+          },
+          "semantic_interpretation_links": {
+            "items": {
+              "$ref": "#/components/schemas/SemanticInterpretationLinkModel"
+            },
+            "type": "array",
+            "title": "Semantic Interpretation Links"
+          },
+          "interpretation_disclaimer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interpretation Disclaimer"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "ComparisonResultMeta",
+        "description": "Metadados semânticos do compare — chaves estáveis para OpenAPI/TS.\n\n`model_config.extra` permite chaves futuras sem quebrar clientes."
       },
       "ComparisonSummary": {
         "properties": {
@@ -1949,6 +2241,32 @@
         ],
         "title": "FieldChange",
         "description": "Uma diferença em um campo de entidade ou na raiz do documento."
+      },
+      "FindingRef": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "heuristic_threat",
+              "structural",
+              "trust_boundary",
+              "pack_hint"
+            ],
+            "title": "Kind"
+          },
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "ID estável (ex.: id da ameaça heurística ou código estrutural)."
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "id"
+        ],
+        "title": "FindingRef",
+        "description": "Referência a um achado na origem da análise."
       },
       "FrameworkRef": {
         "properties": {
@@ -2466,6 +2784,23 @@
         "type": "object",
         "title": "MethodologyInsightsDelta"
       },
+      "ModelPrecheckResponse": {
+        "properties": {
+          "precheck": {
+            "$ref": "#/components/schemas/ModelQualityPrecheck"
+          },
+          "methodology_completeness": {
+            "$ref": "#/components/schemas/MethodologyCompletenessInfo"
+          }
+        },
+        "type": "object",
+        "required": [
+          "precheck",
+          "methodology_completeness"
+        ],
+        "title": "ModelPrecheckResponse",
+        "description": "Saída de `POST /v1/models/precheck` — sem executar o motor STRIDE completo."
+      },
       "ModelQualityPrecheck": {
         "properties": {
           "score_0_100": {
@@ -2800,6 +3135,119 @@
         "title": "RelatedEntityRef",
         "description": "Ligação a uma entidade do modelo ou do resultado de motor."
       },
+      "RemediationBacklog": {
+        "properties": {
+          "schema_version": {
+            "type": "string",
+            "title": "Schema Version",
+            "default": "1.0"
+          },
+          "document_title": {
+            "type": "string",
+            "title": "Document Title"
+          },
+          "methodology": {
+            "type": "string",
+            "title": "Methodology"
+          },
+          "executive_summary": {
+            "type": "string",
+            "title": "Executive Summary"
+          },
+          "synergy_notes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Synergy Notes",
+            "description": "Observações transversais (ex.: vários achados com mesma causa raiz)."
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/BacklogItem"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "by_root_cause": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "By Root Cause",
+            "description": "grouped_root_cause → ids de itens."
+          },
+          "by_control_type": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "By Control Type",
+            "description": "suggested_control_type → ids."
+          },
+          "by_control_category": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "By Control Category",
+            "description": "control_category → ids."
+          },
+          "quick_win_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Quick Win Ids"
+          },
+          "foundational_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Foundational Ids"
+          },
+          "high_impact_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "High Impact Ids"
+          },
+          "high_effort_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "High Effort Ids"
+          },
+          "top_5_action_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Top 5 Action Ids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "document_title",
+          "methodology",
+          "executive_summary",
+          "items"
+        ],
+        "title": "RemediationBacklog",
+        "description": "Resultado agregado: itens + vistas de agrupamento + síntese acionável."
+      },
       "RemediationBacklogRequest": {
         "properties": {
           "document": {
@@ -2954,6 +3402,147 @@
         },
         "type": "object",
         "title": "RiskDeltaSummary"
+      },
+      "SemanticDiffSectionsModel": {
+        "properties": {
+          "structural_change_summary": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Structural Change Summary"
+          },
+          "improved": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Improved"
+          },
+          "worsened": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Worsened"
+          },
+          "risk_impact": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Risk Impact"
+          }
+        },
+        "type": "object",
+        "title": "SemanticDiffSectionsModel"
+      },
+      "SemanticInterpretationLinkModel": {
+        "properties": {
+          "structural_ref": {
+            "type": "string",
+            "title": "Structural Ref"
+          },
+          "related_section": {
+            "type": "string",
+            "enum": [
+              "insights",
+              "improved",
+              "worsened",
+              "risk_impact"
+            ],
+            "title": "Related Section"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "link_kind": {
+            "type": "string",
+            "enum": [
+              "lexical_token_overlap",
+              "entity_topic_correlation"
+            ],
+            "title": "Link Kind",
+            "default": "lexical_token_overlap"
+          },
+          "inference_strength": {
+            "type": "string",
+            "const": "low",
+            "title": "Inference Strength",
+            "description": "Proxy de leitura — não prova causalidade nem impacto real.",
+            "default": "low"
+          },
+          "shared_tokens": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Shared Tokens",
+            "description": "Tokens que motivaram `lexical_token_overlap` (vazio se outro kind)."
+          },
+          "entity_kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entity Kind",
+            "description": "Kind da entidade referida em `structural_ref` (eco da ref estrutural)."
+          }
+        },
+        "type": "object",
+        "required": [
+          "structural_ref",
+          "related_section",
+          "summary"
+        ],
+        "title": "SemanticInterpretationLinkModel",
+        "description": "Liga ref estrutural a bullet interpretativo.\n\n`link_kind` e `inference_strength` deixam explícito que não há causalidade provada."
+      },
+      "SemanticStructuralRefModel": {
+        "properties": {
+          "ref": {
+            "type": "string",
+            "title": "Ref"
+          },
+          "entity_kind": {
+            "type": "string",
+            "title": "Entity Kind"
+          },
+          "entity_id": {
+            "type": "string",
+            "title": "Entity Id"
+          },
+          "note": {
+            "type": "string",
+            "title": "Note"
+          },
+          "change_category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Change Category",
+            "description": "Derivado do prefixo ref (ex.: component_added) — rastreio legível."
+          }
+        },
+        "type": "object",
+        "required": [
+          "ref",
+          "entity_kind",
+          "entity_id",
+          "note"
+        ],
+        "title": "SemanticStructuralRefModel",
+        "description": "Ref estável para mudança estrutural (OpenAPI / consumo tipado)."
       },
       "StrideCategory": {
         "type": "string",
@@ -3183,10 +3772,8 @@
             "description": "Lista priorizada para humanos (estrutura + análise)."
           },
           "meta": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Meta",
-            "description": "Metadados extensíveis (versão do contrato de diff, etc.)."
+            "$ref": "#/components/schemas/ComparisonResultMeta",
+            "description": "Metadados semânticos + extensões (`extra`) para evolução controlada."
           },
           "explanations": {
             "items": {

@@ -25,6 +25,7 @@ export function ModelQualityStrip({ analysis }: Readonly<{ analysis: AnalysisRes
   const pq = analysis.model_quality_precheck;
   const mc = analysis.methodology_completeness;
   const ap = analysis.anti_pattern_hits ?? [];
+  const fitMatrix = pq?.methodology_fit_matrix ?? {};
 
   if (!pq && !mc && ap.length === 0) return null;
 
@@ -47,19 +48,19 @@ export function ModelQualityStrip({ analysis }: Readonly<{ analysis: AnalysisRes
             </div>
             <p className="text-xs text-otm-text-muted">
               Fit STRIDE:{" "}
-              <span className="text-otm-text">{pq.methodology_fit_matrix.stride ?? pq.methodology_fit}</span>
-              {pq.methodology_fit_matrix.pasta ? (
+              <span className="text-otm-text">{fitMatrix.stride ?? pq.methodology_fit}</span>
+              {fitMatrix.pasta ? (
                 <>
                   {" "}
                   · PASTA:{" "}
-                  <span className="text-otm-text">{pq.methodology_fit_matrix.pasta}</span>
+                  <span className="text-otm-text">{fitMatrix.pasta}</span>
                 </>
               ) : null}
-              {pq.methodology_fit_matrix.nist_data_centric ? (
+              {fitMatrix.nist_data_centric ? (
                 <>
                   {" "}
                   · NIST DC:{" "}
-                  <span className="text-otm-text">{pq.methodology_fit_matrix.nist_data_centric}</span>
+                  <span className="text-otm-text">{fitMatrix.nist_data_centric}</span>
                 </>
               ) : null}
             </p>
@@ -89,9 +90,9 @@ export function ModelQualityStrip({ analysis }: Readonly<{ analysis: AnalysisRes
               {completenessLabel(mc.state)}
             </Badge>
             {mc.note ? <p className="text-xs text-otm-text-muted">{mc.note}</p> : null}
-            {mc.reasons.length > 0 ? (
+            {(mc.reasons ?? []).length > 0 ? (
               <ul className="list-inside list-disc text-xs text-otm-text-muted">
-                {mc.reasons.slice(0, 4).map((r) => (
+                {(mc.reasons ?? []).slice(0, 4).map((r) => (
                   <li key={r}>{r}</li>
                 ))}
               </ul>

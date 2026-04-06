@@ -5,6 +5,9 @@ Uso (na raiz do monorepo, com ambiente que tenha `otm_api` instalado):
     python scripts/export_openapi.py
 
 Saída: contracts/openapi.json (consumido por `openapi-typescript` no pacote web).
+
+Validação anti-stale (CI): `python scripts/verify_openapi_up_to_date.py`
+ou `npm run contracts:verify` em `apps/web`.
 """
 
 from __future__ import annotations

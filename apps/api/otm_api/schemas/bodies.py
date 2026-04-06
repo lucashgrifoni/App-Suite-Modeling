@@ -3,10 +3,19 @@ from __future__ import annotations
 from typing import Any, Literal
 
 from otm_core_schema import ThreatModelMethodology
+from otm_core_schema.model_quality_precheck import ModelQualityPrecheck
 from otm_explainability import ExplanationRecord
+from otm_threat_engine.result import MethodologyCompletenessInfo
 from pydantic import BaseModel, Field, model_validator
 
 from otm_api.domain.export_formats import ExportFormat
+
+
+class ModelPrecheckResponse(BaseModel):
+    """Saída de `POST /v1/models/precheck` — sem executar o motor STRIDE completo."""
+
+    precheck: ModelQualityPrecheck
+    methodology_completeness: MethodologyCompletenessInfo
 
 
 class DocumentBody(BaseModel):

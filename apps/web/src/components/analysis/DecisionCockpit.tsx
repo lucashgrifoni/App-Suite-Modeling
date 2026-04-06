@@ -17,9 +17,10 @@ export function DecisionCockpit({ analysis }: Readonly<{ analysis: AnalysisResul
     return checks.filter((c) => !c.passed).slice(0, 3);
   }, [pq?.checks]);
 
+  const strideFit = pq?.methodology_fit_matrix?.stride;
   const recHigh =
     pq?.recommendation_confidence === "high" ||
-    (pq?.methodology_fit_matrix.stride === "strong" && pq?.recommendation_confidence === "medium");
+    (strideFit === "strong" && pq?.recommendation_confidence === "medium");
 
   return (
     <div data-testid="decision-cockpit">
@@ -36,7 +37,9 @@ export function DecisionCockpit({ analysis }: Readonly<{ analysis: AnalysisResul
               <>
                 Modelo na banda <strong className="text-otm-text">{pq.band}</strong> (pré-check{" "}
                 {pq.score_0_100}/100). Confiança nas recomendações:{" "}
-                <strong className="text-otm-text">{pq.recommendation_confidence}</strong>.
+                <strong className="text-otm-text">{pq.recommendation_confidence}</strong>. Use{" "}
+                <strong className="text-otm-text">Comparar</strong> ou <strong className="text-otm-text">Exportar</strong>{" "}
+                abaixo para evidência junto de stakeholders.
               </>
             ) : (
               <>Corra o motor para obter pré-check, prioridades e lacunas com contexto.</>

@@ -33,6 +33,25 @@ eval('0');
     routes = [x for x in out["inferences"] if x["kind"] == "route"]
     assert routes
     assert all(x.get("inference_source") in ("regex_heuristic", "combined", "ast_lite") for x in routes)
+    stacks = out.get("detected_stacks") or []
+    assert "javascript_family" in stacks
+
+
+def test_scan_detects_python_fastapi_signals(tmp_path: Path) -> None:
+    (tmp_path / "main.py").write_text(
+        """
+from fastapi import FastAPI
+app = FastAPI()
+@app.get("/health")
+def health():
+    return {"ok": True}
+""",
+        encoding="utf-8",
+    )
+    out = scan_node_express_repo(tmp_path)
+    stacks = out.get("detected_stacks") or []
+    assert "python_family" in stacks
+    assert any(x.get("stack_hint") == "python_fastapi" for x in out["inferences"])
 
 
 def test_scan_node_express_ast_only_route_when_esprima_enabled(tmp_path, monkeypatch):

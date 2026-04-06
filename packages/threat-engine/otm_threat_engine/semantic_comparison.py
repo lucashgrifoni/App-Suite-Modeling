@@ -15,67 +15,195 @@ from otm_threat_engine.comparison_models import DiffAggregate
 from otm_threat_engine.result import AnalysisResult
 
 _INTERP_DISCLAIMER = (
-    "Ligações ref:struct:* relacionam mudanças estruturais (IDs) com notas de leitura de risco. "
-    "São inferências correlacionais para apoio à decisão — não provam cadeia causal nem impacto real."
+    "Diff semântico v1.4: `semantic_interpretation_links` ancoram refs estruturais a bullets via "
+    "`lexical_token_overlap` ou `entity_topic_correlation` — ambos são proxies de leitura (força `low`), "
+    "sem causalidade provada entre mudança no modelo e risco operacional."
 )
+
+_LINK_TOKENS = (
+    "gateway",
+    "boundary",
+    "trust",
+    "datastore",
+    "extern",
+    "fluxo",
+    "perimetro",
+    "perímetro",
+    "segment",
+    "persist",
+)
+
+# Tópicos por kind de entidade — segunda ancoragem quando não há tokens lexicais em comum.
+_ENTITY_TOPICS: dict[str, tuple[str, ...]] = {
+    "trust_boundary": ("boundary", "trust", "perimetro", "perímetro", "segment", "segmentação", "perimeter"),
+    "asset": ("ativo", "asset", "dados", "classific", "impacto"),
+    "component": ("gateway", "componente", "extern", "datastore", "persist", "fluxo", "perimetro"),
+}
+
+
+def _change_category_from_ref(ref: str) -> str | None:
+    parts = ref.split(":")
+    if len(parts) >= 3 and parts[0] == "struct":
+        return parts[1]
+    return None
+
+
+def _interpretation_links(
+    refs: list[dict[str, str]],
+    insights: list[str],
+    improved: list[str],
+    worsened: list[str],
+    risk_impact: list[str],
+) -> list[dict[str, Any]]:
+    """
+    Ancoragem em duas camadas: (1) tokens partilhados entre nota e bullet; (2) tópico por entity_kind.
+
+    Todas as ligações são `inference_strength: low` — honestidade técnica.
+    """
+    buckets: list[tuple[str, list[str]]] = [
+        ("insights", insights),
+        ("improved", improved),
+        ("worsened", worsened),
+        ("risk_impact", risk_impact),
+    ]
+    linked: set[str] = set()
+    out: list[dict[str, Any]] = []
+    for r in refs:
+        ref_id = r.get("ref") or ""
+        note = (r.get("note") or "").lower()
+        note_tokens = {t for t in _LINK_TOKENS if t in note}
+        ek = r.get("entity_kind") or ""
+        if not note_tokens:
+            continue
+        for section, lines in buckets:
+            for line in lines:
+                low = line.lower()
+                line_tokens = {t for t in _LINK_TOKENS if t in low}
+                inter = note_tokens & line_tokens
+                if inter:
+                    out.append(
+                        {
+                            "structural_ref": ref_id,
+                            "related_section": section,
+                            "summary": line[:280],
+                            "link_kind": "lexical_token_overlap",
+                            "inference_strength": "low",
+                            "shared_tokens": sorted(inter),
+                            "entity_kind": ek,
+                        }
+                    )
+                    linked.add(ref_id)
+                    break
+            else:
+                continue
+            break
+
+    for r in refs:
+        ref_id = r.get("ref") or ""
+        if ref_id in linked:
+            continue
+        ek = (r.get("entity_kind") or "").lower()
+        topics = _ENTITY_TOPICS.get(ek, ())
+        if not topics:
+            continue
+        for section, lines in buckets:
+            for line in lines:
+                low = line.lower()
+                if any(t in low for t in topics):
+                    out.append(
+                        {
+                            "structural_ref": ref_id,
+                            "related_section": section,
+                            "summary": line[:280],
+                            "link_kind": "entity_topic_correlation",
+                            "inference_strength": "low",
+                            "shared_tokens": [],
+                            "entity_kind": r.get("entity_kind"),
+                        }
+                    )
+                    linked.add(ref_id)
+                    break
+            else:
+                continue
+            break
+    return out[:36]
 
 
 def _structural_interpretation_refs(aggregate: DiffAggregate) -> list[dict[str, str]]:
     """Referências estáveis para UI/Markdown: mudança estrutural → nota interpretativa (honesta)."""
+
+    def _row(ref: str, entity_kind: str, entity_id: str, note: str) -> dict[str, str]:
+        row: dict[str, str] = {
+            "ref": ref,
+            "entity_kind": entity_kind,
+            "entity_id": entity_id,
+            "note": note,
+        }
+        cc = _change_category_from_ref(ref)
+        if cc:
+            row["change_category"] = cc
+        return row
+
     refs: list[dict[str, str]] = []
     for cid in aggregate.components.get("added", []):
+        ref = f"struct:component_added:{cid}"
         refs.append(
-            {
-                "ref": f"struct:component_added:{cid}",
-                "entity_kind": "component",
-                "entity_id": cid,
-                "note": "Componente novo no grafo; rever perímetro, dados e trust boundaries associados.",
-            }
+            _row(
+                ref,
+                "component",
+                cid,
+                "Componente novo no grafo; rever perímetro, dados e trust boundaries associados.",
+            )
         )
     for cid in aggregate.components.get("removed", []):
+        ref = f"struct:component_removed:{cid}"
         refs.append(
-            {
-                "ref": f"struct:component_removed:{cid}",
-                "entity_kind": "component",
-                "entity_id": cid,
-                "note": "Componente removido; confirmar se superfícies e fluxos sensíveis foram consolidados.",
-            }
+            _row(
+                ref,
+                "component",
+                cid,
+                "Componente removido; confirmar se superfícies e fluxos sensíveis foram consolidados.",
+            )
         )
     for bid in aggregate.trust_boundaries.get("added", []):
+        ref = f"struct:trust_boundary_added:{bid}"
         refs.append(
-            {
-                "ref": f"struct:trust_boundary_added:{bid}",
-                "entity_kind": "trust_boundary",
-                "entity_id": bid,
-                "note": "Nova segmentação explícita; mapear fluxos que cruzam o perímetro.",
-            }
+            _row(
+                ref,
+                "trust_boundary",
+                bid,
+                "Nova segmentação explícita; mapear fluxos que cruzam o perímetro.",
+            )
         )
     for bid in aggregate.trust_boundaries.get("removed", []):
+        ref = f"struct:trust_boundary_removed:{bid}"
         refs.append(
-            {
-                "ref": f"struct:trust_boundary_removed:{bid}",
-                "entity_kind": "trust_boundary",
-                "entity_id": bid,
-                "note": "Boundary removida; rede de confiança e visibilidade de ataque podem ter mudado.",
-            }
+            _row(
+                ref,
+                "trust_boundary",
+                bid,
+                "Boundary removida; rede de confiança e visibilidade de ataque podem ter mudado.",
+            )
         )
     for aid in aggregate.assets.get("added", []):
+        ref = f"struct:asset_added:{aid}"
         refs.append(
-            {
-                "ref": f"struct:asset_added:{aid}",
-                "entity_kind": "asset",
-                "entity_id": aid,
-                "note": "Novo ativo modelado; rever classificação, impacto e controlos.",
-            }
+            _row(
+                ref,
+                "asset",
+                aid,
+                "Novo ativo modelado; rever classificação, impacto e controlos.",
+            )
         )
     for aid in aggregate.assets.get("removed", []):
+        ref = f"struct:asset_removed:{aid}"
         refs.append(
-            {
-                "ref": f"struct:asset_removed:{aid}",
-                "entity_kind": "asset",
-                "entity_id": aid,
-                "note": "Ativo deixou de estar modelado; confirmar se o dado saiu do escopo ou ficou implícito.",
-            }
+            _row(
+                ref,
+                "asset",
+                aid,
+                "Ativo deixou de estar modelado; confirmar se o dado saiu do escopo ou ficou implícito.",
+            )
         )
     return refs[:40]
 
@@ -236,10 +364,13 @@ def enrich_comparison_meta(
         risk_impact.extend(risk_a)
 
     structural_refs = _structural_interpretation_refs(aggregate)
+    interp_links = _interpretation_links(
+        structural_refs, insights, improved, worsened, risk_impact
+    )
 
     out: dict[str, Any] = {
         "semantic_insights": insights,
-        "semantic_insights_version": "1.2",
+        "semantic_insights_version": "1.4",
         "semantic_diff_sections": {
             "structural_change_summary": [
                 f"Componentes: +{len(aggregate.components.get('added', []))} "
@@ -256,6 +387,7 @@ def enrich_comparison_meta(
             "risk_impact": risk_impact,
         },
         "semantic_structural_refs": structural_refs,
+        "semantic_interpretation_links": interp_links,
         "interpretation_disclaimer": _INTERP_DISCLAIMER,
     }
     return out

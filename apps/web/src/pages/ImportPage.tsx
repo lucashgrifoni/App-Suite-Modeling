@@ -14,6 +14,7 @@ import { ContextHint } from "../components/onboarding/ContextHint";
 import { useSession } from "../context/SessionContext";
 import { useToast } from "../context/ToastContext";
 import type { ArtifactImportKind, ArtifactInference, ExplanationRecord } from "../types/api";
+import type { OtmDocument } from "../types/document";
 
 const KINDS: { value: ArtifactImportKind; label: string; accept: string }[] = [
   { value: "openapi", label: "OpenAPI / Swagger (YAML ou JSON)", accept: ".yaml,.yml,.json" },
@@ -54,7 +55,7 @@ export function ImportPage() {
     setStructuredExplanations(null);
     try {
       const res = await importArtifact(kind, file);
-      setDocument(res.document);
+      setDocument(res.document as unknown as OtmDocument);
       setInferences(res.inferences);
       setUnknowns(res.unknowns);
       setStructuredExplanations(res.explanations ?? null);

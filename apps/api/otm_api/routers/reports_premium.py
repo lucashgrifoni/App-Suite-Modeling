@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 from fastapi import APIRouter, HTTPException, status
 from fastapi.responses import PlainTextResponse, Response
 from otm_report_premium.enums import ReportFormat, ReportLevel
@@ -31,8 +29,17 @@ router = APIRouter(prefix="/reports", tags=["Reports"])
         "Requires `document` and either `analysis` or `run_analysis: true`."
     ),
     response_model=None,
+    responses={
+        200: {
+            "description": "Corpo = Markdown (`output_format=markdown`) ou PDF binário (`output_format=pdf`).",
+            "content": {
+                "text/markdown": {"schema": {"type": "string"}},
+                "application/pdf": {"schema": {"type": "string", "format": "binary"}},
+            },
+        },
+    },
 )
-def post_premium_report(body: PremiumReportBody) -> Any:
+def post_premium_report(body: PremiumReportBody) -> PlainTextResponse | Response:
     doc = document_from_payload_or_422(body.document)
     analysis_obj: AnalysisResult | None = None
     if body.analysis is not None:

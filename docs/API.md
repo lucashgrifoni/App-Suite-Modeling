@@ -19,6 +19,8 @@ A lógica de threat modeling **não** vive na API: validação e modelo em `otm_
 
 Documentação interativa: **`/docs`** (Swagger UI), **`/redoc`**.
 
+Contrato exportado, gate anti-stale, goldens HTTP e E2E híbrido: ver **`docs/CONTRACTS_CI_HYBRID.md`**.
+
 ## Endpoints (MVP)
 
 | Método | Caminho | Descrição |
