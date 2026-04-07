@@ -1,0 +1,63 @@
+name: Bug report
+description: Reportar um comportamento incorreto ou uma falha reproduzível
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Obrigado por reportar. **Não** inclua dados sensíveis, credenciais ou modelos internos confidenciais.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Resumo
+      description: O que correu mal, em uma ou duas frases.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Passos para reproduzir
+      description: Preferencialmente comandos ou cliques exatos (CLI, API ou UI).
+      placeholder: "1. …\n2. …\n3. …"
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Comportamento esperado
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Comportamento observado
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Versão / commit
+      description: Valor de `project.version` em `pyproject.toml`, ou hash curto do Git, ou versão da imagem Docker.
+    validations:
+      required: false
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Superfície
+      options:
+        - CLI (`otm`)
+        - API (`otm_api`)
+        - Web (`apps/web`)
+        - Core / motor (`packages/*`)
+        - Documentação
+        - CI / build
+        - Outro
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Ambiente (opcional)
+      description: SO, Python (`python --version`), Node (`node --version`) se relevante.
+    validations:
+      required: false

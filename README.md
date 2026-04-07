@@ -1,73 +1,95 @@
 # App Suite Modeling
 
-**Threat modeling as code—with a canonical model, multi-methodology analysis, and exports your pipeline can use.**
+**Threat modeling as code for teams that ship software.**  
+Define architecture once in a **versioned YAML model**, run **multi-methodology analysis**, and plug outputs into **reviews, pipelines, and auditors**—without duplicating logic across diagrams and spreadsheets.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-[![Node 18+](https://img.shields.io/badge/node-18+-339933?logo=nodedotjs&logoColor=white)](https://nodejs.org/)
+[![Node 20+](https://img.shields.io/badge/node-20+-339933?logo=nodedotjs&logoColor=white)](https://nodejs.org/)
 
-> **Note:** After you publish the GitHub repository, add a CI status badge pointing at `.github/workflows/ci.yml` (replace `OWNER/REPO` in the URL).
+> **Python distribution name:** `open-threat-model` (see [`pyproject.toml`](pyproject.toml)). **App Suite Modeling** is the product name in docs and the web UI. Install from a clone: `pip install -e ".[cli]"` (or `.[dev,cli,api]` for full dev parity).
 
----
-
-## What it is
-
-**App Suite Modeling** is an open-source **threat modeling** platform: a single **versioned canonical schema** drives a **web UI**, **CLI**, and **REST API**. You describe components, flows, and trust boundaries; the server validates the model and runs analysis (STRIDE, LINDDUN, PASTA, NIST Data-Centric, OCTAVE Allegro, CIA-DIE, **PLOT4ai** for AI/LLM systems). Outputs include **structured explainability**, **remediation backlog hints**, and **exports** (JSON, Markdown, Mermaid, PDF) plus **semantic diff** between revisions.
-
-**Who it’s for:** AppSec engineers, DevSecOps, and architects who want threat models that stay **reviewable, portable, and close to engineering**—not one-off diagrams.
-
-**Problem it solves:** Security and delivery teams need a **repeatable** way to capture structure and risk, attach **evidence-friendly artifacts**, and **iterate** as architecture changes—without duplicating logic across tools.
+> **CI:** When the repo is public, add a workflow badge for [`.github/workflows/ci.yml`](.github/workflows/ci.yml) (replace `OWNER/REPO` in the shield URL).
 
 ---
 
-## Screenshots
+## What is this?
 
-*(Add images under `docs/screenshots/` when you capture the UI—see [`docs/SCREENSHOT_GUIDE.md`](docs/SCREENSHOT_GUIDE.md).)*
+**App Suite Modeling** is an open-source **threat modeling** toolkit built around a **canonical document** (`.otm.yaml` / JSON): components, trust boundaries, data flows, and assets. The same document powers:
 
-| Area | Suggested file | What to show |
-|------|----------------|--------------|
-| Home | `docs/screenshots/home.png` | Hero, primary CTAs (new model, import, templates) |
-| Wizard | `docs/screenshots/wizard.png` | Guided modeling step |
-| Analysis | `docs/screenshots/analysis.png` | Methodology selector + metrics / threats |
-| Export | `docs/screenshots/export.png` | Format checkboxes + PDF action |
-| Diff | `docs/screenshots/diff.png` | Side-by-side or summary of model diff |
+- a **CLI** (`otm`) for automation,
+- a **REST API** ([FastAPI](https://fastapi.tiangolo.com/)) for integrations,
+- and a **web UI** (React + Vite) for guided modeling and visualization.
 
----
+The **threat engine** validates the model and produces **suggested threats**, **structured explainability**, **remediation-style backlog hints**, and **exports** (Markdown, JSON, Mermaid, optional PDF). You can **import** drafts from real engineering artifacts (OpenAPI, Kubernetes manifests, Terraform, Helm) and **diff** two model revisions for PR-style reviews.
 
-## Key features
-
-- **Guided workflow** — Assistant → diagram (React Flow, drag-and-drop) → analysis → export → diff  
-- **Interactive diagram editor** — Edit mode with draggable nodes, connections, and session-stored layout  
-- **Multi-methodology analysis** — STRIDE, LINDDUN, PASTA, NIST Data-Centric, OCTAVE Allegro, CIA-DIE, **PLOT4ai**  
-- **Exports** — JSON, Markdown, Mermaid, bundle JSON; **PDF** report generated in the browser  
-- **Analysis history** — Local snapshots (browser storage), restore, export / PDF per entry  
-- **Explainability** — Structured explanation records alongside heuristics  
-- **Templates & packs** — Built-in catalog + industry packs for contextual threats  
-- **CLI + API** — Same contracts: validate, analyze, export, import, diff, templates  
-- **Artifact import** — OpenAPI/Swagger, Kubernetes YAML, Terraform (draft canonical models)
+It is aimed at **AppSec**, **DevSecOps**, and **software architects** who want models that stay **close to the repo**, **reviewable in Git**, and **repeatable in CI**.
 
 ---
 
-## How it works
+## Why this exists
+
+Traditional threat modeling often **does not scale** with delivery:
+
+- Diagrams and spreadsheets **drift** from the real system.
+- Heuristics live inside **one** vendor tool or one analyst’s head.
+- Outputs are **hard to version**, hard to diff, and awkward in **pull requests** or **tickets**.
+
+This project treats the threat model as **code-like data**: one schema, many surfaces. You **validate** and **analyze** the same file from the terminal or API, attach **evidence-friendly artifacts** to reviews, and **re-run** analysis as the architecture changes—without re-implementing STRIDE (or other lenses) in each client.
+
+---
+
+## Key capabilities
+
+| Area | What you get |
+|------|----------------|
+| **Model as code** | Canonical `.otm.yaml` / JSON validated against [`otm_core_schema`](packages/core-schema); fits Git and code review. |
+| **Multi-methodology engine** | STRIDE, LINDDUN, PASTA, NIST Data-Centric, OCTAVE Allegro, CIA-DIE, **PLOT4ai** (AI/LLM systems). |
+| **Explainability** | Structured explanation records alongside heuristics—not only free-text bullets. |
+| **Semantic diff** | Compare models (and rich comparisons) for **PRs**, audits, and release gates. |
+| **Artifact import** | Seed drafts from **OpenAPI/Swagger**, **Kubernetes YAML**, **Terraform**, **Helm** (always review the result). |
+| **Exports** | JSON, Markdown, Mermaid, bundles; **PDF** generation in the browser for the web UI path; premium report path via optional extras. |
+| **CI / automation** | Same operations via **CLI** or **REST** (`validate`, `analyze`, `export`, `diff`, templates, imports). |
+
+Details: [Methodology matrix](docs/features/MULTI_ENGINE_ARCHITECTURE.md) · [Artifact import](docs/features/ARTIFACT_IMPORT.md) · [Exporters](docs/features/EXPORTERS.md) · [Diff](docs/features/THREAT_MODEL_DIFF.md)
+
+---
+
+## How it works (high level)
 
 ```text
-Import (optional) → Assistant → Diagram → Analysis → Export → Diff
+Author model (.otm.yaml) → validate → analyze (methodology / auto-recommend)
+    → review threats + explanations + backlog hints → export artifacts → diff versions
 ```
 
-1. **Import** (optional) — Upload OpenAPI, K8s manifests, or Terraform to seed a canonical draft.  
-2. **Assistant** — Fill metadata, components, flows, boundaries.  
-3. **Diagram** — Visual edit on `/review`; changes stay in session until you export or send to API.  
-4. **Analysis** — Pick or auto-recommend methodology; review threats, explanations, backlog hints.  
-5. **Export** — Download JSON / Markdown / Mermaid / PDF; optional bundle with analysis.  
-6. **Diff** — Compare two model versions or analyses for reviews and CI-style gates.
+Optional: **import** OpenAPI/K8s/Terraform/Helm to bootstrap a draft, then **incrementally** refine in the **wizard** or editor and share via **API** or **CLI**.
 
-Validation and the analysis engine run **on the server**; the UI orchestrates the flow.
+---
+
+## Architecture overview (short)
+
+| Layer | Role |
+|--------|------|
+| **CLI** (`apps/cli`, Typer) | Local and CI workflows: `otm validate`, `analyze`, `report`, `diff`, `import`, templates. |
+| **API** (`apps/api`, FastAPI) | HTTP access to the same capabilities; OpenAPI contract checked in CI. |
+| **Web UI** (`apps/web`) | Guided flow, React Flow diagram, analysis, export, history in **browser storage** (no server-side session DB by default). |
+| **Threat engine** (`packages/threat-engine`) | Methodology lenses, heuristics, PLOT4ai signals, scoring—**no** dependency on FastAPI/React. |
+| **Schema** (`packages/core-schema`) | Single source of truth for a valid **OTM** document. |
+| **Exporters / diagram / packs** | `packages/exporters`, `diagram-engine`, `industry-packs`, `framework-mappings`, etc. |
+
+Deeper maps: [MONOREPO.md](docs/MONOREPO.md) · [REPOSITORY_LAYOUT.md](docs/REPOSITORY_LAYOUT.md) · [ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md)
 
 ---
 
 ## Quick start
 
-### 1. Python (CLI + API)
+**Prerequisites**
+
+- **Python 3.11+**
+- **Node 20+** if you work on the web UI (matches CI)
+- On Linux, full **dev** installs that pull PDF stacks may need **Cairo** dev packages (see [CONTRIBUTING.md](CONTRIBUTING.md))
+
+**Install (CLI + API + dev tools, recommended for contributors)**
 
 ```bash
 python -m venv .venv
@@ -77,22 +99,24 @@ python -m venv .venv
 pip install -e ".[dev,cli,api]"
 ```
 
-**Automated setup** (venv + editable install + `npm install` in `apps/web`):
+Use **`[dev,cli,api]`** so local runs match CI (API tests need `slowapi`, etc.). Minimal CLI-only: `pip install -e ".[cli]"`.
+
+**Automated bootstrap** (venv + editable install + `npm install` in `apps/web`):
 
 ```bash
 python scripts/setup_dev.py
 ```
 
-**One command for API + UI** (from repo root):
+**Run API + web together** (after setup):
 
 ```bash
 python scripts/run_dev.py
 ```
 
-- API: `http://127.0.0.1:8000` (OpenAPI: `/docs`)  
+- API: `http://127.0.0.1:8000` · OpenAPI UI: `/docs`  
 - Web: `http://127.0.0.1:5173`
 
-### 2. CLI (minimal)
+**Minimal CLI session**
 
 ```bash
 otm validate examples/minimal.otm.yaml
@@ -100,148 +124,150 @@ otm analyze examples/minimal.otm.yaml --methodology stride
 otm report examples/minimal.otm.yaml -o REPORT.md
 ```
 
-### 3. API only
+---
 
-```bash
-uvicorn otm_api.main:app --reload --port 8000
+## Example (real)
+
+**Input** — excerpt from [`examples/minimal.otm.yaml`](examples/minimal.otm.yaml) (order API with user, API, worker, DB):
+
+```yaml
+model:
+  schema_version: "1.1.0"
+  system_type: web_application
+  industry_sector: saas
+
+metadata:
+  title: "Exemplo — API de pedidos"
+  summary: "Serviço REST com fila e banco."
+
+components:
+  - id: user
+    name: "Usuário"
+    kind: user
+    in_trust_boundary: internet
+  - id: api
+    name: "API"
+    kind: process
+    in_trust_boundary: vpc
+  # … trust_boundaries, data_flows, assets (see full file in repo)
 ```
 
-### 4. Web only
+**Commands**
 
 ```bash
-cd apps/web
-npm install
-npm run dev
+otm validate examples/minimal.otm.yaml
+otm analyze examples/minimal.otm.yaml --methodology stride
 ```
 
-*(Full operational guide: [`docs/README.md`](docs/README.md).)*
+**Output (abridged)** — analysis summarizes methodology, crossings, and heuristic counts (exact numbers depend on engine version):
 
----
-
-## Templates
-
-Built-in **templates** (`otm templates`, `GET /v1/templates`) give valid starter models (APIs, cloud, identity, integrations, AI/LLM, industry scenarios). They are **starting points**—always review and extend for your system. See [`docs/TEMPLATE_CATALOG.md`](docs/TEMPLATE_CATALOG.md) and [`docs/TEMPLATES_AND_PACKS.md`](docs/TEMPLATES_AND_PACKS.md).
-
-```bash
-otm init -t saas-web model.otm.yaml
-otm templates list
+```text
+| Exemplo — API de pedidos                                                      |
+| Framework refs: ISO/IEC 27001 … · NIST CSF … · OWASP …                       |
+| Structural warnings: 0                                                        |
+| Methodology: stride                                                           |
+| Cross-boundary flows: 1                                                       |
+| Base heuristics: N new · 0 already covered                                    |
+| Highest score (L×I): …                                                        |
 ```
 
----
-
-## CLI usage (essentials)
-
-| Command | Purpose |
-|---------|---------|
-| `otm validate <file.otm.yaml>` | Validate canonical document |
-| `otm analyze <file> [--methodology …] [--pack …]` | Run analysis |
-| `otm report <file> -o REPORT.md` | Generate markdown report |
-| `otm diff …` | Structural / analysis diff |
-| `otm templates` / `otm templates list` | List embedded templates |
-| `otm templates show <id>` | Template metadata |
-| `otm init -t <id> <path>` | Write template to file |
-
-Details: [`docs/CLI.md`](docs/CLI.md)
+`otm report … -o REPORT.md` produces a **Markdown report** you can attach to a PR or evidence pack.
 
 ---
 
-## API overview
+## Screenshots
 
-| Method | Path | Role |
-|--------|------|------|
-| `GET` | `/health` | Liveness |
-| `POST` | `/v1/models` | Create blank canonical document |
-| `POST` | `/v1/models/validate` | Validate document JSON |
-| `POST` | `/v1/models/analyze` | Run engine (`document`, optional `pack_id`, `methodology`) |
-| `POST` | `/v1/models/diff` | Structural diff between two documents |
-| `POST` | `/v1/models/compare` | Rich comparison + optional analysis |
-| `POST` | `/v1/models/recommend-methodology` | Suggest methodology from context |
-| `GET` | `/v1/templates` | List templates (optional filters) |
-| `POST` | `/v1/templates/{id}/instantiate` | Instantiate template |
-| `POST` | `/v1/exports` | Export artifacts (JSON, Markdown, Mermaid, …) |
-| `POST` | `/v1/imports/*` | OpenAPI, Terraform, Kubernetes import |
+Add PNGs under [`docs/screenshots/`](docs/screenshots/README.md) and swap the placeholders below. Framing guide: [`docs/features/SCREENSHOT_GUIDE.md`](docs/features/SCREENSHOT_GUIDE.md).
 
-Interactive docs: **`/docs`** when the API is running. Full reference: [`docs/API.md`](docs/API.md)
+| Area | Placeholder / file | What it should show |
+|------|---------------------|----------------------|
+| **Product overview** | `docs/screenshots/home.png` | Landing: hero + primary CTAs (new model, import, templates). |
+| **Web interface** | `docs/screenshots/wizard.png` | One clear wizard step with real labels. |
+| **Analysis output** | `docs/screenshots/analysis.png` | Methodology + threat summary / metrics. |
+| **Report export** | `docs/screenshots/export.png` | Export options or PDF action. |
+| **CLI usage** | *(terminal capture or secondary README asset)* | `validate` / `analyze` / `report` in a readable terminal. |
 
----
-
-## Methodologies supported
-
-| ID | Focus |
-|----|--------|
-| `stride` | Spoofing, tampering, repudiation, information disclosure, denial of service, elevation of privilege |
-| `linddun` | Privacy / data protection lens |
-| `nist_data_centric` | Data-centric security perspective |
-| `octave_allegro` | Risk and asset-oriented view |
-| `cia_die` | Confidentiality, integrity, availability (and extensions) |
-| `pasta` | Risk-centric, attack-path oriented analysis |
-| `plot4ai` | AI/LLM systems (models, prompts, RAG, agents) |
-
-Methodology choice: manual selector, or **recommend** from document context. See [`docs/CHOOSE_METHODOLOGY.md`](docs/CHOOSE_METHODOLOGY.md) and [`docs/PLOT4AI_AI_SYSTEM.md`](docs/PLOT4AI_AI_SYSTEM.md).
-
-The **matriz oficial de metodologias** (goals, when to use, complexity, auto-recommendation) is in [`docs/MULTI_ENGINE_ARCHITECTURE.md`](docs/MULTI_ENGINE_ARCHITECTURE.md). **STRIDE** is the **default** general-purpose engine; you can refine threats **incrementally** as the canonical model evolves. **Branding oficial** (palette, tokens, logo): [`docs/BRANDING.md`](docs/BRANDING.md).
-
-### CLI
-
-Automation and CI: `otm` commands — see [CLI usage (essentials)](#cli-usage-essentials) and [`docs/CLI.md`](docs/CLI.md).
-
-### API
-
-Integrations and pipelines: REST — see [API overview](#api-overview) and [`docs/API.md`](docs/API.md).
-
-### UI
-
-Guided browser workflow — see [`docs/UI.md`](docs/UI.md).
+*(Images intentionally omitted until maintainers publish captures—keeps the repo honest.)*
 
 ---
 
 ## Use cases
 
-- **AppSec teams** — Repeatable models, exports for reviews, traceable explanations  
-- **DevSecOps** — CLI/API for automation; artifacts for pipelines and tickets  
-- **Architecture / security reviews** — Diff and compare revisions of the same system  
-- **AI / LLM systems** — PLOT4ai lens for generative AI, RAG, and agentic flows  
+- **AppSec programs** — Repeatable models, exports for review, traceable explanations.  
+- **DevSecOps** — `otm` in pipelines; JSON/Markdown artifacts for tickets and gates.  
+- **Architecture & design reviews** — Semantic **diff** across architecture versions.  
+- **PR discipline** — Attach or generate artifacts from the same file the team changes.  
+- **Audits** — Structured outputs and methodology alignment (see framework mapping docs).  
+- **AI/LLM systems** — PLOT4ai lens for model/prompt/RAG/agent concerns.
 
 ---
 
-## Limitations (honest)
+## Maturity & limitations
 
-- Templates and imports produce **drafts**—human review is required.  
-- **No** built-in server-side persistence for the web UI (session + browser storage by default).  
-- **No** authentication layer in the default stack—deploy behind your identity boundary if needed.  
-- Heuristic coverage is **assistive**, not a guarantee of completeness.
+**Be explicit about what this is not:** a **full multitenant SaaS** with built-in org accounts, centralized model history, or opinionated cloud hosting.
 
-Full list: [`docs/KNOWN_LIMITATIONS.md`](docs/KNOWN_LIMITATIONS.md)
+| Topic | Expectation |
+|--------|-------------|
+| **Core schema & engine** | **Stable** and heavily tested; **STRIDE** is the most mature lens; others vary (see [release scope](docs/internal/decisions/RELEASE_SCOPE_FREEZE.md)). |
+| **CLI / OpenAPI** | **Stable** contracts for automation; breaking changes should be versioned and noted in [CHANGELOG](CHANGELOG.md). |
+| **Web UI** | **Mature MVP**: full flow + diagram + exports; **persistence is browser/session-centric** by default—no server-side user DB in the default stack. |
+| **API in production** | Optional **API key** and **rate limiting** exist; **internet-facing** deployments still need your **gateway, identity, and hardening** ([deployment notes](docs/architecture/DEPLOYMENT_INVARIANTS.md)). |
+| **Import** | Produces **drafts**—humans must reconcile trust boundaries and sensitive data. |
+| **Analysis** | **Heuristic / assistive**—not a completeness guarantee or formal proof. |
+
+Full detail: [KNOWN_LIMITATIONS.md](docs/KNOWN_LIMITATIONS.md)
+
+Test suite (reference): **400+** Python tests in CI when installing `.[dev,cli,api]`—see [CI workflow](.github/workflows/ci.yml).
+
+---
+
+## Project structure (pointer)
+
+- Layout & packaging: [docs/MONOREPO.md](docs/MONOREPO.md)  
+- Layers and `otm_*` packages: [docs/REPOSITORY_LAYOUT.md](docs/REPOSITORY_LAYOUT.md)  
+- How docs are organized: [docs/DOCUMENTATION_STRUCTURE.md](docs/DOCUMENTATION_STRUCTURE.md)
+
+---
+
+## Documentation
+
+| Doc | Purpose |
+|-----|---------|
+| [docs/README.md](docs/README.md) | Doc hub & onboarding (including PT-BR oriented guides) |
+| [docs/features/CLI.md](docs/features/CLI.md) | CLI reference |
+| [docs/features/API.md](docs/features/API.md) | REST API & optional perimeter |
+| [docs/features/UI.md](docs/features/UI.md) | Web app flows |
+| [docs/features/MULTI_ENGINE_ARCHITECTURE.md](docs/features/MULTI_ENGINE_ARCHITECTURE.md) | Methodology matrix |
+| [docs/features/CHOOSE_METHODOLOGY.md](docs/features/CHOOSE_METHODOLOGY.md) | Choosing a lens |
+| [docs/features/PLOT4AI_AI_SYSTEM.md](docs/features/PLOT4AI_AI_SYSTEM.md) | PLOT4ai / AI modeling |
+| [docs/features/ARTIFACT_IMPORT.md](docs/features/ARTIFACT_IMPORT.md) | Importing OpenAPI, K8s, Terraform, Helm |
+| [docs/features/THREAT_MODEL_DIFF.md](docs/features/THREAT_MODEL_DIFF.md) | Model diff |
+| [docs/features/EXPORTERS.md](docs/features/EXPORTERS.md) | Export formats |
+| [docs/CI_AND_SECURITY_EVIDENCE.md](docs/CI_AND_SECURITY_EVIDENCE.md) | Security tooling & CI gates |
+| [docs/features/PRODUCT_POSITIONING.md](docs/features/PRODUCT_POSITIONING.md) | Positioning narrative |
+| [docs/features/BRANDING.md](docs/features/BRANDING.md) | Branding, palette, and visual system for maintainers |
+| [docs/PROJECT_DEEP_DIVE.md](docs/PROJECT_DEEP_DIVE.md) | Long-form product & engineering overview |
+
+Release assessment (maintainers): [FINAL_GO_NO_GO_RELEASE_ASSESSMENT.md](docs/internal/reports/FINAL_GO_NO_GO_RELEASE_ASSESSMENT.md)
 
 ---
 
 ## Contributing
 
-- Read [`CONTRIBUTING.md`](CONTRIBUTING.md)  
-- Report security issues via [`SECURITY.md`](SECURITY.md)  
-- Changes: [`CHANGELOG.md`](CHANGELOG.md)
+Issues and PRs are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) and follow [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).  
+Templates: [.github/ISSUE_TEMPLATE](.github/ISSUE_TEMPLATE) · [Pull request template](.github/pull_request_template.md)
 
 ---
 
-## Product positioning
+## Security
 
-Narrative and differentiators: [`docs/PRODUCT_POSITIONING.md`](docs/PRODUCT_POSITIONING.md)
+Please **do not** file public issues with exploitable vulnerability details. Use the process in [SECURITY.md](SECURITY.md) (e.g. GitHub Security Advisories).
 
 ---
 
-## Repository layout
+## Versioning
 
-| Path | Contents |
-|------|----------|
-| [`packages/`](packages/) | Python libraries: schema, engine, exporters, industry packs, … |
-| [`apps/api/`](apps/api/) | FastAPI service |
-| [`apps/cli/`](apps/cli/) | `otm` CLI |
-| [`apps/web/`](apps/web/) | React + Vite UI |
-| [`docs/`](docs/) | Architecture, API, guides |
-| [`examples/`](examples/) | Sample `.otm.yaml` files |
-| [`tests/`](tests/) | Pytest suite |
-
-Monorepo details: [`docs/MONOREPO.md`](docs/MONOREPO.md)
+Package version lives in `pyproject.toml` (currently **7.2.0**, aligned with `apps/web/package.json`). Tags, RCs, and the relationship to historical milestones (e.g. documented `v0.1.0` scope) are explained in [docs/VERSIONING_AND_TAGS.md](docs/VERSIONING_AND_TAGS.md). Release history: [CHANGELOG.md](CHANGELOG.md).
 
 ---
 
@@ -253,4 +279,4 @@ Monorepo details: [`docs/MONOREPO.md`](docs/MONOREPO.md)
 
 ## Trademarks
 
-*App Suite Modeling* is the project name. Third-party frameworks (STRIDE, LINDDUN, PASTA, NIST, PLOT4ai, etc.) belong to their respective authors and are used here to describe methodology support only.
+*App Suite Modeling* is the project name. STRIDE, LINDDUN, PASTA, NIST, PLOT4ai, and other methodology names belong to their respective owners and are cited here to describe **supported lenses**, not affiliation.

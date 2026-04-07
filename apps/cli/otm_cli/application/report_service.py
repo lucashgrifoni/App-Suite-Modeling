@@ -13,6 +13,7 @@ from otm_report_premium import (
 )
 from otm_report_premium.enums import ReportFormat as PremiumReportFormat
 from otm_report_premium.enums import ReportLevel as PremiumReportLevel
+from otm_report_premium.i18n_locale import normalize_premium_locale
 from otm_threat_engine import AnalysisResult, analyze_document
 
 from otm_cli.application.analysis_io import load_analysis_result_from_path
@@ -78,13 +79,14 @@ def run_report(
     if baseline_json:
         baseline = load_analysis_result_from_path(baseline_json)
 
+    build_locale = "en" if report_format == PremiumReportFormat.PDF else normalize_premium_locale(locale)
     payload = build_premium_report_payload(
         doc,
         result,
         level=level,
         baseline=baseline,
         app_version=installed_version(),
-        locale=locale,
+        locale=build_locale,
     )
     if report_format == PremiumReportFormat.MARKDOWN:
         return ReportPremiumMarkdownResult(text=render_premium_markdown(payload))

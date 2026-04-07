@@ -145,7 +145,7 @@ Variável: `OTM_LOG_LEVEL` (default `INFO`).
 
 ### Riscos aceites
 
-API sem autenticação se exposta publicamente sem gateway — ver [`DEPLOYMENT_INVARIANTS.md`](DEPLOYMENT_INVARIANTS.md).
+API sem autenticação se exposta publicamente sem gateway — ver [`DEPLOYMENT_INVARIANTS.md`](architecture/DEPLOYMENT_INVARIANTS.md).
 
 ### Próximos passos (cenário público)
 
@@ -157,7 +157,7 @@ API keys/OAuth2/mTLS + testes de autorização + OpenAPI/UI alinhados ao fluxo c
 
 - Job `semgrep` no CI: imagem `semgrep/semgrep`, configs **`p/python`**, **`p/typescript`**, **`p/javascript`**, **`p/react`** sobre `packages` e `apps/web/src`.
 - Exclusões: **`.semgrepignore`** na raiz (artefactos, `node_modules`, `.venv`, etc.).
-- Política de triagem, `nosemgrep` e evolução: **[`SEMGREP_POLICY.md`](SEMGREP_POLICY.md)**.
+- Política de triagem, `nosemgrep` e evolução: **[`SEMGREP_POLICY.md`](architecture/SEMGREP_POLICY.md)**.
 
 ---
 

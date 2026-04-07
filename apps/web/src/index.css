@@ -113,6 +113,10 @@
   --otm-primary-subtle: rgba(48, 178, 127, 0.12);
   --otm-primary-muted: rgba(48, 178, 127, 0.06);
 
+  /* Links e realces em fundo claro: o néon do tema escuro falha WCAG em branco/menta */
+  --otm-accent: #0f766e;
+  --otm-success: #047857;
+
   --otm-gradient-hero: radial-gradient(
       100% 80% at 15% 0%,
       rgba(48, 178, 127, 0.18) 0%,

@@ -1,23 +1,23 @@
 # Limitações conhecidas (série 7.x)
 
-Documento objetivo para utilizadores e mantenedores. Complementa o [congelamento de escopo](RELEASE_SCOPE_FREEZE.md) e o [fecho de engenharia](ENGINEERING_CLOSEOUT_SCOPE.md).
+Documento objetivo para utilizadores e mantenedores. Complementa o [congelamento de escopo](internal/decisions/RELEASE_SCOPE_FREEZE.md) e o [fecho de engenharia](internal/decisions/ENGINEERING_CLOSEOUT_SCOPE.md).
 
 ## Produto e plataforma
 
 - **Sem persistência server-side:** a UI usa rascunho local (`sessionStorage`). Não há contas, equipas nem histórico centralizado.
-- **Autenticação na API (opcional):** pode activar-se **`OTM_API_KEY`** para proteger `/v1/*`; sem esta variável, a API permanece aberta na rede onde correr. A UI não gere contas; implantação pública requer reverso/gateway conforme `DEPLOYMENT_INVARIANTS.md`.
+- **Autenticação na API (opcional):** pode activar-se **`OTM_API_KEY`** para proteger `/v1/*`; sem esta variável, a API permanece aberta na rede onde correr. A UI não gere contas; implantação pública requer reverso/gateway conforme `architecture/DEPLOYMENT_INVARIANTS.md`.
 - **MVP de diagramação:** canvas avançado não é o fluxo principal; exportação textual e Mermaid cobrem o núcleo.
 
 ## Heurísticas e metodologias
 
 - **Falsos positivos/negativos:** análise é assistida por heurísticas e lentes; revisão humana permanece obrigatória para decisões de risco.
-- **PLOT4ai:** matching “token-safe” reduz ruído; textos ambíguos ou muito curtos ainda podem gerar sinais imperfeitos (ver `PLOT4AI_AI_SYSTEM.md`).
-- **Maturidade variável:** STRIDE é o mais maduro; outras metodologias são **Evolving** ou **Specialized** (ver matriz em `RELEASE_SCOPE_FREEZE.md`).
+- **PLOT4ai:** matching “token-safe” reduz ruído; textos ambíguos ou muito curtos ainda podem gerar sinais imperfeitos (ver `features/PLOT4AI_AI_SYSTEM.md`).
+- **Maturidade variável:** STRIDE é o mais maduro; outras metodologias são **Evolving** ou **Specialized** (ver matriz em `internal/decisions/RELEASE_SCOPE_FREEZE.md`).
 
 ## Import de artefatos
 
 - **Rascunho, não verdade:** imports produzem `.otm.yaml` para revisão; nomes, trust boundaries e classificação de dados podem exigir ajuste manual.
-- **Cobertura:** formatos suportados e comportamento estão em `ARTIFACT_IMPORT.md`; artefatos exóticos ou malformados podem falhar validação de forma explícita.
+- **Cobertura:** formatos suportados e comportamento estão em `features/ARTIFACT_IMPORT.md`; artefatos exóticos ou malformados podem falhar validação de forma explícita.
 
 ## Windows e terminal
 
@@ -37,4 +37,4 @@ Documento objetivo para utilizadores e mantenedores. Complementa o [congelamento
 ## Compatibilidade
 
 - **Python:** `>=3.11` conforme `pyproject.toml`.
-- **API `/v1/`:** clientes devem tolerar campos opcionais adicionados sem quebra em minor releases da série `0.x`.
+- **API `/v1/`:** clientes devem tolerar campos opcionais adicionados sem quebra em **minor releases** da mesma linha de versão publicada (ver `CHANGELOG.md` para mudanças de contrato).

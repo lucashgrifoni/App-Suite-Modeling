@@ -2,6 +2,8 @@
 
 Obrigado pelo interesse em contribuir. Este projeto prioriza **simplicidade**, **testes** e **um único núcleo de domínio** partilhado por CLI, API e UI.
 
+Comportamento na comunidade: [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) (Contributor Covenant 2.1, em português).
+
 ## Ambiente Python
 
 - Python **3.11+**
@@ -38,6 +40,6 @@ npm run dev
 
 - **Regra de negócio / schema:** `packages/*`
 - **HTTP ou CLI:** `apps/api` ou `apps/cli` apenas como adaptadores
-- **Decisões de arquitetura:** `docs/adr/` (ADRs curtos)
+- **Decisões de arquitetura:** `docs/architecture/adr/` (ADRs curtos)
 
-Ver [docs/MONOREPO.md](docs/MONOREPO.md) para o mapa completo do repositório.
+Ver [docs/MONOREPO.md](docs/MONOREPO.md) para o mapa completo do repositório. Documentação: índice em [docs/README.md](docs/README.md) e organização em [docs/DOCUMENTATION_STRUCTURE.md](docs/DOCUMENTATION_STRUCTURE.md).

@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 
 import pytest
-from otm_core_schema import Metadata, load_document_from_yaml_path
+from otm_core_schema import Metadata, create_blank_document, load_document_from_yaml_path
 from otm_industry_packs.loader import list_template_ids
 
 pytest.importorskip("fastapi")
@@ -163,6 +163,22 @@ def test_validate_ok(client: TestClient) -> None:
     assert body["valid"] is True
     assert body["title"]
     assert body["component_count"] >= 0
+
+
+def test_validate_data_flow_unknown_component_returns_422_not_500(client: TestClient) -> None:
+    """Referência de fluxo a componente inexistente deve ser 422 JSON (nunca 500 por ctx não serializável)."""
+    payload = create_blank_document().model_dump(mode="json", by_alias=True)
+    payload["assets"] = []
+    payload["trust_boundaries"] = []
+    payload["components"] = [{"id": "api", "name": "API", "kind": "process"}]
+    payload["data_flows"] = [
+        {"id": "f1", "from_component": "worke", "to_component": "api"},
+    ]
+    r = client.post("/v1/models/validate", json={"document": payload})
+    assert r.status_code == 422, r.text
+    detail = r.json()["detail"]
+    assert detail["code"] == "DOCUMENT_VALIDATION_ERROR"
+    assert any("data_flow" in str(err.get("msg", "")).lower() for err in detail["errors"])
 
 
 def test_models_precheck_ok(client: TestClient) -> None:

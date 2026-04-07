@@ -1,0 +1,35 @@
+name: Feature request
+description: Propor uma melhoria ou nova capacidade alinhada com o âmbito do projeto
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Por favor liga o pedido a **problema de utilizador** ou **caso de uso de threat modeling / AppSec**. Evita pedidos vagos ou escopo totalmente novo sem contexto.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problema ou oportunidade
+      description: Que fricção existe hoje? Para quem importa (AppSec, DevSecOps, arquiteto)?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposta (alto nível)
+      description: O que mudaria no produto (CLI, API, UI, motor, docs)? Mantém-se o documento canónico como fonte da verdade?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternativas consideradas
+    validations:
+      required: false
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Confirmações
+      options:
+        - label: Revê `docs/KNOWN_LIMITATIONS.md` e `docs/internal/decisions/ENGINEERING_CLOSEOUT_SCOPE.md` — o pedido não contradiz o escopo congelado sem discussão explícita.
+          required: true

@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "App Suite Modeling API",
-    "description": "HTTP API for threat modeling as code: validation, analysis, templates, and exports. Versioned routes under `/v1`. See `docs/API.md` in the repository.",
+    "description": "HTTP API for threat modeling as code: validation, analysis, templates, and exports. Versioned routes under `/v1`. See `docs/features/API.md` in the repository.",
     "version": "0.1.0"
   },
   "paths": {

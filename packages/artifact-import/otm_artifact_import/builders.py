@@ -29,11 +29,11 @@ SourceKind = Literal["openapi", "terraform", "kubernetes", "helm"]
 
 def slug_id(text: str, *, prefix: str = "c") -> str:
     """
-    Converte texto em id válido para o schema canónico (`^[a-zA-Z][a-zA-Z0-9_-]*$`).
+    Converte texto em id válido para o schema canónico (``ENTITY_ID_PATTERN``).
     """
-    s = re.sub(r"[^a-zA-Z0-9_-]+", "_", text.strip().lower())
-    s = s.strip("_") or "x"
-    if not re.match(r"^[a-zA-Z]", s):
+    s = re.sub(r"[^a-zA-Z0-9_.-]+", "_", text.strip().lower())
+    s = s.strip("._-") or "x"
+    if not re.match(r"^[a-zA-Z0-9_]", s):
         s = f"{prefix}_{s}"
     return s[:56]
 

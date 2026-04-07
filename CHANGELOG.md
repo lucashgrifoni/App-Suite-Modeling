@@ -13,15 +13,42 @@ e versionamento semântico quando aplicável.
 
 ### Fixed
 
-- **`gitpage/package-lock.json`** regenerado com **npm 10.x** (alinhado ao **Node 20** no GitHub Actions). Locks gerados com **npm 11** faziam `npm ci` falhar no deploy Pages (pacotes **`@emnapi/*`** em falta no lock; mensagem no UI pode parecer “openapi”).
-- **`apps/web`:** **`i18next` ^26.0.3** com **`react-i18next` ^17** (peer `i18next@>=26.0.1`); **`package-lock.json`** atualizado com **npm 10.x** para **`npm ci`** no CI não falhar com **ERESOLVE** (npm 10 é mais estrito que npm 11 neste par).
-- CI: **`aquasecurity/trivy-action`** atualizado para **0.35.0** (advisory / Dependabot security job deixava de aplicar patch e falhava com `security_update_not_needed` com **0.28.0**).
-- **`deploy-gitpage.yml`:** passo **`actions/configure-pages@v5`** antes de `upload-pages-artifact` (requisito do fluxo GitHub Pages).
-- **Dependabot:** removida duplicata de entrada **`npm` / `gitpage`**; adicionado **`package-ecosystem: github-actions`** para atualizações semanais de actions.
-
 ### Removed
 
 <!-- Compare links: atualizar com URL do repositório remoto após primeiro push de tag. -->
+
+## [7.3.0] — 2026-04-07
+
+Release **v7.3** — reestruturação da documentação (`docs/features/`, `docs/architecture/`, arquivo em `docs/internal/`), relatório premium PDF/HTML reforçado, padrão **`ENTITY_ID_PATTERN`** no core, utilitário **`documentNormalize`** na web, *landing* **gitpage** sem **react-three**, reforço de governança OSS (`CODE_OF_CONDUCT`, templates GitHub) e correções de CI (**locks npm 10**, **mypy** em `render_html`).
+
+### Added
+
+- **`otm_core_schema.entity_id`:** padrão **`ENTITY_ID_PATTERN`** e validação alinhada em **`ThreatModelDocument`** (ids de entidades: underscore, ponto, dígito inicial onde aplicável); testes `tests/test_entity_id_pattern.py`.
+- **Web:** `documentNormalize.ts` + testes Vitest (normalização para diff/UI).
+- **Premium:** `branding.report_logo_data_uri`, asset **`report_logo.png`**; módulo **`render_html`** com layout executivo (tabelas, roadmap, root causes, meter de risco).
+- **Documentação:** `docs/DOCUMENTATION_STRUCTURE.md`, `docs/REPOSITORY_LAYOUT.md`, `docs/PROJECT_DEEP_DIVE.md`, `docs/DOCS_REORGANIZATION_REPORT.md`, árvores **`docs/architecture/`**, **`docs/features/`**, **`docs/internal/`** (checklists, decisões, relatórios e auditorias históricas); `docs/screenshots/README.md`.
+- **Comunidade:** `CODE_OF_CONDUCT.md`, `.github/ISSUE_TEMPLATE/`, `.github/pull_request_template.md`.
+- **Scripts:** `docs_apply_path_migration.py`, `docs_fix_internal_relative_links.py` (manutenção de links após reorg).
+
+### Changed
+
+- **README**, **CONTRIBUTING**, **MONOREPO**, **KNOWN_LIMITATIONS**, **CI_AND_SECURITY_EVIDENCE**, **VERSIONING_AND_TAGS** — apontadores para a nova estrutura de docs.
+- **API / CLI / web:** fluxo de relatório premium (payload PDF em **locale en** estrutural); `openapi.json` e cliente TS alinhados.
+- **gitpage:** dependências focadas em **React + Vite** (remoção de **@react-three/*** / **three**); hero **HeroRadar** / **HeroVisual**; `HeroSection` atualizado.
+- **Report premium PDF:** HTML intermédio redesenhado (hierarquia H1–H3, espaçamento, divisores, tabelas com `word-wrap` e colunas fixas, cores P1–P4, resumo executivo em bullets, root causes com indicadores, roadmap por fase). Geração **PDF** via API/CLI com payload **`locale=en`** para cópia estrutural em inglês; Markdown mantém `--locale` / corpo API.
+- **`.gitignore`**, **`.pre-commit-config.yaml`** — extensões para artefactos locais / política de hooks.
+
+### Fixed
+
+- **`render_html`:** renomeação de variáveis de laço (`bullet`, `snippet`, `impact`, `profile`, `score_raw`) para satisfazer **mypy** (evita sombreamento `b` / `ex` / `raw`).
+- **`gitpage/package-lock.json`** e **`apps/web/package-lock.json`** regenerados com **npm 10.9.2** (compatível com **Node 20** no Actions; evita **`@emnapi/*`** em falta no `npm ci`).
+- Ruff: imports em **`document.py`**, **`test_entity_id_pattern.py`**; formatação em **`reports_premium`**, **`report_service`**, **`render_html`**.
+
+### Removed
+
+- Dezenas de ficheiros Markdown monolíticos em **`docs/`** na raiz (conteúdo migrado para **`docs/features/`**, **`docs/architecture/`** ou **`docs/internal/`**).
+- **`gitpage`:** `Hero3D.tsx` (fluxo three.js anterior) e trechos de config Vite/lock associados ao ecossistema 3D removido.
+- Documentação: removidos `docs/PROJECT_HYGIENE_ROUND2_*` e `docs/PROJECT_HYGIENE_ROUND3_*` da localização antiga (substituídos pela reorganização e histórico Git).
 
 ## [7.2.0] — 2026-04-02
 
@@ -35,7 +62,7 @@ Release **v7.2** — perímetro opcional da API (rate limit, API key), hardening
 - CI: jobs **Semgrep** (`p/python`, `p/typescript`, `p/javascript`, `p/react`) e **Trivy** (imagem Docker da API); gate **`npm audit --audit-level=moderate`** no job `web`.
 - Testes `tests/test_api.py` para API key; E2E híbrido com **`OTM_RATE_LIMIT_DISABLED=1`** no uvicorn (`playwright.hybrid.config.ts`).
 - Frontend: **`public/_headers`** (CSP + cabeçalhos para hosts estáticos), **`public/theme-init.js`** (tema sem script inline), endurecimento em **`vite.config.ts`** (`server` / `preview` headers).
-- **`.semgrepignore`**; política **`docs/SEMGREP_POLICY.md`**; guia **`docs/SECURITY_HEADERS.md`**; **`docs/PRE_COMMIT.md`**; **`.pre-commit-config.yaml`** (Ruff + mypy parcial).
+- **`.semgrepignore`**; política **`docs/architecture/SEMGREP_POLICY.md`**; guia **`docs/features/SECURITY_HEADERS.md`**; **`docs/architecture/PRE_COMMIT.md`**; **`.pre-commit-config.yaml`** (Ruff + mypy parcial).
 - Workflow **`deploy-gitpage.yml`** (build e deploy do site em `gitpage/` para GitHub Pages).
 
 ### Changed
@@ -44,10 +71,10 @@ Release **v7.2** — perímetro opcional da API (rate limit, API key), hardening
 - `pyproject.toml` extra `dev`: dependência **`bandit>=1.7`** para SAST reprodutível; extra `api`: **`slowapi>=0.1.9`**.
 - Python: formatação Ruff aplicada em massa (`packages/`, `apps/`, `tests/`) para alinhar com o novo gate.
 - API: respostas de validação usam `status.HTTP_422_UNPROCESSABLE_CONTENT` (Starlette/FastAPI) em `otm_api.errors` e `otm_api.routers._errors`, eliminando `DeprecationWarning` de `HTTP_422_UNPROCESSABLE_ENTITY`.
-- `docs/DEPLOYMENT_INVARIANTS.md`: secção **API sem autenticação integrada** + variáveis **`OTM_API_KEY`**, **`OTM_RATE_LIMIT`**, **`OTM_RATE_LIMIT_DISABLED`**.
+- `docs/architecture/DEPLOYMENT_INVARIANTS.md`: secção **API sem autenticação integrada** + variáveis **`OTM_API_KEY`**, **`OTM_RATE_LIMIT`**, **`OTM_RATE_LIMIT_DISABLED`**.
 - `pyproject.toml`: comentário no extra `api` sobre **SQLAlchemy** reservado a persistência pós-MVP (sem uso no código da API atual).
 - `docs/CI_AND_SECURITY_EVIDENCE.md`: Ruff/Bandit, **Mypy monorepo**, Semgrep, Trivy, npm audit moderate.
-- `docs/API.md`: secção **Perímetro opcional**; `docs/KNOWN_LIMITATIONS.md`: **`OTM_API_KEY`** opcional.
+- `docs/features/API.md`: secção **Perímetro opcional**; `docs/KNOWN_LIMITATIONS.md`: **`OTM_API_KEY`** opcional.
 - **Mypy:** correcções transversais (tipos `StrideCategory` em heurísticas PLOT4ai, variáveis de loop em Markdown premium/diff export, `ai_import_corpus`, `document_json`, etc.); `otm_artifact_import.builders` com `type: ignore[call-arg]` documentado (falso positivo pydantic/mypy).
 - **Web (`apps/web`):** **React ^19.2**, **Vite ^8**, `@vitejs/plugin-react` ^6, **Vitest ^3.2**; Dependabot agrupa `vite` + `@vitejs/plugin-react` para evitar **ERESOLVE** no `npm ci` (PRs separados incompatíveis).
 - **`gitpage/` (site estático):** **Vite ^8** e `@vitejs/plugin-react` ^6 (mesma regra de peers); Dependabot semanal em `/gitpage` com grupo `vite-ecosystem`; `vite.config.ts`: `manualChunks` em forma de **função** (Rolldown rejeita o mapa objeto).
@@ -67,28 +94,28 @@ Release **v7.1** (i18n pt-BR/en, exports e premium localizados, CLI modular, obs
 
 ### Removed
 
-- Higiene **round 3** (documentação): removido o pacote disperso `docs/I18N_*.md` (substituído por **`docs/I18N.md`**). Relatórios `docs/PROJECT_HYGIENE_ROUND3_*`.
+- Higiene **round 3** (documentação): removido o pacote disperso `docs/I18N_*.md` (substituído por **`docs/features/I18N.md`**).
 
-- Higiene de repositório (release readiness): removido arquivo versionado `docs/archive/legacy-md-2026-03-24/` (29 ficheiros Markdown já marcados como legados e sem referências no código, CI ou documentação viva). Rastreio no histórico Git; sumário consolidado na round 2 (`docs/PROJECT_HYGIENE_ROUND2_*`).
+- Higiene de repositório (release readiness): removido arquivo versionado `docs/archive/legacy-md-2026-03-24/` (29 ficheiros Markdown já marcados como legados e sem referências no código, CI ou documentação viva). Rastreio no histórico Git.
 
-- Higiene **round 2** (documentação): removidos dezenas de Markdown redundantes ou puramente operacionais (pacotes `BRUTAL_*` paralelos, trilhos UI plano/validação/handoff, relatórios de execução CI dispersos, fechos/rounds históricos, ficheiros da higiene round 1). Conteúdo durável fundido em `docs/FULL_PROJECT_REMEDIATION_BACKLOG.md`, `docs/FULL_PROJECT_REMEDIATION_PLAN.md`, `docs/FULL_PROJECT_QUALITY_SCORECARD.md`, `docs/CI_AND_SECURITY_EVIDENCE.md`, `docs/EXPLAINABILITY.md`, `docs/THREAT_MODEL_DIFF.md`, `docs/STRIDE_GENERICITY_REDUCTION_DECISION.md`, `docs/GITHUB_README_AND_METADATA.md`, `docs/FRONTEND_UI_ROLLOUT_HISTORY.md`. Rastreio em `docs/PROJECT_HYGIENE_ROUND2_*`.
+- Higiene **round 2** (documentação): removidos dezenas de Markdown redundantes ou puramente operacionais (pacotes `BRUTAL_*` paralelos, trilhos UI plano/validação/handoff, relatórios de execução CI dispersos, fechos/rounds históricos, ficheiros da higiene round 1). Conteúdo durável fundido em `docs/internal/reports/FULL_PROJECT_REMEDIATION_BACKLOG.md`, `docs/internal/reports/FULL_PROJECT_REMEDIATION_PLAN.md`, `docs/internal/audits/FULL_PROJECT_QUALITY_SCORECARD.md`, `docs/CI_AND_SECURITY_EVIDENCE.md`, `docs/features/EXPLAINABILITY.md`, `docs/features/THREAT_MODEL_DIFF.md`, `docs/internal/decisions/STRIDE_GENERICITY_REDUCTION_DECISION.md`, `docs/internal/reports/GITHUB_README_AND_METADATA.md`, `docs/internal/reports/FRONTEND_UI_ROLLOUT_HISTORY.md`.
 
 ### Added
 
-- Documentação consolidada (higiene round 2): `docs/CI_AND_SECURITY_EVIDENCE.md`, `docs/GITHUB_README_AND_METADATA.md`, `docs/FRONTEND_UI_ROLLOUT_HISTORY.md`; relatórios `docs/PROJECT_HYGIENE_ROUND2_AUDIT_REPORT.md`, `docs/PROJECT_HYGIENE_ROUND2_EXECUTION_LOG.md`, `docs/PROJECT_HYGIENE_ROUND2_FINAL_SUMMARY.md`.
-- Documentação consolidada (higiene round 3): `docs/I18N.md`; relatórios `docs/PROJECT_HYGIENE_ROUND3_AUDIT_REPORT.md`, `docs/PROJECT_HYGIENE_ROUND3_EXECUTION_LOG.md`, `docs/PROJECT_HYGIENE_ROUND3_FINAL_SUMMARY.md`.
+- Documentação consolidada (higiene round 2): `docs/CI_AND_SECURITY_EVIDENCE.md`, `docs/internal/reports/GITHUB_README_AND_METADATA.md`, `docs/internal/reports/FRONTEND_UI_ROLLOUT_HISTORY.md`.
+- Documentação consolidada (higiene round 3): `docs/features/I18N.md`.
 
 - Web (`apps/web`): internacionalização **pt-BR** / **en** com **i18next** + **react-i18next**; `LanguageSwitcher` no header; locales em `src/i18n/locales/`; persistência `otm.web.locale`; testes Vitest (`localePolicy`); E2E `e2e/i18n.spec.ts`; `playwright.config.ts` com `locale: "pt-BR"` para estabilizar cópia PT nos testes.
 - i18n de **artefactos**: `POST /v1/exports` com `locale` opcional validado (`pt-BR` \| `en`); exportadores Markdown com rótulos bilíngues; PDF no cliente (`generateReportPdf`) com chaves `artifactPdf.*`; resolução centralizada em `exportArtifactLocale.ts`; `ExportPage` com `export-artifact-locale`; testes `tests/test_export_locale.py`, `tests/test_api.py::test_export_document_markdown_locale_en`, Vitest `exportArtifactLocale.test.ts`.
 - i18n **report premium** (Fase 3): `PremiumReportPayload.locale`, `report_i18n.py`, `i18n_locale.py`, builder/render MD/HTML bilíngues; `POST /v1/reports/premium` + `PremiumReportBody.locale`; web `fetchPremiumReport({ locale })`; CLI `otm report --locale`; testes `tests/test_premium_i18n_locale.py`, `test_premium_report.py`, `test_api.py::test_reports_premium_markdown_locale_en`.
-- Documentação i18n: **`docs/I18N.md`** (canónico: política, API/exports, premium, limitações, glossário, verificação); `docs/PREMIUM_REPORTS.md` atualizado. *(Nota: ficheiros `docs/I18N_*.md` dispersos foram fundidos neste documento na higiene round 3.)*
-- Auditoria final i18n (implementação): normalização única export/premium + variantes BCP47 em `export_locale.py`; placeholders i18n em `RunEngineCard`, `ReviewPage`, `WizardPage`. Evidência editorial consolidada em `docs/I18N.md` secção 9.
+- Documentação i18n: **`docs/features/I18N.md`** (canónico: política, API/exports, premium, limitações, glossário, verificação); `docs/features/PREMIUM_REPORTS.md` atualizado. *(Nota: ficheiros `docs/I18N_*.md` dispersos foram fundidos neste documento na higiene round 3.)*
+- Auditoria final i18n (implementação): normalização única export/premium + variantes BCP47 em `export_locale.py`; placeholders i18n em `RunEngineCard`, `ReviewPage`, `WizardPage`. Evidência editorial consolidada em `docs/features/I18N.md` secção 9.
 
 - CLI modular: `apps/cli/otm_cli/commands/`, `application/`, `shared/`; `cli.py` só bootstrap Typer; testes `tests/test_cli_application.py`.
 - API: observabilidade JSON (`request_id`, duração, eventos HTTP) em `otm_api.observability`; CORS por `OTM_ENV` / `OTM_CORS_ORIGINS` em `otm_api.cors_settings`.
 - CI: job **mypy** (core-schema + API), **pip-audit** no ambiente do projeto, **npm audit --audit-level=critical** em `apps/web`, job **web-e2e-critical** (`e2e:critical`); Dependabot pip + npm.
-- Relatórios e gates DevSecOps: evidência **consolidada** em [`docs/CI_AND_SECURITY_EVIDENCE.md`](docs/CI_AND_SECURITY_EVIDENCE.md); [`docs/DEPLOYMENT_INVARIANTS.md`](docs/DEPLOYMENT_INVARIANTS.md); [`docs/E2E_GATE_DECISION.md`](docs/E2E_GATE_DECISION.md); [`docs/SONAR_DECISION_REPORT.md`](docs/SONAR_DECISION_REPORT.md). *(Relatórios pontuais `*_EXECUTION_REPORT.md` com o mesmo tema foram fundidos em `CI_AND_SECURITY_EVIDENCE.md` na higiene docs.)*
-- Documentação de fecho: `docs/RELEASE_ENGINEERING_CHECKLIST.md` (gates de release), `docs/DEFINITION_OF_DONE.md`, `docs/ENGINEERING_CLOSEOUT_SCOPE.md`; índice e alinhamento de versão em `docs/README.md`, `RELEASE_SCOPE_FREEZE.md`, `LAUNCH_CHECKLIST.md`, `GO_NO_GO_v0.1.0.md`, `KNOWN_LIMITATIONS.md`.
+- Relatórios e gates DevSecOps: evidência **consolidada** em [`docs/CI_AND_SECURITY_EVIDENCE.md`](docs/CI_AND_SECURITY_EVIDENCE.md); [`docs/architecture/DEPLOYMENT_INVARIANTS.md`](docs/architecture/DEPLOYMENT_INVARIANTS.md); [`docs/internal/decisions/E2E_GATE_DECISION.md`](docs/internal/decisions/E2E_GATE_DECISION.md); [`docs/internal/audits/SONAR_DECISION_REPORT.md`](docs/internal/audits/SONAR_DECISION_REPORT.md). *(Relatórios pontuais `*_EXECUTION_REPORT.md` com o mesmo tema foram fundidos em `CI_AND_SECURITY_EVIDENCE.md` na higiene docs.)*
+- Documentação de fecho: `docs/internal/checklists/RELEASE_ENGINEERING_CHECKLIST.md` (gates de release), `docs/internal/checklists/DEFINITION_OF_DONE.md`, `docs/internal/decisions/ENGINEERING_CLOSEOUT_SCOPE.md`; índice e alinhamento de versão em `docs/README.md`, `RELEASE_SCOPE_FREEZE.md`, `LAUNCH_CHECKLIST.md`, `GO_NO_GO_v0.1.0.md`, `KNOWN_LIMITATIONS.md`.
 
 - Diff semântico **v1.5**: `anchoring_rationale` em cada ligação; `inference_strength` **medium** quando ≥2 tokens lexicais coincidem; `comparison_contract_version` / `semantic_insights_version` **1.5**.
 - `ComparisonResultMeta`: raiz **`extra=forbid`** + campo **`extensions`** para evolução controlada (OpenAPI sem `additionalProperties` soltas na raiz).
@@ -98,9 +125,9 @@ Release **v7.1** (i18n pt-BR/en, exports e premium localizados, CLI modular, obs
 ### Changed
 
 - Web: páginas e blocos de análise (incl. `ExportPage`, `HistoryPage`, `TemplatesPage`, `DiffPage`) e componentes associados passam a usar `t()` / `Trans` em vez de strings fixas na UI.
-- Removido `sonar-project.properties` órfão (sem job Sonar no CI); ver `docs/SONAR_DECISION_REPORT.md`.
+- Removido `sonar-project.properties` órfão (sem job Sonar no CI); ver `docs/internal/audits/SONAR_DECISION_REPORT.md`.
 - UI diff, Markdown e CLI mostram racional de ancoragem (v1.5).
-- Documentação: `docs/THREAT_MODEL_DIFF.md`, `docs/CONTRACTS_CI_HYBRID.md` (fluxo híbrido + `meta` fechado).
+- Documentação: `docs/features/THREAT_MODEL_DIFF.md`, `docs/architecture/CONTRACTS_CI_HYBRID.md` (fluxo híbrido + `meta` fechado).
 
 ### Fixed
 
@@ -116,7 +143,7 @@ Release **v7.0** (OpenAPI como contrato vivo, diff semântico v1.4, E2E híbrido
 - Goldens HTTP semânticos: `tests/test_http_response_goldens.py` + `tests/fixtures/golden/http_api_semantic_expectations.json`.
 - E2E **híbrido**: `playwright.hybrid.config.ts`, `e2e/hybrid.spec.ts`, `npm run e2e:hybrid`, job CI `hybrid-e2e`.
 - `e2e/fixtures/minimal-document.json` (documento canónico para testes híbridos).
-- Documentação: `docs/CONTRACTS_CI_HYBRID.md`, `docs/ROUND2_INTEGRATED_CLOSEOUT.md`. *(Nota editorial 2026-04: `ROUND2_INTEGRATED_CLOSEOUT.md` foi removido na higiene docs; ver `docs/THREAT_MODEL_DIFF.md` e `docs/CI_AND_SECURITY_EVIDENCE.md`.)*
+- Documentação: `docs/architecture/CONTRACTS_CI_HYBRID.md`, `docs/ROUND2_INTEGRATED_CLOSEOUT.md`. *(Nota editorial 2026-04: `ROUND2_INTEGRATED_CLOSEOUT.md` foi removido na higiene docs; ver `docs/features/THREAT_MODEL_DIFF.md` e `docs/CI_AND_SECURITY_EVIDENCE.md`.)*
 - OpenAPI como fonte de tipos TS: `contracts/openapi.json`, `scripts/export_openapi.py`, `openapi-typescript`, `apps/web/src/types/generated/openapi.d.ts`, scripts `contracts:sync` no pacote web.
 - `response_model` explícito em `POST /v1/models/analyze` e `/compare` para esquemas reais no OpenAPI.
 - Schemas OpenAPI **`ComparisonResultMeta`**, **`SemanticInterpretationLinkModel`**, **`SemanticStructuralRefModel`**, **`SemanticDiffSectionsModel`** — `meta` tipado no contrato exportado (com `additionalProperties` para extensões).
@@ -150,10 +177,10 @@ Release **v6.0** (contratos TS alinhados ao motor, diff semântico v1.2, E2E cr�
 - Diff semântico v1.2: contagens estruturais em `semantic_diff_sections.structural_change_summary`, refs `semantic_structural_refs`, disclaimer explícito; `comparison_contract_version` 1.2.
 - E2E crítico: `apps/web/e2e/journeys.spec.ts`, `e2e/cockpit.spec.ts`; script `npm run e2e:critical`.
 - Repo scan: deteções reforçadas (multer/express.file/busboy, sessão, child_process/fork, rotas debug), `modeling_hints` e `import_signals_corpus_snippets`; `repo_ast_optional`; tags `import:signal:` no corpus de anti-patterns.
-- Documentação: `docs/FINAL_CLOSEOUT_ROUND.md`, limitações do produto (`docs/KNOWN_LIMITATIONS.md`; em comunicações antigas também `audit-gpt.md`), pacote de auditoria (`docs/BRUTAL_*.md`, `docs/FULL_PROJECT_*.md`, `docs/CONSOLIDATION_ELITE_ROUND.md`). *(Nota editorial 2026-04: vários destes ficheiros foram fundidos ou removidos; estado canónico em `docs/README.md`, `docs/FULL_PROJECT_CLEAN_ARCHITECTURE_AUDIT.md`, `docs/FULL_PROJECT_REMEDIATION_BACKLOG.md`, `docs/CI_AND_SECURITY_EVIDENCE.md`.)*
+- Documentação: `docs/FINAL_CLOSEOUT_ROUND.md`, limitações do produto (`docs/KNOWN_LIMITATIONS.md`; em comunicações antigas também `audit-gpt.md`), pacote de auditoria (`docs/BRUTAL_*.md`, `docs/FULL_PROJECT_*.md`, `docs/CONSOLIDATION_ELITE_ROUND.md`). *(Nota editorial 2026-04: vários destes ficheiros foram fundidos ou removidos; estado canónico em `docs/README.md`, `docs/internal/audits/FULL_PROJECT_CLEAN_ARCHITECTURE_AUDIT.md`, `docs/internal/reports/FULL_PROJECT_REMEDIATION_BACKLOG.md`, `docs/CI_AND_SECURITY_EVIDENCE.md`.)*
 - `exportArtifactHelpers.ts` (extensão/MIME de export) e `sonar-project.properties` alargado para SonarQube local (`gitpage`, `examples`, `sonar.tests`, `coverage.xml`, exclusões de artefactos/fixtures).
 - `pytest-cov` e `[tool.coverage.run]` para cobertura em `packages` + `apps`.
-- Gate decisivo GO/NO-GO de uma página para publicação (`docs/GO_NO_GO_v0.1.0.md`).
+- Gate decisivo GO/NO-GO de uma página para publicação (`docs/internal/checklists/GO_NO_GO_v0.1.0.md`).
 - Paridade multi-canal: `semantic_insights` fundidos em `key_insights` na comparação; secção narrativa no Markdown de diff; diff semântico entre análises no report premium com baseline; CLI `diff` texto com blocos semânticos.
 - Anti-patterns: catálogo expandido (SaaS, webhooks, API, e-commerce, admin, upload), `mitigating_keywords`, pré-requisitos estruturais mínimos, `confidence_hint` e `detection_sources` nos hits; `wizard_audit_models`.
 - Teste de contrato `tests/test_analysis_ts_contract_alignment.py` (campos `AnalysisResult` vs SPA).
@@ -182,7 +209,7 @@ Release **v5.0** (cockpit de decisão na análise, sinais adaptativos do wizard,
 - UI: `DecisionCockpit`, `ModelQualityStrip`, constantes de wizard adaptativo (`adaptiveWizard`).
 - Engine: biblioteca de anti-patterns, métricas de benchmark, comparação semântica de threat models, sinais de wizard e dados de referência.
 - Importação: `repo_scan` para varredura de repositório (`packages/artifact-import`).
-- Documentação: `docs/ADVANCED_PRODUCT_ROUND.md`; testes e fixtures de benchmark e análise. *(Nota editorial 2026-04: `ADVANCED_PRODUCT_ROUND.md` removido na higiene docs; conteúdo de produto coberto por `docs/README.md`, `docs/EXPLAINABILITY.md`, `docs/MODELING_QUALITY.md`.)*
+- Documentação: `docs/ADVANCED_PRODUCT_ROUND.md`; testes e fixtures de benchmark e análise. *(Nota editorial 2026-04: `ADVANCED_PRODUCT_ROUND.md` removido na higiene docs; conteúdo de produto coberto por `docs/README.md`, `docs/features/EXPLAINABILITY.md`, `docs/features/MODELING_QUALITY.md`.)*
 
 ### Changed
 
@@ -194,8 +221,8 @@ Release **v4.0** (pacote de qualidade de modelagem, relatórios premium, heurís
 
 ### Added
 
-- Pacote `report-premium`, relatórios premium e documentação (`docs/PREMIUM_REPORTS.md`).
-- Modelos de qualidade de modelagem e pré-checagem (`docs/MODELING_QUALITY.md`, `model_quality_precheck`, `methodology_fit_matrix`).
+- Pacote `report-premium`, relatórios premium e documentação (`docs/features/PREMIUM_REPORTS.md`).
+- Modelos de qualidade de modelagem e pré-checagem (`docs/features/MODELING_QUALITY.md`, `model_quality_precheck`, `methodology_fit_matrix`).
 - Heurísticas compostas, completude metodológica NIST e gate de recomendações.
 
 ### Changed
@@ -219,11 +246,11 @@ Primeira release pública incremental coordenada (**App Suite Modeling**), com e
 - Documentação de release: checklist, smoke validation, choose methodology e notas RC históricas.
 - Scripts UI portáteis para CI/Windows: `ci:build:portable`.
 - Smoke E2E mínimo da UI (Playwright, headless).
-- Playbook de publicação (`docs/PUBLISH_PLAYBOOK.md`).
-- Checklist final de lançamento (`docs/LAUNCH_CHECKLIST.md`).
-- Congelamento de escopo e maturidade (`docs/RELEASE_SCOPE_FREEZE.md`).
+- Playbook de publicação (`docs/internal/checklists/PUBLISH_PLAYBOOK.md`).
+- Checklist final de lançamento (`docs/internal/checklists/LAUNCH_CHECKLIST.md`).
+- Congelamento de escopo e maturidade (`docs/internal/decisions/RELEASE_SCOPE_FREEZE.md`).
 - Limitações conhecidas consolidadas (`docs/KNOWN_LIMITATIONS.md`).
-- Relatório de validação da rodada final (`docs/VALIDATION_REPORT_v0.1.0.md`).
+- Relatório de validação da rodada final (`docs/internal/reports/VALIDATION_REPORT_v0.1.0.md`).
 - Guia de versionamento e tags (`docs/VERSIONING_AND_TAGS.md`).
 - Verificação automática mínima de links internos da documentação (`tests/test_docs_links.py`).
 

@@ -6,6 +6,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from otm_core_schema.entity_id import ENTITY_ID_PATTERN
 from otm_core_schema.enums import (
     AssetKind,
     ComponentKind,
@@ -21,8 +22,6 @@ from otm_core_schema.enums import (
     TreatmentStatus,
 )
 from otm_core_schema.version import CANONICAL_SCHEMA_VERSION
-
-_ID_PATTERN = r"^[a-zA-Z][a-zA-Z0-9_-]*$"
 
 
 def _unique_ids(name: str, ids: list[str]) -> None:
@@ -196,7 +195,7 @@ class ModelInfo(BaseModel):
 class Asset(BaseModel):
     """Ativo a proteger (dados, credenciais, serviço crítico, etc.)."""
 
-    id: str = Field(..., pattern=_ID_PATTERN)
+    id: str = Field(..., pattern=ENTITY_ID_PATTERN)
     name: str = Field(..., min_length=1)
     asset_kind: AssetKind = Field(default=AssetKind.DATA)
     description: str | None = None
@@ -234,7 +233,7 @@ class Asset(BaseModel):
 
 
 class Component(BaseModel):
-    id: str = Field(..., pattern=_ID_PATTERN)
+    id: str = Field(..., pattern=ENTITY_ID_PATTERN)
     name: str = Field(..., min_length=1)
     kind: ComponentKind
     description: str | None = None
@@ -277,8 +276,15 @@ class Component(BaseModel):
 
 
 class DataFlow(BaseModel):
-    id: str = Field(..., pattern=_ID_PATTERN)
-    name: str | None = None
+    id: str = Field(..., pattern=ENTITY_ID_PATTERN)
+    name: str | None = Field(
+        default=None,
+        max_length=4096,
+        description=(
+            "Etiqueta humana opcional do fluxo. Unicode permitido (acentos, símbolos); "
+            "não é identificador técnico — ver `id`."
+        ),
+    )
     from_component: str = Field(..., description="ID de Component de origem.")
     to_component: str = Field(..., description="ID de Component de destino.")
     protocol: str | None = None
@@ -311,9 +317,18 @@ class DataFlow(BaseModel):
     )
     metadata: dict[str, Any] = Field(default_factory=dict)
 
+    @field_validator("name", mode="before")
+    @classmethod
+    def normalize_optional_flow_name(cls, v: Any) -> str | None:
+        if v is None:
+            return None
+        if isinstance(v, str) and not v.strip():
+            return None
+        return v
+
 
 class TrustBoundary(BaseModel):
-    id: str = Field(..., pattern=_ID_PATTERN)
+    id: str = Field(..., pattern=ENTITY_ID_PATTERN)
     name: str = Field(..., min_length=1)
     description: str | None = None
     trust_level: str | None = Field(
@@ -379,7 +394,7 @@ class FrameworkRef(BaseModel):
 class EvidenceSuggestion(BaseModel):
     """Evidência sugerida para validar ou reduzir incerteza sobre ameaças."""
 
-    id: str = Field(..., pattern=_ID_PATTERN)
+    id: str = Field(..., pattern=ENTITY_ID_PATTERN)
     title: str = Field(..., min_length=1)
     description: str | None = None
     evidence_kind: EvidenceKind = Field(default=EvidenceKind.OTHER)
@@ -391,7 +406,7 @@ class EvidenceSuggestion(BaseModel):
 
 
 class Mitigation(BaseModel):
-    id: str = Field(..., pattern=_ID_PATTERN)
+    id: str = Field(..., pattern=ENTITY_ID_PATTERN)
     title: str = Field(..., min_length=1)
     description: str | None = None
     status: MitigationStatus = Field(default=MitigationStatus.PLANNED)
@@ -402,7 +417,7 @@ class Mitigation(BaseModel):
 
 
 class Threat(BaseModel):
-    id: str = Field(..., pattern=_ID_PATTERN)
+    id: str = Field(..., pattern=ENTITY_ID_PATTERN)
     title: str = Field(..., min_length=1)
     description: str | None = None
     stride: StrideCategory

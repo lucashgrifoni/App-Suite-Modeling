@@ -190,7 +190,7 @@ export function ImportPage() {
 
       {unknowns && unknowns.length > 0 && (
         <Card title={t("import.unknownTitle")} subtitle={t("import.unknownSubtitle")} variant="glass">
-          <ul className="list-inside list-disc space-y-1 text-sm text-amber-100">
+          <ul className="list-inside list-disc space-y-1 text-sm text-amber-900 dark:text-amber-100">
             {unknowns.map((u) => (
               <li key={u}>{u}</li>
             ))}

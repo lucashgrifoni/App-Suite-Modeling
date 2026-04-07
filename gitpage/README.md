@@ -99,11 +99,11 @@ If the site is served from the repo root, you can still keep the Vite project in
 ## Stack
 
 - React 18 + TypeScript
-- Vite 5
+- Vite 8
 - Tailwind CSS 3
 - Framer Motion
-- `@react-three/fiber`, `@react-three/drei`, `three` (hero 3D)
 - `lucide-react` (icons)
+- Hero visual: CSS + SVG + Motion (sem WebGL)
 
 ## Project structure
 

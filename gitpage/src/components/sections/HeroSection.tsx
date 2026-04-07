@@ -1,14 +1,11 @@
 import { motion, useScroll, useTransform } from "framer-motion";
 import { ArrowRight, BookOpen, Sparkles } from "lucide-react";
-import { lazy, Suspense, useRef } from "react";
+import { useRef } from "react";
 import { ParticleField } from "../effects/ParticleField";
 import { GlowOrbs } from "../effects/GlowOrbs";
+import { HeroVisual } from "../effects/HeroVisual";
 import { hero } from "../../data/content";
 import { docsReadmeUrl, repoUrl } from "../../config/site";
-
-const Hero3D = lazy(() =>
-  import("../effects/Hero3D").then((m) => ({ default: m.Hero3D })),
-);
 
 export function HeroSection() {
   const ref = useRef<HTMLElement>(null);
@@ -16,7 +13,7 @@ export function HeroSection() {
     target: ref,
     offset: ["start start", "end start"],
   });
-  const y1 = useTransform(scrollYProgress, [0, 1], [0, 120]);
+  const y1 = useTransform(scrollYProgress, [0, 1], [0, 80]);
   const y2 = useTransform(scrollYProgress, [0, 1], [0, 60]);
   const op = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
 
@@ -107,26 +104,11 @@ export function HeroSection() {
 
         <motion.div
           style={{ y: y1 }}
-          className="relative flex min-h-[280px] items-center justify-center md:min-h-[420px]"
+          className="relative flex min-h-[280px] items-center justify-center md:min-h-[360px] lg:min-h-[420px]"
         >
-          <div className="absolute inset-0 rounded-[2rem] border border-white/10 bg-gradient-to-br from-white/[0.06] to-transparent shadow-card backdrop-blur-sm" />
-          <div className="relative z-10 w-full px-2">
-            <Suspense
-              fallback={
-                <div
-                  className="flex h-[min(52vh,420px)] w-full items-center justify-center text-sm text-steel"
-                  role="status"
-                >
-                  Loading visual…
-                </div>
-              }
-            >
-              <Hero3D />
-            </Suspense>
-          </div>
+          <HeroVisual />
         </motion.div>
       </div>
-
     </section>
   );
 }

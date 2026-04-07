@@ -6,48 +6,71 @@ Este documento é o **mapa do repositório** para mantenedores e contribuidores.
 
 ## 1. Árvore de diretórios (completa)
 
+Mapa lógico detalhado (camadas × domínios): ver também [`REPOSITORY_LAYOUT.md`](REPOSITORY_LAYOUT.md) e a narrativa de produto em [`PROJECT_DEEP_DIVE.md`](PROJECT_DEEP_DIVE.md).
+
 ```
 .
 ├── .github/
-│   └── workflows/          # CI/CD (ex.: testes Python, lint)
+│   └── workflows/          # CI/CD: Python (ruff, mypy, pytest, bandit, semgrep, trivy…), web, E2E
 ├── apps/
-│   ├── api/                # Backend HTTP (FastAPI)
+│   ├── api/                # Backend HTTP (FastAPI), OpenAPI, perímetro opcional
 │   │   ├── Dockerfile
 │   │   └── otm_api/
-│   ├── cli/                # Linha de comando (Typer)
+│   ├── cli/                # Linha de comando (Typer) — ponto de entrada `otm`
 │   │   └── otm_cli/
 │   └── web/                # Frontend (Vite + React + TS)
 │       ├── src/
 │       ├── index.html
 │       ├── package.json
 │       └── vite.config.ts
+├── contracts/              # Contratos / snapshots usados pelo projeto (ex.: OpenAPI)
 ├── docs/
-│   ├── adr/                # Architecture Decision Records
-│   ├── ARCHITECTURE.md
-│   ├── MVP_ROADMAP.md
+│   ├── README.md           # Índice principal da documentação
 │   ├── MONOREPO.md         # este arquivo
-│   └── README.md
+│   ├── REPOSITORY_LAYOUT.md
+│   ├── PROJECT_DEEP_DIVE.md
+│   ├── KNOWN_LIMITATIONS.md
+│   ├── VERSIONING_AND_TAGS.md
+│   ├── CI_AND_SECURITY_EVIDENCE.md
+│   ├── DOCUMENTATION_STRUCTURE.md  # mapa editorial público vs interno
+│   ├── features/           # Guias de produto e superfícies (CLI, API, UI, imports…)
+│   ├── architecture/       # ADRs, deployment, contratos CI, políticas de tooling
+│   │   └── adr/
+│   ├── internal/           # Auditorias, relatórios, checklists de release (mantenedores)
+│   │   ├── audits/
+│   │   ├── reports/
+│   │   ├── logs/
+│   │   ├── decisions/
+│   │   └── checklists/
+│   └── screenshots/
 ├── examples/               # Modelos TaC e snippets reproduzíveis
-├── packages/               # Bibliotecas Python reutilizáveis (domínio)
+├── fixtures/               # Dados de teste partilhados (quando existirem)
+├── gitpage/               # Site estático (GitHub Pages), build Vite separado de apps/web
+├── packages/               # Bibliotecas Python reutilizáveis (domínio); ver pyproject packages.find
 │   ├── core-schema/        # Schema canônico (Pydantic), I/O YAML/JSON
-│   ├── threat-engine/      # STRIDE, risco, geração de ameaças
+│   ├── explainability/     # Contratos / utilitários de explicabilidade
+│   ├── threat-engine/      # Multi-metodologia, STRIDE, lentes, PLOT4ai, heurísticas
 │   ├── framework-mappings/ # OWASP, NIST, ISO — dados e funções puras
-│   ├── exporters/          # Markdown, Mermaid, etc.
+│   ├── exporters/          # Markdown, Mermaid, bundle, etc.
 │   ├── diagram-engine/     # Grafo neutro para UI (React Flow)
-│   └── industry-packs/     # Packs declarativos por setor (YAML)
-├── tests/                  # Testes de integração e contratos (raiz)
+│   ├── industry-packs/     # Packs declarativos por setor (YAML)
+│   ├── artifact-import/    # Import OpenAPI, K8s, Terraform, Helm…
+│   └── report-premium/     # Relatório premium (extra [report])
+├── scripts/                # Setup, verificação OpenAPI, gates; no pythonpath do pytest
+├── tests/                  # Suite principal na raiz
 ├── docker-compose.yml
-├── pyproject.toml          # Projeto Python e metadados
+├── pyproject.toml          # Projeto Python e metadados (versão open-threat-model)
 ├── README.md
 ├── CONTRIBUTING.md
 ├── LICENSE
 └── .gitignore
 ```
 
-Pastas **opcionais** que podem surgir sem mudar a filosofia:
+Outras pastas comuns **geradas** ou ignoradas: `artifacts/`, `build/`, `dist/`, `.coverage`, `htmlcov/` — não versionar.
 
-- `scripts/` — utilitários de manutenção (migração de schema, geração de docs).
-- `infra/` — Terraform, Helm (se o deploy exigir; evitar até ser necessário).
+Pastas **opcionais** além das acima:
+
+- `infra/` — Terraform, Helm dedicados ao deploy (se o projeto crescer para infra própria na raiz).
 
 ---
 
@@ -62,11 +85,14 @@ Pastas **opcionais** que podem surgir sem mudar a filosofia:
 | **`packages/exporters`** | Transformação documento → artefatos (MD, Mermaid). Sem side effects ocultos no modelo. |
 | **`packages/diagram-engine`** | Documento → nós/arestas para diagramação (compartilhável com a UI). |
 | **`packages/industry-packs`** | Conteúdo declarativo (YAML) por setor; carregado e validado contra o schema. |
+| **`packages/explainability`** | Explicabilidade estruturada alinhada ao motor e consumo por API/CLI/UI. |
+| **`packages/artifact-import`** | Conversão de artefatos de engenharia (OpenAPI, K8s, Terraform, Helm…) em rascunho canônico. |
+| **`packages/report-premium`** | Relatórios premium (MD/HTML/PDF) com extras opcionais de dependência. |
 | **`apps/api`** | Orquestração HTTP, autenticação (futuro), persistência (futuro). **Reutiliza** pacotes; não duplica regras do motor. |
 | **`apps/cli`** | UX de terminal; **mesmo core** que a API. Comandos finos (`validate`, `export`, …). |
 | **`apps/web`** | UI; **não** reimplementa STRIDE nem validação duplicada: chama API ou valida via contrato exposto (JSON Schema / endpoint). |
 | **`examples/`** | Cenários mínimos e realistas para testes manuais e documentação. |
-| **`docs/`** | Arquitetura, ADRs, roadmap, guia do monorepo. |
+| **`docs/`** | Hub de documentação: núcleo na raiz de `docs/`, guias em `features/`, engenharia em `architecture/`, material operacional em `internal/` (ver `DOCUMENTATION_STRUCTURE.md`). |
 | **`tests/`** | Testes que cruzam pacotes ou validam exemplos; testes unitários podem viver ao lado do código (`tests/` dentro do pacote) se o time preferir — hoje a raiz centraliza. |
 | **`.github/workflows`** | Automação: instalar deps, `ruff`, `pytest` (e no futuro build web). |
 
@@ -125,8 +151,8 @@ Pastas **opcionais** que podem surgir sem mudar a filosofia:
 | `CONTRIBUTING.md` | Como configurar ambiente, padrão de PR, estilo de código. |
 | `pyproject.toml` | Metadados Python, dependências, scripts, ferramentas (ruff, pytest). |
 | `.gitignore` | Artefatos de build, venv, node_modules, caches. |
-| `docs/ARCHITECTURE.md` | Visão técnica (já existente). |
-| `docs/adr/` | Decisões importantes (ex.: schema canônico). |
+| `docs/architecture/ARCHITECTURE.md` | Visão técnica (já existente). |
+| `docs/architecture/adr/` | Decisões importantes (ex.: schema canônico). |
 | `.github/workflows/*` | CI mínimo verde. |
 
 Recomendados em breve: `SECURITY.md` (como reportar vulnerabilidade), `CODE_OF_CONDUCT.md` (comunidade).
@@ -140,4 +166,4 @@ Recomendados em breve: `SECURITY.md` (como reportar vulnerabilidade), `CODE_OF_C
 3. **UI e CLI como clientes:** mesma validação e mesmos tipos conceituais; divergência = bug.
 4. **Documentar decisões estruturais** em ADRs curtos, não só no chat.
 
-Para a visão de produto e fases, ver [`MVP_ROADMAP.md`](MVP_ROADMAP.md).
+Para a visão de produto e fases, ver [`features/MVP_ROADMAP.md`](features/MVP_ROADMAP.md).

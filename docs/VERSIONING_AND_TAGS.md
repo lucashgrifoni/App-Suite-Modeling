@@ -2,19 +2,25 @@
 
 Convenção simples para releases incrementais.
 
+## Alinhamento `pyproject.toml` / tags Git
+
+- O campo **`project.version`** em `pyproject.toml` (e `apps/web/package.json`) é a **versão de produto** actual da linha **7.x** (ex.: `7.2.0`).
+- Documentos históricos referem **`v0.1.0`** como **marco inicial** congelado ([`RELEASE_NOTES_v0.1.0.md`](internal/reports/RELEASE_NOTES_v0.1.0.md)); não contradizem a linha 7.x — são camadas diferentes de nomenclatura (marco vs. versão de pacote).
+- Para uma release pública, alinhar **tag Git** (ex.: `v7.2.0`) com o valor em `pyproject.toml` e uma entrada em [`CHANGELOG.md`](../CHANGELOG.md).
+
 ## Formato
 
 - RC: `vMAJOR.MINOR.PATCH-rcN`
 - Stable: `vMAJOR.MINOR.PATCH`
 
-## Primeira tag estável deste repositório
+## Marco inicial documentado neste repositório
 
-- **`v0.1.0`** — release incremental séria documentada em [`RELEASE_NOTES_v0.1.0.md`](RELEASE_NOTES_v0.1.0.md) e [`RELEASE_SCOPE_FREEZE.md`](RELEASE_SCOPE_FREEZE.md).
+- **`v0.1.0`** — marco documentado em [`RELEASE_NOTES_v0.1.0.md`](internal/reports/RELEASE_NOTES_v0.1.0.md) e [`RELEASE_SCOPE_FREEZE.md`](internal/decisions/RELEASE_SCOPE_FREEZE.md) (contexto de congelamento de escopo).
 
-Exemplos adicionais:
+Exemplos adicionais de tags semânticas:
 
-- `v0.2.0-rc1`
-- `v0.2.0`
+- `v7.3.0-rc1`
+- `v7.3.0`
 
 ## Regras práticas
 

@@ -32,7 +32,7 @@ app = FastAPI(
     version="0.1.0",
     description=(
         "HTTP API for threat modeling as code: validation, analysis, templates, and exports. "
-        "Versioned routes under `/v1`. See `docs/API.md` in the repository."
+        "Versioned routes under `/v1`. See `docs/features/API.md` in the repository."
     ),
     openapi_tags=[
         {"name": "System", "description": "Service health."},

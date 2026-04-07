@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Literal
 
+from otm_core_schema.entity_id import ENTITY_ID_PATTERN
 from otm_core_schema.enums import ComponentKind, IndustrySector, StrideCategory
 from pydantic import BaseModel, Field
 
@@ -18,7 +19,7 @@ class RiskTuning(BaseModel):
 class AdditionalThreatRule(BaseModel):
     """Ameaça extra sugerida pelo setor (uma instância por componente compatível)."""
 
-    id: str = Field(..., pattern=r"^[a-zA-Z][a-zA-Z0-9_-]*$")
+    id: str = Field(..., pattern=ENTITY_ID_PATTERN)
     title: str = Field(..., min_length=1)
     description: str | None = None
     stride: StrideCategory
@@ -33,7 +34,7 @@ class AdditionalThreatRule(BaseModel):
 class PackDefinition(BaseModel):
     """Pack por setor — influencia risco e acrescenta ameaças de contexto."""
 
-    id: str = Field(..., pattern=r"^[a-zA-Z][a-zA-Z0-9_-]*$")
+    id: str = Field(..., pattern=ENTITY_ID_PATTERN)
     name: str
     sector: IndustrySector
     description: str | None = None

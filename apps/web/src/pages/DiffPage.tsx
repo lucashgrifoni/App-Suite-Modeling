@@ -211,7 +211,7 @@ function SemanticDiffSectionsBlock({ meta }: Readonly<{ meta: ComparisonMeta }>)
       ) : null}
       {imp.length ? (
         <div className="rounded-otm-md border border-emerald-500/20 bg-emerald-950/15 p-3 text-xs text-otm-text-muted">
-          <p className="font-semibold text-emerald-100">{t("diff.improved")}</p>
+          <p className="font-semibold text-emerald-900 dark:text-emerald-100">{t("diff.improved")}</p>
           <ul className="mt-2 list-inside list-disc space-y-1">
             {imp.map((x) => (
               <li key={x}>{x}</li>
@@ -221,7 +221,7 @@ function SemanticDiffSectionsBlock({ meta }: Readonly<{ meta: ComparisonMeta }>)
       ) : null}
       {wor.length ? (
         <div className="rounded-otm-md border border-amber-500/20 bg-amber-950/15 p-3 text-xs text-otm-text-muted">
-          <p className="font-semibold text-amber-100">{t("diff.worsened")}</p>
+          <p className="font-semibold text-amber-900 dark:text-amber-100">{t("diff.worsened")}</p>
           <ul className="mt-2 list-inside list-disc space-y-1">
             {wor.map((x) => (
               <li key={x}>{x}</li>

@@ -14,6 +14,18 @@ from otm_api.api_error_messages import (
 from otm_api.services.documents import document_from_payload
 
 
+def _pydantic_error_items(exc: PydanticValidationError) -> list[dict[str, Any]]:
+    """
+    Erros no formato esperado pela API, seguros para JSON.
+
+    Com ``include_context=True`` (default), o Pydantic pode incluir em ``ctx``
+    objetos ``Exception`` (ex.: ``ValueError`` em validação de referências de
+    fluxos). Isso quebra ``JSONResponse`` do FastAPI com TypeError e aparece
+    como 500 genérico no cliente.
+    """
+    return cast(list[dict[str, Any]], exc.errors(include_context=False))
+
+
 def error_detail(
     *,
     code: str,
@@ -33,7 +45,7 @@ def raise_document_validation_error(exc: PydanticValidationError) -> HTTPExcepti
         detail=error_detail(
             code="DOCUMENT_VALIDATION_ERROR",
             message=msg_document_validation_error(),
-            errors=cast(list[dict[str, Any]], exc.errors()),
+            errors=_pydantic_error_items(exc),
         ),
     )
 
@@ -45,7 +57,7 @@ def raise_analysis_validation_error(exc: PydanticValidationError) -> HTTPExcepti
         detail=error_detail(
             code="ANALYSIS_VALIDATION_ERROR",
             message=msg_analysis_validation_error(),
-            errors=cast(list[dict[str, Any]], exc.errors()),
+            errors=_pydantic_error_items(exc),
         ),
     )
 
@@ -73,7 +85,7 @@ def raise_template_invalid(exc: PydanticValidationError) -> HTTPException:
         detail=error_detail(
             code="TEMPLATE_INVALID",
             message=msg_template_invalid(),
-            errors=cast(list[dict[str, Any]], exc.errors()),
+            errors=_pydantic_error_items(exc),
         ),
     )
 

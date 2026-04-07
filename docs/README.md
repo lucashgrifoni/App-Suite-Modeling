@@ -1,161 +1,157 @@
-# Documentação
+# Documentação — App Suite Modeling
 
-Projeto oficial: **App Suite Modeling**.
+Ponto de entrada único para navegar o `/docs`. O mapa editorial (público vs interno) está em **[`DOCUMENTATION_STRUCTURE.md`](DOCUMENTATION_STRUCTURE.md)**.
 
-## Release atual
-
-- **Versão:** `7.0.0` (tag Git sugerida: `v7.0.0`; histórico `v0.1.0` em notas antigas)
-- **Congelamento de escopo:** [RELEASE_SCOPE_FREEZE.md](RELEASE_SCOPE_FREEZE.md) · [ENGINEERING_CLOSEOUT_SCOPE.md](ENGINEERING_CLOSEOUT_SCOPE.md)
-- **Definition of Done:** [DEFINITION_OF_DONE.md](DEFINITION_OF_DONE.md)
-- **Checklist técnico (gates):** [RELEASE_ENGINEERING_CHECKLIST.md](RELEASE_ENGINEERING_CHECKLIST.md)
-- **Notas:** [RELEASE_NOTES_v0.1.0.md](RELEASE_NOTES_v0.1.0.md) (marco inicial) + [CHANGELOG.md](../CHANGELOG.md) `[7.0.0]`
-- **Limitações:** [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md)
-- **Gate GO/NO-GO (1 página):** [GO_NO_GO_v0.1.0.md](GO_NO_GO_v0.1.0.md) (ler versão em `pyproject.toml` / `package.json`)
-- **Checklist de lançamento (dia D):** [LAUNCH_CHECKLIST.md](LAUNCH_CHECKLIST.md)
-- **Validação (evidência):** [VALIDATION_REPORT_v0.1.0.md](VALIDATION_REPORT_v0.1.0.md)
-
-## Guia mínimo (primeiro uso)
-
-1. Instalação → secção abaixo  
-2. `otm init` ou copiar `examples/minimal.otm.yaml`  
-3. `otm validate` → `otm analyze` → `otm report` ou `otm export`  
-4. Metodologia: [CHOOSE_METHODOLOGY.md](CHOOSE_METHODOLOGY.md) ou `otm recommend-methodology`  
-5. Import: [ARTIFACT_IMPORT.md](ARTIFACT_IMPORT.md) e `otm import --help`  
-6. Diff: [THREAT_MODEL_DIFF.md](THREAT_MODEL_DIFF.md) e `otm diff --help`  
-7. Backlog: [REMEDIATION_BACKLOG.md](REMEDIATION_BACKLOG.md) e `otm backlog --help`
+**Versão de produto:** `7.2.0` — fonte canónica: [`pyproject.toml`](../pyproject.toml); histórico: [`CHANGELOG.md`](../CHANGELOG.md).
 
 ---
 
-## Comece aqui
+## Começar aqui (*Getting started*)
 
-### 1) Instalação
+1. Instalação: secção [Comece aqui](#comece-aqui) abaixo (ou [`README.md`](../README.md) na raiz, em inglês).  
+2. Primeiro modelo: `otm init` ou [`examples/minimal.otm.yaml`](../examples/minimal.otm.yaml).  
+3. Fluxo: `otm validate` → `otm analyze` → `otm report` / exports via API.  
+4. Limitações honestas: [`KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md).
 
-```bash
-python -m venv .venv
-# Windows
-.venv\Scripts\activate
-pip install -e ".[dev,cli,api]"
-```
+### Release e qualidade (mantenedores)
 
-**Setup automatizado (recomendado):** um único fluxo para **Windows e Linux/Ubuntu** — cria `.venv`, instala o pacote em modo editável (`dev`, `cli`, `api`) e corre `npm install` em `apps/web`.
-
-Na **raiz do repositório**:
-
-```bash
-python scripts/setup_dev.py
-```
-
-Opções: `python scripts/setup_dev.py --skip-npm` (só Python) ou `--recreate-venv` (recriar o venv).
-
-Atalhos:
-
-| SO | Setup | API + UI juntos |
-|----|--------|------------------|
-| Qualquer | `python scripts/setup_dev.py` | `python scripts/run_dev.py` |
-| Linux/macOS | `./scripts/setup_dev.sh` | `./scripts/run_dev.sh` |
-| Windows (PowerShell) | `.\scripts\setup_dev.ps1` | `.\scripts\run_dev.ps1` |
-
-`run_dev.py` inicia **uvicorn** na porta 8000 e **Vite** na 5173; use Ctrl+C para parar os dois. Exige `setup_dev` já executado e `npm` no PATH.
-
-### 2) Primeiro arquivo `.otm.yaml`
-
-Opção pronta:
-
-```bash
-otm init modelo.otm.yaml
-```
-
-Ou use o exemplo:
-
-```bash
-copy examples\minimal.otm.yaml modelo.otm.yaml
-```
-
-### 3) Validar
-
-```bash
-otm validate modelo.otm.yaml
-```
-
-### 4) Analisar
-
-```bash
-otm analyze modelo.otm.yaml
-```
-
-### 5) Gerar relatório
-
-```bash
-otm report modelo.otm.yaml -o RELATORIO.md
-```
-
-### 6) Usar a UI Web
-
-Terminal 1 (API):
-
-```bash
-uvicorn otm_api.main:app --reload --port 8000
-```
-
-Terminal 2 (UI):
-
-```bash
-cd apps/web
-npm install
-npm run dev
-```
-
-Abra `http://localhost:5173`.
+- Congelamento de escopo: [`internal/decisions/RELEASE_SCOPE_FREEZE.md`](internal/decisions/RELEASE_SCOPE_FREEZE.md) · [`internal/decisions/ENGINEERING_CLOSEOUT_SCOPE.md`](internal/decisions/ENGINEERING_CLOSEOUT_SCOPE.md)  
+- *Definition of Done:* [`internal/checklists/DEFINITION_OF_DONE.md`](internal/checklists/DEFINITION_OF_DONE.md)  
+- Gates técnicos: [`internal/checklists/RELEASE_ENGINEERING_CHECKLIST.md`](internal/checklists/RELEASE_ENGINEERING_CHECKLIST.md)  
+- Notas históricas: [`internal/reports/RELEASE_NOTES_v0.1.0.md`](internal/reports/RELEASE_NOTES_v0.1.0.md)  
+- GO/NO-GO (marco): [`internal/checklists/GO_NO_GO_v0.1.0.md`](internal/checklists/GO_NO_GO_v0.1.0.md)  
+- Dia D: [`internal/checklists/LAUNCH_CHECKLIST.md`](internal/checklists/LAUNCH_CHECKLIST.md)  
+- Evidência de validação: [`internal/reports/VALIDATION_REPORT_v0.1.0.md`](internal/reports/VALIDATION_REPORT_v0.1.0.md)  
+- Avaliação OSS (GO / caveats): [`internal/reports/FINAL_GO_NO_GO_RELEASE_ASSESSMENT.md`](internal/reports/FINAL_GO_NO_GO_RELEASE_ASSESSMENT.md) · [`internal/reports/FINAL_RELEASE_SCORECARD.md`](internal/reports/FINAL_RELEASE_SCORECARD.md) · [`internal/logs/FINAL_RELEASE_EXECUTION_LOG.md`](internal/logs/FINAL_RELEASE_EXECUTION_LOG.md)
 
 ---
 
-## Índice da documentação
+## Conceitos centrais (*Core*)
 
 | Documento | Conteúdo |
 |-----------|----------|
-| [MONOREPO.md](MONOREPO.md) | Árvore do repositório, convenções, packaging, checklist OSS |
-| [ARCHITECTURE.md](ARCHITECTURE.md) | Camadas, fonte da verdade, pacotes Python |
-| [MVP_ROADMAP.md](MVP_ROADMAP.md) | Fases de implementação e critérios de MVP |
-| [SCHEMA_V1.md](SCHEMA_V1.md) | Schema canônico v1 (conceito, versionamento, validações) |
-| [CORE_ENGINE.md](CORE_ENGINE.md) | Motor de análise (`otm_threat_engine`) e consumo CLI/API |
-| [CLI.md](CLI.md) | Comandos `otm`, exemplos e arquitetura da CLI |
-| [API.md](API.md) | Endpoints da API FastAPI |
-| [UI.md](UI.md) | Fluxos da UI web e integração com API |
-| [I18N.md](I18N.md) | Internacionalização (pt-BR / en): UI, exports, premium, limitações |
-| [MULTI_ENGINE_ARCHITECTURE.md](MULTI_ENGINE_ARCHITECTURE.md) | Base multi-metodologia (STRIDE, LINDDUN, NIST DC, OCTAVE, CIA-DIE) |
-| [BRANDING.md](BRANDING.md) | Identidade visual, paleta, tokens e sistema de marca |
-| [CHOOSE_METHODOLOGY.md](CHOOSE_METHODOLOGY.md) | Guia rápido para escolher metodologia |
-| [CONTRACT_AND_SNAPSHOTS.md](CONTRACT_AND_SNAPSHOTS.md) | Contratos de saída, códigos de erro API, snapshots e gate |
-| [RELEASE_CHECKLIST_RC.md](RELEASE_CHECKLIST_RC.md) | Checklist técnico de release candidate |
-| [RELEASE_ENGINEERING_CHECKLIST.md](RELEASE_ENGINEERING_CHECKLIST.md) | Gates de engenharia (typecheck, build, pytest, OpenAPI, E2E) |
-| [DEFINITION_OF_DONE.md](DEFINITION_OF_DONE.md) | Definition of Done para merge e manutenção |
-| [ENGINEERING_CLOSEOUT_SCOPE.md](ENGINEERING_CLOSEOUT_SCOPE.md) | Scope freeze do fecho atual (fronteiras explícitas) |
-| [SMOKE_VALIDATION.md](SMOKE_VALIDATION.md) | Fluxos de smoke validation e critérios |
-| [EXPLAINABILITY.md](EXPLAINABILITY.md) | Contrato de explicabilidade (`ExplanationRecord`) e interpretação |
-| [PLOT4AI_AI_SYSTEM.md](PLOT4AI_AI_SYSTEM.md) | Trilha especializada de AI/LLM com PLOT4ai |
-| [ARTIFACT_IMPORT.md](ARTIFACT_IMPORT.md) | Importação assistida por artefatos reais |
-| [REMEDIATION_BACKLOG.md](REMEDIATION_BACKLOG.md) | Backlog inteligente de remediação |
-| [THREAT_MODEL_DIFF.md](THREAT_MODEL_DIFF.md) | Diff semântico de modelos e análise (inclui histórico resumido das frentes de inovação) |
-| [CI_AND_SECURITY_EVIDENCE.md](CI_AND_SECURITY_EVIDENCE.md) | Mypy, SCA, CLI modular, observabilidade e perímetro da API (evidência consolidada) |
-| [SECURITY_HEADERS.md](SECURITY_HEADERS.md) | CSP e cabeçalhos HTTP do frontend (`apps/web`) |
-| [SEMGREP_POLICY.md](SEMGREP_POLICY.md) | Política Semgrep (CI, exclusões, `nosemgrep`) |
-| [PRE_COMMIT.md](PRE_COMMIT.md) | Pre-commit opcional (Ruff + mypy parcial) |
-| [GITHUB_README_AND_METADATA.md](GITHUB_README_AND_METADATA.md) | README raiz, metadados OSS e publicação GitHub |
-| [FRONTEND_UI_ROLLOUT_HISTORY.md](FRONTEND_UI_ROLLOUT_HISTORY.md) | Histórico resumido da evolução da UI web (substitui trilhos plano/validação/handoff) |
-| [RELEASE_NOTES_RC1.md](RELEASE_NOTES_RC1.md) | Nota de release incremental (RC1) |
-| [RELEASE_NOTES_RC2.md](RELEASE_NOTES_RC2.md) | Nota histórica (RC2) |
-| [RELEASE_NOTES_v0.1.0.md](RELEASE_NOTES_v0.1.0.md) | Notas de release **v0.1.0** |
-| [RELEASE_SCOPE_FREEZE.md](RELEASE_SCOPE_FREEZE.md) | Escopo congelado e maturidade por área |
-| [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md) | Limitações conhecidas (honestas) |
-| [GO_NO_GO_v0.1.0.md](GO_NO_GO_v0.1.0.md) | **Gate decisivo** GO/NO-GO (1 página, dia D) |
-| [LAUNCH_CHECKLIST.md](LAUNCH_CHECKLIST.md) | Checklist final operacional de lançamento |
-| [VALIDATION_REPORT_v0.1.0.md](VALIDATION_REPORT_v0.1.0.md) | Evidência de validação da rodada final |
-| [PUBLISH_PLAYBOOK.md](PUBLISH_PLAYBOOK.md) | Playbook de publicação (tag, artefactos, pós-release) |
-| [PREPUBLISH_CHECKLIST.md](PREPUBLISH_CHECKLIST.md) | Checklist rápido do dia D |
-| [VERSIONING_AND_TAGS.md](VERSIONING_AND_TAGS.md) | Convenção de versionamento e tags |
-| [EXPORTERS.md](EXPORTERS.md) | JSON, Markdown, Mermaid e bundle |
-| [TEMPLATES_AND_PACKS.md](TEMPLATES_AND_PACKS.md) | Templates iniciais e industry packs |
-| [TEMPLATE_CATALOG.md](TEMPLATE_CATALOG.md) | Catálogo embutido: categorias, API/UI/CLI, manutenção |
-| [PRODUCT_POSITIONING.md](PRODUCT_POSITIONING.md) | Posicionamento do produto (AppSec / DevSecOps, OSS) |
-| [SCREENSHOT_GUIDE.md](SCREENSHOT_GUIDE.md) | Guia para capturas da UI (README e materiais) |
-| [adr/](adr/) | Architecture Decision Records |
+| [`PROJECT_DEEP_DIVE.md`](PROJECT_DEEP_DIVE.md) | Narrativa longa: produto, fluxos, segurança, glossário |
+| [`REPOSITORY_LAYOUT.md`](REPOSITORY_LAYOUT.md) | Camadas e pacotes `otm_*` |
+| [`MONOREPO.md`](MONOREPO.md) | Árvore do repo, convenções, packaging |
+| [`KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md) | O que o produto **não** promete |
+| [`VERSIONING_AND_TAGS.md`](VERSIONING_AND_TAGS.md) | Versão `7.x`, tags Git, marco `v0.1.0` |
+| [`CI_AND_SECURITY_EVIDENCE.md`](CI_AND_SECURITY_EVIDENCE.md) | Gates CI, SAST, SCA, evidência DevSecOps |
+
+---
+
+## Funcionalidades (*Features*)
+
+Guias em **[`features/`](features/)** — superfícies e capacidades de produto.
+
+| Documento | Conteúdo |
+|-----------|----------|
+| [`features/CLI.md`](features/CLI.md) | Comando `otm` |
+| [`features/API.md`](features/API.md) | REST `/v1`, perímetro opcional |
+| [`features/UI.md`](features/UI.md) | Fluxos da aplicação web |
+| [`features/CHOOSE_METHODOLOGY.md`](features/CHOOSE_METHODOLOGY.md) | Escolher metodologia |
+| [`features/MULTI_ENGINE_ARCHITECTURE.md`](features/MULTI_ENGINE_ARCHITECTURE.md) | Matriz multi-metodologia |
+| [`features/PLOT4AI_AI_SYSTEM.md`](features/PLOT4AI_AI_SYSTEM.md) | PLOT4ai / sistemas de IA |
+| [`features/ARTIFACT_IMPORT.md`](features/ARTIFACT_IMPORT.md) | Import OpenAPI, K8s, Terraform, Helm |
+| [`features/THREAT_MODEL_DIFF.md`](features/THREAT_MODEL_DIFF.md) | Diff semântico |
+| [`features/EXPORTERS.md`](features/EXPORTERS.md) | Formatos de export |
+| [`features/PREMIUM_REPORTS.md`](features/PREMIUM_REPORTS.md) | Relatórios premium |
+| [`features/REMEDIATION_BACKLOG.md`](features/REMEDIATION_BACKLOG.md) | Backlog de remediação |
+| [`features/EXPLAINABILITY.md`](features/EXPLAINABILITY.md) | Explicabilidade estruturada |
+| [`features/CONTRACT_AND_SNAPSHOTS.md`](features/CONTRACT_AND_SNAPSHOTS.md) | Contratos e snapshots |
+| [`features/I18N.md`](features/I18N.md) | Internacionalização pt-BR / en |
+| [`features/SCHEMA_V1.md`](features/SCHEMA_V1.md) | Schema canónico v1 |
+| [`features/CORE_ENGINE.md`](features/CORE_ENGINE.md) | Motor de análise |
+| [`features/TEMPLATES_AND_PACKS.md`](features/TEMPLATES_AND_PACKS.md) · [`features/TEMPLATE_CATALOG.md`](features/TEMPLATE_CATALOG.md) | Templates e *packs* |
+| [`features/MVP_ROADMAP.md`](features/MVP_ROADMAP.md) | Roadmap de fases |
+| [`features/PRODUCT_POSITIONING.md`](features/PRODUCT_POSITIONING.md) | Posicionamento |
+| [`features/BRANDING.md`](features/BRANDING.md) | Identidade visual |
+| [`features/SCREENSHOT_GUIDE.md`](features/SCREENSHOT_GUIDE.md) | Capturas para README/marketing |
+| [`features/MODELING_QUALITY.md`](features/MODELING_QUALITY.md) | Qualidade de modelagem |
+| [`features/SECURITY_HEADERS.md`](features/SECURITY_HEADERS.md) | CSP / cabeçalhos da web |
+
+---
+
+## Arquitetura (*Architecture*)
+
+| Documento | Conteúdo |
+|-----------|----------|
+| [`architecture/ARCHITECTURE.md`](architecture/ARCHITECTURE.md) | Visão técnica |
+| [`architecture/adr/`](architecture/adr/) | Architecture Decision Records |
+| [`architecture/DEPLOYMENT_INVARIANTS.md`](architecture/DEPLOYMENT_INVARIANTS.md) | Implantação e perímetro |
+| [`architecture/CONTRACTS_CI_HYBRID.md`](architecture/CONTRACTS_CI_HYBRID.md) | Contratos, CI, E2E híbrido |
+| [`architecture/SMOKE_VALIDATION.md`](architecture/SMOKE_VALIDATION.md) | Smoke / critérios |
+| [`architecture/PRE_COMMIT.md`](architecture/PRE_COMMIT.md) | *Pre-commit* opcional |
+| [`architecture/SEMGREP_POLICY.md`](architecture/SEMGREP_POLICY.md) | Política Semgrep |
+| [`architecture/DESIGN_SYSTEM_FOUNDATION.md`](architecture/DESIGN_SYSTEM_FOUNDATION.md) | Design system (UI) |
+
+---
+
+## Documentação interna (*Internal — mantenedores*)
+
+Material **operacional** (auditorias, relatórios de execução, checklists de lançamento). Não é necessário para uso quotidiano da CLI/API/UI; é útil para *release engineering* e histórico.
+
+**Não apagar links antigos do Git:** entradas no `CHANGELOG` podem ainda mencionar caminhos antigos; o estado actual está aqui e em [`DOCS_REORGANIZATION_REPORT.md`](DOCS_REORGANIZATION_REPORT.md).
+
+### `internal/audits/`
+
+Auditorias e *scorecards* de engenharia (ex.: conformidade, cobertura, achados).
+
+### `internal/reports/`
+
+Relatórios de validação, notas de release, remediação, histórico de UI, metadados GitHub, avaliação GO/NO-GO.
+
+### `internal/logs/`
+
+Logs de execução de ferramentas e da rodada de release.
+
+### `internal/decisions/`
+
+Congelamento de escopo, gates E2E, decisões STRIDE/PLOT4ai, recomendações de fase.
+
+### `internal/checklists/`
+
+Checklists de publicação, RC, *prepublish*, playbooks.
+
+---
+
+## Guia mínimo (primeiro uso)
+
+1. [`README.md`](../README.md) (raiz) — *quick start* e requisitos (Python 3.11+, Node 20+ para UI).  
+2. `python scripts/setup_dev.py` — *bootstrap* recomendado.  
+3. `otm validate` / `otm analyze` / `otm report` como em [`features/CLI.md`](features/CLI.md).  
+4. Metodologia: [`features/CHOOSE_METHODOLOGY.md`](features/CHOOSE_METHODOLOGY.md) ou `otm recommend-methodology`.  
+5. Import: [`features/ARTIFACT_IMPORT.md`](features/ARTIFACT_IMPORT.md).  
+6. Diff: [`features/THREAT_MODEL_DIFF.md`](features/THREAT_MODEL_DIFF.md).  
+7. Backlog: [`features/REMEDIATION_BACKLOG.md`](features/REMEDIATION_BACKLOG.md).
+
+### Comece aqui (instalação resumida)
+
+```bash
+python -m venv .venv
+# Windows: .venv\Scripts\activate | Linux/macOS: source .venv/bin/activate
+pip install -e ".[dev,cli,api]"
+python scripts/setup_dev.py
+```
+
+Atalhos: `python scripts/run_dev.py` — API + UI (ver [`README.md`](../README.md)).
+
+---
+
+## Mais referências
+
+| Documento | Conteúdo |
+|-----------|----------|
+| [`internal/checklists/RELEASE_CHECKLIST_RC.md`](internal/checklists/RELEASE_CHECKLIST_RC.md) | Checklist RC |
+| [`internal/checklists/PREPUBLISH_CHECKLIST.md`](internal/checklists/PREPUBLISH_CHECKLIST.md) | *Prepublish* |
+| [`internal/checklists/PUBLISH_PLAYBOOK.md`](internal/checklists/PUBLISH_PLAYBOOK.md) | Playbook de tag/release |
+| [`internal/reports/RELEASE_NOTES_RC1.md`](internal/reports/RELEASE_NOTES_RC1.md) · [`internal/reports/RELEASE_NOTES_RC2.md`](internal/reports/RELEASE_NOTES_RC2.md) | Notas RC |
+| [`internal/reports/GITHUB_README_AND_METADATA.md`](internal/reports/GITHUB_README_AND_METADATA.md) | Metadados OSS |
+| [`internal/reports/FRONTEND_UI_ROLLOUT_HISTORY.md`](internal/reports/FRONTEND_UI_ROLLOUT_HISTORY.md) | Histórico da UI |
+| [`screenshots/README.md`](screenshots/README.md) | Onde guardar PNGs |
+
+---
+
+## ADR (decisões)
+
+- [`architecture/adr/0001-schema-canonical-pydantic.md`](architecture/adr/0001-schema-canonical-pydantic.md)  
+- [`architecture/adr/0002-schema-v1-entities.md`](architecture/adr/0002-schema-v1-entities.md)

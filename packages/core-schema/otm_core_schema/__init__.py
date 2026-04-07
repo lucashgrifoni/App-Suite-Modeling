@@ -24,6 +24,7 @@ from otm_core_schema.document import (
     ThreatModelDocument,
     TrustBoundary,
 )
+from otm_core_schema.entity_id import ENTITY_ID_PATTERN
 from otm_core_schema.enums import (
     AssetKind,
     ComponentKind,
@@ -62,6 +63,7 @@ from otm_core_schema.version import CANONICAL_SCHEMA_VERSION
 
 __all__ = [
     "CANONICAL_SCHEMA_VERSION",
+    "ENTITY_ID_PATTERN",
     "Asset",
     "AssetKind",
     "CriticalityLevel",

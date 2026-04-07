@@ -29,6 +29,9 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
+    // Sem isto, no Windows o Vite pode escutar só em IPv6 (::1); Chrome em
+    // `localhost` usa 127.0.0.1 e devolve ERR_CONNECTION_REFUSED.
+    host: true,
     headers: DEV_SECURITY_HEADERS,
     proxy: {
       "/api": {

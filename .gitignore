@@ -46,3 +46,11 @@ apps/web/playwright-report/
 
 # Sonar / local scanner output
 .scannerwork/
+
+# Local
+.cursor/
+.cursorrules
+*.log
+*.tmp
+*.cache
+.env

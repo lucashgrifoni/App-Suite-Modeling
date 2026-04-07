@@ -20,7 +20,7 @@ def test_readme_mentions_stride_as_default_and_incremental_engines() -> None:
 
 
 def test_multi_engine_doc_has_comparison_matrix() -> None:
-    text = _read("docs/MULTI_ENGINE_ARCHITECTURE.md")
+    text = _read("docs/features/MULTI_ENGINE_ARCHITECTURE.md")
     assert (
         "| metodologia | objetivo | quando usar | complexidade | maturidade | "
         "recomendação automática | perfil ideal |" in text
@@ -35,37 +35,37 @@ def test_multi_engine_doc_has_comparison_matrix() -> None:
 
 def test_docs_include_cli_api_ui_examples_and_when_to_use_table() -> None:
     readme = _read("README.md")
-    assert "matriz oficial de metodologias" in readme
-    assert "### cli" in readme
-    assert "### api" in readme
-    assert "### ui" in readme
+    assert "methodology matrix" in readme or "multi-methodology" in readme
+    assert "cli" in readme
+    assert "api" in readme
+    assert "web ui" in readme or "interface web" in readme
 
-    cli = _read("docs/CLI.md")
+    cli = _read("docs/features/CLI.md")
     assert "## exemplos por metodologia" in cli
     assert "--methodology stride" in cli
     assert "--methodology linddun" in cli
     assert "--methodology nist_data_centric" in cli
     assert "--methodology plot4ai" in cli
 
-    api = _read("docs/API.md")
+    api = _read("docs/features/API.md")
     assert "## exemplos por metodologia (`post /v1/models/analyze`)" in api
     assert '"methodology": "stride"' in api
     assert '"methodology": "linddun"' in api
     assert '"methodology": "pasta"' in api
     assert '"methodology": "plot4ai"' in api
 
-    ui = _read("docs/UI.md")
+    ui = _read("docs/features/UI.md")
     assert "hint curto por metodologia" in ui
     assert "exemplos por metodologia (fluxo ui)" in ui
 
 
 def test_branding_docs_exist_and_use_app_suite_modeling() -> None:
     readme = _read("README.md")
-    branding = _read("docs/BRANDING.md")
+    branding = _read("docs/features/BRANDING.md")
     docs_index = _read("docs/README.md")
     assert "app suite modeling" in readme
-    assert "branding oficial" in readme
+    assert "branding" in readme
     assert "paleta oficial" in branding
     assert "tokens de design" in branding
     assert "sistema de logo" in branding
-    assert "branding.md" in docs_index
+    assert "branding.md" in docs_index or "features/branding.md" in docs_index

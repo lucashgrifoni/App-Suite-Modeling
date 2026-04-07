@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { Link, Navigate } from "react-router-dom";
 import { validateDocument } from "../api/otmApi";
@@ -17,6 +17,10 @@ import { Panel } from "../components/patterns/Panel";
 import { useSession } from "../context/SessionContext";
 import { useToast } from "../context/ToastContext";
 import { removeArrayItem, updateArrayItem } from "../utils/collections";
+import {
+  applyDataFlowIdRename,
+  OTM_ENTITY_ID_REGEX,
+} from "../utils/documentNormalize";
 import {
   getAdaptiveAnswer,
   promptsForProfile,
@@ -39,6 +43,11 @@ const STEP_DEFS = [
   { id: 3, labelKey: "wizard.stepDone" as const },
 ];
 
+/** Espaço/tab/etc. no fim do ID quebra correspondência com fluxos e validação no servidor. */
+function idHasTrailingWhitespace(value: string): boolean {
+  return /\s$/.test(value);
+}
+
 export function WizardPage() {
   const { t, i18n } = useTranslation();
   const { document, setDocument } = useSession();
@@ -46,6 +55,8 @@ export function WizardPage() {
   const [step, setStep] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [validating, setValidating] = useState(false);
+  /** ID do fluxo no início da edição (focus), para propagar rename em ativos/fronteiras no blur. */
+  const flowIdFocusStartRef = useRef<Map<number, string>>(new Map());
 
   const stepsForStepper = useMemo(
     () => STEP_DEFS.map((s) => ({ id: s.id, label: t(s.labelKey) })),
@@ -179,7 +190,9 @@ export function WizardPage() {
         />
       </Panel>
 
-      {error && <Alert>{error}</Alert>}
+      {error && (
+        <Alert className="whitespace-pre-wrap break-words">{error}</Alert>
+      )}
 
       {step === 0 && (
         <Card title={t("wizard.cardContext")} variant="glass">
@@ -260,7 +273,9 @@ export function WizardPage() {
             </details>
             {templateProfile && adaptivePrompts.length > 0 ? (
               <details className="rounded-otm-md border border-otm-mint-500/20 bg-emerald-950/10 px-3 py-2 text-sm" open>
-                <summary className="cursor-pointer font-medium text-emerald-100">{t("wizard.adaptiveTitle")}</summary>
+                <summary className="cursor-pointer font-medium text-emerald-900 dark:text-emerald-100">
+                  {t("wizard.adaptiveTitle")}
+                </summary>
                 <p className="mt-2 text-xs text-otm-text-muted">{t("wizard.adaptiveBody")}</p>
                 <ul className="mt-3 space-y-3">
                   {adaptivePrompts.map((p) => (
@@ -308,10 +323,23 @@ export function WizardPage() {
                   <Input
                     id={`comp-${idx}-id`}
                     value={c.id}
+                    aria-invalid={idHasTrailingWhitespace(c.id) || undefined}
+                    aria-describedby={
+                      idHasTrailingWhitespace(c.id) ? `comp-${idx}-id-trail-hint` : undefined
+                    }
                     onChange={(e) => {
                       setComponents(updateArrayItem(doc.components, idx, { ...c, id: e.target.value }));
                     }}
                   />
+                  {idHasTrailingWhitespace(c.id) ? (
+                    <p
+                      id={`comp-${idx}-id-trail-hint`}
+                      role="alert"
+                      className="mt-1 text-xs font-medium text-amber-600 dark:text-amber-400"
+                    >
+                      {t("wizard.idTrailingWhitespace")}
+                    </p>
+                  ) : null}
                 </div>
                 <div className="sm:col-span-4">
                   <Label htmlFor={`comp-${idx}-name`}>{t("wizard.name")}</Label>
@@ -379,13 +407,55 @@ export function WizardPage() {
               >
                 <div className="sm:col-span-2">
                   <Label htmlFor={`flow-${idx}-id`}>{t("wizard.flowId")}</Label>
+                  <p className="mb-1 text-[11px] text-otm-text-muted">{t("wizard.flowIdRenameHint")}</p>
                   <Input
                     id={`flow-${idx}-id`}
                     value={f.id}
+                    aria-invalid={idHasTrailingWhitespace(f.id) || undefined}
+                    aria-describedby={
+                      idHasTrailingWhitespace(f.id) ? `flow-${idx}-id-trail-hint` : undefined
+                    }
+                    onFocus={() => {
+                      flowIdFocusStartRef.current.set(idx, f.id);
+                    }}
+                    onBlur={(e) => {
+                      const from = flowIdFocusStartRef.current.get(idx);
+                      flowIdFocusStartRef.current.delete(idx);
+                      const raw = e.target.value;
+                      const trimmed = raw.trim();
+                      let flows = doc.data_flows;
+                      if (trimmed !== raw) {
+                        flows = updateArrayItem(flows, idx, { ...f, id: trimmed });
+                      }
+                      const to = flows[idx]?.id ?? "";
+                      let nextDoc: typeof doc = { ...doc, data_flows: flows };
+                      let dirty = trimmed !== raw;
+                      if (
+                        from !== undefined &&
+                        from &&
+                        to &&
+                        from !== to &&
+                        OTM_ENTITY_ID_REGEX.test(to) &&
+                        nextDoc.data_flows.filter((x) => x.id === to).length === 1
+                      ) {
+                        nextDoc = applyDataFlowIdRename(nextDoc, from, to);
+                        dirty = true;
+                      }
+                      if (dirty) setDocument(nextDoc);
+                    }}
                     onChange={(e) => {
                       setFlows(updateArrayItem(doc.data_flows, idx, { ...f, id: e.target.value }));
                     }}
                   />
+                  {idHasTrailingWhitespace(f.id) ? (
+                    <p
+                      id={`flow-${idx}-id-trail-hint`}
+                      role="alert"
+                      className="mt-1 text-xs font-medium text-amber-600 dark:text-amber-400"
+                    >
+                      {t("wizard.idTrailingWhitespace")}
+                    </p>
+                  ) : null}
                 </div>
                 <div className="sm:col-span-3">
                   <Label htmlFor={`flow-${idx}-from`}>{t("wizard.from")}</Label>
@@ -427,6 +497,7 @@ export function WizardPage() {
                 </div>
                 <div className="sm:col-span-2">
                   <Label htmlFor={`flow-${idx}-name`}>{t("wizard.flowNameOptional")}</Label>
+                  <p className="mb-1 text-[11px] text-otm-text-muted">{t("wizard.flowNameHint")}</p>
                   <Input
                     id={`flow-${idx}-name`}
                     value={f.name ?? ""}
@@ -438,7 +509,7 @@ export function WizardPage() {
                 <div className="sm:col-span-2">
                   <Button
                     variant="ghost"
-                    className="w-full text-red-300"
+                    className="w-full text-red-700 dark:text-red-300"
                     onClick={() => setFlows(removeArrayItem(doc.data_flows, idx))}
                   >
                     {t("wizard.remove")}

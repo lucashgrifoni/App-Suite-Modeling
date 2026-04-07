@@ -75,10 +75,14 @@ def test_premium_markdown_default_locale_pt_cover(doc_and_result) -> None:
 
 def test_pdf_bytes_from_html(doc_and_result) -> None:
     doc, result = doc_and_result
-    payload = build_premium_report_payload(doc, result, level=ReportLevel.EXECUTIVE)
+    payload = build_premium_report_payload(doc, result, level=ReportLevel.EXECUTIVE, locale="en")
     html = render_premium_html(payload)
     pdf = html_to_pdf_bytes(html)
     assert pdf.startswith(b"%PDF")
+    assert "Executive summary" in html
+    assert "Top prioritized risks" in html
+    assert "data:image/png;base64," in html
+    assert "class='risk-table'" in html
 
 
 def test_deep_has_appendix_or_voice(doc_and_result) -> None:

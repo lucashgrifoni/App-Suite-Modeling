@@ -51,6 +51,7 @@ export interface OtmTrustBoundary {
   inference_note?: string | null;
   user_validated?: boolean | null;
   member_component_ids?: string[];
+  outside_component_ids?: string[];
   crossing_flow_ids?: string[];
 }
 

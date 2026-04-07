@@ -12,6 +12,7 @@ from otm_report_premium import (
     render_premium_markdown,
 )
 from otm_report_premium.enums import ReportFormat, ReportLevel
+from otm_report_premium.i18n_locale import normalize_premium_locale
 from otm_threat_engine import AnalysisResult
 
 
@@ -36,13 +37,14 @@ def render_premium(
 
     PDF só é gerado quando `output_format` é PDF (Markdown não é calculado nesse caso).
     """
+    build_locale = "en" if output_format == ReportFormat.PDF else normalize_premium_locale(locale)
     payload = build_premium_report_payload(
         doc,
         analysis,
         level=level,
         baseline=baseline,
         app_version=app_version(),
-        locale=locale,
+        locale=build_locale,
     )
     if output_format == ReportFormat.MARKDOWN:
         return render_premium_markdown(payload), None

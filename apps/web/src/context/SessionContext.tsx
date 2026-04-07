@@ -8,6 +8,7 @@ import {
 } from "react";
 import type { AnalysisResult } from "../types/api";
 import type { OtmDocument } from "../types/document";
+import { applyKnownComponentIdTypoFixes } from "../utils/documentNormalize";
 
 const DOC_KEY = "otm.web.document";
 const ANALYSIS_KEY = "otm.web.analysis";
@@ -31,7 +32,7 @@ function normalizeDoc(raw: unknown): OtmDocument | null {
   if (!raw || typeof raw !== "object") return null;
   const d = raw as OtmDocument;
   if (!d.model || !d.metadata) return null;
-  return {
+  return applyKnownComponentIdTypoFixes({
     ...d,
     metadata: {
       ...d.metadata,
@@ -44,7 +45,7 @@ function normalizeDoc(raw: unknown): OtmDocument | null {
     threats: d.threats ?? [],
     mitigations: d.mitigations ?? [],
     evidence_suggestions: d.evidence_suggestions ?? [],
-  };
+  });
 }
 
 function persistDocument(doc: OtmDocument | null) {

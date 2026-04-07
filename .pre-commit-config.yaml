@@ -1,5 +1,5 @@
 # Opcional: instalar com `pip install pre-commit && pre-commit install`
-# Ver docs/PRE_COMMIT.md
+# Ver docs/architecture/PRE_COMMIT.md
 
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit

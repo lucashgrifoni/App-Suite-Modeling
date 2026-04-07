@@ -41,6 +41,25 @@ function safeStringify(value: unknown): string | undefined {
   }
 }
 
+function formatPydanticErrors(errors: unknown): string | undefined {
+  if (!Array.isArray(errors) || errors.length === 0) return undefined;
+  const lines: string[] = [];
+  for (const item of errors) {
+    if (typeof item !== "object" || item === null) continue;
+    const o = item as Record<string, unknown>;
+    const msg = typeof o.msg === "string" ? o.msg : null;
+    if (!msg) continue;
+    const loc = Array.isArray(o.loc)
+      ? o.loc
+          .map((x) => (typeof x === "string" || typeof x === "number" ? String(x) : ""))
+          .filter(Boolean)
+          .join(".")
+      : "";
+    lines.push(loc ? `${loc}: ${msg}` : msg);
+  }
+  return lines.length ? lines.join("\n") : undefined;
+}
+
 function formatApiErrorMessage(data: unknown, fallback: string): string {
   const detail = getObjectField(data, "detail");
   if (detail === undefined) return fallback;
@@ -48,10 +67,15 @@ function formatApiErrorMessage(data: unknown, fallback: string): string {
 
   const message = getStringField(detail, "message");
   const code = getStringField(detail, "code");
-  if (message && code) return `${code}: ${message}`;
-  if (message) return message;
+  const pydantic = formatPydanticErrors(getObjectField(detail, "errors"));
 
-  return safeStringify(detail) ?? fallback;
+  let head: string;
+  if (message && code) head = `${code}: ${message}`;
+  else if (message) head = message;
+  else head = safeStringify(detail) ?? fallback;
+
+  if (pydantic) return `${head}\n\n${pydantic}`;
+  return head;
 }
 
 export async function apiFetch<T>(
