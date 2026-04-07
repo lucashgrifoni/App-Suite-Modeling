@@ -16,17 +16,19 @@ This project follows **Keep a Changelog** and **Semantic Versioning**.
 ## [7.4.0] — 2026-04-07
 
 ### Summary
-Stronger methodology recommendation, model quality precheck, aggregate risk signals in analysis export, and tighter industry-pack template metadata alignment.
+Improved methodology recommendation, stronger model quality validation, and better analysis reporting.
 
 ### Highlights
-- Refined methodology ranking and recommendation lens behavior
-- Enhanced model quality precheck in the core schema
-- Aggregate risk summary and cockpit-style section in analysis Markdown export
-- Industry pack template metadata aligned with on-disk inventory
-- Regression coverage for catalog inventory and methodology ranking
+- Refined methodology recommendation and ranking behavior
+- Improved model quality precheck for stronger validation
+- Added aggregate risk summary to analysis exports
+- Better alignment of industry-pack template metadata
+- Expanded regression coverage for ranking and catalog consistency
 
 ### Improvements
-- Engine and methodology completeness integration; Ruff import/format hygiene and Mypy cleanup on methodology lenses
+- Better consistency between methodology guidance and engine analysis
+- Improved export clarity for decision-making
+- Enhanced reliability in catalog and recommendation behavior
 
 ---
 
