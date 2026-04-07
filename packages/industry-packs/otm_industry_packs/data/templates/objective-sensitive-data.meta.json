@@ -2,7 +2,7 @@
   "id": "objective-sensitive-data",
   "title": "Objetivo: processamento de dados sensíveis",
   "description": "Dados pessoais, financeiros ou regulados em trânsito e em repouso.",
-  "suggested_pack": "saas",
+  "suggested_pack": null,
   "category": "objective",
   "category_label": "Objective-based",
   "tags": [

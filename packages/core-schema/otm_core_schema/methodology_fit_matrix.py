@@ -89,6 +89,22 @@ def fit_for_methodology(
     if methodology == ThreatModelMethodology.PLOT4AI:
         return "partial" if doc.import_signals_corpus else "weak"
 
+    if methodology == ThreatModelMethodology.OCTAVE_ALLEGRO:
+        if has_obj and has_assets and classified >= max(1, min(2, len(doc.assets) // 2)):
+            return "strong"
+        if has_assets and has_obj:
+            return "partial"
+        if has_assets or has_obj:
+            return "partial"
+        return "weak"
+
+    if methodology == ThreatModelMethodology.CIA_DIE:
+        if has_boundaries and has_assets:
+            return "strong"
+        if has_boundaries or has_assets:
+            return "partial"
+        return "weak"
+
     # Demais metodologias: conservador
     return "partial" if (has_assets and has_boundaries) else "weak"
 
@@ -101,5 +117,7 @@ def build_methodology_fit_matrix(doc: ThreatModelDocument) -> dict[str, str]:
         ThreatModelMethodology.NIST_DATA_CENTRIC,
         ThreatModelMethodology.LINDDUN,
         ThreatModelMethodology.PLOT4AI,
+        ThreatModelMethodology.OCTAVE_ALLEGRO,
+        ThreatModelMethodology.CIA_DIE,
     )
     return {m.value: fit_for_methodology(doc, m) for m in keys}

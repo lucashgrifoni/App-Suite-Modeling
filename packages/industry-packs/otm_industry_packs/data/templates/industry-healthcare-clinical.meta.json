@@ -2,7 +2,7 @@
   "id": "industry-healthcare-clinical",
   "title": "Saúde / acesso a dados clínicos",
   "description": "Utilizador/profissional → portal → backend clínico → registos sensíveis → auditoria.",
-  "suggested_pack": "saas",
+  "suggested_pack": "cloud_native",
   "category": "industry",
   "category_label": "Industry",
   "tags": [

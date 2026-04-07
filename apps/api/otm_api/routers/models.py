@@ -135,6 +135,13 @@ def recommend_methodology_for_model(body: DocumentBody) -> RecommendMethodologyR
         methodology=rec.methodology,
         reason=rec.reason,
         explanations=list(rec.explanations),
+        methodology_scores=rec.methodology_scores,
+        runner_up_methodology=rec.runner_up_methodology,
+        runner_up_score=rec.runner_up_score,
+        score_gap=rec.score_gap,
+        recommendation_confidence=rec.recommendation_confidence,
+        top_supporting_signals=list(rec.top_supporting_signals),
+        counter_signals=list(rec.counter_signals),
     )
 
 

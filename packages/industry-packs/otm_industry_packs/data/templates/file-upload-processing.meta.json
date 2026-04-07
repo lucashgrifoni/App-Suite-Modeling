@@ -2,7 +2,7 @@
   "id": "file-upload-processing",
   "title": "Upload de ficheiros / processamento de documentos",
   "description": "Upload → validação/scan → armazenamento → pipeline de processamento.",
-  "suggested_pack": "saas",
+  "suggested_pack": null,
   "category": "integrations",
   "category_label": "Integrations",
   "tags": [

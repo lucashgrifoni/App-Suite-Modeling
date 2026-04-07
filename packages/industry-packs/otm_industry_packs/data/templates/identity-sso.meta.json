@@ -2,7 +2,7 @@
   "id": "identity-sso",
   "title": "SSO / OIDC / SAML",
   "description": "Utilizador → aplicação → IdP → tokens/sessão → serviços a jusante.",
-  "suggested_pack": "saas",
+  "suggested_pack": null,
   "category": "identity_access",
   "category_label": "Identity & Access",
   "tags": [

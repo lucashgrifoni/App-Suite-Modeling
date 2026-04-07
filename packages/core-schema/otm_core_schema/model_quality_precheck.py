@@ -34,17 +34,55 @@ class ModelQualityPrecheck(BaseModel):
         default_factory=dict,
         description="Adequação por metodologia (stride, pasta, nist_data_centric, …).",
     )
+    structure_score: int = Field(
+        default=0,
+        ge=0,
+        le=100,
+        description="Completude estrutural (componentes, fronteiras, fluxos).",
+    )
+    methodology_score: int = Field(
+        default=0,
+        ge=0,
+        le=100,
+        description="Aderência do modelo à metodologia declarada no documento.",
+    )
+    context_score: int = Field(
+        default=0,
+        ge=0,
+        le=100,
+        description="Riqueza de contexto de negócio e classificação de dados.",
+    )
+    overall_score: int = Field(
+        default=0,
+        ge=0,
+        le=100,
+        description="Combinação explícita (média ponderada) dos três eixos.",
+    )
+    methodology_fit_reasons: list[str] = Field(
+        default_factory=list,
+        description="Por que strong/partial/weak para a metodologia efectiva do documento.",
+    )
+
+
+def _fit_to_methodology_points(level: str) -> int:
+    # Faixa mais larga para separar casos «ricos na estrutura» vs «aderência fraca à metodologia».
+    return {"strong": 94, "partial": 64, "weak": 34}.get(level, 48)
 
 
 def assess_model_precheck(doc: ThreatModelDocument) -> ModelQualityPrecheck:
     """
     Heurística leve: pontuação e banda para orientar o modelador.
+
+    `methodology_fit` espelha a célula da matriz para a metodologia **declarada** no documento,
+    evitando contradições do tipo matrix=strong vs fit=weak sem explicação.
     """
     checks: list[QualityCheckItem] = []
-    score = 0
+    structure = 0
+    context = 0
 
     if doc.assets:
-        score += 18
+        structure += 12
+        context += 10
         checks.append(
             QualityCheckItem(
                 code="assets_present",
@@ -62,7 +100,7 @@ def assess_model_precheck(doc: ThreatModelDocument) -> ModelQualityPrecheck:
         )
 
     if doc.trust_boundaries:
-        score += 18
+        structure += 16
         validated = sum(1 for b in doc.trust_boundaries if b.user_validated is True)
         checks.append(
             QualityCheckItem(
@@ -88,7 +126,7 @@ def assess_model_precheck(doc: ThreatModelDocument) -> ModelQualityPrecheck:
         or (f.data_types and len(f.data_types) > 0)
     )
     if rich_flows > 0:
-        score += min(20, 5 + rich_flows * 3)
+        structure += min(22, 4 + rich_flows * 4)
         checks.append(
             QualityCheckItem(
                 code="flow_semantics",
@@ -109,7 +147,7 @@ def assess_model_precheck(doc: ThreatModelDocument) -> ModelQualityPrecheck:
         1 for c in doc.components if c.responsibility or c.privilege_level or c.handles_sensitive_data is not None
     )
     if rich_components > 0:
-        score += min(18, 6 + rich_components * 2)
+        structure += min(20, 4 + rich_components * 3)
         checks.append(
             QualityCheckItem(
                 code="component_context",
@@ -127,7 +165,7 @@ def assess_model_precheck(doc: ThreatModelDocument) -> ModelQualityPrecheck:
         )
 
     if doc.business_context and (doc.business_context.business_objectives or doc.business_context.business_goals):
-        score += 12
+        context += 18
         checks.append(
             QualityCheckItem(
                 code="business_context",
@@ -148,7 +186,7 @@ def assess_model_precheck(doc: ThreatModelDocument) -> ModelQualityPrecheck:
         1 for a in doc.assets if a.data_classification is not None or (a.sensitivity and len(a.sensitivity) > 2)
     )
     if classified > 0:
-        score += 14
+        context += 20
         checks.append(
             QualityCheckItem(
                 code="data_classification",
@@ -165,35 +203,79 @@ def assess_model_precheck(doc: ThreatModelDocument) -> ModelQualityPrecheck:
             )
         )
 
-    score = min(100, score)
-    if score >= 75:
+    matrix = build_methodology_fit_matrix(doc)
+    meth = doc.model_info.methodology.value
+    matrix_level = matrix.get(meth, "partial")
+    fit: Literal["strong", "partial", "weak"] = matrix_level  # type: ignore[assignment]
+
+    methodology_points = _fit_to_methodology_points(matrix_level)
+    structure = min(100, structure)
+    context = min(100, context)
+    overall = int(round(structure * 0.44 + methodology_points * 0.28 + context * 0.28))
+
+    # Eixo legado (soma histórica) — mantém compatibilidade com benchmarks e exportações.
+    legacy_linear = 0
+    if doc.assets:
+        legacy_linear += 18
+    if doc.trust_boundaries:
+        legacy_linear += 18
+    if rich_flows > 0:
+        legacy_linear += min(20, 5 + rich_flows * 3)
+    if rich_components > 0:
+        legacy_linear += min(18, 6 + rich_components * 2)
+    if doc.business_context and (doc.business_context.business_objectives or doc.business_context.business_goals):
+        legacy_linear += 12
+    if classified > 0:
+        legacy_linear += 14
+    legacy_linear = min(100, legacy_linear)
+
+    # Combina eixo legado com o eixo multi-dimensional; peso do legado um pouco maior para
+    # modelos muito completos continuarem na banda «rich» sem perder separação nos casos médios.
+    display_score = int(round(legacy_linear * 0.36 + overall * 0.64))
+    display_score = min(100, max(0, display_score))
+    # Modelos muito completos no eixo legado com matriz «strong» para a metodologia declarada
+    # não devem cair para «good» só porque o blend numérico ficou no limiar — evita achatamento.
+    if legacy_linear >= 78 and matrix_level == "strong" and overall >= 52:
+        display_score = max(display_score, 75)
+
+    fit_reasons: list[str] = [
+        f"Metodologia do documento: `{meth}`; matriz de aderência: `{matrix_level}`.",
+    ]
+    if matrix_level == "strong":
+        fit_reasons.append("Contexto mínimo para esta metodologia parece suficiente.")
+    elif matrix_level == "partial":
+        fit_reasons.append(
+            "Faltam elementos para classificar como 'strong' (ver matriz por metodologia no relatório)."
+        )
+    else:
+        fit_reasons.append(
+            "Metodologia declarada exige mais contexto (objectivos, ativos classificados, privacidade, etc.)."
+        )
+
+    if display_score >= 73:
         band: Literal["minimal", "good", "rich"] = "rich"
-    elif score >= 45:
+    elif display_score >= 48:
         band = "good"
     else:
         band = "minimal"
 
-    meth = doc.model_info.methodology.value
-    fit: Literal["strong", "partial", "weak"] = "partial"
-    if meth == "pasta" and not (doc.business_context and doc.business_context.business_objectives):
-        fit = "weak"
-    elif meth == "nist_data_centric" and classified == 0:
-        fit = "weak"
-    elif doc.assets and doc.trust_boundaries and rich_flows >= 2:
-        fit = "strong"
-
-    if score >= 70 and fit == "strong":
+    if display_score >= 70 and fit == "strong":
         conf: Literal["low", "medium", "high"] = "high"
-    elif score >= 40:
+    elif display_score >= 40:
         conf = "medium"
     else:
         conf = "low"
 
     return ModelQualityPrecheck(
-        score_0_100=score,
+        score_0_100=display_score,
         band=band,
         methodology_fit=fit,
         recommendation_confidence=conf,
         checks=checks,
-        methodology_fit_matrix=build_methodology_fit_matrix(doc),
+        methodology_fit_matrix=matrix,
+        structure_score=structure,
+        methodology_score=methodology_points,
+        context_score=context,
+        overall_score=overall,
+        methodology_fit_reasons=fit_reasons,
     )

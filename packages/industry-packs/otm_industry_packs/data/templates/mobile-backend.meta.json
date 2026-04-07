@@ -2,7 +2,7 @@
   "id": "mobile-backend",
   "title": "Aplicação mobile + backend",
   "description": "App mobile → API → auth → serviços backend → armazenamento.",
-  "suggested_pack": "saas",
+  "suggested_pack": null,
   "category": "applications",
   "category_label": "Applications",
   "tags": [

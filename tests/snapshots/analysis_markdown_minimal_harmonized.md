@@ -19,6 +19,31 @@ Contagem de referências `framework:control_id` nas heurísticas (por catálogo 
 - **OWASP ASVS** (`owasp_asvs`): 38
 - **OWASP Threat Modeling** (`owasp_tm`): 21
 
+### Consolidação de risco e cockpit executivo
+
+- **Ameaças activas:** 21 · **Score total:** 324.0 · **Média / máx:** 15.43 / 25.0
+- **Distribuição por severidade:** `{'high': 10, 'medium': 4, 'critical': 7}`
+- **Top ameaças (score):**
+  - `eng_flow_to_db_tampering` — [tampering] Canal do fluxo to_db (score 25.0)
+  - `eng_flow_to_db_information_disclosure` — [information_disclosure] Canal do fluxo to_db (score 25.0)
+  - `eng_api_spoofing` — [spoofing] API (public_api) (score 20.0)
+  - `eng_api_elevation_of_privilege` — [elevation_of_privilege] API (public_api) (score 20.0)
+  - `eng_flow_http_in_tampering` — [tampering] Atravessa fronteira — http_in (score 20.0)
+- **Componentes mais críticos:** `api` (85.0), `worker` (51.0), `db` (45.0), `user` (21.0)
+- **Fluxos mais críticos:** `to_db` (50.0), `to_worker` (40.0), `http_in` (20.0)
+- **Temas dominantes:** eng: 20; biz: 1
+- **Mitigação inicial:**
+  - Priorizar `eng_flow_to_db_tampering` em `to_db` (score 25.0).
+  - Priorizar `eng_flow_to_db_information_disclosure` em `to_db` (score 25.0).
+  - Priorizar `eng_api_spoofing` em `api` (score 20.0).
+  - Priorizar `eng_api_elevation_of_privilege` em `api` (score 20.0).
+  - Priorizar `eng_flow_http_in_tampering` em `http_in` (score 20.0).
+- **Postura:** `elevated` — Postura crítica agregada — tratamento prioritário recomendado.
+  - 21 achados heurísticos activos; soma de scores ≈ 324.0.
+  - Ordenar backlog pelos `top_threats` e validar com donos de sistema.
+  - *Rever:* Rever controlos nas fronteiras com fluxos de maior risco acumulado.
+  - *Rever:* Confirmar classificação e retenção nos ativos mais expostos.
+
 
 ### Fluxos entre fronteiras
 
@@ -26,7 +51,7 @@ Contagem de referências `framework:control_id` nas heurísticas (por catálogo 
 
 ### Qualidade do modelo e metodologia (resumo)
 
-- **Pré-check:** score **72/100** (banda `good`) · confiança nas recomendações: `high` · fit STRIDE: `strong`.
+- **Pré-check:** score **62/100** (banda `good`) · confiança nas recomendações: `medium` · fit STRIDE: `strong`.
 - **Completude metodológica:** `complete` — —
 
 ### Lacunas do modelo (pré-check)

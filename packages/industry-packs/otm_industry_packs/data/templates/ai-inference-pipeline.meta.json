@@ -2,7 +2,7 @@
   "id": "ai-inference-pipeline",
   "title": "Pipeline de inferência",
   "description": "Upload/API → pré-processamento → fornecedor de modelo → armazenamento de resultados → workflow.",
-  "suggested_pack": "cloud_native",
+  "suggested_pack": null,
   "category": "ai_llm",
   "category_label": "AI & LLM",
   "tags": [

@@ -2,7 +2,7 @@
   "id": "ai-rag-enterprise",
   "title": "RAG corporativo",
   "description": "UI → API de retrieval → vector DB → arquivo de documentos → fornecedor LLM.",
-  "suggested_pack": "saas",
+  "suggested_pack": null,
   "category": "ai_llm",
   "category_label": "AI & LLM",
   "tags": [

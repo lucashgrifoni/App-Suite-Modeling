@@ -5,9 +5,16 @@
   "suggested_pack": "saas",
   "category": "applications",
   "category_label": "Applications",
-  "tags": ["saas", "web", "legacy-catalog"],
+  "tags": [
+    "saas",
+    "web",
+    "legacy-catalog"
+  ],
   "complexity": "low",
   "best_for": "Produto SaaS clássico com front web.",
   "suggested_methodology": "stride",
-  "recommendation_hints": ["session_management", "tenant_isolation"]
+  "recommendation_hints": [
+    "session_management",
+    "tenant_isolation"
+  ]
 }

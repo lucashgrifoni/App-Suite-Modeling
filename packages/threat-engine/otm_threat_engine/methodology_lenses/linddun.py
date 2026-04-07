@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from otm_core_schema import StrideCategory, ThreatModelDocument, ThreatModelMethodology
+from otm_core_schema import IndustrySector, StrideCategory, ThreatModelDocument, ThreatModelMethodology
 
 from otm_threat_engine.methodology_lenses.common import (
     append_engine_lens_note,
@@ -169,7 +169,26 @@ def _looks_like_pii_context(doc: ThreatModelDocument) -> bool:
             (doc.business_context.regulatory_context if doc.business_context else "") or "",
         ]
     ).lower()
-    if any(k in text for k in ("pii", _PII_LITERAL, "privacidade", "lgpd", "gdpr", "consent")):
+    comp_blob = " ".join(f"{c.name or ''} {c.id or ''}" for c in doc.components).lower()
+    blob = f"{text} {comp_blob}"
+    privacy_tokens = (
+        "pii",
+        _PII_LITERAL,
+        "privacidade",
+        "lgpd",
+        "gdpr",
+        "consent",
+        "phi",
+        "ehr",
+        "clinical",
+        "paciente",
+        "hipaa",
+        "dados clínicos",
+        "clinical record",
+    )
+    if any(k in blob for k in privacy_tokens):
+        return True
+    if doc.model_info.industry_sector == IndustrySector.HEALTHCARE:
         return True
     return any(
         a.asset_kind.value == "data" and (a.sensitivity or "").lower() in {"confidential", "restricted"}

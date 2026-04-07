@@ -2,7 +2,7 @@
   "id": "pam-privileged-actions",
   "title": "PAM / ações privilegiadas",
   "description": "Admin/operador → aprovação → gateway de ação → sistemas alvo.",
-  "suggested_pack": "saas",
+  "suggested_pack": null,
   "category": "identity_access",
   "category_label": "Identity & Access",
   "tags": [

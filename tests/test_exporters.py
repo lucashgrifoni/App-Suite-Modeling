@@ -398,6 +398,8 @@ def test_export_analysis_json_minimal_top_level_key_order_stable() -> None:
         "wizard_context_notes",
         "wizard_signal_trace",
         "anti_pattern_hits",
+        "aggregate_risk",
+        "decision_cockpit",
     ]
 
 
@@ -514,6 +516,7 @@ def test_export_analysis_markdown_harmonized_minimal_h3_heading_order_stable(
     headings = [line.strip() for line in md.splitlines() if line.startswith("### ")]
     assert headings == [
         "### Referências a frameworks (agregado)",
+        "### Consolidação de risco e cockpit executivo",
         "### Fluxos entre fronteiras",
         "### Qualidade do modelo e metodologia (resumo)",
         "### Lacunas do modelo (pré-check)",

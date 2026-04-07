@@ -9,6 +9,7 @@ from otm_core_schema.model_quality_precheck import assess_model_precheck
 from otm_industry_packs.models import PackDefinition
 
 from otm_threat_engine.anti_pattern_library import detect_anti_patterns
+from otm_threat_engine.risk_aggregate import build_aggregate_and_cockpit
 from otm_threat_engine.business_abuse_heuristics import append_business_abuse_heuristics
 from otm_threat_engine.composite_heuristics import append_composite_heuristics
 from otm_threat_engine.engine_finalize import finalize_analysis_with_methodology
@@ -249,11 +250,14 @@ class ThreatAnalysisEngine:
             recommendation_reason=rec_reason,
             methodology_explanations=meth_exps,
         )
+        risk_views = build_aggregate_and_cockpit(final)
         return final.model_copy(
             update={
                 "model_quality_precheck": assess_model_precheck(doc),
                 "methodology_completeness": assess_methodology_completeness(doc, chosen),
                 "anti_pattern_hits": detect_anti_patterns(doc),
+                "aggregate_risk": risk_views["aggregate_risk"].model_dump(mode="json"),
+                "decision_cockpit": risk_views["decision_cockpit"].model_dump(mode="json"),
             }
         )
 

@@ -2,7 +2,7 @@
   "id": "serverless-api",
   "title": "Serverless API",
   "description": "API Gateway → funções → BD gerida → segredos e logging.",
-  "suggested_pack": "cloud_native",
+  "suggested_pack": null,
   "category": "cloud_infra",
   "category_label": "Cloud & Infra",
   "tags": [
