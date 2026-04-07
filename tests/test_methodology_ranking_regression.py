@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-from otm_core_schema.io import load_document_from_yaml_path
-from otm_core_schema.enums import ThreatModelMethodology
-from otm_industry_packs.loader import load_template_yaml
-from otm_core_schema import load_document_from_yaml
-from otm_threat_engine import analyze_document, recommend_methodology
 from pathlib import Path
+
+from otm_core_schema import load_document_from_yaml
+from otm_core_schema.enums import ThreatModelMethodology
+from otm_core_schema.io import load_document_from_yaml_path
+from otm_industry_packs.loader import load_template_yaml
+from otm_threat_engine import analyze_document, recommend_methodology
 
 _ROOT = Path(__file__).resolve().parents[1]
 
@@ -37,7 +38,7 @@ def test_core_saas_lab_saas_web_stride_not_nist_mass() -> None:
     doc = _doc_from_template("saas-web")
     rec = recommend_methodology(doc)
     assert rec.methodology == ThreatModelMethodology.STRIDE
-    assert float(( rec.methodology_scores or {}).get("nist_data_centric", 99)) < float(
+    assert float((rec.methodology_scores or {}).get("nist_data_centric", 99)) < float(
         (rec.methodology_scores or {}).get("stride", 0)
     )
 

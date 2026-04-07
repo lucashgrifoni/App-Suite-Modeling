@@ -5,8 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 
 import otm_industry_packs
-from otm_industry_packs.loader import list_template_ids, load_template_info
 from otm_industry_packs.catalog.registry_data import EXPANSION_TEMPLATE_SPECS
+from otm_industry_packs.loader import list_template_ids, load_template_info
 
 
 def test_shipped_template_yaml_count_is_38() -> None:

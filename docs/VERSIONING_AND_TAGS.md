@@ -21,6 +21,7 @@ Exemplos adicionais de tags semânticas:
 
 - `v7.3.0-rc1`
 - `v7.3.0`
+- `v.7.4` (product line tag aligned with `7.4.0` in `pyproject.toml`)
 
 ## Regras práticas
 

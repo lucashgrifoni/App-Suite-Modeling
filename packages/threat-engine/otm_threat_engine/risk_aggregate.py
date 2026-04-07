@@ -84,7 +84,9 @@ def build_aggregate_and_cockpit(result: AnalysisResult) -> dict[str, AggregateRi
             families[prefix] += 1
 
     def _top(score_map: dict[str, float], n: int = 5) -> list[dict[str, Any]]:
-        return [{"id": k, "aggregate_score": round(v, 2)} for k, v in sorted(score_map.items(), key=lambda x: -x[1])[:n]]
+        return [
+            {"id": k, "aggregate_score": round(v, 2)} for k, v in sorted(score_map.items(), key=lambda x: -x[1])[:n]
+        ]
 
     themes = [f"{k}: {v}" for k, v in families.most_common(8)]
     mitigations: list[str] = []

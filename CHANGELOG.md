@@ -13,6 +13,23 @@ This project follows **Keep a Changelog** and **Semantic Versioning**.
 
 ---
 
+## [7.4.0] — 2026-04-07
+
+### Summary
+Stronger methodology recommendation, model quality precheck, aggregate risk signals in analysis export, and tighter industry-pack template metadata alignment.
+
+### Highlights
+- Refined methodology ranking and recommendation lens behavior
+- Enhanced model quality precheck in the core schema
+- Aggregate risk summary and cockpit-style section in analysis Markdown export
+- Industry pack template metadata aligned with on-disk inventory
+- Regression coverage for catalog inventory and methodology ranking
+
+### Improvements
+- Engine and methodology completeness integration; Ruff import/format hygiene and Mypy cleanup on methodology lenses
+
+---
+
 ## [7.3.0] — 2026-04-07
 
 ### Summary

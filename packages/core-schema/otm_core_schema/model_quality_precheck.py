@@ -244,9 +244,7 @@ def assess_model_precheck(doc: ThreatModelDocument) -> ModelQualityPrecheck:
     if matrix_level == "strong":
         fit_reasons.append("Contexto mínimo para esta metodologia parece suficiente.")
     elif matrix_level == "partial":
-        fit_reasons.append(
-            "Faltam elementos para classificar como 'strong' (ver matriz por metodologia no relatório)."
-        )
+        fit_reasons.append("Faltam elementos para classificar como 'strong' (ver matriz por metodologia no relatório).")
     else:
         fit_reasons.append(
             "Metodologia declarada exige mais contexto (objectivos, ativos classificados, privacidade, etc.)."

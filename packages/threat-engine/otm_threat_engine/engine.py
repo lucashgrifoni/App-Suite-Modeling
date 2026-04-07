@@ -9,7 +9,6 @@ from otm_core_schema.model_quality_precheck import assess_model_precheck
 from otm_industry_packs.models import PackDefinition
 
 from otm_threat_engine.anti_pattern_library import detect_anti_patterns
-from otm_threat_engine.risk_aggregate import build_aggregate_and_cockpit
 from otm_threat_engine.business_abuse_heuristics import append_business_abuse_heuristics
 from otm_threat_engine.composite_heuristics import append_composite_heuristics
 from otm_threat_engine.engine_finalize import finalize_analysis_with_methodology
@@ -27,6 +26,7 @@ from otm_threat_engine.engine_support import (
 from otm_threat_engine.methodology_completeness import assess_methodology_completeness
 from otm_threat_engine.recommendation_gate import filter_pack_control_hints
 from otm_threat_engine.result import AnalysisResult, HeuristicThreat
+from otm_threat_engine.risk_aggregate import build_aggregate_and_cockpit
 from otm_threat_engine.structural import collect_structural_findings
 from otm_threat_engine.trust_insights import analyze_trust_boundary_crossings
 from otm_threat_engine.version import ENGINE_VERSION

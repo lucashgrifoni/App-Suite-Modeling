@@ -524,7 +524,10 @@ def _append_aggregate_risk_and_cockpit(lines: list[str], result: AnalysisResult)
         ):
             items = ar.get(key) or []
             if items:
-                lines.append(f"- **{label} mais críticos:** " + ", ".join(f"`{x.get('id')}` ({x.get('aggregate_score')})" for x in items[:4]))
+                lines.append(
+                    f"- **{label} mais críticos:** "
+                    + ", ".join(f"`{x.get('id')}` ({x.get('aggregate_score')})" for x in items[:4])
+                )
         themes = ar.get("dominant_themes") or []
         if themes:
             lines.append("- **Temas dominantes:** " + "; ".join(str(t) for t in themes[:6]))
@@ -534,9 +537,7 @@ def _append_aggregate_risk_and_cockpit(lines: list[str], result: AnalysisResult)
             for st in starters[:6]:
                 lines.append(f"  - {st}")
     if dc:
-        lines.append(
-            f"- **Postura:** `{dc.get('risk_posture', '—')}` — {dc.get('headline', '')}"
-        )
+        lines.append(f"- **Postura:** `{dc.get('risk_posture', '—')}` — {dc.get('headline', '')}")
         for kd in dc.get("key_decisions") or []:
             lines.append(f"  - {kd}")
         for nr in (dc.get("next_reviews") or [])[:4]:

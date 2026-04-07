@@ -12,9 +12,9 @@ from otm_explainability import (
 from otm_threat_engine.methodology_lenses.contracts import MethodologyRecommendation
 from otm_threat_engine.methodology_lenses.dispatch import build_lens_dispatch
 from otm_threat_engine.methodology_lenses.recommendation import (
+    _plot4ai_recommendation_detail,
     build_recommendation_context_text,
     compute_methodology_ranking,
-    _plot4ai_recommendation_detail,
 )
 from otm_threat_engine.result import AnalysisResult
 
@@ -56,7 +56,7 @@ def recommend_with_rules(doc: ThreatModelDocument) -> MethodologyRecommendation:
         subject=f"Metodologia {methodology.value}",
         message=reason,
         evidence=[e for e in ev_body if e][:24],
-        confidence=rec_conf,  # type: ignore[arg-type]
+        confidence=rec_conf,
         related_entities=[
             RelatedEntityRef(entity_kind="document", entity_id=(doc.metadata.title or "")[:120]),
         ],
