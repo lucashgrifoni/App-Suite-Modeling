@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, Literal
 
 from otm_core_schema import FrameworkRef, RiskAssessment, StrideCategory, ThreatModelMethodology
 from otm_core_schema.enums import HeuristicTier, MethodologyCompletenessState
@@ -195,4 +195,12 @@ class AnalysisResult(BaseModel):
     anti_pattern_hits: list[AntiPatternHit] = Field(
         default_factory=list,
         description="Anti-padrões de modelagem alinhados ao template_semantic_profile.",
+    )
+    aggregate_risk: dict[str, Any] | None = Field(
+        default=None,
+        description="Consolidação agregada de severidades, tops e temas (serializável JSON).",
+    )
+    decision_cockpit: dict[str, Any] | None = Field(
+        default=None,
+        description="Resumo executivo de postura e próximos passos.",
     )

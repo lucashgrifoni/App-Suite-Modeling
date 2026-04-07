@@ -2,7 +2,7 @@
   "id": "objective-internet-facing",
   "title": "Objetivo: aplicação exposta à Internet",
   "description": "Aplicação com superfície externa relevante (HTTP/API).",
-  "suggested_pack": "saas",
+  "suggested_pack": null,
   "category": "objective",
   "category_label": "Objective-based",
   "tags": [

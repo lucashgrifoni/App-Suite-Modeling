@@ -1,11 +1,38 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
+from typing import Literal
+
 from otm_core_schema import IndustrySector, SystemType, ThreatModelDocument, ThreatModelMethodology
 
 from otm_threat_engine.ai_modeling.corpus import build_ai_calibration_corpus
 from otm_threat_engine.methodology_lenses.common import has_any, has_any_token, has_safe_ai_marker
 
 _PII_LITERAL = "dados pessoais"
+
+_TIE_PRIORITY: dict[ThreatModelMethodology, int] = {
+    ThreatModelMethodology.PLOT4AI: 7,
+    ThreatModelMethodology.PASTA: 6,
+    ThreatModelMethodology.LINDDUN: 5,
+    ThreatModelMethodology.NIST_DATA_CENTRIC: 4,
+    ThreatModelMethodology.OCTAVE_ALLEGRO: 3,
+    ThreatModelMethodology.CIA_DIE: 2,
+    ThreatModelMethodology.STRIDE: 1,
+}
+
+
+@dataclass(frozen=True)
+class MethodologyRanking:
+    """Resultado da competição por pontuação entre metodologias."""
+
+    scores: dict[ThreatModelMethodology, float]
+    winner: ThreatModelMethodology
+    runner_up: ThreatModelMethodology | None
+    score_gap: float
+    confidence: Literal["low", "medium", "high"]
+    supporting_signals: tuple[str, ...]
+    counter_signals: tuple[str, ...]
+    reason_summary: str
 
 
 def build_recommendation_context_text(doc: ThreatModelDocument) -> str:
@@ -96,102 +123,220 @@ def _plot4ai_recommendation_detail(doc: ThreatModelDocument, text: str) -> tuple
     return reason, ev
 
 
+def _apply_declared_methodology_template_alignment(
+    doc: ThreatModelDocument,
+    scores: dict[ThreatModelMethodology, float],
+    sector: IndustrySector,
+    sys_t: SystemType,
+    mega: str,
+    pos: list[str],
+) -> None:
+    """
+    Ajuste semântico por metodologia **declarada** no OTM (tipicamente herdada do template).
+
+    - Evita que o viés «finanças → NIST» ou «batch_data_pipeline → NIST» sobreponha um
+      template que já fixou PASTA ou STRIDE.
+    - Documentos com STRIDE por omissão (ex.: testes unitários sem `methodology` no YAML)
+      não recebem estes reforços: só PASTA explícito ou STRIDE+NIST em pipelines de dados.
+    """
+    decl = doc.model_info.methodology
+    if decl == ThreatModelMethodology.PASTA:
+        scores[ThreatModelMethodology.PASTA] += 44.0
+        if sector == IndustrySector.FINANCE:
+            scores[ThreatModelMethodology.NIST_DATA_CENTRIC] -= 26.0
+            pos.append("template declara PASTA em finanças → atenua viés genérico finance→NIST")
+    elif decl == ThreatModelMethodology.STRIDE and sys_t == SystemType.BATCH_DATA_PIPELINE:
+        scores[ThreatModelMethodology.STRIDE] += 38.0
+        scores[ThreatModelMethodology.NIST_DATA_CENTRIC] -= 28.0
+        # Vocabulário ETL/pipeline no texto não deve sobrepor um template que já fixou STRIDE.
+        if has_any(
+            mega,
+            ("etl", "ingest", "ingestão", "transform", "warehouse", "data lake", "pipeline", "armazém"),
+        ):
+            scores[ThreatModelMethodology.NIST_DATA_CENTRIC] -= 22.0
+            pos.append("STRIDE+batch: atenua bónus semântico ETL/pipeline face ao template")
+        pos.append("template declara STRIDE em batch pipeline → equilibra batch→NIST")
+    elif decl == ThreatModelMethodology.NIST_DATA_CENTRIC and sys_t == SystemType.BATCH_DATA_PIPELINE:
+        scores[ThreatModelMethodology.NIST_DATA_CENTRIC] += 14.0
+        pos.append("template declara NIST em pipeline de dados → reforço data-centric")
+
+
+def compute_methodology_ranking(doc: ThreatModelDocument) -> MethodologyRanking:
+    """
+    Pontua todas as metodologias e escolhe a vencedora por ranking (empates quebrados por `_TIE_PRIORITY`).
+
+    Evita o viés da «primeira regra que casa» que empurrava NIST/PLOT4AI/PASTA de forma desproporcional.
+    """
+    text = build_recommendation_context_text(doc)
+    sector = doc.model_info.industry_sector
+    sys_t = doc.model_info.system_type
+    tags_l = [t.lower() for t in (doc.metadata.tags or [])]
+    comp_blob = " ".join(f"{c.name or ''} {c.id or ''}" for c in doc.components).lower()
+    flow_blob = " ".join(f"{f.name or ''} {f.id or ''}" for f in doc.data_flows).lower()
+    mega = f"{text} {comp_blob} {flow_blob}"
+
+    scores: dict[ThreatModelMethodology, float] = {m: 0.0 for m in ThreatModelMethodology}
+    pos: list[str] = []
+
+    stride = 8.0
+    if sys_t in (SystemType.WEB_APPLICATION, SystemType.API_BACKEND, SystemType.HYBRID):
+        stride += 22
+        pos.append("tipo web/api/híbrido → STRIDE")
+    if sys_t == SystemType.MOBILE_APPLICATION:
+        stride += 14
+    if sector == IndustrySector.SAAS:
+        stride += 12
+        pos.append("setor SaaS")
+    if sector == IndustrySector.CLOUD_NATIVE:
+        stride += 10
+    if has_any(mega, ("tenant", "multi-tenant", "multitenant", "bff", "waf", "api gateway")):
+        stride += 10
+    if sys_t == SystemType.BATCH_DATA_PIPELINE:
+        stride -= 10
+    if has_any(mega, ("etl", "ingest", "ingestão", "transform", "data warehouse", "data lake", "pipeline")):
+        stride -= 14
+    scores[ThreatModelMethodology.STRIDE] = stride
+
+    nist = 5.0
+    if sys_t == SystemType.BATCH_DATA_PIPELINE:
+        nist += 38
+        pos.append("batch_data_pipeline → NIST data-centric")
+    if has_any(mega, ("etl", "ingest", "ingestão", "transform", "warehouse", "data lake", "pipeline", "armazém")):
+        nist += 26
+        pos.append("vocabulário ETL/pipeline")
+    if sector == IndustrySector.FINANCE:
+        nist += 32
+        pos.append("setor finanças → NIST data-centric")
+    if sector == IndustrySector.HEALTHCARE and has_any(
+        mega, ("clinical", "ehr", "phi", "paciente", "clínico", "clinical record")
+    ):
+        nist += 10
+    elif sector == IndustrySector.HEALTHCARE:
+        nist += 5
+    if has_any(mega, ("pagamento", "payment", "pci")):
+        nist += 8
+    if sector == IndustrySector.SAAS and sys_t != SystemType.BATCH_DATA_PIPELINE:
+        nist -= 16
+    if has_any(mega, ("privileg", "admin", "pam", "jump", "consola privilegiada", "administrador")):
+        nist -= 8
+    scores[ThreatModelMethodology.NIST_DATA_CENTRIC] = nist
+
+    ld = 3.0
+    if sector == IndustrySector.HEALTHCARE:
+        ld += 34
+        pos.append("setor healthcare → LINDDUN")
+    if has_any(mega, ("phi", "clinical", "ehr", "paciente", "dados clínicos", "hipaa", "registo eletrónico")):
+        ld += 22
+    privacy_kw = ("lgpd", "gdpr", "privacy", "privacidade", "pii", _PII_LITERAL, "consent")
+    if has_any(mega, privacy_kw):
+        hits = sum(1 for k in privacy_kw if k in mega)
+        ld += min(52, 18 + hits * 14)
+    if any(t in tags_l for t in ("healthcare", "phi", "clinical")):
+        ld += 8
+    decl = doc.model_info.methodology
+    if decl == ThreatModelMethodology.LINDDUN:
+        ld += 5
+    scores[ThreatModelMethodology.LINDDUN] = ld
+
+    plot = _plot4ai_recommendation_detail(doc, text)
+    p4 = 0.0
+    if plot is not None:
+        ev_count = max(3, len(plot[1]))
+        p4 = 40.0 + min(42.0, 6.0 * float(ev_count))
+        pos.append("sinais AI/LLM/RAG/PLOT4ai")
+    scores[ThreatModelMethodology.PLOT4AI] = p4
+
+    pasta = 4.0
+    if has_any(mega, ("kill chain", "threat chain", "attack chain", "risk-centric", "cadeia de risco")):
+        pasta += 34
+        pos.append("linguagem de cadeia de risco/ataque (PASTA)")
+    if has_any(mega, ("ataque", "attack", "threat actor", "simulation", "simulação")):
+        pasta += 14
+    if has_any(mega, ("vulnerability", "vulnerabilidade", "exploit")):
+        pasta += 12
+    if has_any(mega, ("enterprise", "avançad", "advanced")) and pasta > 14:
+        pasta += 4
+    scores[ThreatModelMethodology.PASTA] = pasta
+
+    oct = 2.0
+    if has_any(
+        mega,
+        (
+            "risco organizacional",
+            "organizational risk",
+            "inventário de ativos",
+            "inventario de ativos",
+            "asset inventory",
+            "octave",
+            "business impact",
+            "bia",
+        ),
+    ):
+        oct += 30
+        pos.append("contexto OCTAVE/BIA/inventário explícito")
+    if has_any(mega, ("crown jewel", "ativos críticos", "critical asset")):
+        oct += 14
+    scores[ThreatModelMethodology.OCTAVE_ALLEGRO] = oct
+
+    cia = 2.0
+    if has_any(mega, ("workshop", "executivo", "rápido", "iniciante")):
+        cia += 24
+    scores[ThreatModelMethodology.CIA_DIE] = cia
+
+    _apply_declared_methodology_template_alignment(doc, scores, sector, sys_t, mega, pos)
+
+    winner = max(scores, key=lambda m: (scores[m], _TIE_PRIORITY[m]))
+    ordered = sorted(scores, key=lambda m: (scores[m], _TIE_PRIORITY[m]), reverse=True)
+    second = ordered[1] if len(ordered) > 1 else None
+    top = scores[winner]
+    second_v = scores[second] if second is not None else 0.0
+    gap = top - second_v
+
+    if gap >= 12 or top >= 48:
+        conf: Literal["low", "medium", "high"] = "high"
+    elif gap >= 5 or top >= 28:
+        conf = "medium"
+    else:
+        conf = "low"
+
+    counters: list[str] = []
+    for m, v in scores.items():
+        if m != winner and top - v <= 8:
+            counters.append(f"{m.value} competiu com {v:.1f} pts (Δ {top - v:.1f})")
+
+    support_unique = list(dict.fromkeys(pos))[:12]
+    reason = (
+        f"Metodologia `{winner.value}` por ranking ({top:.1f} pts; 2ª `{second.value if second else '—'}` "
+        f"com {second_v:.1f}; gap {gap:.1f})."
+    )
+
+    return MethodologyRanking(
+        scores=scores,
+        winner=winner,
+        runner_up=second,
+        score_gap=round(gap, 2),
+        confidence=conf,
+        supporting_signals=tuple(support_unique),
+        counter_signals=tuple(counters[:10]),
+        reason_summary=reason,
+    )
+
+
 def build_recommendation_rules(
     doc: ThreatModelDocument, text: str
 ) -> list[tuple[bool, ThreatModelMethodology, str, list[str]]]:
     """
-    Cada regra: (predicate, methodology, reason, evidence).
+    Compatível com testes: uma entrada por valor de `ThreatModelMethodology`, com `predicate` só na vencedora.
 
-    `evidence` são factos observáveis no documento — evita explicações vagas.
+    `text` é ignorado porque o ranking recalcula o corpus via `build_recommendation_context_text`.
     """
-    title_snippet = (doc.metadata.title or "")[:80]
-    sector = doc.model_info.industry_sector.value
-    sys_type = doc.model_info.system_type.value
-    plot = _plot4ai_recommendation_detail(doc, text)
-    return [
-        (
-            plot is not None,
-            ThreatModelMethodology.PLOT4AI,
-            plot[0] if plot else "",
-            plot[1] if plot else [],
-        ),
-        (
-            has_any(
-                text,
-                (
-                    "enterprise",
-                    "avançad",
-                    "advanced",
-                    "attack",
-                    "ataque",
-                    "vulnerabilidade",
-                    "vulnerability",
-                    "impacto",
-                    "risk-centric",
-                    "threat chain",
-                    "kill chain",
-                ),
-            ),
-            ThreatModelMethodology.PASTA,
-            "Contexto de análise avançada orientada a ataque, vulnerabilidade ou cadeia de risco (PASTA).",
-            [
-                "Termos como ataque, vulnerabilidade, kill chain ou risk-centric aparecem no "
-                "contexto textual do modelo.",
-            ],
-        ),
-        (
-            has_any(text, ("lgpd", "gdpr", "privacy", "privacidade", "pii", _PII_LITERAL)),
-            ThreatModelMethodology.LINDDUN,
-            "Metodologia LINDDUN recomendada porque o contexto aponta privacidade, PII ou obrigações LGPD/GDPR.",
-            [
-                "O utilizador descreveu privacidade, dados pessoais, PII ou compliance LGPD/GDPR no documento.",
-                f"Setor declarado: {sector}; tipo de sistema: {sys_type}.",
-            ],
-        ),
-        (
-            doc.model_info.industry_sector in {IndustrySector.FINANCE, IndustrySector.HEALTHCARE}
-            or has_any(
-                text,
-                ("pagamento", "payment", "saude", "health", "classificação de dados"),
-            ),
-            ThreatModelMethodology.NIST_DATA_CENTRIC,
-            "Setor ou texto focado em dados sensíveis (finanças, saúde, pagamentos) sugere visão "
-            "centrada em dados (NIST).",
-            [
-                f"Setor do modelo: {sector}.",
-                "Ou o texto menciona pagamentos, saúde ou classificação de dados.",
-            ],
-        ),
-        (
-            has_any(text, ("ativo", "asset", "risco organizacional", "organizacional")),
-            ThreatModelMethodology.OCTAVE_ALLEGRO,
-            "Foco explícito em ativos ou risco organizacional encaixa em OCTAVE Allegro.",
-            [
-                "O texto do modelo refere ativos ou risco organizacional de forma explícita.",
-            ],
-        ),
-        (
-            has_any(text, ("workshop", "executivo", "rápido", "iniciante")),
-            ThreatModelMethodology.CIA_DIE,
-            "Pedido de avaliação rápida ou comunicação executiva inclina para CIA / CIA-DIE.",
-            [
-                "Palavras como workshop, executivo, rápido ou iniciante aparecem no contexto.",
-            ],
-        ),
-        (
-            doc.model_info.system_type
-            in {
-                SystemType.WEB_APPLICATION,
-                SystemType.API_BACKEND,
-                SystemType.HYBRID,
-            }
-            or doc.model_info.industry_sector == IndustrySector.CLOUD_NATIVE,
-            ThreatModelMethodology.STRIDE,
-            "Sistema técnico (web/api/híbrido ou cloud-native) favorece STRIDE como base.",
-            [
-                f"Tipo de sistema: {sys_type}; setor: {sector}.",
-                "Regra de fallback do produto quando não há sinal mais forte.",
-                f"Título de referência: «{title_snippet}».",
-            ],
-        ),
-    ]
+    _ = text
+    ranking = compute_methodology_ranking(doc)
+    rows: list[tuple[bool, ThreatModelMethodology, str, list[str]]] = []
+    for m in ThreatModelMethodology:
+        if m == ranking.winner:
+            ev = list(ranking.supporting_signals) or [ranking.reason_summary]
+            rows.append((True, m, ranking.reason_summary, ev))
+        else:
+            rows.append((False, m, "", []))
+    return rows

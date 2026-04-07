@@ -2,7 +2,7 @@
   "id": "ai-llm-chat",
   "title": "Chat LLM simples",
   "description": "UI → backend → orquestração de prompts → fornecedor de modelo.",
-  "suggested_pack": "saas",
+  "suggested_pack": null,
   "category": "ai_llm",
   "category_label": "AI & LLM",
   "tags": [

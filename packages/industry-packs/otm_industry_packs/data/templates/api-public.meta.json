@@ -2,7 +2,7 @@
   "id": "api-public",
   "title": "API pública simples",
   "description": "Browser/mobile → API gateway → serviço → base de dados.",
-  "suggested_pack": "saas",
+  "suggested_pack": "cloud_native",
   "category": "applications",
   "category_label": "Applications",
   "tags": [

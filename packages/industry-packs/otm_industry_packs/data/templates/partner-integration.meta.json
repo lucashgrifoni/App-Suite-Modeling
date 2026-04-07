@@ -2,7 +2,7 @@
   "id": "partner-integration",
   "title": "Marketplace / integração com parceiro",
   "description": "App interna → API de parceiro → transformação → reconciliação assíncrona.",
-  "suggested_pack": "saas",
+  "suggested_pack": null,
   "category": "integrations",
   "category_label": "Integrations",
   "tags": [

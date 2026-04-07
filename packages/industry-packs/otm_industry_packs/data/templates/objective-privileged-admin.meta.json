@@ -2,7 +2,7 @@
   "id": "objective-privileged-admin",
   "title": "Objetivo: fluxo administrativo privilegiado",
   "description": "Contas e ações com privilégios elevados e impacto elevado.",
-  "suggested_pack": "saas",
+  "suggested_pack": null,
   "category": "objective",
   "category_label": "Objective-based",
   "tags": [

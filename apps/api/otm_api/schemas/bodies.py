@@ -110,6 +110,13 @@ class RecommendMethodologyResponse(BaseModel):
     methodology: ThreatModelMethodology
     reason: str
     explanations: list[ExplanationRecord] = Field(default_factory=list)
+    methodology_scores: dict[str, float] | None = None
+    runner_up_methodology: ThreatModelMethodology | None = None
+    runner_up_score: float | None = None
+    score_gap: float | None = None
+    recommendation_confidence: str | None = None
+    top_supporting_signals: list[str] = Field(default_factory=list)
+    counter_signals: list[str] = Field(default_factory=list)
 
 
 class ExportBody(DocumentBody):

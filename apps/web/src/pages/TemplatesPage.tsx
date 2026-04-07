@@ -173,7 +173,7 @@ export function TemplatesPage() {
       ) : (
         <ul className="space-y-3">
           {items.map((item) => (
-            <li key={item.id}>
+            <li key={item.id} data-testid={`tpl-row-${item.id}`}>
               <Card variant="elevated" className="otm-card-stable-hover">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0 flex-1">

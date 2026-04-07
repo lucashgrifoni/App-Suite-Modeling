@@ -1,7 +1,10 @@
 """
-Definições do catálogo expandido (35 templates) — fonte para emitir `.otm.yaml` + `.meta.json`.
+Definições do catálogo expandido (35 entradas de emissão em `EXPANSION_TEMPLATE_SPECS`).
 
-Manutenção: alterar aqui e executar `python scripts/emit_template_catalog.py`.
+O pacote embarca **38** ficheiros `*.otm.yaml` em `data/templates/` (alguns mantidos fora
+desta lista de expansão). A UI/API listam os 38 via `list_template_ids()`.
+
+Manutenção: alterar aqui e executar `python scripts/emit_template_catalog.py` quando aplicável.
 """
 
 from __future__ import annotations
@@ -112,7 +115,7 @@ def _tier1(app_members: list[str]) -> list[dict[str, Any]]:
     ]
 
 
-# --- 35 templates (lista de expansão) ---
+# --- 35 templates na lista de expansão (≈38 YAML em disco; ver docstring do módulo) ---
 
 EXPANSION_TEMPLATE_SPECS: list[ExpansionTemplateSpec] = [
     ExpansionTemplateSpec(
@@ -1803,7 +1806,7 @@ EXPANSION_TEMPLATE_SPECS: list[ExpansionTemplateSpec] = [
             tags=["healthcare", "phi", "clinical"],
             complexity="high",
             best_for="Sistemas com PHI e requisitos de auditoria clínica.",
-            suggested_pack="saas",
+            suggested_pack="cloud_native",
             suggested_methodology="linddun",
             recommendation_hints=["break_glass_clinical", "minimum_necessary"],
         ),
@@ -1903,7 +1906,7 @@ EXPANSION_TEMPLATE_SPECS: list[ExpansionTemplateSpec] = [
             tags=["pii", "privacy", "compliance"],
             complexity="high",
             best_for="Modelagem centrada em dados e privacidade.",
-            suggested_pack="saas",
+            suggested_pack=None,
             suggested_methodology="linddun",
             recommendation_hints=["data_minimization", "retention_policy"],
         ),
@@ -1966,7 +1969,7 @@ EXPANSION_TEMPLATE_SPECS: list[ExpansionTemplateSpec] = [
             tags=["admin", "privileged", "soc"],
             complexity="high",
             best_for="Revisão de contas privilegiadas e trilhos de aprovação.",
-            suggested_pack="saas",
+            suggested_pack=None,
             suggested_methodology="stride",
             recommendation_hints=["just_in_time_access", "approval_workflow"],
         ),
@@ -2069,7 +2072,7 @@ EXPANSION_TEMPLATE_SPECS: list[ExpansionTemplateSpec] = [
             tags=["ai", "llm", "genai"],
             complexity="medium",
             best_for="Ancorar análise em PLOT4ai e superfícies de prompt/tool.",
-            suggested_pack="saas",
+            suggested_pack=None,
             suggested_methodology="plot4ai",
             recommendation_hints=["plot4ai_layers", "model_provider_trust"],
         ),

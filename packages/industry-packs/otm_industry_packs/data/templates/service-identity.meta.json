@@ -2,7 +2,7 @@
   "id": "service-identity",
   "title": "Machine-to-machine / identidade de serviço",
   "description": "Serviço A → emissão de token → Serviço B → recurso protegido.",
-  "suggested_pack": "cloud_native",
+  "suggested_pack": null,
   "category": "identity_access",
   "category_label": "Identity & Access",
   "tags": [

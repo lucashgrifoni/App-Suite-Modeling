@@ -2,7 +2,7 @@
   "id": "webhook-ingestion",
   "title": "Webhook receiver / ingestão de eventos",
   "description": "Terceiros → endpoint webhook → validação → fila → processamento.",
-  "suggested_pack": "cloud_native",
+  "suggested_pack": "saas",
   "category": "applications",
   "category_label": "Applications",
   "tags": [

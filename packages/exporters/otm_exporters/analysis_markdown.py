@@ -495,6 +495,55 @@ def _append_guided_context_and_audit(
         lines.append("")
 
 
+def _append_aggregate_risk_and_cockpit(lines: list[str], result: AnalysisResult) -> None:
+    """Bloco compacto de consolidação agregada e cockpit executivo (JSON em AnalysisResult)."""
+    ar = result.aggregate_risk
+    dc = result.decision_cockpit
+    if not ar and not dc:
+        return
+    lines.append("### Consolidação de risco e cockpit executivo")
+    lines.append("")
+    if ar:
+        lines.append(
+            f"- **Ameaças activas:** {ar.get('active_threat_count', '—')} · "
+            f"**Score total:** {ar.get('total_risk_score', '—')} · "
+            f"**Média / máx:** {ar.get('mean_risk_score', '—')} / {ar.get('max_risk_score', '—')}"
+        )
+        dist = ar.get("severity_distribution") or {}
+        if dist:
+            lines.append(f"- **Distribuição por severidade:** `{dist}`")
+        top_t = ar.get("top_threats") or []
+        if top_t:
+            lines.append("- **Top ameaças (score):**")
+            for row in top_t[:5]:
+                lines.append(f"  - `{row.get('id')}` — {row.get('title', '')[:80]} (score {row.get('score')})")
+        for label, key in (
+            ("Componentes", "top_components"),
+            ("Fluxos", "top_flows"),
+            ("Ativos", "top_assets"),
+        ):
+            items = ar.get(key) or []
+            if items:
+                lines.append(f"- **{label} mais críticos:** " + ", ".join(f"`{x.get('id')}` ({x.get('aggregate_score')})" for x in items[:4]))
+        themes = ar.get("dominant_themes") or []
+        if themes:
+            lines.append("- **Temas dominantes:** " + "; ".join(str(t) for t in themes[:6]))
+        starters = ar.get("mitigation_starters") or []
+        if starters:
+            lines.append("- **Mitigação inicial:**")
+            for st in starters[:6]:
+                lines.append(f"  - {st}")
+    if dc:
+        lines.append(
+            f"- **Postura:** `{dc.get('risk_posture', '—')}` — {dc.get('headline', '')}"
+        )
+        for kd in dc.get("key_decisions") or []:
+            lines.append(f"  - {kd}")
+        for nr in (dc.get("next_reviews") or [])[:4]:
+            lines.append(f"  - *Rever:* {nr}")
+    lines.append("")
+
+
 def _append_next_steps_from_harmonized(
     lines: list[str],
     result: AnalysisResult,
@@ -554,6 +603,7 @@ def export_analysis_markdown(
     if s.max_risk_score is not None:
         lines.append(f"{msgs.bullet_max_score} **{s.max_risk_score}**")
     _append_framework_aggregate(lines, result, msgs)
+    _append_aggregate_risk_and_cockpit(lines, result)
     lines.append("")
     if result.pack_control_hints:
         lines.append(msgs.pack_control_title)

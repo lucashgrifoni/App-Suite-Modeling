@@ -2,7 +2,7 @@
   "id": "admin-portal",
   "title": "Portal de administração",
   "description": "UI admin → API privilegiada → auditoria → sistemas sensíveis.",
-  "suggested_pack": "saas",
+  "suggested_pack": null,
   "category": "identity_access",
   "category_label": "Identity & Access",
   "tags": [
