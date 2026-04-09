@@ -1,6 +1,6 @@
 # Gate de segurança: falha do workflow se houver achados CRITICAL/HIGH (ou equivalente) em SAST, SCA, IaC, segredos e contrato de API.
 # Observação: segredos expostos são tratados como falha em qualquer severidade (Gitleaks). Semgrep usa severidade ERROR como proxy de alto risco.
-name: Security — SAST, SCA, IaC, Secrets, API
+name: Security (Pipeline)
 
 on:
   push:
