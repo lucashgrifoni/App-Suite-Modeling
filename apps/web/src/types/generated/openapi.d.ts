@@ -2547,6 +2547,11 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RemediationBacklog"];
+                    /**
+                     * @example ## Remediação
+                     *
+                     *     Itens priorizados…
+                     */
                     "text/markdown": string;
                 };
             };
