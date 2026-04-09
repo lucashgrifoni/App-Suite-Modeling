@@ -8,6 +8,14 @@
   --color-mint: #08b98b;
   --color-slate: #5a6876;
   --color-steel: #7c8394;
+  /* Semantic — status / radar / alerts */
+  --semantic-success: var(--color-mint);
+  --semantic-success-muted: rgba(8, 185, 139, 0.14);
+  --semantic-danger: #f87171;
+  --semantic-danger-strong: #ef4444;
+  --semantic-danger-muted: rgba(248, 113, 113, 0.12);
+  --semantic-danger-text: #fecaca;
+  --semantic-surface-deep: #0a0e38;
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
 }
 

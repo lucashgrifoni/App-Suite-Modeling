@@ -2,7 +2,27 @@ import { useEffect, useRef } from "react";
 import { tokens } from "../../lib/tokens";
 import { useReducedMotion } from "../../hooks/useReducedMotion";
 
-type Particle = { x: number; y: number; z: number; vx: number; vy: number; r: number };
+/** Mint / neutral canvas specks plus sparse red “threat” accents (matches semantic danger). */
+type ParticleKind = "mint" | "steel" | "danger";
+
+type Particle = {
+  x: number;
+  y: number;
+  z: number;
+  vx: number;
+  vy: number;
+  r: number;
+  kind: ParticleKind;
+};
+
+/** ~14% red specks — visible on dark hero without overwhelming mint palette. */
+const DANGER_FRACTION = 0.14;
+
+function pickParticleKind(z: number, roll: number): ParticleKind {
+  if (roll < DANGER_FRACTION) return "danger";
+  if (z > 0.55) return "mint";
+  return "steel";
+}
 
 /**
  * Lightweight canvas particle layer — depth via parallax on pointer move (desktop).
@@ -35,14 +55,19 @@ export function ParticleField() {
       canvas.style.height = `${h}px`;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       const count = Math.min(120, Math.floor((w * h) / 18000));
-      particles = Array.from({ length: count }, () => ({
-        x: Math.random() * w,
-        y: Math.random() * h,
-        z: Math.random(),
-        vx: (Math.random() - 0.5) * 0.25,
-        vy: (Math.random() - 0.5) * 0.25,
-        r: Math.random() * 1.8 + 0.4,
-      }));
+      particles = Array.from({ length: count }, () => {
+        const z = Math.random();
+        const kind = pickParticleKind(z, Math.random());
+        return {
+          x: Math.random() * w,
+          y: Math.random() * h,
+          z,
+          vx: (Math.random() - 0.5) * 0.25,
+          vy: (Math.random() - 0.5) * 0.25,
+          r: (kind === "danger" ? 1.15 : 1) * (Math.random() * 1.8 + 0.4),
+          kind,
+        };
+      });
     };
 
     const onMove = (e: MouseEvent) => {
@@ -67,10 +92,15 @@ export function ParticleField() {
         const px = p.x + parallaxX * p.z;
         const py = p.y + parallaxY * p.z;
         ctx.beginPath();
-        ctx.fillStyle =
-          p.z > 0.55
-            ? `rgba(8, 185, 139, ${alpha})`
-            : `rgba(124, 131, 148, ${alpha * 0.7})`;
+        if (p.kind === "danger") {
+          const a = Math.min(0.95, alpha * 0.95 + 0.12);
+          // semantic.dangerStrong #ef4444 — canvas fill (8-digit hex support varies)
+          ctx.fillStyle = `rgba(239, 68, 68, ${a})`;
+        } else if (p.kind === "mint") {
+          ctx.fillStyle = `rgba(8, 185, 139, ${alpha})`;
+        } else {
+          ctx.fillStyle = `rgba(124, 131, 148, ${alpha * 0.7})`;
+        }
         ctx.arc(px, py, p.r, 0, Math.PI * 2);
         ctx.fill();
       }

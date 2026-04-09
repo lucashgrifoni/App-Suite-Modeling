@@ -9,6 +9,13 @@ export default {
         mint: "#08b98b",
         slate: "#5a6876",
         steel: "#7c8394",
+        "surface-deep": "var(--semantic-surface-deep)",
+        danger: {
+          DEFAULT: "var(--semantic-danger)",
+          strong: "var(--semantic-danger-strong)",
+          muted: "var(--semantic-danger-muted)",
+          text: "var(--semantic-danger-text)",
+        },
       },
       fontFamily: {
         sans: [
@@ -32,6 +39,10 @@ export default {
       boxShadow: {
         mint: "0 0 40px rgba(8, 185, 139, 0.35)",
         card: "0 25px 50px -12px rgba(0, 0, 0, 0.45)",
+        "hero-stack":
+          "0 32px 64px -24px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(8, 185, 139, 0.12)",
+        "hero-lip":
+          "0 12px 28px -8px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.06)",
       },
       animation: {
         "pulse-slow": "pulse 5s cubic-bezier(0.4, 0, 0.6, 1) infinite",
