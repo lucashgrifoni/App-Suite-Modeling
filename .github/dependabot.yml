@@ -1,4 +1,5 @@
-# Dependabot — atualização semanal de dependências (pip + npm).
+# Dependabot — weekly dependency updates (pip + npm + GitHub Actions).
+# Grouping below reduces duplicate PR noise after batch updates on main.
 version: 2
 updates:
   - package-ecosystem: pip
@@ -6,23 +7,36 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    commit-message:
+      prefix: chore(deps)
 
   - package-ecosystem: npm
     directory: /apps/web
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
-    # Vite 8 exige @vitejs/plugin-react 6+; PRs separados geram ERESOLVE no npm ci.
+    commit-message:
+      prefix: chore(deps)
     groups:
+      # Vite 8 + plugin-react must move together (avoids npm ci ERESOLVE).
       vite-ecosystem:
         patterns:
           - "vite"
           - "@vitejs/plugin-react"
-    # Tailwind v4 exige @tailwindcss/postcss e migração de CSS; manter v3 até migração explícita.
+      # One PR for unit + E2E runners instead of two separate bumps.
+      test-tooling:
+        patterns:
+          - "vitest"
+          - "@playwright/test"
+      # Patch/minor TypeScript + OpenAPI typings generator tracks together; TS major stays ignored below.
+      typescript-and-openapi:
+        patterns:
+          - "typescript"
+          - "openapi-typescript"
     ignore:
       - dependency-name: tailwindcss
         update-types: ["version-update:semver-major"]
-      # openapi-typescript 7.x declara peer typescript@^5.x; TS 6 quebra npm ci (ERESOLVE).
+      # openapi-typescript 7.x peers typescript@^5; allow patch/minor only via group until peer widens.
       - dependency-name: typescript
         update-types: ["version-update:semver-major"]
 
@@ -31,14 +45,30 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 3
+    commit-message:
+      prefix: chore(deps)
     groups:
       vite-ecosystem:
         patterns:
           - "vite"
           - "@vitejs/plugin-react"
+      # React + types in one PR on minors/patches.
+      react-ecosystem:
+        patterns:
+          - "react"
+          - "react-dom"
+          - "@types/react"
+          - "@types/react-dom"
 
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    commit-message:
+      prefix: chore(deps)
+    groups:
+      # Single consolidated Actions bump (checkout, setup-node, pages/*, etc.).
+      all-actions:
+        patterns:
+          - "*"
