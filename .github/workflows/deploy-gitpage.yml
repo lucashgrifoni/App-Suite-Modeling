@@ -1,4 +1,5 @@
-# Builds the marketing site in gitpage/ and deploys to GitHub Pages.
+# Apenas GitHub Pages: build estático em gitpage/ e publicação via Actions.
+# Scans de segurança, testes e demais CI ficam em ci.yml (não misturar aqui).
 # Repository Settings → Pages → Source: GitHub Actions (required).
 
 name: Deploy GitHub Pages
