@@ -1,7 +1,7 @@
 # Builds the marketing site in gitpage/ and deploys to GitHub Pages.
 # Repository Settings → Pages → Source: GitHub Actions (required).
 
-name: Deploy GitHub Pages (gitpage)
+name: Deploy GitHub Pages
 
 # Dispara em todo push em main/master para não depender de "ter mudado só gitpage/"
 # (evita 404 quando o workflow existe mas nunca rodou por causa de filtro de paths).
