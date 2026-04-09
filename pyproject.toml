@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "open-threat-model"
-version = "7.4.0"
+version = "7.5.0"
 description = "Plataforma open source de Threat Modeling as Code (core, API, CLI, UI)."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -24,7 +24,8 @@ api = [
   # Reservado para persistência pós-MVP (multi-utilizador / histórico); a API atual não importa SQLAlchemy.
   "sqlalchemy>=2.0",
 ]
-cli = ["typer>=0.9", "rich>=13.7"]
+# click>=8.2: Typer subclasses click.Choice as generic; older Click raises "Choice is not subscriptable".
+cli = ["typer>=0.12.3", "rich>=13.7", "click>=8.2"]
 # PDF premium (xhtml2pdf); instalar com: pip install -e ".[report]"
 report = ["xhtml2pdf>=0.2.15"]
 dev = [
@@ -36,6 +37,9 @@ dev = [
   "types-PyYAML>=6.0.12",
   "xhtml2pdf>=0.2.15",
   "bandit>=1.7",
+  # Tests import the CLI; align with [cli] Typer/Click constraints.
+  "typer>=0.12.3",
+  "click>=8.2",
 ]
 # AST leve opcional para `scan_node_express_repo` (env `OTM_REPO_ESPRIMA=1`). Sem isto, mantém-se só heurística regex.
 artifact_import_ast = ["esprima>=4.0.0,<5"]

@@ -13,6 +13,23 @@ This project follows **Keep a Changelog** and **Semantic Versioning**.
 
 ---
 
+## [7.5.0] — 2026-04-09
+
+### Summary
+Release metadata alignment, clearer public changelog narrative, and **Typer/Click** constraints so the CLI and test suite load cleanly on Python 3.12+ (generic `click.Choice` compatibility).
+
+### Highlights
+- **Dependencies:** `typer>=0.12.3` and `click>=8.2` for `[cli]` and `[dev]` — avoids `TypeError: type 'Choice' is not subscriptable` when importing the CLI in tests
+- More consistent, user-facing **CHANGELOG** wording for the capability set shipped in the 7.4 line
+- **SemVer** alignment across `pyproject.toml` and the web app (`7.5.0`) for packaging and GitHub Releases
+- Tag **`v.7.5`** follows the repository’s existing `v.7.x` tagging style
+
+### Improvements
+- Easier mapping between Git tags and package version for adopters and CI
+- Clearer communication of methodology guidance, model validation, and analysis reporting themes
+
+---
+
 ## [7.4.0] — 2026-04-07
 
 ### Summary
