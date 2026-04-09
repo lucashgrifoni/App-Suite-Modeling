@@ -131,6 +131,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+      # xhtml2pdf (extra dev) → pycairo: headers Cairo no Linux (igual ci.yml).
+      - name: Install Cairo build deps (pycairo)
+        run: sudo apt-get update && sudo apt-get install -y libcairo2-dev pkg-config
       - name: Setup Python
         uses: actions/setup-python@v6
         with:

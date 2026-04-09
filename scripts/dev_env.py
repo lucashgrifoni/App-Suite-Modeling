@@ -51,7 +51,9 @@ def npm_run(args: list[str], *, cwd: Path) -> None:
     """
     if sys.platform == "win32":
         line = "npm " + subprocess.list2cmdline(args)
-        subprocess.run(line, cwd=cwd, shell=True, check=True)
+        subprocess.run(  # nosemgrep: python-subprocess-shell-true
+            line, cwd=cwd, shell=True, check=True
+        )  # Windows: npm via cmd evita OSError 193 com shims sem .exe.
         return
     npm = shutil.which("npm")
     if not npm:
@@ -63,7 +65,9 @@ def npm_popen(args: list[str], *, cwd: Path) -> subprocess.Popen:
     """Como ``npm_run``, mas devolve um ``Popen`` (servidor de desenvolvimento)."""
     if sys.platform == "win32":
         line = "npm " + subprocess.list2cmdline(args)
-        return subprocess.Popen(line, cwd=cwd, shell=True)
+        return subprocess.Popen(  # nosemgrep: python-subprocess-shell-true
+            line, cwd=cwd, shell=True
+        )  # Windows: idem npm_run (shim npm.cmd).
     npm = shutil.which("npm")
     if not npm:
         raise FileNotFoundError("npm não encontrado no PATH")

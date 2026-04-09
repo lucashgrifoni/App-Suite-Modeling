@@ -1,0 +1,26 @@
+# Regras mínimas de runtime / footguns para o gate Semgrep (WARNING+ bloqueia no CI).
+# Expandir com regras adicionais conforme SEMGREP_POLICY.md.
+rules:
+  - id: python-dangerous-eval
+    languages: [python]
+    message: Evite eval com entrada não confiável.
+    severity: WARNING
+    pattern: eval($X)
+
+  - id: python-dangerous-exec
+    languages: [python]
+    message: Evite exec com entrada não confiável.
+    severity: WARNING
+    pattern: exec($X)
+
+  - id: python-subprocess-shell-true
+    languages: [python]
+    message: subprocess com shell=True aumenta risco de injeção de comando.
+    severity: WARNING
+    pattern: subprocess.$FUNC(..., shell=True, ...)
+
+  - id: js-dangerous-innerhtml
+    languages: [javascript, typescript]
+    message: innerHTML com dados não confiáveis pode levar a XSS.
+    severity: WARNING
+    pattern: $EL.innerHTML = $X

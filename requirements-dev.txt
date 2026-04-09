@@ -1,0 +1,2 @@
+# Dependências de desenvolvimento + extras usados no CI/Snyk (grafo alinhado a ci.yml).
+-e .[dev,cli,api]
