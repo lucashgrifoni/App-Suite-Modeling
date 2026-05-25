@@ -3,6 +3,8 @@ import type { OtmDocument } from "../types/document";
 import {
   applyDataFlowIdRename,
   applyKnownComponentIdTypoFixes,
+  OTM_ENTITY_ID_REGEX,
+  sanitizeEntityIdInput,
 } from "./documentNormalize";
 
 function minimalDoc(overrides: Partial<OtmDocument> = {}): OtmDocument {
@@ -132,5 +134,43 @@ describe("applyDataFlowIdRename", () => {
     });
     const out = applyDataFlowIdRename(doc, "old", "x");
     expect(out.assets[0].related_data_flow_ids).toEqual(["old"]);
+  });
+});
+
+describe("sanitizeEntityIdInput", () => {
+  it("translitera acentos para ASCII", () => {
+    expect(sanitizeEntityIdInput("Aplicação")).toBe("Aplicacao");
+    expect(sanitizeEntityIdInput("café-João")).toBe("cafe-Joao");
+  });
+
+  it("troca espaços e caracteres especiais por _", () => {
+    expect(sanitizeEntityIdInput("my api")).toBe("my_api");
+    expect(sanitizeEntityIdInput("api@v1")).toBe("api_v1");
+    expect(sanitizeEntityIdInput("a<b>c/d\\e&f")).toBe("a_b_c_d_e_f");
+  });
+
+  it("preserva caracteres já válidos (._-)", () => {
+    expect(sanitizeEntityIdInput("api.v1")).toBe("api.v1");
+    expect(sanitizeEntityIdInput("svc-2_x")).toBe("svc-2_x");
+    expect(sanitizeEntityIdInput("_gate")).toBe("_gate");
+  });
+
+  it("remove . e - iniciais (primeiro caráter tem de ser [a-zA-Z0-9_])", () => {
+    expect(sanitizeEntityIdInput(".hidden")).toBe("hidden");
+    expect(sanitizeEntityIdInput("--api")).toBe("api");
+  });
+
+  it("mantém string vazia como vazia (edição intermédia)", () => {
+    expect(sanitizeEntityIdInput("")).toBe("");
+    expect(sanitizeEntityIdInput("   ")).toBe("___");
+  });
+
+  it("o resultado satisfaz sempre ENTITY_ID_PATTERN quando não vazio", () => {
+    for (const raw of ["Aplicação", "my api", "api@v1", ".x", "café", "100% público"]) {
+      const out = sanitizeEntityIdInput(raw);
+      if (out !== "") {
+        expect(OTM_ENTITY_ID_REGEX.test(out)).toBe(true);
+      }
+    }
   });
 });

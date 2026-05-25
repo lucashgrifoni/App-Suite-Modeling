@@ -20,6 +20,7 @@ import { removeArrayItem, updateArrayItem } from "../utils/collections";
 import {
   applyDataFlowIdRename,
   OTM_ENTITY_ID_REGEX,
+  sanitizeEntityIdInput,
 } from "../utils/documentNormalize";
 import {
   getAdaptiveAnswer,
@@ -328,7 +329,12 @@ export function WizardPage() {
                       idHasTrailingWhitespace(c.id) ? `comp-${idx}-id-trail-hint` : undefined
                     }
                     onChange={(e) => {
-                      setComponents(updateArrayItem(doc.components, idx, { ...c, id: e.target.value }));
+                      setComponents(
+                        updateArrayItem(doc.components, idx, {
+                          ...c,
+                          id: sanitizeEntityIdInput(e.target.value),
+                        }),
+                      );
                     }}
                   />
                   {idHasTrailingWhitespace(c.id) ? (
@@ -444,7 +450,12 @@ export function WizardPage() {
                       if (dirty) setDocument(nextDoc);
                     }}
                     onChange={(e) => {
-                      setFlows(updateArrayItem(doc.data_flows, idx, { ...f, id: e.target.value }));
+                      setFlows(
+                        updateArrayItem(doc.data_flows, idx, {
+                          ...f,
+                          id: sanitizeEntityIdInput(e.target.value),
+                        }),
+                      );
                     }}
                   />
                   {idHasTrailingWhitespace(f.id) ? (

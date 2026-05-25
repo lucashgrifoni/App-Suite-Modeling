@@ -8,6 +8,28 @@ import type { OtmDocument } from "../types/document";
 /** Alinhado a `ENTITY_ID_PATTERN` em `otm_core_schema.entity_id` (só IDs técnicos). */
 export const OTM_ENTITY_ID_REGEX = /^[a-zA-Z0-9_][a-zA-Z0-9_.-]*$/;
 
+/**
+ * Normaliza texto digitado/colado num ID que satisfaz {@link OTM_ENTITY_ID_REGEX}.
+ *
+ * Deixa o utilizador escrever o nome "de qualquer jeito" (acentos, espaços, símbolos)
+ * sem cair no `DOCUMENT_VALIDATION_ERROR` do schema canónico — os campos `name`/`title`
+ * humanos continuam livres; só o `id` técnico precisa ser ASCII seguro para Mermaid,
+ * nomes de ficheiro e contratos de API.
+ *
+ * Regras (em ordem):
+ * 1. translitera acentos para ASCII (ç→c, ã→a, é→e, …) via decomposição Unicode;
+ * 2. troca qualquer caráter fora de `[a-zA-Z0-9_.-]` por `_`;
+ * 3. remove `.`/`-` iniciais (o primeiro caráter tem de ser `[a-zA-Z0-9_]`).
+ *
+ * Mantém string vazia como vazia (estado intermédio de edição), sem forçar conteúdo.
+ */
+export function sanitizeEntityIdInput(raw: string): string {
+  if (typeof raw !== "string" || raw === "") return "";
+  const ascii = raw.normalize("NFKD").replace(/[\u0300-\u036f]/g, "");
+  const replaced = ascii.replace(/[^a-zA-Z0-9_.-]/g, "_");
+  return replaced.replace(/^[.-]+/, "");
+}
+
 /** Pares [id errado, id correcto]; aplicados em ordem se o rename for não ambíguo. */
 const KNOWN_COMPONENT_ID_TYPOS: ReadonlyArray<readonly [string, string]> = [
   ["worke", "worker"],
