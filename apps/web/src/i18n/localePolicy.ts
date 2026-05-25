@@ -36,12 +36,19 @@ export function resolveInitialLocaleFromNavigator(languages: readonly string[]):
 }
 
 /**
- * Idioma inicial quando não há storage válido (browser).
+ * Idioma inicial no browser.
+ *
+ * Política do produto: **inglês é o idioma principal**. Na primeira carga, sem
+ * preferência guardada, abrimos sempre em `en`. A escolha explícita do utilizador
+ * é persistida em {@link LOCALE_STORAGE_KEY} e passa a prevalecer nas cargas
+ * seguintes (incluindo pt-BR).
+ *
+ * A deteção por `navigator` ({@link resolveInitialLocaleFromNavigator}) deixou de
+ * ditar o idioma inicial — continua exportada como utilitário reutilizável.
  */
 export function getInitialLocaleFromWindow(): SupportedLocale {
   if (typeof window === "undefined") return "en";
   const stored = parseStoredLocale(window.localStorage.getItem(LOCALE_STORAGE_KEY));
   if (stored) return stored;
-  const nav = typeof navigator !== "undefined" ? navigator.languages ?? [navigator.language] : [];
-  return resolveInitialLocaleFromNavigator(nav);
+  return "en";
 }

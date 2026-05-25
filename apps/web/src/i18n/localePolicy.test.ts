@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  getInitialLocaleFromWindow,
   LOCALE_STORAGE_KEY,
   parseStoredLocale,
   resolveInitialLocaleFromNavigator,
@@ -40,5 +41,37 @@ describe("resolveInitialLocaleFromNavigator", () => {
     expect(resolveInitialLocaleFromNavigator(["en-US"])).toBe("en");
     expect(resolveInitialLocaleFromNavigator(["fr-FR"])).toBe("en");
     expect(resolveInitialLocaleFromNavigator([])).toBe("en");
+  });
+});
+
+describe("getInitialLocaleFromWindow (English-first)", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  function stubWindow(stored: string | null): void {
+    vi.stubGlobal("window", {
+      localStorage: { getItem: (_k: string) => stored },
+    });
+  }
+
+  it("abre em en por padrão quando não há preferência guardada", () => {
+    stubWindow(null);
+    expect(getInitialLocaleFromWindow()).toBe("en");
+  });
+
+  it("respeita a preferência guardada (pt-BR prevalece)", () => {
+    stubWindow("pt-BR");
+    expect(getInitialLocaleFromWindow()).toBe("pt-BR");
+  });
+
+  it("ignora preferência guardada inválida e cai em en", () => {
+    stubWindow("fr");
+    expect(getInitialLocaleFromWindow()).toBe("en");
+  });
+
+  it("retorna en em ambiente sem window (SSR/node)", () => {
+    // sem stub de window: typeof window === "undefined" no ambiente node
+    expect(getInitialLocaleFromWindow()).toBe("en");
   });
 });
