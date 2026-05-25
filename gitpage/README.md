@@ -70,7 +70,7 @@ The repository includes **`.github/workflows/deploy-gitpage.yml`**, which:
 
 1. **Settings → Pages → Build and deployment**: **Source** = **GitHub Actions** (as in your screenshot).
 2. Commit and push the workflow file (repo root `.github/workflows/`, not inside `gitpage/` — GitHub only loads workflows from there).
-3. Open **Actions** → **Deploy GitHub Pages (gitpage)** → confirm the latest run is **green** (both **build** and **deploy** jobs). The site URL appears on the run summary and under Pages (for a project repo, e.g. `https://lucashgrifoni.github.io/App_Suite_Modeling/` — use the exact name of your repository in the path).
+3. Open **Actions** → **Deploy GitHub Pages (gitpage)** → confirm the latest run is **green** (both **build** and **deploy** jobs). The site URL appears on the run summary and under Pages (for a project repo, e.g. `https://lucashgrifoni.github.io/App-Suite-Modeling/` — use the exact name of your repository in the path).
 
 If GitHub asks to approve the **`github-pages` environment** on first deploy, approve it once in **Settings → Environments**.
 
