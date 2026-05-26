@@ -37,7 +37,7 @@ ruff format packages apps tests
 
 ### Pacotes cobertos (job `python`)
 
-O comando no `.github/workflows/ci.yml` inclui **todos** os pacotes Python de primeira linha e a CLI:
+O comando no `.github/workflows/github-ci-cd.yml` (job `python`) inclui **todos** os pacotes Python de primeira linha e a CLI:
 
 - `packages/core-schema/otm_core_schema`
 - `apps/api/otm_api`

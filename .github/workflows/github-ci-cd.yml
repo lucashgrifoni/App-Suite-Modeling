@@ -1,0 +1,299 @@
+# GitHub CI/CD
+#
+# Quality pipeline for the App Suite Modeling monorepo (Python core + React UI).
+# Adapted from the standard `github-ci-cd.yml` template: same supply-chain
+# hardening, SHA-pinned actions, permissions, and concurrency conventions, but
+# the jobs run this repository's real pipeline instead of the generic
+# single-command Node contract (there is no root package.json).
+#
+# Jobs:
+#   - python : Ruff (lint + format), mypy, import-boundary check, OpenAPI
+#              staleness check, pytest, release smoke suite.
+#   - web    : multi-OS (ubuntu + windows) production build of apps/web.
+#   - web-e2e-smoke / web-e2e-critical / hybrid-e2e : Playwright journeys.
+#
+# Security gates (Semgrep, Snyk, CodeQL, Trivy, Gitleaks, SBOM) live in
+# security-ci-cd.yml and are intentionally not duplicated here.
+#
+# Supply-chain hardening:
+#   - Third-party and first-party actions are pinned to immutable commit SHAs.
+#   - The trailing comment records the semantic tag used to resolve the SHA.
+#   - Keep `.github/dependabot.yml` enabled for `github-actions` so Dependabot
+#     can refresh SHA pins through reviewable pull requests.
+#   - On push, the web build emits an SLSA build-provenance attestation for the
+#     UI build output. It is skipped on pull_request.
+#
+# Harden-Runner egress:
+#   - Start with `egress-policy: audit` for 2-4 weeks per repository, then
+#     switch to `block` with the observed `allowed-endpoints` allowlist.
+#
+# Secrets: none.
+
+name: GitHub CI/CD
+
+on:
+  pull_request:
+    branches:
+      - main
+      - master
+  push:
+    branches:
+      - main
+      - master
+      - develop
+  workflow_dispatch:
+  merge_group:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: project-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.12"
+  NODE_VERSION: "20"
+
+jobs:
+  python:
+    name: Python (lint, types, tests)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@8d3c67de8e2fe68ef647c8db1e6a09f647780f40 # v2
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Setup Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      # xhtml2pdf (extra dev/report) -> svglib -> pycairo needs Cairo headers on
+      # Linux (no manylinux wheel).
+      - name: Install Cairo build deps (pycairo)
+        run: sudo apt-get update && sudo apt-get install -y libcairo2-dev pkg-config
+
+      - name: Install
+        run: pip install -e ".[dev,cli,api]"
+
+      - name: Ruff (lint)
+        run: ruff check packages apps tests
+
+      - name: Ruff (format)
+        run: ruff format --check packages apps tests
+
+      - name: Mypy (monorepo)
+        run: |
+          mypy \
+            packages/core-schema/otm_core_schema \
+            apps/api/otm_api \
+            packages/explainability/otm_explainability \
+            packages/framework-mappings/otm_framework_mappings \
+            packages/diagram-engine/otm_diagram_engine \
+            apps/cli/otm_cli \
+            packages/exporters/otm_exporters \
+            packages/artifact-import/otm_artifact_import \
+            packages/report-premium/otm_report_premium \
+            packages/threat-engine/otm_threat_engine \
+            packages/industry-packs/otm_industry_packs
+
+      - name: Core vs adapter import boundary
+        run: python scripts/check_core_adapter_boundary.py
+
+      - name: OpenAPI contract not stale
+        run: python scripts/verify_openapi_up_to_date.py
+
+      - name: Tests
+        run: python -m pytest
+
+      - name: Smoke suite
+        run: python -m pytest tests/test_smoke_release_candidate.py
+
+  web:
+    name: Web (build multi-OS)
+    needs: python
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      # Exercised only on push (not pull_request) to mint the SLSA attestation.
+      id-token: write
+      attestations: write
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@8d3c67de8e2fe68ef647c8db1e6a09f647780f40 # v2
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Install UI dependencies
+        working-directory: apps/web
+        run: npm ci
+
+      - name: UI build (standard)
+        if: runner.os != 'Windows'
+        working-directory: apps/web
+        run: npm run ci:build
+
+      - name: UI build (portable/windows)
+        if: runner.os == 'Windows'
+        working-directory: apps/web
+        run: npm run ci:build:portable
+
+      - name: Attest UI build provenance (SLSA)
+        if: runner.os != 'Windows' && github.event_name != 'pull_request'
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
+        with:
+          subject-path: apps/web/dist/**
+
+  web-e2e-smoke:
+    name: E2E smoke (UI)
+    needs: web
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@8d3c67de8e2fe68ef647c8db1e6a09f647780f40 # v2
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Install web dependencies
+        working-directory: apps/web
+        run: npm ci
+
+      - name: Install Playwright browser
+        working-directory: apps/web
+        run: node ./node_modules/@playwright/test/cli.js install chromium
+
+      - name: Run UI smoke E2E
+        working-directory: apps/web
+        run: npm run e2e:smoke:portable
+
+  web-e2e-critical:
+    name: E2E critical (mock stack)
+    needs: web
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@8d3c67de8e2fe68ef647c8db1e6a09f647780f40 # v2
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Install web dependencies
+        working-directory: apps/web
+        run: npm ci
+
+      - name: Install Playwright browser
+        working-directory: apps/web
+        run: node ./node_modules/@playwright/test/cli.js install chromium
+
+      - name: E2E critical (mock stack)
+        working-directory: apps/web
+        run: npm run e2e:critical
+
+  hybrid-e2e:
+    name: E2E hybrid (real API + Vite)
+    needs: web
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@8d3c67de8e2fe68ef647c8db1e6a09f647780f40 # v2
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Setup Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Cairo build deps (pycairo)
+        run: sudo apt-get update && sudo apt-get install -y libcairo2-dev pkg-config
+
+      - name: Install Python packages
+        run: pip install -e ".[dev,cli,api]"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Install web and Playwright
+        working-directory: apps/web
+        run: |
+          npm ci
+          node ./node_modules/@playwright/test/cli.js install chromium
+
+      - name: Hybrid E2E (real API + Vite)
+        working-directory: apps/web
+        env:
+          CI: "true"
+        run: npm run e2e:hybrid

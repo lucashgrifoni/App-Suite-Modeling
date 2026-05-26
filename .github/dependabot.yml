@@ -1,44 +1,175 @@
-# Dependabot — atualização semanal de dependências (pip + npm).
+# Dependabot — aligned with the standard template in `5.Templates - YML`,
+# adapted to this monorepo's real manifests:
+#   - github-actions : / (refreshes the SHA pins used by the workflows)
+#   - pip            : / (pyproject.toml / requirements-dev.txt)
+#   - npm            : /apps/web (React UI) and /gitpage (landing site)
+#
+# Conventions applied across every ecosystem:
+#   - groups   : batch minor/patch bumps into fewer reviewable PRs.
+#   - cooldown : delay adopting a new release for a few days so compromised-
+#                release supply-chain attacks (usually detected within a week)
+#                are caught before auto-update.
+#   - ignore   : block automatic major-version jumps; surface majors manually.
 version: 2
+
 updates:
-  - package-ecosystem: pip
-    directory: /
+  # ---------------------------------------------------------------------------
+  # GitHub Actions workflows (refreshes the SHA pins in .github/workflows).
+  # ---------------------------------------------------------------------------
+  - package-ecosystem: "github-actions"
+    directory: "/"
     schedule:
-      interval: weekly
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "America/Sao_Paulo"
     open-pull-requests-limit: 5
-
-  - package-ecosystem: npm
-    directory: /apps/web
-    schedule:
-      interval: weekly
-    open-pull-requests-limit: 5
-    # Vite 8 exige @vitejs/plugin-react 6+; PRs separados geram ERESOLVE no npm ci.
+    labels:
+      - "dependencies"
+      - "github-actions"
+      - "security"
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+    cooldown:
+      default-days: 7
     groups:
-      vite-ecosystem:
+      github-actions:
         patterns:
-          - "vite"
-          - "@vitejs/plugin-react"
-    # Tailwind v4 exige @tailwindcss/postcss e migração de CSS; manter v3 até migração explícita.
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
     ignore:
-      - dependency-name: tailwindcss
-        update-types: ["version-update:semver-major"]
-      # openapi-typescript 7.x declara peer typescript@^5.x; TS 6 quebra npm ci (ERESOLVE).
-      - dependency-name: typescript
-        update-types: ["version-update:semver-major"]
+      - dependency-name: "*"
+        update-types:
+          - "version-update:semver-major"
 
-  - package-ecosystem: npm
-    directory: /gitpage
+  # ---------------------------------------------------------------------------
+  # Python (pyproject.toml + requirements-dev.txt at the repo root).
+  # ---------------------------------------------------------------------------
+  - package-ecosystem: "pip"
+    directory: "/"
     schedule:
-      interval: weekly
-    open-pull-requests-limit: 3
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "America/Sao_Paulo"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "python"
+    commit-message:
+      prefix: "build"
+      include: "scope"
+    cooldown:
+      default-days: 7
+    groups:
+      pip:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - "version-update:semver-major"
+
+  # ---------------------------------------------------------------------------
+  # React UI (apps/web). Vite 8 requires @vitejs/plugin-react 6+; separate PRs
+  # would trigger ERESOLVE on `npm ci`, so they are grouped. Tailwind v4 and
+  # TypeScript 6 majors are held back until an explicit migration.
+  # ---------------------------------------------------------------------------
+  - package-ecosystem: "npm"
+    directory: "/apps/web"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "America/Sao_Paulo"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "npm"
+    commit-message:
+      prefix: "build"
+      include: "scope"
+    cooldown:
+      default-days: 7
+      semver-minor-days: 7
+      semver-patch-days: 3
     groups:
       vite-ecosystem:
         patterns:
           - "vite"
           - "@vitejs/plugin-react"
+      npm-production:
+        dependency-type: "production"
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+      npm-development:
+        dependency-type: "development"
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - "version-update:semver-major"
+      # tailwindcss v4 requires @tailwindcss/postcss and a CSS migration.
+      - dependency-name: "tailwindcss"
+        update-types: ["version-update:semver-major"]
+      # openapi-typescript 7.x declares peer typescript@^5.x; TS 6 breaks npm ci.
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
 
-  - package-ecosystem: github-actions
-    directory: /
+  # ---------------------------------------------------------------------------
+  # Landing site (gitpage). Same Vite grouping rationale as apps/web.
+  # ---------------------------------------------------------------------------
+  - package-ecosystem: "npm"
+    directory: "/gitpage"
     schedule:
-      interval: weekly
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "America/Sao_Paulo"
     open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "npm"
+    commit-message:
+      prefix: "build"
+      include: "scope"
+    cooldown:
+      default-days: 7
+      semver-minor-days: 7
+      semver-patch-days: 3
+    groups:
+      vite-ecosystem:
+        patterns:
+          - "vite"
+          - "@vitejs/plugin-react"
+      npm-production:
+        dependency-type: "production"
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+      npm-development:
+        dependency-type: "development"
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - "version-update:semver-major"

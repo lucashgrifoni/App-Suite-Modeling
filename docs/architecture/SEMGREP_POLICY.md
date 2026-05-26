@@ -2,19 +2,21 @@
 
 ## O que corre no CI
 
-No `.github/workflows/ci.yml`, job **Semgrep**:
+No `.github/workflows/security-ci-cd.yml`, job **SAST - Semgrep**:
 
-- `p/python` — pacotes e apps Python.  
-- `p/typescript` — tipos e TS/TSX em `apps/web/src`.  
-- `p/javascript` — padrões JS genéricos (complementa TS).  
-- `p/react` — anti-padrões comuns em React.
+- `p/security-audit` — regras de segurança multi-linguagem (Python, JS/TS, etc.).  
+- `p/github-actions` — padrões de risco em workflows do GitHub Actions.  
+- `rules/semgrep/appsec-runtime-footguns.yml` — rule pack custom deste repositório.
+
+O scan corre com `--severity WARNING --error` (bloqueia WARNING e ERROR) e publica SARIF.
 
 Comando equivalente local (com Docker):
 
 ```bash
 docker run --rm -v "$PWD:/src" -w /src semgrep/semgrep semgrep scan \
-  --config p/python --config p/typescript --config p/javascript --config p/react \
-  --error packages apps/web/src
+  --config p/security-audit --config p/github-actions \
+  --config rules/semgrep/appsec-runtime-footguns.yml \
+  --severity WARNING --error .
 ```
 
 ## Quando o job falha

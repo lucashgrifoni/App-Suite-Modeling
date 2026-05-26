@@ -1,0 +1,513 @@
+# Security CI/CD
+#
+# Standard security pipeline covering:
+#   - SAST          : Semgrep, Snyk Code, CodeQL
+#   - SCA           : Snyk Open Source, Trivy (filesystem vuln), Dependency Review (PR)
+#   - IaC / Pipeline: Trivy (misconfig), KICS (Checkmarx)
+#   - Secrets       : Trivy (secret), Gitleaks (git history)
+#   - Workflow lint : actionlint
+#   - SBOM          : Trivy (CycloneDX), uploaded as a build artifact
+#
+# Adopted from the standard `security-ci-cd.yml` template. The only project
+# adaptation is the extra Semgrep `--config rules/semgrep/appsec-runtime-footguns.yml`,
+# which keeps this repository's custom runtime-footgun rule pack as a gate.
+#
+# Supply-chain hardening:
+#   - Third-party and first-party actions are pinned to immutable commit SHAs.
+#   - The trailing comment records the semantic tag used to resolve the SHA.
+#   - Keep `.github/dependabot.yml` enabled for `github-actions` so Dependabot
+#     can refresh SHA pins through reviewable pull requests.
+#
+# Harden-Runner egress:
+#   - Start with `egress-policy: audit` for 2-4 weeks per repository.
+#   - Review the Harden-Runner insights/recommended policy for each job.
+#   - Then switch to `egress-policy: block` and add the observed
+#     job-specific `allowed-endpoints` allowlist.
+#   - Block-mode syntax:
+#       egress-policy: block
+#       allowed-endpoints: |
+#         <observed-host>:443
+#
+# Semgrep severity mapping:
+#   - WARNING = medium-severity findings
+#   - ERROR   = high-severity findings
+#
+# Required repository or organization secrets:
+#   - SNYK_TOKEN          : Snyk Code and Snyk Open Source scans
+#   - GITLEAKS_LICENSE    : required only for organizations using the paid
+#                           gitleaks-action license
+#
+# GITHUB_TOKEN is supplied automatically by GitHub Actions.
+# SARIF uploads require `security-events: write`. This permission is set at
+# the workflow level and, when applicable, tightened at job level. On private
+# repositories, SARIF upload and Dependency Review require GitHub Advanced
+# Security; on public repositories both are free.
+
+name: Security CI/CD
+
+on:
+  pull_request:
+    branches:
+      - main
+      - master
+  push:
+    branches:
+      - main
+      - master
+      - develop
+  workflow_dispatch:
+  schedule:
+    - cron: "0 3 * * 1"
+  merge_group:
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+concurrency:
+  group: security-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.13"
+  NODE_VERSION: "20"
+  TRIVY_SEVERITY: "MEDIUM,HIGH,CRITICAL"
+  TRIVY_SKIP_DIRS: ".git,node_modules,dist,build,coverage"
+  SNYK_SEVERITY_THRESHOLD: "medium"
+
+jobs:
+  sast-semgrep:
+    name: SAST - Semgrep
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@8d3c67de8e2fe68ef647c8db1e6a09f647780f40 # v2
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+
+      - name: Setup Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Semgrep
+        # Pinned to an exact version for reproducible scans. Bump deliberately
+        # (or via Dependabot 'pip') rather than floating across releases.
+        run: python -m pip install "semgrep==1.163.0"
+
+      - name: Scan application and workflow code
+        run: |
+          semgrep scan \
+            --config p/security-audit \
+            --config p/github-actions \
+            --config rules/semgrep/appsec-runtime-footguns.yml \
+            --severity WARNING \
+            --sarif --output=semgrep.sarif \
+            --error \
+            --metrics=off \
+            .
+
+      - name: Upload Semgrep SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@9e0d7b8d25671d64c341c19c0152d693099fb5ba # v4.35.5
+        with:
+          sarif_file: semgrep.sarif
+          category: semgrep
+
+  sast-snyk-code:
+    name: SAST - Snyk Code
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@8d3c67de8e2fe68ef647c8db1e6a09f647780f40 # v2
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install Snyk CLI
+        run: npm install -g snyk
+
+      - name: Authenticate Snyk
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: snyk auth "$SNYK_TOKEN"
+
+      - name: Run Snyk Code
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: >
+          snyk code test
+          --severity-threshold=${{ env.SNYK_SEVERITY_THRESHOLD }}
+          --sarif-file-output=snyk-code.sarif
+
+      - name: Upload Snyk Code SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@9e0d7b8d25671d64c341c19c0152d693099fb5ba # v4.35.5
+        with:
+          sarif_file: snyk-code.sarif
+          category: snyk-code
+
+  sast-codeql:
+    name: SAST - CodeQL
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        language:
+          - javascript-typescript
+          - python
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@8d3c67de8e2fe68ef647c8db1e6a09f647780f40 # v2
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@9e0d7b8d25671d64c341c19c0152d693099fb5ba # v4.35.5
+        with:
+          languages: ${{ matrix.language }}
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@9e0d7b8d25671d64c341c19c0152d693099fb5ba # v4.35.5
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@9e0d7b8d25671d64c341c19c0152d693099fb5ba # v4.35.5
+        with:
+          category: "/language:${{ matrix.language }}"
+
+  sca-snyk:
+    name: SCA - Snyk Open Source
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@8d3c67de8e2fe68ef647c8db1e6a09f647780f40 # v2
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install Snyk CLI
+        run: npm install -g snyk
+
+      - name: Authenticate Snyk
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: snyk auth "$SNYK_TOKEN"
+
+      - name: Run Snyk Open Source scan
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: >
+          snyk test
+          --all-projects
+          --severity-threshold=${{ env.SNYK_SEVERITY_THRESHOLD }}
+          --sarif-file-output=snyk-oss.sarif
+
+      - name: Upload Snyk Open Source SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@9e0d7b8d25671d64c341c19c0152d693099fb5ba # v4.35.5
+        with:
+          sarif_file: snyk-oss.sarif
+          category: snyk-oss
+
+  sca-trivy:
+    name: SCA - Trivy
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@8d3c67de8e2fe68ef647c8db1e6a09f647780f40 # v2
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+
+      - name: Scan dependencies for vulnerabilities
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln
+          severity: ${{ env.TRIVY_SEVERITY }}
+          ignore-unfixed: true
+          exit-code: "1"
+          format: sarif
+          output: trivy-deps.sarif
+          skip-dirs: ${{ env.TRIVY_SKIP_DIRS }}
+
+      - name: Upload Trivy dependency SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@9e0d7b8d25671d64c341c19c0152d693099fb5ba # v4.35.5
+        with:
+          sarif_file: trivy-deps.sarif
+          category: trivy-deps
+
+  iac-and-pipeline-trivy:
+    name: IaC and Pipeline - Trivy
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@8d3c67de8e2fe68ef647c8db1e6a09f647780f40 # v2
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+
+      - name: Scan IaC and workflow misconfigurations
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: misconfig
+          severity: ${{ env.TRIVY_SEVERITY }}
+          exit-code: "1"
+          format: sarif
+          output: trivy-iac.sarif
+          skip-dirs: ${{ env.TRIVY_SKIP_DIRS }}
+
+      - name: Upload Trivy IaC SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@9e0d7b8d25671d64c341c19c0152d693099fb5ba # v4.35.5
+        with:
+          sarif_file: trivy-iac.sarif
+          category: trivy-iac
+
+  iac-kics:
+    name: IaC - KICS (Checkmarx)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@8d3c67de8e2fe68ef647c8db1e6a09f647780f40 # v2
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+
+      - name: Scan IaC with KICS
+        uses: Checkmarx/kics-github-action@05aa5eb70eede1355220f4ca5238d96b397e30a6 # v2.1.20
+        with:
+          path: "."
+          output_path: kics-results
+          output_formats: sarif
+          fail_on: medium,high,critical
+          enable_comments: false
+          enable_annotations: false
+          exclude_paths: ".git,node_modules,dist,build,coverage"
+
+      - name: Upload KICS SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@9e0d7b8d25671d64c341c19c0152d693099fb5ba # v4.35.5
+        with:
+          sarif_file: kics-results/results.sarif
+          category: kics
+
+  secrets-trivy:
+    name: Secrets - Trivy
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@8d3c67de8e2fe68ef647c8db1e6a09f647780f40 # v2
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+
+      - name: Scan repository files for secrets
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: secret
+          severity: ${{ env.TRIVY_SEVERITY }}
+          exit-code: "1"
+          format: sarif
+          output: trivy-secrets.sarif
+          skip-dirs: ${{ env.TRIVY_SKIP_DIRS }}
+
+      - name: Upload Trivy secrets SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@9e0d7b8d25671d64c341c19c0152d693099fb5ba # v4.35.5
+        with:
+          sarif_file: trivy-secrets.sarif
+          category: trivy-secrets
+
+  secrets-history-gitleaks:
+    name: Secrets History - Gitleaks
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@8d3c67de8e2fe68ef647c8db1e6a09f647780f40 # v2
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Scan git history for leaked secrets
+        uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+          GITLEAKS_ENABLE_COMMENTS: "false"
+          GITLEAKS_ENABLE_UPLOAD_ARTIFACT: "false"
+          GITLEAKS_ENABLE_SUMMARY: "true"
+
+  dependency-review:
+    name: SCA - Dependency Review (PR)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@8d3c67de8e2fe68ef647c8db1e6a09f647780f40 # v2
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+
+      - name: Review new dependencies introduced by the pull request
+        uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48 # v4
+        with:
+          fail-on-severity: moderate
+          comment-summary-in-pr: on-failure
+          # Opt-in license policy. Tailor to your project and enable ONE of the
+          # two lines below (allow-list is stricter and recommended).
+          # allow-licenses: "MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC"
+          # deny-licenses: "GPL-2.0, GPL-3.0, AGPL-3.0, LGPL-2.1"
+
+  sbom:
+    name: SBOM - CycloneDX
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@8d3c67de8e2fe68ef647c8db1e6a09f647780f40 # v2
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+
+      - name: Generate CycloneDX SBOM
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          format: cyclonedx
+          output: sbom.cdx.json
+          skip-dirs: ${{ env.TRIVY_SKIP_DIRS }}
+
+      - name: Upload SBOM artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: sbom-cyclonedx
+          path: sbom.cdx.json
+          if-no-files-found: error
+          retention-days: 90
+
+  workflow-lint:
+    name: Workflow Lint - actionlint
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@8d3c67de8e2fe68ef647c8db1e6a09f647780f40 # v2
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+
+      - name: Lint GitHub Actions workflows
+        uses: devops-actions/actionlint@9fb9c192862f19e684586ca84b500461bcd8a541 # v0.1.12

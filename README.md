@@ -9,7 +9,7 @@ Define architecture once in a **versioned YAML model**, run **multi-methodology 
 
 > **Python distribution name:** `open-threat-model` (see [`pyproject.toml`](pyproject.toml)). **App Suite Modeling** is the product name in docs and the web UI. Install from a clone: `pip install -e ".[cli]"` (or `.[dev,cli,api]` for full dev parity).
 
-> **CI:** When the repo is public, add a workflow badge for [`.github/workflows/ci.yml`](.github/workflows/ci.yml) (replace `OWNER/REPO` in the shield URL).
+> **CI:** When the repo is public, add a workflow badge for [`.github/workflows/github-ci-cd.yml`](.github/workflows/github-ci-cd.yml) (replace `OWNER/REPO` in the shield URL).
 
 ---
 
@@ -217,7 +217,7 @@ Add PNGs under [`docs/screenshots/`](docs/screenshots/README.md) and swap the pl
 
 Full detail: [KNOWN_LIMITATIONS.md](docs/KNOWN_LIMITATIONS.md)
 
-Test suite (reference): **400+** Python tests in CI when installing `.[dev,cli,api]`—see [CI workflow](.github/workflows/ci.yml).
+Test suite (reference): **400+** Python tests in CI when installing `.[dev,cli,api]`—see [CI workflow](.github/workflows/github-ci-cd.yml).
 
 ---
 
