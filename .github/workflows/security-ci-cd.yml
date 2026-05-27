@@ -86,7 +86,7 @@ jobs:
       security-events: write
     steps:
       - name: Harden runner
-        uses: step-security/harden-runner@8d3c67de8e2fe68ef647c8db1e6a09f647780f40 # v2
+        uses: step-security/harden-runner@ab7a9404c0f3da075243ca237b5fac12c98deaa5 # v2
         with:
           egress-policy: audit
 
@@ -133,7 +133,7 @@ jobs:
       security-events: write
     steps:
       - name: Harden runner
-        uses: step-security/harden-runner@8d3c67de8e2fe68ef647c8db1e6a09f647780f40 # v2
+        uses: step-security/harden-runner@ab7a9404c0f3da075243ca237b5fac12c98deaa5 # v2
         with:
           egress-policy: audit
 
@@ -185,7 +185,7 @@ jobs:
           - python
     steps:
       - name: Harden runner
-        uses: step-security/harden-runner@8d3c67de8e2fe68ef647c8db1e6a09f647780f40 # v2
+        uses: step-security/harden-runner@ab7a9404c0f3da075243ca237b5fac12c98deaa5 # v2
         with:
           egress-policy: audit
 
@@ -216,7 +216,7 @@ jobs:
       security-events: write
     steps:
       - name: Harden runner
-        uses: step-security/harden-runner@8d3c67de8e2fe68ef647c8db1e6a09f647780f40 # v2
+        uses: step-security/harden-runner@ab7a9404c0f3da075243ca237b5fac12c98deaa5 # v2
         with:
           egress-policy: audit
 
@@ -263,7 +263,7 @@ jobs:
       security-events: write
     steps:
       - name: Harden runner
-        uses: step-security/harden-runner@8d3c67de8e2fe68ef647c8db1e6a09f647780f40 # v2
+        uses: step-security/harden-runner@ab7a9404c0f3da075243ca237b5fac12c98deaa5 # v2
         with:
           egress-policy: audit
 
@@ -273,7 +273,7 @@ jobs:
           persist-credentials: false
 
       - name: Scan dependencies for vulnerabilities
-        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # 0.36.0
         with:
           scan-type: fs
           scan-ref: .
@@ -301,7 +301,7 @@ jobs:
       security-events: write
     steps:
       - name: Harden runner
-        uses: step-security/harden-runner@8d3c67de8e2fe68ef647c8db1e6a09f647780f40 # v2
+        uses: step-security/harden-runner@ab7a9404c0f3da075243ca237b5fac12c98deaa5 # v2
         with:
           egress-policy: audit
 
@@ -311,7 +311,7 @@ jobs:
           persist-credentials: false
 
       - name: Scan IaC and workflow misconfigurations
-        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # 0.36.0
         with:
           scan-type: fs
           scan-ref: .
@@ -338,7 +338,7 @@ jobs:
       security-events: write
     steps:
       - name: Harden runner
-        uses: step-security/harden-runner@8d3c67de8e2fe68ef647c8db1e6a09f647780f40 # v2
+        uses: step-security/harden-runner@ab7a9404c0f3da075243ca237b5fac12c98deaa5 # v2
         with:
           egress-policy: audit
 
@@ -374,7 +374,7 @@ jobs:
       security-events: write
     steps:
       - name: Harden runner
-        uses: step-security/harden-runner@8d3c67de8e2fe68ef647c8db1e6a09f647780f40 # v2
+        uses: step-security/harden-runner@ab7a9404c0f3da075243ca237b5fac12c98deaa5 # v2
         with:
           egress-policy: audit
 
@@ -384,7 +384,7 @@ jobs:
           persist-credentials: false
 
       - name: Scan repository files for secrets
-        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # 0.36.0
         with:
           scan-type: fs
           scan-ref: .
@@ -410,7 +410,7 @@ jobs:
       contents: read
     steps:
       - name: Harden runner
-        uses: step-security/harden-runner@8d3c67de8e2fe68ef647c8db1e6a09f647780f40 # v2
+        uses: step-security/harden-runner@ab7a9404c0f3da075243ca237b5fac12c98deaa5 # v2
         with:
           egress-policy: audit
 
@@ -439,7 +439,7 @@ jobs:
       pull-requests: write
     steps:
       - name: Harden runner
-        uses: step-security/harden-runner@8d3c67de8e2fe68ef647c8db1e6a09f647780f40 # v2
+        uses: step-security/harden-runner@ab7a9404c0f3da075243ca237b5fac12c98deaa5 # v2
         with:
           egress-policy: audit
 
@@ -466,7 +466,7 @@ jobs:
       contents: read
     steps:
       - name: Harden runner
-        uses: step-security/harden-runner@8d3c67de8e2fe68ef647c8db1e6a09f647780f40 # v2
+        uses: step-security/harden-runner@ab7a9404c0f3da075243ca237b5fac12c98deaa5 # v2
         with:
           egress-policy: audit
 
@@ -476,7 +476,7 @@ jobs:
           persist-credentials: false
 
       - name: Generate CycloneDX SBOM
-        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # 0.36.0
         with:
           scan-type: fs
           scan-ref: .
@@ -500,7 +500,7 @@ jobs:
       contents: read
     steps:
       - name: Harden runner
-        uses: step-security/harden-runner@8d3c67de8e2fe68ef647c8db1e6a09f647780f40 # v2
+        uses: step-security/harden-runner@ab7a9404c0f3da075243ca237b5fac12c98deaa5 # v2
         with:
           egress-policy: audit
 
