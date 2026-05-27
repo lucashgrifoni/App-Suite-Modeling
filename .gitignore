@@ -54,3 +54,8 @@ apps/web/playwright-report/
 *.tmp
 *.cache
 .env
+
+# Local working material (not versioned)
+melhorias app modeling/
+ARQUIVO_DA_META.md
+_analysis_outputs/

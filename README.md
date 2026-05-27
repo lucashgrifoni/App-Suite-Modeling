@@ -267,7 +267,7 @@ Please **do not** file public issues with exploitable vulnerability details. Use
 
 ## Versioning
 
-Package version lives in `pyproject.toml` (currently **7.2.0**, aligned with `apps/web/package.json`). Tags, RCs, and the relationship to historical milestones (e.g. documented `v0.1.0` scope) are explained in [docs/VERSIONING_AND_TAGS.md](docs/VERSIONING_AND_TAGS.md). Release history: [CHANGELOG.md](CHANGELOG.md).
+Package version lives in `pyproject.toml` (currently **7.5.0**, aligned with `apps/web/package.json`). Tags, RCs, and the relationship to historical milestones (e.g. documented `v0.1.0` scope) are explained in [docs/VERSIONING_AND_TAGS.md](docs/VERSIONING_AND_TAGS.md). Release history: [CHANGELOG.md](CHANGELOG.md).
 
 ---
 

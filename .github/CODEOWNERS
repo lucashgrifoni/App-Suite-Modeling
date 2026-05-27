@@ -1,0 +1,9 @@
+# Default ownership for this single-maintainer repository.
+* @lucashgrifoni
+
+# Sensitive paths.
+.github/workflows/* @lucashgrifoni
+apps/ @lucashgrifoni
+packages/ @lucashgrifoni
+contracts/ @lucashgrifoni
+sonar-project.properties @lucashgrifoni
