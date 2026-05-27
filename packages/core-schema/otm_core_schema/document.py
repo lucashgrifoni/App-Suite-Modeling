@@ -61,6 +61,13 @@ def _validate_data_flow_refs(data_flows: list[DataFlow], *, comp_ids: set[str]) 
             raise ValueError(f"data_flow '{df.id}' to_component '{df.to_component}' not found")
 
 
+def _require_refs_in(refs: list[str], valid_ids: set[str], make_error) -> None:
+    """Raise ValueError(make_error(ref)) for the first ref not present in valid_ids."""
+    for ref in refs:
+        if ref not in valid_ids:
+            raise ValueError(make_error(ref))
+
+
 def _validate_trust_boundary_refs(
     trust_boundaries: list[TrustBoundary],
     *,
@@ -68,15 +75,13 @@ def _validate_trust_boundary_refs(
     flow_ids: set[str],
 ) -> None:
     for tb in trust_boundaries:
-        for mid in tb.member_component_ids:
-            if mid not in comp_ids:
-                raise ValueError(f"trust_boundary '{tb.id}' references unknown component '{mid}'")
-        for fid in tb.crossing_flow_ids:
-            if fid not in flow_ids:
-                raise ValueError(f"trust_boundary '{tb.id}' references unknown data_flow '{fid}'")
-        for oid in tb.outside_component_ids:
-            if oid not in comp_ids:
-                raise ValueError(f"trust_boundary '{tb.id}' references unknown outside component '{oid}'")
+
+        def err(kind: str, _tb: TrustBoundary = tb):
+            return lambda r: f"trust_boundary '{_tb.id}' references unknown {kind} '{r}'"
+
+        _require_refs_in(tb.member_component_ids, comp_ids, err("component"))
+        _require_refs_in(tb.crossing_flow_ids, flow_ids, err("data_flow"))
+        _require_refs_in(tb.outside_component_ids, comp_ids, err("outside component"))
 
 
 def _validate_mitigation_refs(mitigations: list[Mitigation], *, threat_ids: set[str]) -> None:

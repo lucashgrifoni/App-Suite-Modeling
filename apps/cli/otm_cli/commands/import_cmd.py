@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Any
 
 import typer
 from rich.panel import Panel
@@ -14,6 +14,24 @@ from otm_cli.commands.bootstrap import console
 from otm_cli.commands.handle_errors import exit_on_cli_error
 from otm_cli.shared.emit import write_json_file
 from otm_cli.shared.errors import CliUserError
+
+
+def _emit_draft(
+    yaml_text: str,
+    explain_payload: dict[str, Any] | None,
+    *,
+    output: Path | None,
+    explain_out: Path | None,
+) -> None:
+    """Escreve o draft `.otm.yaml` (ou imprime) e, opcionalmente, as inferências em JSON."""
+    if output:
+        output.write_text(yaml_text, encoding="utf-8")
+        console.print(f"[green]Draft[/green] → {output.resolve()}")
+    else:
+        print(yaml_text, end="")
+    if explain_out and explain_payload:
+        write_json_file(payload=explain_payload, output=explain_out)
+        console.print(f"[green]Inferences[/green] → {explain_out.resolve()}")
 
 
 def build_import_app() -> typer.Typer:
@@ -47,14 +65,7 @@ def build_import_app() -> typer.Typer:
         except CliUserError as e:
             exit_on_cli_error(console, e)
 
-        if output:
-            output.write_text(yaml_text, encoding="utf-8")
-            console.print(f"[green]Draft[/green] → {output.resolve()}")
-        else:
-            print(yaml_text, end="")
-        if explain_out and explain_payload:
-            write_json_file(payload=explain_payload, output=explain_out)
-            console.print(f"[green]Inferences[/green] → {explain_out.resolve()}")
+        _emit_draft(yaml_text, explain_payload, output=output, explain_out=explain_out)
         if inferences and output:
             console.print(
                 Panel.fit(
@@ -82,14 +93,7 @@ def build_import_app() -> typer.Typer:
         except CliUserError as e:
             exit_on_cli_error(console, e)
 
-        if output:
-            output.write_text(yaml_text, encoding="utf-8")
-            console.print(f"[green]Draft[/green] → {output.resolve()}")
-        else:
-            print(yaml_text, end="")
-        if explain_out and explain_payload:
-            write_json_file(payload=explain_payload, output=explain_out)
-            console.print(f"[green]Inferences[/green] → {explain_out.resolve()}")
+        _emit_draft(yaml_text, explain_payload, output=output, explain_out=explain_out)
 
     @import_cmd.command("k8s")
     def cmd_import_k8s(
@@ -112,14 +116,7 @@ def build_import_app() -> typer.Typer:
         except CliUserError as e:
             exit_on_cli_error(console, e)
 
-        if output:
-            output.write_text(yaml_text, encoding="utf-8")
-            console.print(f"[green]Draft[/green] → {output.resolve()}")
-        else:
-            print(yaml_text, end="")
-        if explain_out and explain_payload:
-            write_json_file(payload=explain_payload, output=explain_out)
-            console.print(f"[green]Inferences[/green] → {explain_out.resolve()}")
+        _emit_draft(yaml_text, explain_payload, output=output, explain_out=explain_out)
 
     @import_cmd.command("repo")
     def cmd_import_repo(

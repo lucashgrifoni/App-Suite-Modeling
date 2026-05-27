@@ -35,7 +35,7 @@ def enrich_heuristic_threat(
 ) -> HeuristicThreat:
     reg = _resolve_registry(registry)
     refs = reg.refs_for_stride(h.stride)
-    if not refs:
+    if not refs:  # pragma: no cover - shipped registry has refs for every StrideCategory
         return h
     return h.model_copy(update={"framework_refs": refs})
 

@@ -347,6 +347,56 @@ def _item_from_pack_hint(hint: str, seq: int, exp_seq_ref: list[int]) -> Backlog
     )
 
 
+def _collect_backlog_items(result: AnalysisResult, doc: ThreatModelDocument | None) -> list[BacklogItem]:
+    """Constrói os itens de backlog a partir de heurísticas, achados estruturais, fronteiras e pack hints."""
+    items: list[BacklogItem] = []
+    n = 0
+    exp_seq_ref = [0]
+    for t in result.heuristic_threats:
+        if t.skipped_as_duplicate:
+            continue
+        n += 1
+        items.append(_item_from_threat(t, doc, result.methodology, n, exp_seq_ref))
+    for i, sf in enumerate(result.structural_findings):
+        items.append(_item_from_structural(sf.code, sf.message, i, exp_seq_ref))
+    for i, tf in enumerate(result.trust_boundary_findings):
+        items.append(_item_from_trust_boundary(tf.code, tf.message, i, tf.data_flow_id, exp_seq_ref))
+    for i, hint in enumerate(result.pack_control_hints):
+        items.append(_item_from_pack_hint(hint, i, exp_seq_ref))
+    return items
+
+
+def _synergy_notes(by_root: dict[str, list[str]], by_cat: dict[str, list[str]]) -> list[str]:
+    """Notas de sinergia quando vários itens partilham causa raiz ou categoria de identidade."""
+    synergy: list[str] = []
+    for root, ids in by_root.items():
+        if len(ids) >= 3:
+            synergy.append(
+                f"{len(ids)} itens partilham causa raiz `{root}` — avaliar iniciativa única antes de esgotar várias pistas."
+            )
+    for cat, ids in by_cat.items():
+        if cat == "identity_access" and len(ids) >= 2:
+            synergy.append(
+                f"Vários achados ({len(ids)}) em identidade/acesso — um programa IAM unificado pode reduzir risco agregado."
+            )
+    return synergy
+
+
+def _apply_auth_dependencies(items: list[BacklogItem]) -> None:
+    """Liga itens de dados (esforço não trivial) ao primeiro item de identity_access como dependência."""
+    auth_items = [it for it in items if it.suggested_control_type == "identity_access"]
+    if not auth_items:
+        return
+    auth_id = auth_items[0].id
+    for it in items:
+        if it.id == auth_id or it.control_category != "data" or it.effort_estimate == "low":
+            continue
+        deps = list(it.depends_on_action_ids)
+        if auth_id not in deps:
+            deps.append(auth_id)
+        it.depends_on_action_ids = deps
+
+
 def build_remediation_backlog(
     result: AnalysisResult,
     doc: ThreatModelDocument | None = None,
@@ -354,24 +404,7 @@ def build_remediation_backlog(
     """
     Gera backlog a partir da análise. O documento é opcional mas melhora nomes e camadas.
     """
-    items: list[BacklogItem] = []
-    n = 0
-    exp_seq_ref = [0]
-
-    for t in result.heuristic_threats:
-        if t.skipped_as_duplicate:
-            continue
-        n += 1
-        items.append(_item_from_threat(t, doc, result.methodology, n, exp_seq_ref))
-
-    for i, sf in enumerate(result.structural_findings):
-        items.append(_item_from_structural(sf.code, sf.message, i, exp_seq_ref))
-
-    for i, tf in enumerate(result.trust_boundary_findings):
-        items.append(_item_from_trust_boundary(tf.code, tf.message, i, tf.data_flow_id, exp_seq_ref))
-
-    for i, hint in enumerate(result.pack_control_hints):
-        items.append(_item_from_pack_hint(hint, i, exp_seq_ref))
+    items = _collect_backlog_items(result, doc)
 
     if not items:
         return RemediationBacklog(
@@ -407,29 +440,8 @@ def build_remediation_backlog(
     himp = [it.id for it in items if it.impact_estimate == "high"]
     heff = [it.id for it in items if it.effort_estimate == "high"]
 
-    synergy: list[str] = []
-    for root, ids in by_root.items():
-        if len(ids) >= 3:
-            synergy.append(
-                f"{len(ids)} itens partilham causa raiz `{root}` — avaliar iniciativa única antes de esgotar várias pistas."
-            )
-    for cat, ids in by_cat.items():
-        if cat == "identity_access" and len(ids) >= 2:
-            synergy.append(
-                f"Vários achados ({len(ids)}) em identidade/acesso — um programa IAM unificado pode reduzir risco agregado."
-            )
-
-    auth_items = [it for it in items if it.suggested_control_type == "identity_access"]
-    auth_id = auth_items[0].id if auth_items else None
-    if auth_id:
-        for it in items:
-            if it.id == auth_id:
-                continue
-            if it.control_category == "data" and it.effort_estimate != "low":
-                deps = list(it.depends_on_action_ids)
-                if auth_id not in deps:
-                    deps.append(auth_id)
-                it.depends_on_action_ids = deps
+    synergy = _synergy_notes(by_root, by_cat)
+    _apply_auth_dependencies(items)
 
     top5 = [it.id for it in sorted(items, key=lambda x: x.priority_rank)[:5]]
 

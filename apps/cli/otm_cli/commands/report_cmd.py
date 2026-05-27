@@ -89,7 +89,7 @@ def register(app: typer.Typer) -> None:
             )
         except CliUserError as e:
             exit_on_cli_error(console, e)
-        except ReportPdfDependencyError as e:
+        except ReportPdfDependencyError as e:  # pragma: no cover - defensive guard
             console.print(f"[red]{e}[/red]")
             raise typer.Exit(1) from e
 

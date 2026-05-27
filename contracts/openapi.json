@@ -1258,6 +1258,32 @@
             "type": "array",
             "title": "Anti Pattern Hits",
             "description": "Anti-padrões de modelagem alinhados ao template_semantic_profile."
+          },
+          "aggregate_risk": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Aggregate Risk",
+            "description": "Consolidação agregada de severidades, tops e temas (serializável JSON)."
+          },
+          "decision_cockpit": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decision Cockpit",
+            "description": "Resumo executivo de postura e próximos passos."
           }
         },
         "type": "object",
@@ -2868,6 +2894,46 @@
             "type": "object",
             "title": "Methodology Fit Matrix",
             "description": "Adequação por metodologia (stride, pasta, nist_data_centric, …)."
+          },
+          "structure_score": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Structure Score",
+            "description": "Completude estrutural (componentes, fronteiras, fluxos).",
+            "default": 0
+          },
+          "methodology_score": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Methodology Score",
+            "description": "Aderência do modelo à metodologia declarada no documento.",
+            "default": 0
+          },
+          "context_score": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Context Score",
+            "description": "Riqueza de contexto de negócio e classificação de dados.",
+            "default": 0
+          },
+          "overall_score": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Overall Score",
+            "description": "Combinação explícita (média ponderada) dos três eixos.",
+            "default": 0
+          },
+          "methodology_fit_reasons": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Methodology Fit Reasons",
+            "description": "Por que strong/partial/weak para a metodologia efectiva do documento."
           }
         },
         "type": "object",
@@ -3095,6 +3161,77 @@
             },
             "type": "array",
             "title": "Explanations"
+          },
+          "methodology_scores": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "number"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Methodology Scores"
+          },
+          "runner_up_methodology": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ThreatModelMethodology"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "runner_up_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Runner Up Score"
+          },
+          "score_gap": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score Gap"
+          },
+          "recommendation_confidence": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recommendation Confidence"
+          },
+          "top_supporting_signals": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Top Supporting Signals"
+          },
+          "counter_signals": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Counter Signals"
           }
         },
         "type": "object",

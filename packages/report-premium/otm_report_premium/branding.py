@@ -34,19 +34,19 @@ def report_logo_data_uri(*, max_bytes: int = 2_000_000) -> str | None:
                 continue
             b64 = base64.standard_b64encode(raw).decode("ascii")
             return f"data:image/png;base64,{b64}"
-        except OSError:
+        except OSError:  # pragma: no cover - defensive: logo file read error
             continue
 
     # Fallback: recurso empacotado (wheel/sdist)
     try:
         files = resources.files("otm_report_premium")
         logo = files.joinpath("assets", "report_logo.png")
-        if logo.is_file():
+        if logo.is_file():  # pragma: no cover - wheel-only fallback; the local asset path resolves first in-repo
             raw = logo.read_bytes()
             if len(raw) <= max_bytes:
                 b64 = base64.standard_b64encode(raw).decode("ascii")
                 return f"data:image/png;base64,{b64}"
-    except (ModuleNotFoundError, OSError):
+    except (ModuleNotFoundError, OSError):  # pragma: no cover - defensive: packaged-resource access error
         pass
 
     return None

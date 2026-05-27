@@ -250,6 +250,11 @@ footer {
 )
 
 
+_UL_CLOSE = "</ul>"
+_HR_DIVIDER = "<hr class='section-divider'/>"
+_TABLE_SECTION_CLOSE = "</table></section>"
+
+
 def _esc(s: str) -> str:
     return html.escape(s, quote=True)
 
@@ -310,13 +315,8 @@ def _band_css(band: str) -> str:
     return "sev-low"
 
 
-def render_premium_html(payload: PremiumReportPayload) -> str:
-    """
-    Full HTML for xhtml2pdf. Labels and section chrome are **English** (executive PDF).
-    Dynamic threat text follows the payload (may be non-English if model/heuristics are localized).
-    """
+def _html_header(parts: list[str], payload: PremiumReportPayload) -> None:
     c = payload.cover
-    es = payload.executive_summary
     logo_uri = report_logo_data_uri()
     subtitle_parts = []
     if c.model_id_hint:
@@ -324,12 +324,14 @@ def render_premium_html(payload: PremiumReportPayload) -> str:
     subtitle_parts.append(f"{c.system_type} · {c.industry_sector}")
     subtitle = " — ".join(subtitle_parts) if subtitle_parts else f"{c.system_type} · {c.industry_sector}"
 
-    parts: list[str] = [
-        "<!DOCTYPE html><html lang='en'><head><meta charset='utf-8'/>",
-        f"<title>{_esc(c.title)} — App Suite Modeling</title><style>{_S}</style></head><body>",
-        "<header class='report-header'>",
-        "<div class='product-line'>App Suite Modeling</div>",
-    ]
+    parts.extend(
+        [
+            "<!DOCTYPE html><html lang='en'><head><meta charset='utf-8'/>",
+            f"<title>{_esc(c.title)} — App Suite Modeling</title><style>{_S}</style></head><body>",
+            "<header class='report-header'>",
+            "<div class='product-line'>App Suite Modeling</div>",
+        ]
+    )
     if logo_uri:
         parts.append(f"<div class='logo-wrap'><img src='{_esc(logo_uri)}' alt='Logo'/></div>")
     parts.append(f"<h1>{_esc(c.title)}</h1>")
@@ -353,10 +355,33 @@ def render_premium_html(payload: PremiumReportPayload) -> str:
         parts.append("<ul>")
         for bullet in payload.disclaimer.bullets:
             parts.append(f"<li>{_esc(bullet)}</li>")
-        parts.append("</ul>")
+        parts.append(_UL_CLOSE)
     parts.append("</div>")
 
-    parts.append("<hr class='section-divider'/>")
+
+def _html_risk_meter(parts: list[str], payload: PremiumReportPayload) -> None:
+    top = _top_risk_for_exec(payload.top_risks)
+    if not (top and (top.severity_score is not None or top.composite_score)):
+        return
+    score_raw = float(top.severity_score) if top.severity_score is not None else float(top.composite_score)
+    pct = min(100.0, max(5.0, (score_raw / 25.0) * 100.0))
+    if top.priority_tier == "P1":
+        fill_color = _COLOR_P1
+    elif top.priority_tier == "P2":
+        fill_color = _COLOR_P2
+    else:
+        fill_color = _COLOR_P3
+    parts.append("<p class='small-muted'><strong>Top risk score (visual)</strong></p>")
+    parts.append(
+        f"<div class='risk-meter'><div class='risk-meter-fill' style='width:{pct:.0f}%;background:{fill_color};'>"
+        f"</div></div>"
+    )
+
+
+def _html_executive_summary(parts: list[str], payload: PremiumReportPayload) -> None:
+    c = payload.cover
+    es = payload.executive_summary
+    parts.append(_HR_DIVIDER)
     parts.append("<section class='section'><h2>Executive summary</h2>")
     top = _top_risk_for_exec(payload.top_risks)
     tier_line = "No ranked heuristic threats"
@@ -379,47 +404,40 @@ def render_premium_html(payload: PremiumReportPayload) -> str:
     )
     parts.append(f"<li><span class='hl'>Overall status:</span> {status_icon} {_esc(c.overall_status_display)}</li>")
     parts.append(f"<li><span class='hl'>Urgency:</span> {_esc(es.urgency_level)}</li>")
-    parts.append("</ul>")
+    parts.append(_UL_CLOSE)
     if es.top5_risk_titles:
         parts.append("<p class='small-muted' style='margin:10px 0 0 0;'><strong>Top risk themes:</strong></p><ul>")
         for t in es.top5_risk_titles[:5]:
             parts.append(f"<li>{_esc(t[:200])}</li>")
-        parts.append("</ul>")
+        parts.append(_UL_CLOSE)
     parts.append(f"<p style='margin-top:12px;font-size:9pt;color:#334155;'>{_esc(es.executive_conclusion)}</p>")
-    if top and (top.severity_score is not None or top.composite_score):
-        score_raw = float(top.severity_score) if top.severity_score is not None else float(top.composite_score)
-        pct = min(100.0, max(5.0, (score_raw / 25.0) * 100.0))
-        if top.priority_tier == "P1":
-            fill_color = _COLOR_P1
-        elif top.priority_tier == "P2":
-            fill_color = _COLOR_P2
-        else:
-            fill_color = _COLOR_P3
-        parts.append("<p class='small-muted'><strong>Top risk score (visual)</strong></p>")
-        parts.append(
-            f"<div class='risk-meter'><div class='risk-meter-fill' style='width:{pct:.0f}%;background:{fill_color};'>"
-            f"</div></div>"
-        )
+    _html_risk_meter(parts, payload)
     parts.append("<p class='small-muted'>" + _esc(es.business_impact_summary) + "</p>")
     if es.readiness_questions:
         parts.append("<p class='small-muted'><strong>Readiness checks:</strong></p><ul>")
         for q in es.readiness_questions[:5]:
             parts.append(f"<li>{_esc(q)}</li>")
-        parts.append("</ul>")
+        parts.append(_UL_CLOSE)
     parts.append("</div></section>")
 
-    if payload.level != ReportLevel.EXECUTIVE and es.severity_distribution:
-        parts.append("<hr class='section-divider'/>")
-        parts.append("<section class='section'><h2>Severity distribution</h2>")
-        parts.append("<table class='risk-table'><colgroup>")
-        parts.append("<col style='width:40%'/><col style='width:60%'/></colgroup>")
-        parts.append("<tr><th>Severity band</th><th>Count</th></tr>")
-        for band, n in sorted(es.severity_distribution.items()):
-            cls = _band_css(str(band))
-            parts.append(f"<tr><td class='{_esc(cls)}'>{_esc(str(band))}</td><td>{n}</td></tr>")
-        parts.append("</table></section>")
 
-    parts.append("<hr class='section-divider'/>")
+def _html_severity_distribution(parts: list[str], payload: PremiumReportPayload) -> None:
+    es = payload.executive_summary
+    if not (payload.level != ReportLevel.EXECUTIVE and es.severity_distribution):
+        return
+    parts.append(_HR_DIVIDER)
+    parts.append("<section class='section'><h2>Severity distribution</h2>")
+    parts.append("<table class='risk-table'><colgroup>")
+    parts.append("<col style='width:40%'/><col style='width:60%'/></colgroup>")
+    parts.append("<tr><th>Severity band</th><th>Count</th></tr>")
+    for band, n in sorted(es.severity_distribution.items()):
+        cls = _band_css(str(band))
+        parts.append(f"<tr><td class='{_esc(cls)}'>{_esc(str(band))}</td><td>{n}</td></tr>")
+    parts.append(_TABLE_SECTION_CLOSE)
+
+
+def _html_top_risks(parts: list[str], payload: PremiumReportPayload) -> None:
+    parts.append(_HR_DIVIDER)
     parts.append("<section class='section'><h2>Top prioritized risks</h2>")
     parts.append("<p class='small-muted'>Ranked by composite priority (P1 = immediate attention).</p>")
     parts.append("<table class='risk-table'><colgroup>")
@@ -446,10 +464,12 @@ def render_premium_html(payload: PremiumReportPayload) -> str:
         parts.append(f"<td>{_esc(sc)}</td>")
         parts.append(f"<td><span class='badge-tier {_esc(tier_cls)}'>{_esc(rk.priority_tier)}</span></td>")
         parts.append("</tr>")
-    parts.append("</table></section>")
+    parts.append(_TABLE_SECTION_CLOSE)
 
+
+def _html_root_cause_and_roadmap(parts: list[str], payload: PremiumReportPayload) -> None:
     if payload.root_cause_groups:
-        parts.append("<hr class='section-divider'/>")
+        parts.append(_HR_DIVIDER)
         parts.append("<section class='section'><h2>Root cause breakdown</h2>")
         parts.append("<div class='root-grid'>")
         for i, g in enumerate(payload.root_cause_groups[:12]):
@@ -464,7 +484,7 @@ def render_premium_html(payload: PremiumReportPayload) -> str:
         parts.append("</div></section>")
 
     if payload.roadmap:
-        parts.append("<hr class='section-divider'/>")
+        parts.append(_HR_DIVIDER)
         parts.append("<section class='section'><h2>Remediation roadmap</h2>")
         for ph in payload.roadmap:
             h = _roadmap_heading(ph.phase)
@@ -474,22 +494,26 @@ def render_premium_html(payload: PremiumReportPayload) -> str:
             parts.append("</ul></div>")
         parts.append("</section>")
 
+
+def _html_quick_and_strategic(parts: list[str], payload: PremiumReportPayload) -> None:
     if payload.level != ReportLevel.EXECUTIVE and payload.quick_wins:
-        parts.append("<hr class='section-divider'/>")
+        parts.append(_HR_DIVIDER)
         parts.append("<section class='section'><h2>Quick wins</h2><ul>")
         for qw in payload.quick_wins[:12]:
             parts.append(f"<li><strong>{_esc(qw.title[:200])}</strong> — {_esc(qw.rationale[:400])}</li>")
         parts.append("</ul></section>")
 
     if payload.level != ReportLevel.EXECUTIVE and payload.strategic_recommendations:
-        parts.append("<hr class='section-divider'/>")
+        parts.append(_HR_DIVIDER)
         parts.append("<section class='section'><h2>Strategic recommendations</h2>")
         for s in payload.strategic_recommendations[:10]:
             parts.append(f"<h3>{_esc(s.title)}</h3><p>{_esc(s.detail[:600])}</p>")
         parts.append("</section>")
 
+
+def _html_detail_tables(parts: list[str], payload: PremiumReportPayload) -> None:
     if payload.level != ReportLevel.EXECUTIVE and payload.explainability:
-        parts.append("<hr class='section-divider'/>")
+        parts.append(_HR_DIVIDER)
         parts.append("<section class='section'><h2>Explainability (sample)</h2>")
         parts.append("<table class='risk-table'><tr><th>Category</th><th>Message</th><th>Confidence</th></tr>")
         for snippet in payload.explainability[:10]:
@@ -497,10 +521,10 @@ def render_premium_html(payload: PremiumReportPayload) -> str:
             parts.append(
                 f"<tr><td>{_esc(snippet.category)}</td><td>{_esc(snippet.message[:350])}</td><td>{_esc(conf)}</td></tr>"
             )
-        parts.append("</table></section>")
+        parts.append(_TABLE_SECTION_CLOSE)
 
     if payload.level != ReportLevel.EXECUTIVE and payload.business_impacts:
-        parts.append("<hr class='section-divider'/>")
+        parts.append(_HR_DIVIDER)
         parts.append("<section class='section'><h2>Business impact (sample)</h2>")
         parts.append("<table class='risk-table'><tr><th>Threat</th><th>Labels</th><th>Rationale</th></tr>")
         for impact in payload.business_impacts[:8]:
@@ -509,10 +533,12 @@ def render_premium_html(payload: PremiumReportPayload) -> str:
                 f"<tr><td>{_esc(impact.threat_id)}</td><td>{_esc(labels)}</td>"
                 f"<td>{_esc(impact.rationale[:400])}</td></tr>"
             )
-        parts.append("</table></section>")
+        parts.append(_TABLE_SECTION_CLOSE)
 
+
+def _html_exploit_and_baseline(parts: list[str], payload: PremiumReportPayload) -> None:
     if payload.level != ReportLevel.EXECUTIVE and payload.exploitability_profiles:
-        parts.append("<hr class='section-divider'/>")
+        parts.append(_HR_DIVIDER)
         parts.append("<section class='section'><h2>Exploitability context (sample)</h2>")
         parts.append("<table class='risk-table'><tr><th>Threat</th><th>Locality</th><th>Notes</th></tr>")
         for profile in payload.exploitability_profiles[:8]:
@@ -520,13 +546,28 @@ def render_premium_html(payload: PremiumReportPayload) -> str:
                 f"<tr><td>{_esc(profile.threat_id)}</td><td>{_esc(profile.attack_locality)}</td>"
                 f"<td>{_esc(profile.notes[:450])}</td></tr>"
             )
-        parts.append("</table></section>")
+        parts.append(_TABLE_SECTION_CLOSE)
 
     if payload.baseline_diff and payload.baseline_diff.has_baseline:
-        parts.append("<hr class='section-divider'/>")
+        parts.append(_HR_DIVIDER)
         parts.append("<section class='section'><h2>Baseline / delta</h2>")
         parts.append(f"<p>{_esc(payload.baseline_diff.narrative)}</p></section>")
 
+
+def render_premium_html(payload: PremiumReportPayload) -> str:
+    """
+    Full HTML for xhtml2pdf. Labels and section chrome are **English** (executive PDF).
+    Dynamic threat text follows the payload (may be non-English if model/heuristics are localized).
+    """
+    parts: list[str] = []
+    _html_header(parts, payload)
+    _html_executive_summary(parts, payload)
+    _html_severity_distribution(parts, payload)
+    _html_top_risks(parts, payload)
+    _html_root_cause_and_roadmap(parts, payload)
+    _html_quick_and_strategic(parts, payload)
+    _html_detail_tables(parts, payload)
+    _html_exploit_and_baseline(parts, payload)
     parts.append(
         "<footer>App Suite Modeling — Premium security report. "
         "Full technical detail: export Markdown or JSON analysis bundle.</footer></body></html>"

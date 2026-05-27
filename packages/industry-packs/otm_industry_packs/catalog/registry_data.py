@@ -12,6 +12,15 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+# Rótulos de agrupamento reutilizados em vários templates (constantes evitam duplicação literal).
+_LBL_DATABASE = "Base de dados"
+_LBL_CLOUD_INFRA = "Cloud & Infra"
+_LBL_IDENTITY_ACCESS = "Identity & Access"
+_LBL_APPLICATION = "Aplicação"
+_LBL_ACCOUNT_VPC = "Conta / VPC"
+_LBL_AI_LLM = "AI & LLM"
+_LBL_LLM_PROVIDER = "Fornecedor LLM"
+
 
 @dataclass(frozen=True)
 class ExpansionTemplateSpec:
@@ -160,7 +169,7 @@ EXPANSION_TEMPLATE_SPECS: list[ExpansionTemplateSpec] = [
                 },
                 {
                     "id": "db",
-                    "name": "Base de dados",
+                    "name": _LBL_DATABASE,
                     "kind": "datastore",
                     "technology": "PostgreSQL",
                     "in_trust_boundary": "app_tier",
@@ -230,7 +239,7 @@ EXPANSION_TEMPLATE_SPECS: list[ExpansionTemplateSpec] = [
                 },
                 {
                     "id": "db",
-                    "name": "Base de dados",
+                    "name": _LBL_DATABASE,
                     "kind": "datastore",
                     "technology": "PostgreSQL",
                     "in_trust_boundary": "app_tier",
@@ -507,7 +516,7 @@ EXPANSION_TEMPLATE_SPECS: list[ExpansionTemplateSpec] = [
             title="Serverless API",
             description="API Gateway → funções → BD gerida → segredos e logging.",
             category="cloud_infra",
-            category_label="Cloud & Infra",
+            category_label=_LBL_CLOUD_INFRA,
             tags=["serverless", "faas", "managed"],
             complexity="medium",
             best_for="APIs em funções com serviços geridos.",
@@ -570,7 +579,7 @@ EXPANSION_TEMPLATE_SPECS: list[ExpansionTemplateSpec] = [
             title="Plataforma de contentores (sem Kubernetes)",
             description="LB/WAF → contentores de aplicação → cache → BD.",
             category="cloud_infra",
-            category_label="Cloud & Infra",
+            category_label=_LBL_CLOUD_INFRA,
             tags=["containers", "lb", "cache"],
             complexity="medium",
             best_for="Workloads em contentores orquestrados por serviço gerido.",
@@ -607,7 +616,7 @@ EXPANSION_TEMPLATE_SPECS: list[ExpansionTemplateSpec] = [
                 },
                 {
                     "id": "db",
-                    "name": "Base de dados",
+                    "name": _LBL_DATABASE,
                     "kind": "datastore",
                     "technology": "PostgreSQL",
                     "in_trust_boundary": "app_tier",
@@ -627,7 +636,7 @@ EXPANSION_TEMPLATE_SPECS: list[ExpansionTemplateSpec] = [
             title="Cloud-native completo",
             description="Ingress → workloads → serviços internos → cache → BD → observabilidade.",
             category="cloud_infra",
-            category_label="Cloud & Infra",
+            category_label=_LBL_CLOUD_INFRA,
             tags=["kubernetes", "observability", "mesh"],
             complexity="high",
             best_for="Arquiteturas K8s com observabilidade e serviços internos.",
@@ -664,7 +673,7 @@ EXPANSION_TEMPLATE_SPECS: list[ExpansionTemplateSpec] = [
                 },
                 {
                     "id": "db",
-                    "name": "Base de dados",
+                    "name": _LBL_DATABASE,
                     "kind": "datastore",
                     "technology": "PostgreSQL",
                     "in_trust_boundary": "app_tier",
@@ -698,7 +707,7 @@ EXPANSION_TEMPLATE_SPECS: list[ExpansionTemplateSpec] = [
             title="Batch / jobs agendados",
             description="Agendador → worker → armazenamento → API externa.",
             category="cloud_infra",
-            category_label="Cloud & Infra",
+            category_label=_LBL_CLOUD_INFRA,
             tags=["batch", "scheduler", "cron"],
             complexity="medium",
             best_for="Processamento periódico e integrações batch.",
@@ -763,7 +772,7 @@ EXPANSION_TEMPLATE_SPECS: list[ExpansionTemplateSpec] = [
             title="Pipeline de dados / ETL",
             description="Ingestão → transformação → fila → armazém / data lake.",
             category="cloud_infra",
-            category_label="Cloud & Infra",
+            category_label=_LBL_CLOUD_INFRA,
             tags=["etl", "data", "warehouse"],
             complexity="high",
             best_for="Pipelines analíticos e integração de fontes múltiplas.",
@@ -825,7 +834,7 @@ EXPANSION_TEMPLATE_SPECS: list[ExpansionTemplateSpec] = [
             title="SSO / OIDC / SAML",
             description="Utilizador → aplicação → IdP → tokens/sessão → serviços a jusante.",
             category="identity_access",
-            category_label="Identity & Access",
+            category_label=_LBL_IDENTITY_ACCESS,
             tags=["sso", "oidc", "saml"],
             complexity="high",
             best_for="Federar identidade e sessão com protocolos standard.",
@@ -845,7 +854,7 @@ EXPANSION_TEMPLATE_SPECS: list[ExpansionTemplateSpec] = [
             boundaries=_tier1(["app", "idp", "api"]),
             components=[
                 {"id": "user", "name": "Utilizador", "kind": "user", "in_trust_boundary": "internet"},
-                {"id": "app", "name": "Aplicação", "kind": "process", "in_trust_boundary": "app_tier"},
+                {"id": "app", "name": _LBL_APPLICATION, "kind": "process", "in_trust_boundary": "app_tier"},
                 {
                     "id": "idp",
                     "name": "Identity Provider",
@@ -888,7 +897,7 @@ EXPANSION_TEMPLATE_SPECS: list[ExpansionTemplateSpec] = [
             title="Portal de administração",
             description="UI admin → API privilegiada → auditoria → sistemas sensíveis.",
             category="identity_access",
-            category_label="Identity & Access",
+            category_label=_LBL_IDENTITY_ACCESS,
             tags=["admin", "audit", "privileged"],
             complexity="high",
             best_for="Operações administrativas com trilho de auditoria.",
@@ -952,7 +961,7 @@ EXPANSION_TEMPLATE_SPECS: list[ExpansionTemplateSpec] = [
             title="Machine-to-machine / identidade de serviço",
             description="Serviço A → emissão de token → Serviço B → recurso protegido.",
             category="identity_access",
-            category_label="Identity & Access",
+            category_label=_LBL_IDENTITY_ACCESS,
             tags=["m2m", "oauth_client", "jwt"],
             complexity="medium",
             best_for="Chamadas serviço-a-serviço com credenciais de workload.",
@@ -1015,7 +1024,7 @@ EXPANSION_TEMPLATE_SPECS: list[ExpansionTemplateSpec] = [
             title="PAM / ações privilegiadas",
             description="Admin/operador → aprovação → gateway de ação → sistemas alvo.",
             category="identity_access",
-            category_label="Identity & Access",
+            category_label=_LBL_IDENTITY_ACCESS,
             tags=["pam", "approval", "privileged"],
             complexity="high",
             best_for="Elevar privilégio com workflow e registo.",
@@ -1153,7 +1162,7 @@ EXPANSION_TEMPLATE_SPECS: list[ExpansionTemplateSpec] = [
             assumptions=["Retry com backoff e idempotência."],
             boundaries=[
                 {"id": "internet", "name": "Internet"},
-                {"id": "app_tier", "name": "Conta / VPC", "member_component_ids": ["svc", "db"]},
+                {"id": "app_tier", "name": _LBL_ACCOUNT_VPC, "member_component_ids": ["svc", "db"]},
             ],
             components=[
                 {"id": "svc", "name": "Serviço interno", "kind": "process", "in_trust_boundary": "app_tier"},
@@ -1294,7 +1303,7 @@ EXPANSION_TEMPLATE_SPECS: list[ExpansionTemplateSpec] = [
             title="Chat LLM simples",
             description="UI → backend → orquestração de prompts → fornecedor de modelo.",
             category="ai_llm",
-            category_label="AI & LLM",
+            category_label=_LBL_AI_LLM,
             tags=["llm", "chat", "genai"],
             complexity="medium",
             best_for="Assistência conversacional com modelo alojado externamente.",
@@ -1313,7 +1322,7 @@ EXPANSION_TEMPLATE_SPECS: list[ExpansionTemplateSpec] = [
             assumptions=["Sem dados sensíveis em prompts sem controlo."],
             boundaries=[
                 {"id": "internet", "name": "Internet"},
-                {"id": "app_tier", "name": "Conta / VPC", "member_component_ids": ["ui", "orch"]},
+                {"id": "app_tier", "name": _LBL_ACCOUNT_VPC, "member_component_ids": ["ui", "orch"]},
             ],
             components=[
                 {"id": "user", "name": "Utilizador", "kind": "user", "in_trust_boundary": "internet"},
@@ -1321,7 +1330,7 @@ EXPANSION_TEMPLATE_SPECS: list[ExpansionTemplateSpec] = [
                 {"id": "orch", "name": "Orquestração de prompts", "kind": "process", "in_trust_boundary": "app_tier"},
                 {
                     "id": "provider",
-                    "name": "Fornecedor LLM",
+                    "name": _LBL_LLM_PROVIDER,
                     "kind": "external_entity",
                     "in_trust_boundary": "internet",
                 },
@@ -1346,7 +1355,7 @@ EXPANSION_TEMPLATE_SPECS: list[ExpansionTemplateSpec] = [
             title="RAG corporativo",
             description="UI → API de retrieval → vector DB → arquivo de documentos → fornecedor LLM.",
             category="ai_llm",
-            category_label="AI & LLM",
+            category_label=_LBL_AI_LLM,
             tags=["rag", "vector", "enterprise"],
             complexity="high",
             best_for="Respostas fundamentadas em corpus interno com embeddings.",
@@ -1367,7 +1376,7 @@ EXPANSION_TEMPLATE_SPECS: list[ExpansionTemplateSpec] = [
                 {"id": "internet", "name": "Internet"},
                 {
                     "id": "app_tier",
-                    "name": "Conta / VPC",
+                    "name": _LBL_ACCOUNT_VPC,
                     "member_component_ids": ["ui", "retrieval", "vdb", "docs"],
                 },
             ],
@@ -1389,7 +1398,7 @@ EXPANSION_TEMPLATE_SPECS: list[ExpansionTemplateSpec] = [
                     "technology": "Object/SQL",
                     "in_trust_boundary": "app_tier",
                 },
-                {"id": "llm", "name": "Fornecedor LLM", "kind": "external_entity", "in_trust_boundary": "internet"},
+                {"id": "llm", "name": _LBL_LLM_PROVIDER, "kind": "external_entity", "in_trust_boundary": "internet"},
             ],
             flows=[
                 {"id": "u_ui", "from_component": "user", "to_component": "ui", "protocol": "HTTPS", "encrypted": True},
@@ -1425,7 +1434,7 @@ EXPANSION_TEMPLATE_SPECS: list[ExpansionTemplateSpec] = [
             title="Agente com tool use",
             description="Operador/utilizador → orquestrador de agente → ferramentas → aprovação/auditoria.",
             category="ai_llm",
-            category_label="AI & LLM",
+            category_label=_LBL_AI_LLM,
             tags=["agent", "tools", "governance"],
             complexity="high",
             best_for="Automação com chamadas a ferramentas e trilho de aprovação.",
@@ -1482,7 +1491,7 @@ EXPANSION_TEMPLATE_SPECS: list[ExpansionTemplateSpec] = [
             title="Copilot interno com dados sensíveis",
             description="Portal do colaborador → controlo de acesso → sistemas HR/Finanças → orquestração LLM.",
             category="ai_llm",
-            category_label="AI & LLM",
+            category_label=_LBL_AI_LLM,
             tags=["copilot", "hr", "sensitive"],
             complexity="high",
             best_for="Assistência sobre dados internos altamente sensíveis.",
@@ -1539,7 +1548,7 @@ EXPANSION_TEMPLATE_SPECS: list[ExpansionTemplateSpec] = [
             title="Pipeline de inferência",
             description="Upload/API → pré-processamento → fornecedor de modelo → armazenamento de resultados → workflow.",
             category="ai_llm",
-            category_label="AI & LLM",
+            category_label=_LBL_AI_LLM,
             tags=["inference", "mlops", "batch"],
             complexity="high",
             best_for="Fluxos de inferência com pré/pós-processamento e arquivo de resultados.",
@@ -1558,7 +1567,7 @@ EXPANSION_TEMPLATE_SPECS: list[ExpansionTemplateSpec] = [
             assumptions=["Versão de modelo e dados de treino registadas."],
             boundaries=[
                 {"id": "internet", "name": "Internet"},
-                {"id": "app_tier", "name": "Conta / VPC", "member_component_ids": ["ingress", "pre", "out", "wf"]},
+                {"id": "app_tier", "name": _LBL_ACCOUNT_VPC, "member_component_ids": ["ingress", "pre", "out", "wf"]},
             ],
             components=[
                 {"id": "ingress", "name": "Entrada (API/upload)", "kind": "gateway", "in_trust_boundary": "app_tier"},
@@ -1623,7 +1632,7 @@ EXPANSION_TEMPLATE_SPECS: list[ExpansionTemplateSpec] = [
                     "technology": "PSP",
                     "in_trust_boundary": "app_tier",
                 },
-                {"id": "db", "name": "Base de dados", "kind": "datastore", "in_trust_boundary": "app_tier"},
+                {"id": "db", "name": _LBL_DATABASE, "kind": "datastore", "in_trust_boundary": "app_tier"},
             ],
             flows=[
                 {"id": "u_s", "from_component": "user", "to_component": "shop", "protocol": "HTTPS", "encrypted": True},
@@ -1750,7 +1759,7 @@ EXPANSION_TEMPLATE_SPECS: list[ExpansionTemplateSpec] = [
             assumptions=["Dispositivos com autenticação mútua quando possível."],
             boundaries=[
                 {"id": "internet", "name": "Internet"},
-                {"id": "app_tier", "name": "Conta / VPC", "member_component_ids": ["portal", "dispatch", "tel"]},
+                {"id": "app_tier", "name": _LBL_ACCOUNT_VPC, "member_component_ids": ["portal", "dispatch", "tel"]},
             ],
             components=[
                 {"id": "user", "name": "Operador", "kind": "user", "in_trust_boundary": "internet"},
@@ -1888,7 +1897,7 @@ EXPANSION_TEMPLATE_SPECS: list[ExpansionTemplateSpec] = [
             components=[
                 {"id": "user", "name": "Cliente Internet", "kind": "user", "in_trust_boundary": "internet"},
                 {"id": "edge", "name": "Borda (WAF/LB)", "kind": "gateway", "in_trust_boundary": "app_tier"},
-                {"id": "app", "name": "Aplicação", "kind": "process", "in_trust_boundary": "app_tier"},
+                {"id": "app", "name": _LBL_APPLICATION, "kind": "process", "in_trust_boundary": "app_tier"},
             ],
             flows=[
                 {"id": "u_e", "from_component": "user", "to_component": "edge", "protocol": "HTTPS", "encrypted": True},
@@ -2033,7 +2042,7 @@ EXPANSION_TEMPLATE_SPECS: list[ExpansionTemplateSpec] = [
             assumptions=["Inventário de subprocessadores mantido."],
             boundaries=[
                 {"id": "internet", "name": "Internet"},
-                {"id": "app_tier", "name": "Conta / VPC", "member_component_ids": ["core"]},
+                {"id": "app_tier", "name": _LBL_ACCOUNT_VPC, "member_component_ids": ["core"]},
             ],
             components=[
                 {"id": "user", "name": "Cliente", "kind": "user", "in_trust_boundary": "internet"},
@@ -2087,13 +2096,13 @@ EXPANSION_TEMPLATE_SPECS: list[ExpansionTemplateSpec] = [
             assumptions=["Política de retenção de prompts definida."],
             boundaries=[
                 {"id": "internet", "name": "Internet"},
-                {"id": "app_tier", "name": "Conta / VPC", "member_component_ids": ["app", "orch"]},
+                {"id": "app_tier", "name": _LBL_ACCOUNT_VPC, "member_component_ids": ["app", "orch"]},
             ],
             components=[
                 {"id": "user", "name": "Utilizador", "kind": "user", "in_trust_boundary": "internet"},
-                {"id": "app", "name": "Aplicação", "kind": "process", "in_trust_boundary": "app_tier"},
+                {"id": "app", "name": _LBL_APPLICATION, "kind": "process", "in_trust_boundary": "app_tier"},
                 {"id": "orch", "name": "Orquestração IA", "kind": "process", "in_trust_boundary": "app_tier"},
-                {"id": "llm", "name": "Fornecedor LLM", "kind": "external_entity", "in_trust_boundary": "internet"},
+                {"id": "llm", "name": _LBL_LLM_PROVIDER, "kind": "external_entity", "in_trust_boundary": "internet"},
             ],
             flows=[
                 {"id": "u_a", "from_component": "user", "to_component": "app", "protocol": "HTTPS", "encrypted": True},

@@ -6,6 +6,7 @@ Usada no pré-check e em relatórios — heurística, não garantia de cobertura
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Literal
 
 from otm_core_schema.document import ThreatModelDocument
@@ -35,17 +36,20 @@ def _rich_flow_ratio(doc: ThreatModelDocument) -> float:
     return rich / max(1, len(doc.data_flows))
 
 
-def fit_for_methodology(
-    doc: ThreatModelDocument,
-    methodology: ThreatModelMethodology,
-) -> FitLevel:
-    """
-    Avalia se o documento tem contexto suficiente para a metodologia indicada.
-    """
-    has_assets = len(doc.assets) > 0
-    has_boundaries = len(doc.trust_boundaries) > 0
+@dataclass(frozen=True)
+class _FitContext:
+    has_assets: bool
+    has_boundaries: bool
+    has_obj: bool
+    has_privacy_cue: bool
+    classified: int
+    flow_rich: float
+    asset_count: int
+    has_import_signals: bool
+
+
+def _build_fit_context(doc: ThreatModelDocument) -> _FitContext:
     bc = doc.business_context
-    has_obj = bool(bc and (bc.business_objectives or bc.business_goals))
     has_privacy_cue = bool(
         bc
         and (
@@ -53,60 +57,84 @@ def fit_for_methodology(
             or (bc.regulatory_context and "priv" in bc.regulatory_context.lower())
         )
     )
-    classified = _classified_assets_count(doc)
-    flow_rich = _rich_flow_ratio(doc)
+    return _FitContext(
+        has_assets=len(doc.assets) > 0,
+        has_boundaries=len(doc.trust_boundaries) > 0,
+        has_obj=bool(bc and (bc.business_objectives or bc.business_goals)),
+        has_privacy_cue=has_privacy_cue,
+        classified=_classified_assets_count(doc),
+        flow_rich=_rich_flow_ratio(doc),
+        asset_count=len(doc.assets),
+        has_import_signals=bool(doc.import_signals_corpus),
+    )
 
-    if methodology == ThreatModelMethodology.STRIDE:
-        if has_assets and has_boundaries and flow_rich >= 0.34:
-            return "strong"
-        if has_assets or has_boundaries:
-            return "partial"
+
+def _fit_stride(c: _FitContext) -> FitLevel:
+    if c.has_assets and c.has_boundaries and c.flow_rich >= 0.34:
+        return "strong"
+    return "partial" if (c.has_assets or c.has_boundaries) else "weak"
+
+
+def _fit_pasta(c: _FitContext) -> FitLevel:
+    if c.has_obj and c.has_assets and c.classified > 0:
+        return "strong"
+    return "partial" if (c.has_obj or c.has_assets) else "weak"
+
+
+def _fit_nist(c: _FitContext) -> FitLevel:
+    if not c.has_assets:
         return "weak"
+    if c.classified >= max(1, c.asset_count // 2):
+        return "strong"
+    return "partial" if c.classified > 0 else "weak"
 
-    if methodology == ThreatModelMethodology.PASTA:
-        if has_obj and has_assets and classified > 0:
-            return "strong"
-        if has_obj or has_assets:
-            return "partial"
-        return "weak"
 
-    if methodology == ThreatModelMethodology.NIST_DATA_CENTRIC:
-        if not has_assets:
-            return "weak"
-        if classified >= max(1, len(doc.assets) // 2):
-            return "strong"
-        if classified > 0:
-            return "partial"
-        return "weak"
+def _fit_linddun(c: _FitContext) -> FitLevel:
+    if c.has_privacy_cue and c.has_assets:
+        return "strong"
+    return "partial" if (c.has_privacy_cue or c.has_assets) else "weak"
 
-    if methodology == ThreatModelMethodology.LINDDUN:
-        if has_privacy_cue and has_assets:
-            return "strong"
-        if has_privacy_cue or has_assets:
-            return "partial"
-        return "weak"
 
-    if methodology == ThreatModelMethodology.PLOT4AI:
-        return "partial" if doc.import_signals_corpus else "weak"
+def _fit_plot4ai(c: _FitContext) -> FitLevel:
+    return "partial" if c.has_import_signals else "weak"
 
-    if methodology == ThreatModelMethodology.OCTAVE_ALLEGRO:
-        if has_obj and has_assets and classified >= max(1, min(2, len(doc.assets) // 2)):
-            return "strong"
-        if has_assets and has_obj:
-            return "partial"
-        if has_assets or has_obj:
-            return "partial"
-        return "weak"
 
-    if methodology == ThreatModelMethodology.CIA_DIE:
-        if has_boundaries and has_assets:
-            return "strong"
-        if has_boundaries or has_assets:
-            return "partial"
-        return "weak"
+def _fit_octave(c: _FitContext) -> FitLevel:
+    if c.has_obj and c.has_assets and c.classified >= max(1, min(2, c.asset_count // 2)):
+        return "strong"
+    return "partial" if (c.has_assets or c.has_obj) else "weak"
 
+
+def _fit_cia(c: _FitContext) -> FitLevel:
+    if c.has_boundaries and c.has_assets:
+        return "strong"
+    return "partial" if (c.has_boundaries or c.has_assets) else "weak"
+
+
+_FIT_FUNCS = {
+    ThreatModelMethodology.STRIDE: _fit_stride,
+    ThreatModelMethodology.PASTA: _fit_pasta,
+    ThreatModelMethodology.NIST_DATA_CENTRIC: _fit_nist,
+    ThreatModelMethodology.LINDDUN: _fit_linddun,
+    ThreatModelMethodology.PLOT4AI: _fit_plot4ai,
+    ThreatModelMethodology.OCTAVE_ALLEGRO: _fit_octave,
+    ThreatModelMethodology.CIA_DIE: _fit_cia,
+}
+
+
+def fit_for_methodology(
+    doc: ThreatModelDocument,
+    methodology: ThreatModelMethodology,
+) -> FitLevel:
+    """
+    Avalia se o documento tem contexto suficiente para a metodologia indicada.
+    """
+    ctx = _build_fit_context(doc)
+    fn = _FIT_FUNCS.get(methodology)
+    if fn is not None:
+        return fn(ctx)
     # Demais metodologias: conservador
-    return "partial" if (has_assets and has_boundaries) else "weak"
+    return "partial" if (ctx.has_assets and ctx.has_boundaries) else "weak"  # pragma: no cover - unreachable
 
 
 def build_methodology_fit_matrix(doc: ThreatModelDocument) -> dict[str, str]:

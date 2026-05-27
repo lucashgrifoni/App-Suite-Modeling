@@ -41,7 +41,7 @@ def test_benchmark_wave_cases_meet_golden_minimums(template_id: str) -> None:
     assert r.model_quality_precheck.score_0_100 >= exp["min_model_completeness_score"]
     assert r.methodology_completeness is not None
     assert r.methodology_completeness.state.value in exp["methodology_completeness_stride"]
-    m = compute_benchmark_metrics(doc, r)
+    m = compute_benchmark_metrics(r)
     assert m.model_completeness_score >= exp["min_model_completeness_score"]
     assert 0.0 <= m.specificity_ratio <= 1.0
     if exp.get("stride_fit_matrix_strong_or_partial") and r.model_quality_precheck:
@@ -104,7 +104,7 @@ evidence_suggestions: []
 def test_benchmark_metrics_has_expected_keys() -> None:
     doc = load_document_from_yaml_path(_ROOT / "examples" / "minimal.otm.yaml")
     r = analyze_document(doc)
-    m = compute_benchmark_metrics(doc, r)
+    m = compute_benchmark_metrics(r)
     assert m.top_10_actionability_score >= 0.0
     assert m.methodology_delta >= 0.0
     assert 0.0 <= m.anti_pattern_signal_density <= 1.0

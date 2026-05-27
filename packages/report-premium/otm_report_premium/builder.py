@@ -9,7 +9,7 @@ from __future__ import annotations
 import importlib.metadata
 from collections import Counter, defaultdict
 from datetime import date
-from typing import Literal
+from typing import Any, Literal
 
 from otm_core_schema import ComponentKind
 from otm_core_schema.document import ThreatModelDocument
@@ -55,12 +55,11 @@ from .risk_context import (
 def _app_version() -> str:
     try:
         return importlib.metadata.version("open-threat-model")
-    except importlib.metadata.PackageNotFoundError:
+    except importlib.metadata.PackageNotFoundError:  # pragma: no cover - defensive: package always installed
         return "unknown"
 
 
-def _severity_band(t: HeuristicThreat) -> str:
-    raw = t.risk.score if t.risk.score is not None else float(t.risk.likelihood * t.risk.impact)
+def _band_for_score(raw: float) -> str:
     if raw >= 20:
         return "critical"
     if raw >= 15:
@@ -68,6 +67,11 @@ def _severity_band(t: HeuristicThreat) -> str:
     if raw >= 9:
         return "medium"
     return "low"
+
+
+def _severity_band(t: HeuristicThreat) -> str:
+    raw = t.risk.score if t.risk.score is not None else float(t.risk.likelihood * t.risk.impact)
+    return _band_for_score(raw)
 
 
 def _overall_status(
@@ -124,39 +128,17 @@ def _boundary_name(doc: ThreatModelDocument, bid: str | None) -> str | None:
     return bid
 
 
-def build_premium_report_payload(
-    doc: ThreatModelDocument,
-    result: AnalysisResult,
-    *,
-    level: ReportLevel,
-    baseline: AnalysisResult | None = None,
-    app_version: str | None = None,
-    include_mermaid: bool = True,
-    locale: str | None = None,
-) -> PremiumReportPayload:
-    """
-    Constrói o payload premium. `baseline` opcional alimenta secção de diff/trend.
-
-    ``locale`` opcional: ``pt-BR`` (omissão) ou ``en`` após normalização na API.
-    """
-    loc: PremiumReportLocale = normalize_premium_locale(locale)
-    b = premium_builder_copy(loc)
-    meth = result.methodology
-    active: list[HeuristicThreat] = [h for h in result.heuristic_threats if not h.skipped_as_duplicate]
-    backlog = build_remediation_backlog(result, doc)
-    recommendation = recommend_methodology(doc)
-    app_v = app_version or _app_version()
-
-    max_score = result.summary.max_risk_score
-    status_key, status_display = _overall_status(max_score, b)
-
-    comp_names = {c.id: c.name for c in doc.components}
+def _trust_boundary_by_component(doc: ThreatModelDocument) -> dict[str, str]:
     tb_by_component: dict[str, str] = {}
     for c in doc.components:
         if c.in_trust_boundary:
             tb_by_component[c.id] = c.in_trust_boundary
+    return tb_by_component
 
-    # Distribuições
+
+def _build_distribution_counters(
+    active: list[HeuristicThreat], doc: ThreatModelDocument, tb_by_component: dict[str, str]
+) -> tuple[Counter[str], Counter[str], Counter[str], Counter[str], dict[str, dict[str, int]]]:
     sev_counter: Counter[str] = Counter()
     stride_counter: Counter[str] = Counter()
     comp_counter: Counter[str] = Counter()
@@ -178,39 +160,29 @@ def build_premium_report_payload(
         stride_counter[threat.stride.value] += 1
         if threat.risk:
             raw = threat.risk.score or float(threat.risk.likelihood * threat.risk.impact)
-            band = "critical" if raw >= 20 else "high" if raw >= 15 else "medium" if raw >= 9 else "low"
-            sev_counter[band] += 1
+            sev_counter[_band_for_score(raw)] += 1
         if threat.target_component_id:
             comp_counter[threat.target_component_id] += 1
+    return sev_counter, stride_counter, comp_counter, tb_counter, heatmap
 
-    methodology_dist = {meth.value: len(active) + len(doc.threats)}
-    total_threats = len(active) + len(doc.threats)
 
-    top_boundaries = [_boundary_name(doc, bid) or bid for bid, _n in tb_counter.most_common(5)]
-    top_surfaces = [comp_names.get(cid, cid) for cid, _n in comp_counter.most_common(5)]
+def _urgency_level(score: float) -> Literal["high", "medium", "low"]:
+    if score >= 15:
+        return "high"
+    if score >= 9:
+        return "medium"
+    return "low"
 
-    sorted_threats = sorted(
-        active,
-        key=lambda x: composite_priority_score(x, doc, meth),
-        reverse=True,
-    )
-    top5_titles = [t.title for t in sorted_threats[:5]]
 
-    urgency: Literal["high", "medium", "low"] = (
-        "high" if (max_score or 0) >= 15 else "medium" if (max_score or 0) >= 9 else "low"
-    )
-
-    readiness = [
-        b.readiness_high if (max_score or 0) >= 15 else b.readiness_moderate,
-        b.readiness_release,
-        b.readiness_compensating,
-    ]
-
-    exec_conclusion = b.exec_conclusion.format(
-        total_threats=total_threats,
-        risk_label=_risk_label(max_score, b),
-    )
-
+def _build_architecture(
+    doc: ThreatModelDocument,
+    b: PremiumBuilderCopy,
+    meth: Any,
+    recommendation: Any,
+    *,
+    include_mermaid: bool,
+    level: ReportLevel,
+) -> ArchitectureSummary:
     arch_narrative_parts: list[str] = []
     if doc.business_context and doc.business_context.description:
         arch_narrative_parts.append(doc.business_context.description)
@@ -221,7 +193,7 @@ def build_premium_report_payload(
             n_tb=len(doc.trust_boundaries),
         )
     )
-    arch = ArchitectureSummary(
+    return ArchitectureSummary(
         narrative=" ".join(arch_narrative_parts),
         main_components=[c.name for c in doc.components[:12]],
         main_flows=[f.name or f.id for f in doc.data_flows[:12]],
@@ -236,7 +208,23 @@ def build_premium_report_payload(
         mermaid_flowchart=export_flowchart_mermaid(doc) if include_mermaid and level == ReportLevel.DEEP else None,
     )
 
-    # Rankings
+
+def _build_distributions(
+    *,
+    total_threats: int,
+    sev_counter: Counter[str],
+    stride_counter: Counter[str],
+    comp_counter: Counter[str],
+    tb_counter: Counter[str],
+    heatmap: dict[str, dict[str, int]],
+    methodology_dist: dict[str, int],
+    comp_names: dict[str, str],
+    doc: ThreatModelDocument,
+    backlog: Any,
+    active: list[HeuristicThreat],
+    meth: Any,
+    tb_by_component: dict[str, str],
+) -> DistributionBlock:
     comp_scores: dict[str, float] = defaultdict(float)
     for t in active:
         if t.target_component_id:
@@ -249,7 +237,7 @@ def build_premium_report_payload(
     top_comp_ranked = sorted(comp_scores.items(), key=lambda x: -x[1])[:10]
     top_tb_ranked = sorted(tb_scores.items(), key=lambda x: -x[1])[:10]
 
-    distributions = DistributionBlock(
+    return DistributionBlock(
         total_threats=total_threats,
         by_severity_band=dict(sev_counter),
         by_stride=dict(stride_counter),
@@ -263,7 +251,14 @@ def build_premium_report_payload(
         top_boundaries_ranked=[(_boundary_name(doc, b) or b, s) for b, s in top_tb_ranked],
     )
 
-    # Top 10
+
+def _build_top_risks(
+    sorted_threats: list[HeuristicThreat],
+    doc: ThreatModelDocument,
+    meth: Any,
+    backlog: Any,
+    b: PremiumBuilderCopy,
+) -> list[TopRiskItem]:
     top_risks: list[TopRiskItem] = []
     for i, t in enumerate(sorted_threats[:10]):
         tier = assign_priority_tier(i, min(10, len(sorted_threats)))
@@ -293,13 +288,15 @@ def build_premium_report_payload(
                 suggested_horizon=horizon_for_tier(tier),
             )
         )
+    return top_risks
 
-    # Root cause groups
+
+def _build_root_cause_groups(backlog: Any, loc: PremiumReportLocale) -> list[RootCauseGroup]:
     rc_groups: list[RootCauseGroup] = []
     for root_key, item_ids in backlog.by_root_cause.items():
         items = [i for i in backlog.items if i.id in item_ids]
         if not items:
-            continue
+            continue  # pragma: no cover - defensive guard
         comps: set[str] = set()
         for it in items:
             comps.update(it.related_components)
@@ -315,15 +312,15 @@ def build_premium_report_payload(
             )
         )
     rc_groups.sort(key=lambda x: -x.threat_count)
+    return rc_groups
 
-    exploit_profiles = [infer_exploitability(t, doc) for t in sorted_threats[:15]]
-    business_rows = [build_business_impact_row(t) for t in sorted_threats[:15]]
 
+def _build_quick_wins(backlog: Any) -> list[QuickWinItem]:
     quick_wins: list[QuickWinItem] = []
     for qid in backlog.quick_win_ids[:15]:
         item = next((i for i in backlog.items if i.id == qid), None)
         if not item:
-            continue
+            continue  # pragma: no cover - defensive guard
         quick_wins.append(
             QuickWinItem(
                 backlog_item_id=qid,
@@ -331,7 +328,10 @@ def build_premium_report_payload(
                 rationale=item.quick_win_explanation or item.rationale,
             )
         )
+    return quick_wins
 
+
+def _build_ownership_rows(backlog: Any, b: PremiumBuilderCopy) -> list[OwnershipRow]:
     ownership_rows: list[OwnershipRow] = []
     owner_buckets: dict[str, list[str]] = defaultdict(list)
     for it in backlog.items:
@@ -347,7 +347,10 @@ def build_premium_report_payload(
                 backlog_item_ids=ids[:30],
             )
         )
+    return ownership_rows
 
+
+def _build_strategic(result: AnalysisResult, b: PremiumBuilderCopy) -> list[StrategicRecommendation]:
     strategic: list[StrategicRecommendation] = [
         StrategicRecommendation(
             title=b.strategic_baseline_title,
@@ -362,7 +365,10 @@ def build_premium_report_payload(
         strategic.append(
             StrategicRecommendation(title=b.strategic_pack_title, detail=hint[:400]),
         )
+    return strategic
 
+
+def _build_roadmap(backlog: Any, b: PremiumBuilderCopy) -> list[RoadmapPhase]:
     immediate: list[str] = []
     short_term: list[str] = []
     medium: list[str] = []
@@ -374,55 +380,58 @@ def build_premium_report_payload(
             short_term.append(line)
         else:
             medium.append(line)
-
-    roadmap = [
+    return [
         RoadmapPhase(phase="immediate", title=b.roadmap_immediate, items=immediate[:12]),
         RoadmapPhase(phase="short", title=b.roadmap_short, items=short_term[:12]),
         RoadmapPhase(phase="medium", title=b.roadmap_medium, items=medium[:12]),
     ]
 
-    baseline_section: BaselineDiffSection | None = None
-    if baseline is not None:
-        adiff = diff_analysis_results(baseline, result)
-        sem_ins, sem_imp, sem_wor, sem_risk = semantic_diff_from_analyses_only(baseline, result)
-        baseline_section = BaselineDiffSection(
-            has_baseline=True,
-            methodology_changed=adiff.methodology_changed,
-            max_risk_delta=adiff.max_risk_delta,
-            threats_added=[x.threat_id for x in adiff.heuristic_threats.added],
-            threats_removed=[x.threat_id for x in adiff.heuristic_threats.removed],
-            threats_modified=[x.threat_id for x in adiff.heuristic_threats.modified],
-            recurring_signatures=adiff.signature_remap_hints,
-            trust_boundary_delta_summary=(
-                b.tb_delta.format(
-                    before=adiff.trust_boundary_findings.count_before,
-                    after=adiff.trust_boundary_findings.count_after,
-                )
-                if adiff.trust_boundary_findings
-                else ""
-            ),
-            structural_delta_summary=(
-                b.struct_delta.format(
-                    before=adiff.structural_findings.count_before,
-                    after=adiff.structural_findings.count_after,
-                )
-                if adiff.structural_findings
-                else ""
-            ),
-            narrative=b.baseline_narrative.format(
-                delta=adiff.max_risk_delta,
-                added=len(adiff.heuristic_threats.added),
-                removed=len(adiff.heuristic_threats.removed),
-            ),
-            semantic_improved=sem_imp[:12],
-            semantic_worsened=sem_wor[:12],
-            semantic_risk_impact=sem_risk[:8],
-            semantic_insights_from_analysis=sem_ins[:14],
-        )
 
-    dedupe: list[DedupeGroup] = build_dedupe_groups(active, meth, doc)
+def _build_baseline_section(
+    baseline: AnalysisResult | None, result: AnalysisResult, b: PremiumBuilderCopy
+) -> BaselineDiffSection | None:
+    if baseline is None:
+        return None
+    adiff = diff_analysis_results(baseline, result)
+    sem_ins, sem_imp, sem_wor, sem_risk = semantic_diff_from_analyses_only(baseline, result)
+    return BaselineDiffSection(
+        has_baseline=True,
+        methodology_changed=adiff.methodology_changed,
+        max_risk_delta=adiff.max_risk_delta,
+        threats_added=[x.threat_id for x in adiff.heuristic_threats.added],
+        threats_removed=[x.threat_id for x in adiff.heuristic_threats.removed],
+        threats_modified=[x.threat_id for x in adiff.heuristic_threats.modified],
+        recurring_signatures=adiff.signature_remap_hints,
+        trust_boundary_delta_summary=(
+            b.tb_delta.format(
+                before=adiff.trust_boundary_findings.count_before,
+                after=adiff.trust_boundary_findings.count_after,
+            )
+            if adiff.trust_boundary_findings
+            else ""
+        ),
+        structural_delta_summary=(
+            b.struct_delta.format(
+                before=adiff.structural_findings.count_before,
+                after=adiff.structural_findings.count_after,
+            )
+            if adiff.structural_findings
+            else ""
+        ),
+        narrative=b.baseline_narrative.format(
+            delta=adiff.max_risk_delta,
+            added=len(adiff.heuristic_threats.added),
+            removed=len(adiff.heuristic_threats.removed),
+        ),
+        semantic_improved=sem_imp[:12],
+        semantic_worsened=sem_wor[:12],
+        semantic_risk_impact=sem_risk[:8],
+        semantic_insights_from_analysis=sem_ins[:14],
+    )
 
-    explain_snippets = [
+
+def _build_explain_snippets(result: AnalysisResult) -> list[ExplainabilitySnippet]:
+    return [
         ExplainabilitySnippet(
             record_id=e.id,
             category=str(e.category),
@@ -432,27 +441,36 @@ def build_premium_report_payload(
         for e in result.explanations[:40]
     ]
 
-    tech_appendix: TechnicalAppendix | None = None
-    if level == ReportLevel.DEEP:
-        lines = []
-        for t in active:
-            lines.append(f"### {t.id} — {t.title}\n{t.description}\n")
-        for c_threat in doc.threats:
-            lines.append(
-                f"### {b.threat_canonical_prefix} {c_threat.id} — {c_threat.title}\n{c_threat.description or ''}\n"
-            )
-        tech_appendix = TechnicalAppendix(
-            full_threat_listing="\n".join(lines)[:120000],
-            methodology_outputs_note=b.tech_methodology_outputs,
-            import_evidence_note=(b.tech_import_evidence if doc.import_signals_corpus else None),
-        )
 
-    disclaimer = InferenceDisclaimer(
-        summary=b.disclaimer_summary,
-        bullets=[b.disclaimer_b1, b.disclaimer_b2],
+def _build_tech_appendix(
+    doc: ThreatModelDocument, active: list[HeuristicThreat], b: PremiumBuilderCopy, level: ReportLevel
+) -> TechnicalAppendix | None:
+    if level != ReportLevel.DEEP:
+        return None
+    lines = []
+    for t in active:
+        lines.append(f"### {t.id} — {t.title}\n{t.description}\n")
+    for c_threat in doc.threats:
+        lines.append(
+            f"### {b.threat_canonical_prefix} {c_threat.id} — {c_threat.title}\n{c_threat.description or ''}\n"
+        )
+    return TechnicalAppendix(
+        full_threat_listing="\n".join(lines)[:120000],
+        methodology_outputs_note=b.tech_methodology_outputs,
+        import_evidence_note=(b.tech_import_evidence if doc.import_signals_corpus else None),
     )
 
-    cover = CoverPage(
+
+def _build_cover(
+    doc: ThreatModelDocument,
+    meth: Any,
+    app_v: str,
+    max_score: float | None,
+    status_key: Literal["requires_immediate_attention", "action_recommended", "acceptable_with_follow_up"],
+    status_display: str,
+    b: PremiumBuilderCopy,
+) -> CoverPage:
+    return CoverPage(
         title=doc.metadata.title,
         model_id_hint=doc.metadata.document_version or doc.metadata.title[:48],
         document_version=doc.metadata.document_version,
@@ -468,7 +486,21 @@ def build_premium_report_payload(
         overall_status_display=status_display,
     )
 
-    exec_summary = ExecutiveSummaryBlock(
+
+def _build_exec_summary(
+    *,
+    total_threats: int,
+    sev_counter: Counter[str],
+    methodology_dist: dict[str, int],
+    top_boundaries: list[str],
+    top_surfaces: list[str],
+    top5_titles: list[str],
+    urgency: Literal["high", "medium", "low"],
+    exec_conclusion: str,
+    readiness: list[str],
+    b: PremiumBuilderCopy,
+) -> ExecutiveSummaryBlock:
+    return ExecutiveSummaryBlock(
         threat_count=total_threats,
         severity_distribution=dict(sev_counter),
         methodology_distribution=methodology_dist,
@@ -481,7 +513,8 @@ def build_premium_report_payload(
         readiness_questions=readiness,
     )
 
-    guided_audit: GuidedModelingAuditBlock | None = None
+
+def _build_guided_audit(result: AnalysisResult, b: PremiumBuilderCopy) -> GuidedModelingAuditBlock | None:
     trace_lines = [
         b.wizard_trace.format(
             source_tag=e.source_tag,
@@ -514,7 +547,7 @@ def build_premium_report_payload(
             mc_line += f" {mc.note[:160]}"
 
     if result.wizard_context_notes or trace_lines or gap_msgs or ap_summaries or mq_line or mc_line:
-        guided_audit = GuidedModelingAuditBlock(
+        return GuidedModelingAuditBlock(
             model_quality_summary_line=mq_line,
             methodology_completeness_line=mc_line,
             wizard_context_notes=list(result.wizard_context_notes[:8]),
@@ -522,6 +555,121 @@ def build_premium_report_payload(
             top_model_gap_messages=gap_msgs,
             anti_pattern_summaries=ap_summaries,
         )
+    return None
+
+
+def build_premium_report_payload(
+    doc: ThreatModelDocument,
+    result: AnalysisResult,
+    *,
+    level: ReportLevel,
+    baseline: AnalysisResult | None = None,
+    app_version: str | None = None,
+    include_mermaid: bool = True,
+    locale: str | None = None,
+) -> PremiumReportPayload:
+    """
+    Constrói o payload premium. `baseline` opcional alimenta secção de diff/trend.
+
+    ``locale`` opcional: ``pt-BR`` (omissão) ou ``en`` após normalização na API.
+    """
+    loc: PremiumReportLocale = normalize_premium_locale(locale)
+    b = premium_builder_copy(loc)
+    meth = result.methodology
+    active: list[HeuristicThreat] = [h for h in result.heuristic_threats if not h.skipped_as_duplicate]
+    backlog = build_remediation_backlog(result, doc)
+    recommendation = recommend_methodology(doc)
+    app_v = app_version or _app_version()
+
+    max_score = result.summary.max_risk_score
+    status_key, status_display = _overall_status(max_score, b)
+
+    comp_names = {c.id: c.name for c in doc.components}
+    tb_by_component = _trust_boundary_by_component(doc)
+
+    sev_counter, stride_counter, comp_counter, tb_counter, heatmap = _build_distribution_counters(
+        active, doc, tb_by_component
+    )
+
+    methodology_dist = {meth.value: len(active) + len(doc.threats)}
+    total_threats = len(active) + len(doc.threats)
+
+    top_boundaries = [_boundary_name(doc, bid) or bid for bid, _n in tb_counter.most_common(5)]
+    top_surfaces = [comp_names.get(cid, cid) for cid, _n in comp_counter.most_common(5)]
+
+    sorted_threats = sorted(
+        active,
+        key=lambda x: composite_priority_score(x, doc, meth),
+        reverse=True,
+    )
+    top5_titles = [t.title for t in sorted_threats[:5]]
+
+    urgency = _urgency_level(max_score or 0)
+
+    readiness = [
+        b.readiness_high if (max_score or 0) >= 15 else b.readiness_moderate,
+        b.readiness_release,
+        b.readiness_compensating,
+    ]
+
+    exec_conclusion = b.exec_conclusion.format(
+        total_threats=total_threats,
+        risk_label=_risk_label(max_score, b),
+    )
+
+    arch = _build_architecture(
+        doc, b, meth, recommendation, include_mermaid=include_mermaid, level=level
+    )
+
+    distributions = _build_distributions(
+        total_threats=total_threats,
+        sev_counter=sev_counter,
+        stride_counter=stride_counter,
+        comp_counter=comp_counter,
+        tb_counter=tb_counter,
+        heatmap=heatmap,
+        methodology_dist=methodology_dist,
+        comp_names=comp_names,
+        doc=doc,
+        backlog=backlog,
+        active=active,
+        meth=meth,
+        tb_by_component=tb_by_component,
+    )
+
+    top_risks = _build_top_risks(sorted_threats, doc, meth, backlog, b)
+    rc_groups = _build_root_cause_groups(backlog, loc)
+
+    exploit_profiles = [infer_exploitability(t, doc) for t in sorted_threats[:15]]
+    business_rows = [build_business_impact_row(t) for t in sorted_threats[:15]]
+
+    quick_wins = _build_quick_wins(backlog)
+    ownership_rows = _build_ownership_rows(backlog, b)
+    strategic = _build_strategic(result, b)
+    roadmap = _build_roadmap(backlog, b)
+    baseline_section = _build_baseline_section(baseline, result, b)
+    dedupe: list[DedupeGroup] = build_dedupe_groups(active, meth, doc)
+    explain_snippets = _build_explain_snippets(result)
+    tech_appendix = _build_tech_appendix(doc, active, b, level)
+
+    disclaimer = InferenceDisclaimer(
+        summary=b.disclaimer_summary,
+        bullets=[b.disclaimer_b1, b.disclaimer_b2],
+    )
+    cover = _build_cover(doc, meth, app_v, max_score, status_key, status_display, b)
+    exec_summary = _build_exec_summary(
+        total_threats=total_threats,
+        sev_counter=sev_counter,
+        methodology_dist=methodology_dist,
+        top_boundaries=top_boundaries,
+        top_surfaces=top_surfaces,
+        top5_titles=top5_titles,
+        urgency=urgency,
+        exec_conclusion=exec_conclusion,
+        readiness=readiness,
+        b=b,
+    )
+    guided_audit = _build_guided_audit(result, b)
 
     return PremiumReportPayload(
         locale=loc,

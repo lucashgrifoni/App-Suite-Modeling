@@ -60,6 +60,23 @@ def signals_for_profile(doc: ThreatModelDocument) -> list[WizardSignal]:
     return [s for s in parse_wizard_tags(doc.metadata.tags) if s.profile == want]
 
 
+# (profile, key confirmado com `yes`) -> palavras-chave sintéticas para o anti-pattern matcher.
+_SYNTHETIC_KEYWORDS: dict[tuple[str, str], list[str]] = {
+    ("internal_admin_portal", "approval"): ["aprovação", "approval", "workflow", "four-eyes"],
+    ("internal_admin_portal", "segregation"): ["segregação", "segregation", "duty", "funções"],
+    ("internal_admin_portal", "jit"): ["just-in-time", "jit", "elevação", "temporary"],
+    ("file_handling_application", "quarantine"): ["quarentena", "quarantine", "isolamento"],
+    ("file_handling_application", "scan"): ["antivirus", "sandbox", "revalidação", "scan"],
+    ("file_handling_application", "public_objects"): ["privado", "signed", "acl", "não público"],
+    ("api_backend_rest", "auth"): ["oauth", "autenticação", "authorization", "api key"],
+    ("api_backend_rest", "rate_limit"): ["rate limit", "throttl", "quota"],
+    ("api_backend_rest", "edge_controls"): ["waf", "policy", "perímetro", "gateway policy"],
+    ("industry_ecommerce", "checkout"): ["checkout", "contexto", "fraud"],
+    ("industry_ecommerce", "psp_boundary"): ["psp", "terceiro", "third", "pagamento"],
+    ("industry_ecommerce", "sensitive_data"): ["classificação", "pci", "dados sensíveis"],
+}
+
+
 def synthetic_keyword_corpus(signals: list[WizardSignal]) -> str:
     """
     Palavras-chave sintéticas para o anti-pattern matcher quando o modelador
@@ -67,36 +84,8 @@ def synthetic_keyword_corpus(signals: list[WizardSignal]) -> str:
     """
     chunks: list[str] = []
     for s in signals:
-        if s.value != "yes":
-            continue
-        if s.profile == "internal_admin_portal":
-            if s.key == "approval":
-                chunks.extend(["aprovação", "approval", "workflow", "four-eyes"])
-            if s.key == "segregation":
-                chunks.extend(["segregação", "segregation", "duty", "funções"])
-            if s.key == "jit":
-                chunks.extend(["just-in-time", "jit", "elevação", "temporary"])
-        elif s.profile == "file_handling_application":
-            if s.key == "quarantine":
-                chunks.extend(["quarentena", "quarantine", "isolamento"])
-            if s.key == "scan":
-                chunks.extend(["antivirus", "sandbox", "revalidação", "scan"])
-            if s.key == "public_objects":
-                chunks.extend(["privado", "signed", "acl", "não público"])
-        elif s.profile == "api_backend_rest":
-            if s.key == "auth":
-                chunks.extend(["oauth", "autenticação", "authorization", "api key"])
-            if s.key == "rate_limit":
-                chunks.extend(["rate limit", "throttl", "quota"])
-            if s.key == "edge_controls":
-                chunks.extend(["waf", "policy", "perímetro", "gateway policy"])
-        elif s.profile == "industry_ecommerce":
-            if s.key == "checkout":
-                chunks.extend(["checkout", "contexto", "fraud"])
-            if s.key == "psp_boundary":
-                chunks.extend(["psp", "terceiro", "third", "pagamento"])
-            if s.key == "sensitive_data":
-                chunks.extend(["classificação", "pci", "dados sensíveis"])
+        if s.value == "yes":
+            chunks.extend(_SYNTHETIC_KEYWORDS.get((s.profile, s.key), []))
     return " ".join(chunks).lower()
 
 
@@ -313,27 +302,9 @@ def _matches_payment_context(h: Any) -> bool:
     return "pagamento" in blob or "payment" in blob or "checkout" in blob or "psp" in blob
 
 
-def apply_wizard_context_to_heuristics(
-    doc: ThreatModelDocument,
-    heuristics: list[Any],
-) -> tuple[int, list[str], list[WizardSignalTraceEntry]]:
-    """
-    Aumenta impacto (conservador, +1, cap) quando clusters do assistente estão armados.
-
-    Devolve (n_alterados, notas_explicativas, audit_trail).
-    """
-    sigs = signals_for_profile(doc)
-    if not sigs:
-        return 0, [], []
-
+def _context_notes(*, admin: bool, file_r: bool, api_r: bool, ecom: bool) -> list[str]:
+    """Notas explicativas para os clusters armados pelo assistente."""
     notes: list[str] = []
-    admin = _admin_risk_signal(sigs)
-    file_r = _file_risk_signal(sigs)
-    api_r = _api_risk_signal(sigs)
-    ecom = _ecom_risk_signal(sigs)
-
-    trace = _build_ranking_trace_entries(admin=admin, file_r=file_r, api_r=api_r, ecom=ecom, signals=sigs)
-
     if admin:
         notes.append(
             "Assistente: ≥2 lacunas admin declaradas (sem mitigador de aprovação) — "
@@ -347,25 +318,53 @@ def apply_wizard_context_to_heuristics(
         notes.append("Assistente: ≥2 fraquezas API/perímetro declaradas — reforço em achados de perímetro/API.")
     if ecom:
         notes.append("Assistente: ≥2 lacunas e-commerce declaradas — reforço em achados de pagamento.")
+    return notes
 
+
+def _matches_any_armed_context(h: Any, *, admin: bool, file_r: bool, api_r: bool, ecom: bool) -> bool:
+    return (
+        (admin and _matches_admin_context(h))
+        or (file_r and _matches_upload_context(h))
+        or (api_r and _matches_api_perimeter(h))
+        or (ecom and _matches_payment_context(h))
+    )
+
+
+def _boost_heuristics(heuristics: list[Any], *, admin: bool, file_r: bool, api_r: bool, ecom: bool) -> int:
+    """Aplica reforço de impacto (+1) às heurísticas que casam com um cluster armado."""
     changed = 0
     for h in heuristics:
         if h.skipped_as_duplicate:
             continue
-        boost = 0
-        if admin and _matches_admin_context(h):
-            boost = 1
-        elif file_r and _matches_upload_context(h):
-            boost = 1
-        elif api_r and _matches_api_perimeter(h):
-            boost = 1
-        elif ecom and _matches_payment_context(h):
-            boost = 1
-        if boost:
-            h.risk = _boost_impact(h.risk, boost)
-            ref = "wizard:context_boost"
-            if ref not in h.signal_refs:
-                h.signal_refs = [*list(h.signal_refs), ref]
-            changed += 1
+        if not _matches_any_armed_context(h, admin=admin, file_r=file_r, api_r=api_r, ecom=ecom):
+            continue
+        h.risk = _boost_impact(h.risk, 1)
+        ref = "wizard:context_boost"
+        if ref not in h.signal_refs:
+            h.signal_refs = [*list(h.signal_refs), ref]
+        changed += 1
+    return changed
 
+
+def apply_wizard_context_to_heuristics(
+    doc: ThreatModelDocument,
+    heuristics: list[Any],
+) -> tuple[int, list[str], list[WizardSignalTraceEntry]]:
+    """
+    Aumenta impacto (conservador, +1, cap) quando clusters do assistente estão armados.
+
+    Devolve (n_alterados, notas_explicativas, audit_trail).
+    """
+    sigs = signals_for_profile(doc)
+    if not sigs:
+        return 0, [], []
+
+    admin = _admin_risk_signal(sigs)
+    file_r = _file_risk_signal(sigs)
+    api_r = _api_risk_signal(sigs)
+    ecom = _ecom_risk_signal(sigs)
+
+    trace = _build_ranking_trace_entries(admin=admin, file_r=file_r, api_r=api_r, ecom=ecom, signals=sigs)
+    notes = _context_notes(admin=admin, file_r=file_r, api_r=api_r, ecom=ecom)
+    changed = _boost_heuristics(heuristics, admin=admin, file_r=file_r, api_r=api_r, ecom=ecom)
     return changed, notes, trace

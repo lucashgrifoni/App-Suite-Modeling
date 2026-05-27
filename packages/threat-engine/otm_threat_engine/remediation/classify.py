@@ -24,6 +24,49 @@ def _ai_context(methodology: ThreatModelMethodology, threat: HeuristicThreat) ->
     return any(k in blob for k in ("llm", "modelo de linguagem", "prompt", "rag", "inferen"))
 
 
+def _layer_for_kind(ck: ComponentKind | None) -> str | None:
+    if ck in (ComponentKind.GATEWAY, ComponentKind.EXTERNAL_ENTITY):
+        return "edge"
+    if ck == ComponentKind.PROCESS:
+        return "application"
+    if ck in (ComponentKind.DATASTORE, ComponentKind.QUEUE):
+        return "data"
+    if ck == ComponentKind.USER:
+        return "edge"
+    return None
+
+
+def _root_control_cat_for_stride(st: StrideCategory, ck: ComponentKind | None) -> tuple[str, str, str]:
+    """Devolve (root_cause, control_type, category) por categoria STRIDE."""
+    if st in (StrideCategory.SPOOFING, StrideCategory.ELEVATION_OF_PRIVILEGE):
+        return "identity_and_authorization_gaps", "identity_access", "identity_access"
+    if st == StrideCategory.INFORMATION_DISCLOSURE:
+        return "data_exposure_and_classification", "data_protection", "data"
+    if st == StrideCategory.TAMPERING:
+        is_ds = ck == ComponentKind.DATASTORE
+        return (
+            "integrity_and_supply_chain",
+            "data_protection" if is_ds else "hardening_and_integrity",
+            "data" if is_ds else "surface_exposure",
+        )
+    if st == StrideCategory.DENIAL_OF_SERVICE:
+        return "availability_and_resilience", "resilience_and_rate_limiting", "observability_audit"
+    if st == StrideCategory.REPUDIATION:
+        return "non_repudiation_and_audit", "logging_and_audit", "observability_audit"
+    # pragma: no cover - unreachable: StrideCategory is exhaustive (all 6 handled above)
+    return "general_mitigation", "defense_in_depth", "cross_cutting"  # pragma: no cover
+
+
+def _supplier_trust_override(ck: ComponentKind | None, threat: HeuristicThreat) -> tuple[str, str, str, str] | None:
+    """Override (cat, root, ctrl, layer_hint) quando a entidade externa é um fornecedor (supplier)."""
+    if ck != ComponentKind.EXTERNAL_ENTITY or not threat.framework_refs:
+        return None
+    for ref in threat.framework_refs:
+        if ref.framework and "supplier" in ref.framework.lower():
+            return "third_party_integration", "third_party_trust", "vendor_and_integration_governance", "integration"
+    return None
+
+
 def classify_threat(
     threat: HeuristicThreat,
     doc: ThreatModelDocument | None,
@@ -34,55 +77,17 @@ def classify_threat(
     (grouped_root_cause, suggested_control_type, control_category, architecture_layer)
     """
     ck = component_kind_for_id(doc, threat.target_component_id)
-    layer: str | None = None
-    if ck in (ComponentKind.GATEWAY, ComponentKind.EXTERNAL_ENTITY):
-        layer = "edge"
-    elif ck == ComponentKind.PROCESS:
-        layer = "application"
-    elif ck in (ComponentKind.DATASTORE, ComponentKind.QUEUE):
-        layer = "data"
-    elif ck == ComponentKind.USER:
-        layer = "edge"
+    layer = _layer_for_kind(ck)
+    root, ctrl, cat = _root_control_cat_for_stride(threat.stride, ck)
 
-    st = threat.stride
-
-    if st in (StrideCategory.SPOOFING, StrideCategory.ELEVATION_OF_PRIVILEGE):
-        root = "identity_and_authorization_gaps"
-        ctrl = "identity_access"
-        cat = "identity_access"
-    elif st == StrideCategory.INFORMATION_DISCLOSURE:
-        root = "data_exposure_and_classification"
-        ctrl = "data_protection"
-        cat = "data"
-    elif st == StrideCategory.TAMPERING:
-        root = "integrity_and_supply_chain"
-        ctrl = "data_protection" if ck == ComponentKind.DATASTORE else "hardening_and_integrity"
-        cat = "data" if ck == ComponentKind.DATASTORE else "surface_exposure"
-    elif st == StrideCategory.DENIAL_OF_SERVICE:
-        root = "availability_and_resilience"
-        ctrl = "resilience_and_rate_limiting"
-        cat = "observability_audit"
-    elif st == StrideCategory.REPUDIATION:
-        root = "non_repudiation_and_audit"
-        ctrl = "logging_and_audit"
-        cat = "observability_audit"
-    else:
-        root = "general_mitigation"
-        ctrl = "defense_in_depth"
-        cat = "cross_cutting"
-
-    if ck == ComponentKind.EXTERNAL_ENTITY and threat.framework_refs:
-        for ref in threat.framework_refs:
-            if ref.framework and "supplier" in ref.framework.lower():
-                cat = "third_party_integration"
-                root = "third_party_trust"
-                ctrl = "vendor_and_integration_governance"
-                layer = layer or "integration"
-                break
+    override = _supplier_trust_override(ck, threat)
+    if override is not None:
+        cat, root, ctrl, layer_hint = override
+        layer = layer or layer_hint
 
     if _ai_context(methodology, threat):
         cat = "ai_ml_specific"
-        if root == "general_mitigation":
+        if root == "general_mitigation":  # pragma: no cover - root never "general_mitigation" (STRIDE exhaustive)
             root = "ai_governance_and_model_risk"
         ctrl = "ai_ml_governance" if ctrl == "defense_in_depth" else f"ai_ml:{ctrl}"
 

@@ -18,14 +18,14 @@ def _data_dir() -> Path:
 
 def list_pack_ids() -> list[str]:
     d = _data_dir() / "packs"
-    if not d.is_dir():
+    if not d.is_dir():  # pragma: no cover - defensive: packaged data dir always present
         return []
     return sorted(p.stem for p in d.glob("*.yaml"))
 
 
 def list_template_ids() -> list[str]:
     d = _data_dir() / "templates"
-    if not d.is_dir():
+    if not d.is_dir():  # pragma: no cover - defensive: packaged data dir always present
         return []
     out: list[str] = []
     for p in d.glob("*.otm.yaml"):
@@ -38,7 +38,7 @@ def load_pack(pack_id: str) -> PackDefinition:
     if not path.is_file():
         raise FileNotFoundError(f"Pack desconhecido: {pack_id!r} (use: {list_pack_ids()})")
     raw = yaml.safe_load(path.read_text(encoding="utf-8"))
-    if not isinstance(raw, dict):
+    if not isinstance(raw, dict):  # pragma: no cover - defensive: packaged pack yaml is a valid mapping
         raise ValueError(f"Pack inválido: {path}")
     return PackDefinition.model_validate(raw)
 
@@ -55,6 +55,6 @@ def load_template_info(template_id: str) -> TemplateInfo | None:
     """Manifest opcional `templates/<id>.meta.json`."""
     path = _data_dir() / "templates" / f"{template_id}.meta.json"
     if not path.is_file():
-        return None
+        return None  # pragma: no cover - defensive: shipped templates always have a manifest
     raw = json.loads(path.read_text(encoding="utf-8"))
     return TemplateInfo.model_validate(raw)

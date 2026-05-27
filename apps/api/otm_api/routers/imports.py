@@ -37,10 +37,14 @@ def _serialize(result: ArtifactImportResult) -> ArtifactImportResponse:
 
 
 async def _read_limited(file: UploadFile) -> tuple[bytes, str]:
-    data = await file.read()
+    # Bounded read: never materialize more than the limit (+1 sentinel byte) in process memory,
+    # even if a client sends a much larger artifact. Receive-time / on-disk request-body caps for
+    # internet-facing deployments are delegated to the gateway or ASGI server
+    # (see docs/architecture/DEPLOYMENT_INVARIANTS.md).
+    data = await file.read(_MAX_BYTES + 1)
     if len(data) > _MAX_BYTES:
         raise HTTPException(
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
             detail="Artifact exceeds 2 MiB limit (MVP).",
         )
     name = file.filename or "upload"
@@ -87,5 +91,5 @@ async def import_kubernetes_route(file: UploadFile = File(...)) -> ArtifactImpor
     try:
         data, name = await _read_limited(file)
         return _serialize(import_kubernetes_bytes(data, filename=name))
-    except ValueError as e:
+    except ValueError as e:  # pragma: no cover - defensive guard
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e

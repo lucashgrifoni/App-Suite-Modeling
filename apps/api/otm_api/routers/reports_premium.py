@@ -89,7 +89,7 @@ def post_premium_report(body: PremiumReportBody) -> PlainTextResponse | Response
             baseline=baseline_obj,
             locale=loc,
         )
-    except ImportError as e:
+    except ImportError as e:  # pragma: no cover - defensive: PDF extra (xhtml2pdf) installed in supported envs
         raise HTTPException(
             status_code=status.HTTP_501_NOT_IMPLEMENTED,
             detail=error_detail(

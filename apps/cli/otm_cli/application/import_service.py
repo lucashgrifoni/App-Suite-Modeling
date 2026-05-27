@@ -10,6 +10,8 @@ from otm_core_schema import dump_document_to_yaml
 from otm_cli.shared.emit import write_json_file
 from otm_cli.shared.errors import CliUserError
 
+_CONFIRM_PATH = "confirm the path."
+
 
 def import_openapi(spec: Path) -> tuple[str, dict[str, Any] | None, list[Any]]:
     """Return (yaml_text, explain_payload_or_none, inferences_for_ui_summary)."""
@@ -20,7 +22,7 @@ def import_openapi(spec: Path) -> tuple[str, dict[str, Any] | None, list[Any]]:
             exit_code=1,
             failed="OpenAPI file.",
             cause=f"not a file: {spec}",
-            next_step="confirm the path.",
+            next_step=_CONFIRM_PATH,
         )
     result = import_openapi_path(spec)
     yaml_text = dump_document_to_yaml(result.document)
@@ -41,7 +43,7 @@ def import_terraform(target: Path) -> tuple[str, dict[str, Any] | None, list[Any
             exit_code=1,
             failed="Terraform.",
             cause=f"path does not exist: {target}",
-            next_step="confirm the path.",
+            next_step=_CONFIRM_PATH,
         )
     result = import_terraform_path(target)
     yaml_text = dump_document_to_yaml(result.document)
@@ -62,7 +64,7 @@ def import_kubernetes(target: Path) -> tuple[str, dict[str, Any] | None, list[An
             exit_code=1,
             failed="Kubernetes.",
             cause=f"path does not exist: {target}",
-            next_step="confirm the path.",
+            next_step=_CONFIRM_PATH,
         )
     result = import_kubernetes_path(target)
     yaml_text = dump_document_to_yaml(result.document)

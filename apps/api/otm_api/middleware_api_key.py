@@ -27,7 +27,7 @@ def _keys_match(presented: str | None, expected: str) -> bool:
         presented = ""
     try:
         return secrets.compare_digest(presented.encode("utf-8"), expected.encode("utf-8"))
-    except ValueError:
+    except ValueError:  # pragma: no cover - defensive: utf-8 encode of validated str does not raise
         return False
 
 

@@ -66,6 +66,80 @@ def _field_changes_heuristic(before: HeuristicThreat, after: HeuristicThreat) ->
     return out
 
 
+def _methodology_insights_delta(
+    baseline: AnalysisResult, revised: AnalysisResult
+) -> MethodologyInsightsDelta | None:
+    bi = baseline.methodology_insights
+    ai = revised.methodology_insights
+    if not (bi or ai):
+        return None
+    keys_b = {b.key for b in (bi.blocks if bi else [])}
+    keys_a = {b.key for b in (ai.blocks if ai else [])}
+    return MethodologyInsightsDelta(
+        profile_before=bi.profile if bi else None,
+        profile_after=ai.profile if ai else None,
+        blocks_added=sorted(keys_a - keys_b),
+        blocks_removed=sorted(keys_b - keys_a),
+    )
+
+
+def _build_heuristic_section(
+    b_act: dict[str, HeuristicThreat],
+    a_act: dict[str, HeuristicThreat],
+    *,
+    added_ids: list[str],
+    removed_ids: list[str],
+    common: set[str],
+) -> HeuristicThreatDeltaSection:
+    section = HeuristicThreatDeltaSection()
+    for hid in added_ids:
+        section.added.append(HeuristicThreatDelta(threat_id=hid, change="added", score_after=a_act[hid].risk.score))
+    for hid in removed_ids:
+        section.removed.append(
+            HeuristicThreatDelta(threat_id=hid, change="removed", score_before=b_act[hid].risk.score)
+        )
+    for hid in sorted(common):
+        ch = _field_changes_heuristic(b_act[hid], a_act[hid])
+        if not ch:
+            continue
+        sb = b_act[hid].risk.score
+        sa = a_act[hid].risk.score
+        sd = None if sb is None or sa is None else float(sa) - float(sb)
+        section.modified.append(
+            HeuristicThreatDelta(
+                threat_id=hid,
+                change="modified",
+                score_before=sb,
+                score_after=sa,
+                score_delta=sd,
+                field_changes=ch,
+            )
+        )
+    return section
+
+
+def _signature_remap_hints(
+    b_act: dict[str, HeuristicThreat],
+    a_act: dict[str, HeuristicThreat],
+    *,
+    added_ids: list[str],
+    removed_ids: list[str],
+) -> list[str]:
+    hints: list[str] = []
+    rem_by_sig: dict[tuple[Any, ...], str] = {}
+    for hid in removed_ids:
+        rem_by_sig[_heuristic_signature(b_act[hid])] = hid
+    for hid in added_ids:
+        sig = _heuristic_signature(a_act[hid])
+        if sig in rem_by_sig:
+            ob = rem_by_sig[sig]
+            hints.append(
+                f"Possível remapeamento de heurística: baseline `{ob}` → revisão `{hid}` "
+                f"(mesma assinatura: stride/alvos/título)."
+            )
+    return hints
+
+
 def diff_analysis_results(baseline: AnalysisResult, revised: AnalysisResult) -> AnalysisDiff:
     """
     Compara dois resultados de análise.
@@ -86,61 +160,14 @@ def diff_analysis_results(baseline: AnalysisResult, revised: AnalysisResult) -> 
     removed_ids = sorted(b_ids - a_ids)
     common = b_ids & a_ids
 
-    section = HeuristicThreatDeltaSection()
     max_b = baseline.summary.max_risk_score
     max_a = revised.summary.max_risk_score
     max_delta = None
     if max_b is not None or max_a is not None:
         max_delta = float(max_a or 0.0) - float(max_b or 0.0)
 
-    for hid in added_ids:
-        h = a_act[hid]
-        section.added.append(
-            HeuristicThreatDelta(
-                threat_id=hid,
-                change="added",
-                score_after=h.risk.score,
-            )
-        )
-    for hid in removed_ids:
-        h = b_act[hid]
-        section.removed.append(
-            HeuristicThreatDelta(
-                threat_id=hid,
-                change="removed",
-                score_before=h.risk.score,
-            )
-        )
-    for hid in sorted(common):
-        ch = _field_changes_heuristic(b_act[hid], a_act[hid])
-        if not ch:
-            continue
-        sb = b_act[hid].risk.score
-        sa = a_act[hid].risk.score
-        sd = None if sb is None or sa is None else float(sa) - float(sb)
-        section.modified.append(
-            HeuristicThreatDelta(
-                threat_id=hid,
-                change="modified",
-                score_before=sb,
-                score_after=sa,
-                score_delta=sd,
-                field_changes=ch,
-            )
-        )
-
-    hints: list[str] = []
-    rem_by_sig: dict[tuple[Any, ...], str] = {}
-    for hid in removed_ids:
-        rem_by_sig[_heuristic_signature(b_act[hid])] = hid
-    for hid in added_ids:
-        sig = _heuristic_signature(a_act[hid])
-        if sig in rem_by_sig:
-            ob = rem_by_sig[sig]
-            hints.append(
-                f"Possível remapeamento de heurística: baseline `{ob}` → revisão `{hid}` "
-                f"(mesma assinatura: stride/alvos/título)."
-            )
+    section = _build_heuristic_section(b_act, a_act, added_ids=added_ids, removed_ids=removed_ids, common=common)
+    hints = _signature_remap_hints(b_act, a_act, added_ids=added_ids, removed_ids=removed_ids)
 
     cats_b = baseline.summary.framework_ref_counts_by_catalog
     cats_a = revised.summary.framework_ref_counts_by_catalog
@@ -160,18 +187,7 @@ def diff_analysis_results(baseline: AnalysisResult, revised: AnalysisResult) -> 
         removed=sorted(set_b - set_a),
     )
 
-    ins_delta: MethodologyInsightsDelta | None = None
-    bi = baseline.methodology_insights
-    ai = revised.methodology_insights
-    if bi or ai:
-        keys_b = {b.key for b in (bi.blocks if bi else [])}
-        keys_a = {b.key for b in (ai.blocks if ai else [])}
-        ins_delta = MethodologyInsightsDelta(
-            profile_before=bi.profile if bi else None,
-            profile_after=ai.profile if ai else None,
-            blocks_added=sorted(keys_a - keys_b),
-            blocks_removed=sorted(keys_b - keys_a),
-        )
+    ins_delta = _methodology_insights_delta(baseline, revised)
 
     keys_b_f = {_finding_key(f.code, f.data_flow_id) for f in baseline.trust_boundary_findings}
     keys_a_f = {_finding_key(f.code, f.data_flow_id) for f in revised.trust_boundary_findings}

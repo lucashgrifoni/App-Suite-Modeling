@@ -23,5 +23,5 @@ def register(app: typer.Typer) -> None:
         if version:
             console.print(f"otm (App Suite Modeling) [bold]v{installed_version()}[/bold]")
             raise typer.Exit(0)
-        if ctx.invoked_subcommand is None:
+        if ctx.invoked_subcommand is None:  # pragma: no cover - app has no_args_is_help; typer shows help before this
             console.print(ctx.get_help())

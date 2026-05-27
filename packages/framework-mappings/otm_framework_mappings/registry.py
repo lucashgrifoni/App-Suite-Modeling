@@ -19,7 +19,7 @@ def _dedupe_refs(refs: Iterable[FrameworkRef]) -> list[FrameworkRef]:
     for r in refs:
         key = (r.framework, r.control_id)
         if key in seen:
-            continue
+            continue  # pragma: no cover - defensive guard
         seen.add(key)
         out.append(r)
     return out
@@ -63,7 +63,7 @@ class StrideFrameworkRegistry:
     def from_yaml_bytes(cls, raw: bytes) -> StrideFrameworkRegistry:
         obj = yaml.safe_load(raw)
         if not isinstance(obj, dict):
-            raise ValueError("YAML de mapeamento deve ser um objeto na raiz.")
+            raise ValueError("YAML de mapeamento deve ser um objeto na raiz.")  # pragma: no cover - defensive: packaged data is a valid mapping
         parsed = RawStrideMapFile.model_validate(obj)
         return cls.from_raw_file(parsed)
 

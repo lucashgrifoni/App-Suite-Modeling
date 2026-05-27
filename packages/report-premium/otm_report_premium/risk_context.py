@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Literal
 
 from otm_core_schema import ComponentKind, StrideCategory
@@ -16,6 +17,42 @@ def _blob(threat: HeuristicThreat) -> str:
     return f"{threat.title} {threat.description}".lower()
 
 
+@dataclass(frozen=True)
+class _ExploitSignals:
+    remoteish: bool
+    requires_mitm: bool
+    webhook: bool
+    integration: bool
+    agent: bool
+    prompt: bool
+    misconfig: bool
+
+
+def _exploit_signals(text: str, *, ext: bool, userish: bool) -> _ExploitSignals:
+    """Sinais textuais de exploração (heurística por keyword)."""
+    return _ExploitSignals(
+        remoteish=ext or userish or "api" in text or "extern" in text,
+        requires_mitm="mitm" in text or "man-in-the-middle" in text,
+        webhook="webhook" in text or "callback" in text or "deep link" in text,
+        integration="integra" in text or "third" in text or "terceiro" in text,
+        agent="agent" in text or "tool" in text or "função" in text,
+        prompt="prompt" in text or "rag" in text or "retrieval" in text or "embedding" in text,
+        misconfig="misconfig" in text or "configuração" in text or "expost" in text,
+    )
+
+
+def _infer_locality(
+    ck: ComponentKind | None, *, remoteish: bool, userish: bool
+) -> Literal["local", "remote", "hybrid", "unknown"]:
+    if remoteish and not userish:
+        return "remote"
+    if ck == ComponentKind.PROCESS and not remoteish:
+        return "local"
+    if remoteish and userish:
+        return "hybrid"
+    return "unknown"
+
+
 def infer_exploitability(
     threat: HeuristicThreat,
     doc: ThreatModelDocument | None,
@@ -28,24 +65,8 @@ def infer_exploitability(
 
     ext = ck in (ComponentKind.EXTERNAL_ENTITY, ComponentKind.GATEWAY)
     userish = ck == ComponentKind.USER
-    remoteish = ext or userish or "api" in text or "extern" in text
-
-    requires_mitm = "mitm" in text or "man-in-the-middle" in text
-    webhook = "webhook" in text or "callback" in text or "deep link" in text
-    integration = "integra" in text or "third" in text or "terceiro" in text
-    agent = "agent" in text or "tool" in text or "função" in text
-    prompt = "prompt" in text or "rag" in text or "retrieval" in text or "embedding" in text
-    misconfig = "misconfig" in text or "configuração" in text or "expost" in text
-
-    locality: Literal["local", "remote", "hybrid", "unknown"]
-    if remoteish and not userish:
-        locality = "remote"
-    elif ck == ComponentKind.PROCESS and not remoteish:
-        locality = "local"
-    elif remoteish and userish:
-        locality = "hybrid"
-    else:
-        locality = "unknown"
+    sig = _exploit_signals(text, ext=ext, userish=userish)
+    locality = _infer_locality(ck, remoteish=sig.remoteish, userish=userish)
 
     notes_parts: list[str] = []
     if ext:
@@ -57,16 +78,16 @@ def infer_exploitability(
 
     return ExploitabilityProfile(
         threat_id=threat.id,
-        requires_external_access=bool(ext or remoteish),
+        requires_external_access=bool(ext or sig.remoteish),
         requires_authenticated_user=None if not userish else True,
         requires_user_interaction=True if userish else None,
-        requires_external_integration_control=True if integration else None,
-        requires_mitm=True if requires_mitm else None,
-        requires_webhook_or_deeplink=True if webhook else None,
+        requires_external_integration_control=True if sig.integration else None,
+        requires_mitm=True if sig.requires_mitm else None,
+        requires_webhook_or_deeplink=True if sig.webhook else None,
         attack_locality=locality,
-        depends_on_agent_tool_use=True if agent else None,
-        depends_on_prompt_or_retrieval_abuse=True if prompt else None,
-        depends_on_misconfiguration=True if misconfig else None,
+        depends_on_agent_tool_use=True if sig.agent else None,
+        depends_on_prompt_or_retrieval_abuse=True if sig.prompt else None,
+        depends_on_misconfiguration=True if sig.misconfig else None,
         notes=" ".join(notes_parts),
     )
 

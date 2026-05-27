@@ -19,7 +19,7 @@ from otm_threat_engine import AnalysisResult
 def app_version() -> str:
     try:
         return importlib.metadata.version("open-threat-model")
-    except importlib.metadata.PackageNotFoundError:
+    except importlib.metadata.PackageNotFoundError:  # pragma: no cover - defensive: package metadata present at runtime
         return "dev"
 
 

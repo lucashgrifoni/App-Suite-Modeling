@@ -29,6 +29,6 @@ def iter_yaml_documents(text: str):
     """Itera documentos multi-parte (ex.: manifests Kubernetes)."""
     for doc in yaml.safe_load_all(text):
         if doc is None:
-            continue
+            continue  # pragma: no cover - defensive: empty YAML document skipped
         if isinstance(doc, dict):
             yield doc

@@ -8,5 +8,5 @@ import importlib.metadata
 def installed_version() -> str:
     try:
         return importlib.metadata.version("open-threat-model")
-    except importlib.metadata.PackageNotFoundError:
+    except importlib.metadata.PackageNotFoundError:  # pragma: no cover - defensive: package always installed
         return "dev"

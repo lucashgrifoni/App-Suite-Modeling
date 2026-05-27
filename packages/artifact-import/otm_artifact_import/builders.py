@@ -33,8 +33,8 @@ def slug_id(text: str, *, prefix: str = "c") -> str:
     """
     s = re.sub(r"[^a-zA-Z0-9_.-]+", "_", text.strip().lower())
     s = s.strip("._-") or "x"
-    if not re.match(r"^[a-zA-Z0-9_]", s):
-        s = f"{prefix}_{s}"
+    if not re.match(r"^\w", s, re.ASCII):
+        s = f"{prefix}_{s}"  # pragma: no cover - defensive: sanitized slug always starts with a word char
     return s[:56]
 
 
@@ -89,8 +89,8 @@ def assemble_draft(
     for u in unknowns:
         assumption_lines.append(f"[não inferido] {u}")
 
-    # model_info: mypy+pydantic v2 alinham o campo Python; ignore evita falso positivo em alguns plugins.
-    doc = ThreatModelDocument(  # type: ignore[call-arg]
+    # model_info: mypy+pydantic v2 alinham o campo Python automaticamente (plugin pydantic ativo).
+    doc = ThreatModelDocument(
         metadata=Metadata(
             title=title,
             summary=summary or f"Rascunho importado ({source_kind})",

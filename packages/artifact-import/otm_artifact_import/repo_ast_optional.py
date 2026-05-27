@@ -12,19 +12,38 @@ from typing import Any
 _HTTP_METHODS = frozenset({"get", "post", "put", "delete", "patch", "use"})
 
 
+def _route_method_name(callee: Any) -> str | None:
+    """Nome do método HTTP (`get`/`post`/…) numa `MemberExpression`, ou None."""
+    if callee.get("type") != "MemberExpression":
+        return None
+    prop = callee.get("property") or {}
+    name = prop.get("name") or (prop.get("value") if prop.get("type") == "Literal" else None)
+    if isinstance(name, str) and name in _HTTP_METHODS:
+        return name
+    return None
+
+
+def _first_string_arg(node: Any) -> str | None:
+    """Primeiro argumento `Literal` string da chamada, ou None."""
+    for arg in node.get("arguments") or []:
+        if arg.get("type") == "Literal" and isinstance(arg.get("value"), str):
+            return str(arg["value"])
+    return None
+
+
+def _collect_call_route(node: Any, hits: list[tuple[str, str]]) -> None:
+    name = _route_method_name(node.get("callee") or {})
+    if name is None:
+        return
+    path = _first_string_arg(node)
+    if path is not None:
+        hits.append((name, path))
+
+
 def _walk(node: Any, hits: list[tuple[str, str]]) -> None:
     if isinstance(node, dict):
-        t = node.get("type")
-        if t == "CallExpression":
-            callee = node.get("callee") or {}
-            if callee.get("type") == "MemberExpression":
-                prop = callee.get("property") or {}
-                name = prop.get("name") or (prop.get("value") if prop.get("type") == "Literal" else None)
-                if isinstance(name, str) and name in _HTTP_METHODS:
-                    for arg in node.get("arguments") or []:
-                        if arg.get("type") == "Literal" and isinstance(arg.get("value"), str):
-                            hits.append((name, arg["value"]))
-                            break
+        if node.get("type") == "CallExpression":
+            _collect_call_route(node, hits)
         for v in node.values():
             _walk(v, hits)
     elif isinstance(node, list):

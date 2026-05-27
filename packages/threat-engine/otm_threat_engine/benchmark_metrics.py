@@ -8,8 +8,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from otm_core_schema import ThreatModelDocument
-
 from otm_threat_engine.result import AnalysisResult
 
 
@@ -45,7 +43,6 @@ def _generic_title(h) -> bool:
 
 
 def compute_benchmark_metrics(
-    doc: ThreatModelDocument,
     analysis: AnalysisResult,
     *,
     expected_stride_prefixes: tuple[str, ...] = (),

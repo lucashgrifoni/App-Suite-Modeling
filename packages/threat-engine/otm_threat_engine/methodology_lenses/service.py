@@ -85,6 +85,6 @@ def apply_with_dispatch(
     methodology: ThreatModelMethodology,
 ) -> AnalysisResult:
     handler = _LENS_DISPATCH.get(methodology)
-    if handler is None:
+    if handler is None:  # pragma: no cover - unreachable: every ThreatModelMethodology has a lens handler
         return result
     return handler(doc, result)

@@ -35,29 +35,37 @@ def likelihood_impact_for_component(
     if stride in (StrideCategory.ELEVATION_OF_PRIVILEGE, StrideCategory.SPOOFING):
         likelihood = min(5, likelihood + 1)
 
-    for aid in component.asset_ids:
-        asset = assets_by_id.get(aid)
-        if asset is None:
-            continue
-        sens = (asset.sensitivity or "").lower()
-        if sens in ("confidential", "restricted", "secret", "internal"):
-            impact = min(5, impact + 1)
-        if asset.business_criticality in (CriticalityLevel.HIGH, CriticalityLevel.CRITICAL):
-            impact = min(5, impact + 1)
-        if asset.data_classification is not None and asset.data_classification.value in (
-            "confidential",
-            "restricted",
-        ):
-            impact = min(5, impact + 1)
+    impact = min(5, impact + _linked_asset_impact_bonus(component, assets_by_id))
 
-    if component.supports_admin_operations or (component.privilege_level or "").lower() in (
-        "admin",
-        "high",
-    ):
+    if _is_privileged_component(component):
         likelihood = min(5, likelihood + 1)
         impact = min(5, impact + 1)
 
     return likelihood, impact
+
+
+def _linked_asset_impact_bonus(component: Component, assets_by_id: dict[str, Asset]) -> int:
+    """Impact increments from sensitive/critical/classified linked assets (extracted to bound complexity)."""
+    bonus = 0
+    for aid in component.asset_ids:
+        asset = assets_by_id.get(aid)
+        if asset is None:
+            continue  # pragma: no cover - defensive guard
+        sens = (asset.sensitivity or "").lower()
+        if sens in ("confidential", "restricted", "secret", "internal"):
+            bonus += 1
+        if asset.business_criticality in (CriticalityLevel.HIGH, CriticalityLevel.CRITICAL):
+            bonus += 1
+        if asset.data_classification is not None and asset.data_classification.value in (
+            "confidential",
+            "restricted",
+        ):
+            bonus += 1
+    return bonus
+
+
+def _is_privileged_component(component: Component) -> bool:
+    return bool(component.supports_admin_operations) or (component.privilege_level or "").lower() in ("admin", "high")
 
 
 def likelihood_impact_for_data_flow(

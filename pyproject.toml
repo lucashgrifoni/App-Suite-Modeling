@@ -73,6 +73,15 @@ relative_files = true
 source = ["packages", "apps"]
 omit = ["*/tests/*", "*/__pycache__/*", "*/.venv/*"]
 
+[tool.coverage.report]
+# Standard, non-functional lines excluded from the coverage metric (universally accepted).
+exclude_also = [
+  "if TYPE_CHECKING:",
+  "raise NotImplementedError",
+  "if __name__ == .__main__.:",
+  "@(abc\\.)?abstractmethod",
+]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = [

@@ -68,27 +68,68 @@ def _agg_from_structural(d: ThreatModelDiff) -> DiffAggregate:
 
 
 def _analysis_has_changes(ad: AnalysisDiff) -> bool:
-    if ad.methodology_changed or ad.signature_remap_hints:
-        return True
     ht = ad.heuristic_threats
-    if ht.added or ht.removed or ht.modified:
-        return True
-    if ad.framework_ref_counts:
-        return True
-    if ad.pack_control_hints.added or ad.pack_control_hints.removed:
-        return True
     mi = ad.methodology_insights
-    if mi and (mi.blocks_added or mi.blocks_removed or mi.profile_before != mi.profile_after):
-        return True
     tb = ad.trust_boundary_findings
-    if tb and (tb.added_keys or tb.removed_keys):
-        return True
     sf = ad.structural_findings
-    if sf and (sf.codes_added or sf.codes_removed):
-        return True
-    if (ad.max_risk_delta or 0) != 0:
-        return True
-    return False
+    return any(
+        (
+            ad.methodology_changed,
+            ad.signature_remap_hints,
+            ht.added,
+            ht.removed,
+            ht.modified,
+            ad.framework_ref_counts,
+            ad.pack_control_hints.added,
+            ad.pack_control_hints.removed,
+            bool(mi and (mi.blocks_added or mi.blocks_removed or mi.profile_before != mi.profile_after)),
+            bool(tb and (tb.added_keys or tb.removed_keys)),
+            bool(sf and (sf.codes_added or sf.codes_removed)),
+            (ad.max_risk_delta or 0) != 0,
+        )
+    )
+
+
+def _heuristic_change_insights(ad: AnalysisDiff) -> list[str]:
+    out: list[str] = []
+    for h in ad.heuristic_threats.added[:10]:
+        score_note = f" (score {h.score_after})" if h.score_after is not None else ""
+        out.append(f"Heurística nova ativa: `{h.threat_id}`{score_note}.")
+    for h in ad.heuristic_threats.removed[:10]:
+        out.append(
+            f"Heurística ativa deixou de existir: `{h.threat_id}`"
+            + (f" (era score {h.score_before})" if h.score_before is not None else "")
+            + "."
+        )
+    for h in ad.heuristic_threats.modified:
+        if h.score_delta is not None and h.score_delta > 0:
+            out.append(f"Risco da heurística `{h.threat_id}` subiu (Δ score {h.score_delta:+.1f}).")
+        elif h.score_delta is not None and h.score_delta < 0:
+            out.append(f"Risco da heurística `{h.threat_id}` desceu (Δ score {h.score_delta:+.1f}).")
+    return out
+
+
+def _framework_pack_insights(ad: AnalysisDiff) -> list[str]:
+    out: list[str] = []
+    for fr in ad.framework_ref_counts:
+        if fr.count_after < fr.count_before:
+            out.append(
+                f"Menos referências mapeadas em `{fr.catalog}` ({fr.count_before} → {fr.count_after}); "
+                "cobertura de controlos pode ter regressado."
+            )
+        elif fr.count_after > fr.count_before:
+            out.append(f"Mais referências em `{fr.catalog}` ({fr.count_before} → {fr.count_after}).")
+    if ad.pack_control_hints.removed:
+        out.append(
+            "Controlo(s) do pack deixaram de ser sugeridos: "
+            + "; ".join(ad.pack_control_hints.removed[:5])
+            + ("…" if len(ad.pack_control_hints.removed) > 5 else "")
+        )
+    if ad.pack_control_hints.added:
+        joined = "; ".join(ad.pack_control_hints.added[:5])
+        suffix = "…" if len(ad.pack_control_hints.added) > 5 else ""
+        out.append("Novas sugestões de controlo do pack: " + joined + suffix)
+    return out
 
 
 def _analysis_insights(ad: AnalysisDiff) -> list[str]:
@@ -102,39 +143,9 @@ def _analysis_insights(ad: AnalysisDiff) -> list[str]:
             f"Score máximo entre ameaças ativas mudou: {ad.max_risk_before} → {ad.max_risk_after} "
             f"(Δ {ad.max_risk_delta:+.1f})."
         )
-    for h in ad.heuristic_threats.added[:10]:
-        score_note = f" (score {h.score_after})" if h.score_after is not None else ""
-        insights.append(f"Heurística nova ativa: `{h.threat_id}`{score_note}.")
-    for h in ad.heuristic_threats.removed[:10]:
-        insights.append(
-            f"Heurística ativa deixou de existir: `{h.threat_id}`"
-            + (f" (era score {h.score_before})" if h.score_before is not None else "")
-            + "."
-        )
-    for h in ad.heuristic_threats.modified:
-        if h.score_delta is not None and h.score_delta > 0:
-            insights.append(f"Risco da heurística `{h.threat_id}` subiu (Δ score {h.score_delta:+.1f}).")
-        elif h.score_delta is not None and h.score_delta < 0:
-            insights.append(f"Risco da heurística `{h.threat_id}` desceu (Δ score {h.score_delta:+.1f}).")
+    insights.extend(_heuristic_change_insights(ad))
     insights.extend(ad.signature_remap_hints[:10])
-    for fr in ad.framework_ref_counts:
-        if fr.count_after < fr.count_before:
-            insights.append(
-                f"Menos referências mapeadas em `{fr.catalog}` ({fr.count_before} → {fr.count_after}); "
-                "cobertura de controlos pode ter regressado."
-            )
-        elif fr.count_after > fr.count_before:
-            insights.append(f"Mais referências em `{fr.catalog}` ({fr.count_before} → {fr.count_after}).")
-    if ad.pack_control_hints.removed:
-        insights.append(
-            "Controlo(s) do pack deixaram de ser sugeridos: "
-            + "; ".join(ad.pack_control_hints.removed[:5])
-            + ("…" if len(ad.pack_control_hints.removed) > 5 else "")
-        )
-    if ad.pack_control_hints.added:
-        joined = "; ".join(ad.pack_control_hints.added[:5])
-        suffix = "…" if len(ad.pack_control_hints.added) > 5 else ""
-        insights.append("Novas sugestões de controlo do pack: " + joined + suffix)
+    insights.extend(_framework_pack_insights(ad))
     tb = ad.trust_boundary_findings
     if tb and (tb.added_keys or tb.removed_keys):
         insights.append(
@@ -161,6 +172,35 @@ def _merge_key_insights(a: list[str], b: list[str], *, max_items: int = 32) -> l
             if len(out) >= max_items:
                 return out
     return out
+
+
+def _build_risk_delta(analysis: AnalysisDiff | None, *, residual_changed: bool) -> RiskDeltaSummary:
+    mods = analysis.heuristic_threats.modified if analysis else []
+    added = analysis.heuristic_threats.added if analysis else []
+    removed = analysis.heuristic_threats.removed if analysis else []
+    return RiskDeltaSummary(
+        analysis_max_score_baseline=analysis.max_risk_before if analysis else None,
+        analysis_max_score_revised=analysis.max_risk_after if analysis else None,
+        analysis_max_score_delta=analysis.max_risk_delta if analysis else None,
+        heuristic_increased_ids=[h.threat_id for h in mods if (h.score_delta or 0) > 0]
+        + [h.threat_id for h in added],
+        heuristic_decreased_ids=[h.threat_id for h in mods if (h.score_delta or 0) < 0]
+        + [h.threat_id for h in removed],
+        document_residual_aggregate_changed=residual_changed,
+    )
+
+
+def _build_recommendation_delta(analysis: AnalysisDiff | None) -> RecommendationDelta:
+    if analysis is None:
+        return RecommendationDelta()
+    mi = analysis.methodology_insights
+    return RecommendationDelta(
+        pack_hints_added=analysis.pack_control_hints.added,
+        pack_hints_removed=analysis.pack_control_hints.removed,
+        framework_catalog_deltas=list(analysis.framework_ref_counts),
+        methodology_insight_blocks_added=list(mi.blocks_added if mi else []),
+        methodology_insight_blocks_removed=list(mi.blocks_removed if mi else []),
+    )
 
 
 def compare_threat_models(
@@ -194,20 +234,7 @@ def compare_threat_models(
         headline += f" | análise: metodologia {analysis.methodology_before}→{analysis.methodology_after}, "
         headline += f"Δscore_max={analysis.max_risk_delta!s}"
 
-    risk_delta = RiskDeltaSummary(
-        analysis_max_score_baseline=analysis.max_risk_before if analysis else None,
-        analysis_max_score_revised=analysis.max_risk_after if analysis else None,
-        analysis_max_score_delta=analysis.max_risk_delta if analysis else None,
-        heuristic_increased_ids=[
-            h.threat_id for h in (analysis.heuristic_threats.modified if analysis else []) if (h.score_delta or 0) > 0
-        ]
-        + [h.threat_id for h in (analysis.heuristic_threats.added if analysis else [])],
-        heuristic_decreased_ids=[
-            h.threat_id for h in (analysis.heuristic_threats.modified if analysis else []) if (h.score_delta or 0) < 0
-        ]
-        + [h.threat_id for h in (analysis.heuristic_threats.removed if analysis else [])],
-        document_residual_aggregate_changed=bool(structural.residual_risk_summary),
-    )
+    risk_delta = _build_risk_delta(analysis, residual_changed=bool(structural.residual_risk_summary))
 
     heuristic_section = analysis.heuristic_threats if analysis else HeuristicThreatDeltaSection()
 
@@ -216,18 +243,7 @@ def compare_threat_models(
         heuristic=heuristic_section,
     )
 
-    rec = RecommendationDelta()
-    if analysis:
-        mi = analysis.methodology_insights
-        blocks_added = list(mi.blocks_added if mi else [])
-        blocks_removed = list(mi.blocks_removed if mi else [])
-        rec = RecommendationDelta(
-            pack_hints_added=analysis.pack_control_hints.added,
-            pack_hints_removed=analysis.pack_control_hints.removed,
-            framework_catalog_deltas=list(analysis.framework_ref_counts),
-            methodology_insight_blocks_added=blocks_added,
-            methodology_insight_blocks_removed=blocks_removed,
-        )
+    rec = _build_recommendation_delta(analysis)
 
     key_insights = _merge_key_insights(s_insights, a_insights)
 

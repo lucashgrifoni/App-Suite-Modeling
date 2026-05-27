@@ -7,6 +7,7 @@ Snapshots / modo harmonizado / ordem de secções: `tests/test_exporters.py` (`a
 from __future__ import annotations
 
 import os
+from typing import Any
 
 from otm_core_schema import FrameworkRef, ThreatModelDocument
 from otm_framework_mappings import framework_display_name
@@ -172,7 +173,7 @@ def _build_harmonized(active: list) -> tuple[list, int, dict[str, int]]:
         if _cluster_suppressible(h=h, flags=flags):
             suppressed += 1
             suppressed_by_cluster["cluster_root_cause_overlap"] += 1
-            continue
+            continue  # pragma: no cover - defensive guard
         harmonized.append(h)
     return harmonized, suppressed, suppressed_by_cluster
 
@@ -194,7 +195,7 @@ def _append_risk_categories_block(
         k = risk_category_key(h)
         if k in buckets and len(buckets[k]) < top_n:
             buckets[k].append(h)
-    if not any(buckets[k] for k in order):
+    if not any(buckets[k] for k in order):  # pragma: no cover - risk_category_key always maps to a bucket (default "stride")
         return
     lines.append(msgs.risk_categories_title)
     lines.append("")
@@ -301,6 +302,15 @@ def _append_heuristic_block(
     lines.append("")
 
 
+def _append_bullet_section(lines: list[str], header: str, items: list[str], limit: int) -> None:
+    """Emite um cabeçalho seguido de bullets (até `limit`) quando há itens."""
+    if not items:
+        return
+    lines.append(header)
+    for item in items[:limit]:
+        lines.append(f"  - {item}")
+
+
 def _append_plot4ai_ai_context_block(
     lines: list[str],
     result: AnalysisResult,
@@ -315,18 +325,9 @@ def _append_plot4ai_ai_context_block(
     lines.append("")
     if ctx.pattern_tags:
         lines.append(f"{msgs.plot_patterns} {', '.join(ctx.pattern_tags)}")
-    if ctx.primary_risk_surfaces:
-        lines.append(msgs.plot_surfaces)
-        for p in ctx.primary_risk_surfaces[:6]:
-            lines.append(f"  - {p}")
-    if ctx.prioritized_recommendations:
-        lines.append(msgs.plot_recs)
-        for rec in ctx.prioritized_recommendations[:7]:
-            lines.append(f"  - {rec}")
-    if ctx.sensitive_data_notes:
-        lines.append(msgs.plot_sensitive)
-        for n in ctx.sensitive_data_notes[:5]:
-            lines.append(f"  - {n}")
+    _append_bullet_section(lines, msgs.plot_surfaces, ctx.primary_risk_surfaces, 6)
+    _append_bullet_section(lines, msgs.plot_recs, ctx.prioritized_recommendations, 7)
+    _append_bullet_section(lines, msgs.plot_sensitive, ctx.sensitive_data_notes, 5)
     if ctx.heuristic_ids_by_layer:
         lines.append(msgs.plot_layer_group)
         for lid, hid in list(ctx.heuristic_ids_by_layer.items())[:10]:
@@ -416,83 +417,147 @@ def _append_explainability_compact(
     lines.append("")
 
 
+def _append_quality_block(lines: list[str], result: AnalysisResult, msgs: AnalysisMarkdownMessages) -> None:
+    pq = result.model_quality_precheck
+    mc = result.methodology_completeness
+    if pq is None and mc is None:
+        return
+    lines.append(msgs.quality_title)
+    lines.append("")
+    if pq is not None:
+        lines.append(
+            msgs.precheck_line.format(
+                score=pq.score_0_100,
+                band=pq.band,
+                conf=pq.recommendation_confidence,
+                fit=pq.methodology_fit_matrix.get("stride", pq.methodology_fit),
+            )
+        )
+    if mc is not None:
+        reasons = "; ".join(mc.reasons[:3]) if mc.reasons else "—"
+        note = mc.note or ""
+        note_suffix = f" · _{note}_" if note else ""
+        lines.append(msgs.completeness_line.format(state=mc.state.value, reasons=reasons, note=note_suffix))
+    lines.append("")
+
+
+def _append_wizard_context_block(lines: list[str], result: AnalysisResult, msgs: AnalysisMarkdownMessages) -> None:
+    if not result.wizard_context_notes:
+        return
+    lines.append(msgs.wizard_context_title)
+    lines.append("")
+    lines.append(msgs.wizard_context_blurb)
+    lines.append("")
+    for note in result.wizard_context_notes[:8]:
+        lines.append(f"- {note}")
+    lines.append("")
+
+
+def _append_audit_trail_block(lines: list[str], result: AnalysisResult, msgs: AnalysisMarkdownMessages) -> None:
+    if not result.wizard_signal_trace:
+        return
+    lines.append(msgs.audit_title)
+    lines.append("")
+    lines.append(msgs.audit_blurb)
+    lines.append("")
+    for entry in result.wizard_signal_trace[:12]:
+        areas = ", ".join(entry.impact_areas) if entry.impact_areas else "—"
+        lines.append(
+            msgs.audit_entry.format(
+                tag=entry.source_tag,
+                effect=entry.effect,
+                weight=entry.weight,
+                mechanism=entry.mechanism,
+                areas=areas,
+                explanation=entry.explanation,
+            )
+        )
+    lines.append("")
+
+
+def _append_model_gaps_block(lines: list[str], result: AnalysisResult, msgs: AnalysisMarkdownMessages) -> None:
+    pq = result.model_quality_precheck
+    if not (pq and pq.checks):
+        return
+    failed = [c for c in pq.checks if not c.passed][:6]
+    if not failed:
+        return
+    lines.append(msgs.model_gaps_title)
+    lines.append("")
+    for c in failed:
+        lines.append(f"- [{c.code}] {c.message}")
+    lines.append("")
+
+
+def _append_anti_patterns_block(lines: list[str], result: AnalysisResult, msgs: AnalysisMarkdownMessages) -> None:
+    if not result.anti_pattern_hits:
+        return
+    lines.append(msgs.anti_patterns_title)
+    lines.append("")
+    for hit in result.anti_pattern_hits[:10]:
+        conf = getattr(hit, "confidence_hint", None) or "medium"
+        lines.append(f"- **{hit.name}** (`{hit.id}`){msgs.anti_pattern_confidence.format(conf=conf)}{hit.message}")
+    lines.append("")
+
+
 def _append_guided_context_and_audit(
     lines: list[str],
     result: AnalysisResult,
     msgs: AnalysisMarkdownMessages,
 ) -> None:
     """Propaga notas do assistente, audit trail, lacunas do pré-check e anti-padrões (fora da UI)."""
-    pq = result.model_quality_precheck
-    mc = result.methodology_completeness
-    if pq is not None or mc is not None:
-        lines.append(msgs.quality_title)
-        lines.append("")
-        if pq is not None:
+    _append_quality_block(lines, result, msgs)
+    _append_wizard_context_block(lines, result, msgs)
+    _append_audit_trail_block(lines, result, msgs)
+    _append_model_gaps_block(lines, result, msgs)
+    _append_anti_patterns_block(lines, result, msgs)
+
+
+def _append_top_groups(lines: list[str], ar: dict[str, Any]) -> None:
+    for label, key in (
+        ("Componentes", "top_components"),
+        ("Fluxos", "top_flows"),
+        ("Ativos", "top_assets"),
+    ):
+        items = ar.get(key) or []
+        if items:
             lines.append(
-                msgs.precheck_line.format(
-                    score=pq.score_0_100,
-                    band=pq.band,
-                    conf=pq.recommendation_confidence,
-                    fit=pq.methodology_fit_matrix.get("stride", pq.methodology_fit),
-                )
+                f"- **{label} mais críticos:** "
+                + ", ".join(f"`{x.get('id')}` ({x.get('aggregate_score')})" for x in items[:4])
             )
-        if mc is not None:
-            reasons = "; ".join(mc.reasons[:3]) if mc.reasons else "—"
-            note = mc.note or ""
-            note_suffix = f" · _{note}_" if note else ""
-            lines.append(
-                msgs.completeness_line.format(
-                    state=mc.state.value,
-                    reasons=reasons,
-                    note=note_suffix,
-                )
-            )
-        lines.append("")
 
-    if result.wizard_context_notes:
-        lines.append(msgs.wizard_context_title)
-        lines.append("")
-        lines.append(msgs.wizard_context_blurb)
-        lines.append("")
-        for note in result.wizard_context_notes[:8]:
-            lines.append(f"- {note}")
-        lines.append("")
 
-    if result.wizard_signal_trace:
-        lines.append(msgs.audit_title)
-        lines.append("")
-        lines.append(msgs.audit_blurb)
-        lines.append("")
-        for entry in result.wizard_signal_trace[:12]:
-            areas = ", ".join(entry.impact_areas) if entry.impact_areas else "—"
-            lines.append(
-                msgs.audit_entry.format(
-                    tag=entry.source_tag,
-                    effect=entry.effect,
-                    weight=entry.weight,
-                    mechanism=entry.mechanism,
-                    areas=areas,
-                    explanation=entry.explanation,
-                )
-            )
-        lines.append("")
+def _append_aggregate_block(lines: list[str], ar: dict[str, Any]) -> None:
+    lines.append(
+        f"- **Ameaças activas:** {ar.get('active_threat_count', '—')} · "
+        f"**Score total:** {ar.get('total_risk_score', '—')} · "
+        f"**Média / máx:** {ar.get('mean_risk_score', '—')} / {ar.get('max_risk_score', '—')}"
+    )
+    dist = ar.get("severity_distribution") or {}
+    if dist:
+        lines.append(f"- **Distribuição por severidade:** `{dist}`")
+    top_t = ar.get("top_threats") or []
+    if top_t:
+        lines.append("- **Top ameaças (score):**")
+        for row in top_t[:5]:
+            lines.append(f"  - `{row.get('id')}` — {row.get('title', '')[:80]} (score {row.get('score')})")
+    _append_top_groups(lines, ar)
+    themes = ar.get("dominant_themes") or []
+    if themes:
+        lines.append("- **Temas dominantes:** " + "; ".join(str(t) for t in themes[:6]))
+    starters = ar.get("mitigation_starters") or []
+    if starters:
+        lines.append("- **Mitigação inicial:**")
+        for st in starters[:6]:
+            lines.append(f"  - {st}")
 
-    if pq and pq.checks:
-        failed = [c for c in pq.checks if not c.passed][:6]
-        if failed:
-            lines.append(msgs.model_gaps_title)
-            lines.append("")
-            for c in failed:
-                lines.append(f"- [{c.code}] {c.message}")
-            lines.append("")
 
-    if result.anti_pattern_hits:
-        lines.append(msgs.anti_patterns_title)
-        lines.append("")
-        for hit in result.anti_pattern_hits[:10]:
-            conf = getattr(hit, "confidence_hint", None) or "medium"
-            lines.append(f"- **{hit.name}** (`{hit.id}`){msgs.anti_pattern_confidence.format(conf=conf)}{hit.message}")
-        lines.append("")
+def _append_cockpit_block(lines: list[str], dc: dict[str, Any]) -> None:
+    lines.append(f"- **Postura:** `{dc.get('risk_posture', '—')}` — {dc.get('headline', '')}")
+    for kd in dc.get("key_decisions") or []:
+        lines.append(f"  - {kd}")
+    for nr in (dc.get("next_reviews") or [])[:4]:
+        lines.append(f"  - *Rever:* {nr}")
 
 
 def _append_aggregate_risk_and_cockpit(lines: list[str], result: AnalysisResult) -> None:
@@ -504,44 +569,9 @@ def _append_aggregate_risk_and_cockpit(lines: list[str], result: AnalysisResult)
     lines.append("### Consolidação de risco e cockpit executivo")
     lines.append("")
     if ar:
-        lines.append(
-            f"- **Ameaças activas:** {ar.get('active_threat_count', '—')} · "
-            f"**Score total:** {ar.get('total_risk_score', '—')} · "
-            f"**Média / máx:** {ar.get('mean_risk_score', '—')} / {ar.get('max_risk_score', '—')}"
-        )
-        dist = ar.get("severity_distribution") or {}
-        if dist:
-            lines.append(f"- **Distribuição por severidade:** `{dist}`")
-        top_t = ar.get("top_threats") or []
-        if top_t:
-            lines.append("- **Top ameaças (score):**")
-            for row in top_t[:5]:
-                lines.append(f"  - `{row.get('id')}` — {row.get('title', '')[:80]} (score {row.get('score')})")
-        for label, key in (
-            ("Componentes", "top_components"),
-            ("Fluxos", "top_flows"),
-            ("Ativos", "top_assets"),
-        ):
-            items = ar.get(key) or []
-            if items:
-                lines.append(
-                    f"- **{label} mais críticos:** "
-                    + ", ".join(f"`{x.get('id')}` ({x.get('aggregate_score')})" for x in items[:4])
-                )
-        themes = ar.get("dominant_themes") or []
-        if themes:
-            lines.append("- **Temas dominantes:** " + "; ".join(str(t) for t in themes[:6]))
-        starters = ar.get("mitigation_starters") or []
-        if starters:
-            lines.append("- **Mitigação inicial:**")
-            for st in starters[:6]:
-                lines.append(f"  - {st}")
+        _append_aggregate_block(lines, ar)
     if dc:
-        lines.append(f"- **Postura:** `{dc.get('risk_posture', '—')}` — {dc.get('headline', '')}")
-        for kd in dc.get("key_decisions") or []:
-            lines.append(f"  - {kd}")
-        for nr in (dc.get("next_reviews") or [])[:4]:
-            lines.append(f"  - *Rever:* {nr}")
+        _append_cockpit_block(lines, dc)
     lines.append("")
 
 

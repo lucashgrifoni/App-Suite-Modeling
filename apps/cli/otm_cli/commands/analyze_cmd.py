@@ -8,6 +8,7 @@ from typing import Annotated
 import typer
 from otm_core_schema.enums import ThreatModelMethodology
 from otm_framework_mappings import framework_display_name
+from otm_threat_engine.result import AnalysisResult
 from rich.panel import Panel
 
 from otm_cli.application.analyze_service import run_analyze
@@ -16,6 +17,67 @@ from otm_cli.commands.handle_errors import exit_on_cli_error
 from otm_cli.shared.emit import write_json_file
 from otm_cli.shared.enums import MethodologyOption
 from otm_cli.shared.errors import CliUserError
+
+
+def _emit_json_output(result: AnalysisResult, json_out: Path, *, quiet: bool) -> None:
+    payload = result.model_dump(mode="json")
+    write_json_file(payload=payload, output=json_out)
+    if not quiet:
+        console.print(f"[green]Analysis written to[/green] {json_out.resolve()}")
+
+
+def _emit_analysis_panel(result: AnalysisResult) -> None:
+    s = result.summary
+    pack_line = ""
+    if result.industry_pack_id:
+        pack_line = f"Pack: {result.industry_pack_id} · pack threats: {s.pack_threats_generated}\n"
+    fw_line = ""
+    if s.framework_ref_counts_by_catalog:
+        bits = [f"{framework_display_name(k)}: {v}" for k, v in sorted(s.framework_ref_counts_by_catalog.items())]
+        fw_line = "Framework refs: " + " · ".join(bits) + "\n"
+    console.print(
+        Panel.fit(
+            f"[bold]{result.document_title}[/bold]\n\n"
+            f"{pack_line}"
+            f"{fw_line}"
+            f"Structural warnings: {s.structural_findings}\n"
+            f"Methodology: {result.methodology.value}\n"
+            f"Cross-boundary flows: {s.trust_boundary_findings}\n"
+            f"Base heuristics: {s.heuristic_threats_generated} new · "
+            f"{s.heuristic_threats_skipped_duplicate} already covered\n"
+            f"Highest score (L×I): {s.max_risk_score!s}\n"
+            f"Engine: {result.engine_version}",
+            title="analyze",
+            border_style="cyan",
+        )
+    )
+    if result.methodology_recommendation_reason:
+        console.print(f"[dim]Auto recommendation:[/dim] {result.methodology_recommendation_reason}")
+    if result.methodology == ThreatModelMethodology.PLOT4AI and result.ai_system_context:
+        ctx = result.ai_system_context
+        tags = ", ".join(ctx.pattern_tags[:6]) if ctx.pattern_tags else "—"
+        console.print(f"[dim]PLOT4ai (AI):[/dim] patterns ~ [{tags}]")
+        if ctx.primary_risk_surfaces:
+            console.print(f"[dim]  Surface:[/dim] {ctx.primary_risk_surfaces[0][:160]}")
+
+
+def _emit_explainability(result: AnalysisResult, *, explain: bool) -> None:
+    if not (explain and result.explanations):
+        return
+    console.print("\n[bold]Explainability[/bold] (first 15 entries)")
+    for ex in result.explanations[:15]:
+        cat = getattr(ex.category, "value", ex.category)
+        console.print(f"  [cyan]{cat}[/cyan] · {ex.subject} — {ex.message}")
+
+
+def _emit_audit_trail(result: AnalysisResult) -> None:
+    if not (result.wizard_context_notes or result.wizard_signal_trace):
+        return
+    console.print("\n[bold]Assistant / audit trail[/bold] (summary)")
+    for n in result.wizard_context_notes[:6]:
+        console.print(f"  [dim]note:[/dim] {n[:200]}")
+    for tr in result.wizard_signal_trace[:8]:
+        console.print(f"  [dim]{tr.effect}[/dim] `{tr.source_tag[:64]}` ({tr.weight}) → {tr.explanation[:160]}")
 
 
 def register(app: typer.Typer) -> None:
@@ -64,56 +126,10 @@ def register(app: typer.Typer) -> None:
             exit_on_cli_error(console, e)
 
         if json_out:
-            payload = result.model_dump(mode="json")
-            write_json_file(payload=payload, output=json_out)
-            if not quiet:
-                console.print(f"[green]Analysis written to[/green] {json_out.resolve()}")
-
+            _emit_json_output(result, json_out, quiet=quiet)
         if quiet:
             raise typer.Exit(0)
 
-        s = result.summary
-        pack_line = ""
-        if result.industry_pack_id:
-            pack_line = f"Pack: {result.industry_pack_id} · pack threats: {s.pack_threats_generated}\n"
-        fw_line = ""
-        if s.framework_ref_counts_by_catalog:
-            bits = [f"{framework_display_name(k)}: {v}" for k, v in sorted(s.framework_ref_counts_by_catalog.items())]
-            fw_line = "Framework refs: " + " · ".join(bits) + "\n"
-        console.print(
-            Panel.fit(
-                f"[bold]{result.document_title}[/bold]\n\n"
-                f"{pack_line}"
-                f"{fw_line}"
-                f"Structural warnings: {s.structural_findings}\n"
-                f"Methodology: {result.methodology.value}\n"
-                f"Cross-boundary flows: {s.trust_boundary_findings}\n"
-                f"Base heuristics: {s.heuristic_threats_generated} new · "
-                f"{s.heuristic_threats_skipped_duplicate} already covered\n"
-                f"Highest score (L×I): {s.max_risk_score!s}\n"
-                f"Engine: {result.engine_version}",
-                title="analyze",
-                border_style="cyan",
-            )
-        )
-        if result.methodology_recommendation_reason:
-            console.print(f"[dim]Auto recommendation:[/dim] {result.methodology_recommendation_reason}")
-        if result.methodology == ThreatModelMethodology.PLOT4AI and result.ai_system_context:
-            ctx = result.ai_system_context
-            tags = ", ".join(ctx.pattern_tags[:6]) if ctx.pattern_tags else "—"
-            console.print(f"[dim]PLOT4ai (AI):[/dim] patterns ~ [{tags}]")
-            if ctx.primary_risk_surfaces:
-                console.print(f"[dim]  Surface:[/dim] {ctx.primary_risk_surfaces[0][:160]}")
-
-        if explain and result.explanations:
-            console.print("\n[bold]Explainability[/bold] (first 15 entries)")
-            for ex in result.explanations[:15]:
-                cat = getattr(ex.category, "value", ex.category)
-                console.print(f"  [cyan]{cat}[/cyan] · {ex.subject} — {ex.message}")
-
-        if result.wizard_context_notes or result.wizard_signal_trace:
-            console.print("\n[bold]Assistant / audit trail[/bold] (summary)")
-            for n in result.wizard_context_notes[:6]:
-                console.print(f"  [dim]note:[/dim] {n[:200]}")
-            for tr in result.wizard_signal_trace[:8]:
-                console.print(f"  [dim]{tr.effect}[/dim] `{tr.source_tag[:64]}` ({tr.weight}) → {tr.explanation[:160]}")
+        _emit_analysis_panel(result)
+        _emit_explainability(result, explain=explain)
+        _emit_audit_trail(result)

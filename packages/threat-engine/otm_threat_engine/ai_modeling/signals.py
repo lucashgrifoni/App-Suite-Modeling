@@ -158,28 +158,34 @@ def _apply_structural_enrichment(doc: ThreatModelDocument, b: AiSignalBundle) ->
             "Agente, gateway de ferramentas ou orquestração com tool-use descrita estruturalmente.",
         )
 
+    _apply_external_provider_enrichment(doc, b)
+
+
+def _apply_external_provider_enrichment(doc: ThreatModelDocument, b: AiSignalBundle) -> None:
+    """Marca dependência de fornecedor externo de modelo e fluxos que cruzam até ele."""
     ext = [c for c in doc.components if c.kind == ComponentKind.EXTERNAL_ENTITY]
     llm_ext_ids = {
         c.id
         for c in ext
         if _external_model_blob_match(f"{c.id} {c.name} {(c.description or '')} {(c.technology or '')}".lower())
     }
-    if llm_ext_ids:
-        b.provider_inference = True
-        _add_evidence(
-            b,
-            "provider_inference",
-            "Componente externo (fornecedor de modelo / inferência) declarado no diagrama.",
-        )
-        for f in doc.data_flows:
-            if f.from_component in llm_ext_ids or f.to_component in llm_ext_ids:
-                b.external_model_provider_linked = True
-                _add_evidence(
-                    b,
-                    "provider_inference",
-                    "Fluxo cruza fronteira até fornecedor externo de modelo — dependência de terceiros relevante.",
-                )
-                break
+    if not llm_ext_ids:
+        return
+    b.provider_inference = True
+    _add_evidence(
+        b,
+        "provider_inference",
+        "Componente externo (fornecedor de modelo / inferência) declarado no diagrama.",
+    )
+    for f in doc.data_flows:
+        if f.from_component in llm_ext_ids or f.to_component in llm_ext_ids:
+            b.external_model_provider_linked = True
+            _add_evidence(
+                b,
+                "provider_inference",
+                "Fluxo cruza fronteira até fornecedor externo de modelo — dependência de terceiros relevante.",
+            )
+            break
 
 
 def collect_ai_signals_from_document(doc: ThreatModelDocument) -> AiSignalBundle:

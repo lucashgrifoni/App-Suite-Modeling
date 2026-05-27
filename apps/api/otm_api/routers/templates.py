@@ -79,6 +79,6 @@ def instantiate_template(
         doc = document_from_template(template_id)
     except FileNotFoundError as e:
         raise raise_template_not_found(e) from e
-    except PydanticValidationError as e:
+    except PydanticValidationError as e:  # pragma: no cover - defensive guard
         raise raise_template_invalid(e) from e
     return CreateModelResponse(document=doc.model_dump(mode="json", by_alias=True))

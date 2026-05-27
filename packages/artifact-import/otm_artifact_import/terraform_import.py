@@ -47,25 +47,25 @@ def _public_ingress_hint(body: str) -> bool:
     return bool(re.search(r"0\.0\.0\.0/0", body))
 
 
+_CLOUD_PREFIXES = ("aws_", "google_", "azurerm_")
+
+# Avaliadas por ordem; primeira keyword presente em `rtype` define o ComponentKind.
+_CLOUD_RESOURCE_RULES: list[tuple[tuple[str, ...], ComponentKind]] = [
+    (("s3_bucket", "storage_bucket"), ComponentKind.DATASTORE),
+    (("rds", "sql_database", "db_instance", "database"), ComponentKind.DATASTORE),
+    (("dynamodb",), ComponentKind.DATASTORE),
+    (("sqs_queue", "sns_topic", "servicebus"), ComponentKind.QUEUE),
+    (("lb", "load_balancer", "gateway"), ComponentKind.GATEWAY),
+    (("instance", "lambda", "function", "ecs_service"), ComponentKind.PROCESS),
+]
+
+
 def _map_resource_kind(rtype: str) -> tuple[ComponentKind, str | None]:
     """Devolve (ComponentKind, technology_hint)."""
-    if rtype.startswith("aws_") or rtype.startswith("google_") or rtype.startswith("azurerm_"):
-        if "s3_bucket" in rtype or "storage_bucket" in rtype:
-            return ComponentKind.DATASTORE, rtype
-        if "rds" in rtype or "sql_database" in rtype or "db_instance" in rtype or "database" in rtype:
-            return ComponentKind.DATASTORE, rtype
-        if "dynamodb" in rtype:
-            return ComponentKind.DATASTORE, rtype
-        if "sqs_queue" in rtype or "sns_topic" in rtype or "servicebus" in rtype:
-            return ComponentKind.QUEUE, rtype
-        if "lb" in rtype or "load_balancer" in rtype or "gateway" in rtype:
-            return ComponentKind.GATEWAY, rtype
-        if "instance" in rtype or "lambda" in rtype or "function" in rtype or "ecs_service" in rtype:
-            return ComponentKind.PROCESS, rtype
-        return ComponentKind.OTHER, rtype
-
-    if rtype.startswith("kubernetes_") or rtype.startswith("helm_"):
-        return ComponentKind.OTHER, rtype
+    if rtype.startswith(_CLOUD_PREFIXES):
+        for keywords, kind in _CLOUD_RESOURCE_RULES:
+            if any(k in rtype for k in keywords):
+                return kind, rtype
     return ComponentKind.OTHER, rtype
 
 

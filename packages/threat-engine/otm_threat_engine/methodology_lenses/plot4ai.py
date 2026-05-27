@@ -182,6 +182,21 @@ def _insight_items_yes_no(active: bool, yes_bullets: list[str], no_bullet: str) 
     return yes_bullets if active else [no_bullet]
 
 
+def _governance_layer_items(signals: AiSignalBundle) -> list[str]:
+    """Bullets da camada de governação/observabilidade conforme a evidência disponível."""
+    if signals.explicit_governance_evidence:
+        return [
+            "Trilha auditável de prompts, respostas resumidas e chamadas a ferramentas",
+            "Versionamento de prompts/modelos e avaliações periódicas",
+        ]
+    if signals.ml_pipeline_referenced or signals.model_interaction:
+        return [
+            "Pipeline ou inferência referidos — reforçar observabilidade e deriva",
+            "Sem evidência textual de controlos formais (possível gap operacional)",
+        ]
+    return ["Sem sinal de pipeline de IA no texto — planear mínimo de logging seguro para evolução."]
+
+
 def _append_plot4ai_insights(
     doc: ThreatModelDocument,
     result: AnalysisResult,
@@ -272,21 +287,7 @@ def _append_plot4ai_insights(
         (
             "governance_observability_layer",
             "Camada: governação, auditoria e observabilidade",
-            (
-                [
-                    "Trilha auditável de prompts, respostas resumidas e chamadas a ferramentas",
-                    "Versionamento de prompts/modelos e avaliações periódicas",
-                ]
-                if signals.explicit_governance_evidence
-                else (
-                    [
-                        "Pipeline ou inferência referidos — reforçar observabilidade e deriva",
-                        "Sem evidência textual de controlos formais (possível gap operacional)",
-                    ]
-                    if signals.ml_pipeline_referenced or signals.model_interaction
-                    else ["Sem sinal de pipeline de IA no texto — planear mínimo de logging seguro para evolução."]
-                )
-            ),
+            _governance_layer_items(signals),
         ),
     ]
 

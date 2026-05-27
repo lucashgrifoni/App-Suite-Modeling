@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from .enums import ReportLevel
 from .models import PremiumReportPayload
-from .report_i18n import premium_render_copy
+from .report_i18n import PremiumRenderCopy, premium_render_copy
 
 
 def _md_table(headers: list[str], rows: list[list[str]], empty_msg: str) -> str:
@@ -16,12 +16,7 @@ def _md_table(headers: list[str], rows: list[list[str]], empty_msg: str) -> str:
     return h + sep + body
 
 
-def render_premium_markdown(payload: PremiumReportPayload) -> str:
-    """Gera Markdown completo; profundidade controlada por `payload.level`."""
-    r = premium_render_copy(payload.locale)
-    lvl = payload.level
-    lines: list[str] = []
-
+def _md_cover_and_disclaimer(lines: list[str], payload: PremiumReportPayload, r: PremiumRenderCopy) -> None:
     lines.append(f"# {payload.cover.title}\n")
     lines.append(f"{r.md_executive_cover}\n")
     ver = payload.cover.document_version or r.nd
@@ -39,6 +34,8 @@ def render_premium_markdown(payload: PremiumReportPayload) -> str:
         lines.append(f"- {bullet}")
     lines.append("")
 
+
+def _md_executive_summary(lines: list[str], payload: PremiumReportPayload, r: PremiumRenderCopy) -> None:
     lines.append(f"{r.md_executive_summary}\n")
     es = payload.executive_summary
     lines.append(f"- {r.md_total_threats} {es.threat_count}")
@@ -72,80 +69,77 @@ def render_premium_markdown(payload: PremiumReportPayload) -> str:
         lines.append(f"- {q}")
     lines.append("")
 
-    if payload.guided_modeling_audit:
-        audit = payload.guided_modeling_audit
-        lines.append(f"{r.md_guided_context}\n")
-        if audit.model_quality_summary_line:
-            lines.append(f"- {r.md_model_quality} {audit.model_quality_summary_line}\n")
-        if audit.methodology_completeness_line:
-            lines.append(f"- {r.md_methodology_line} {audit.methodology_completeness_line}\n")
-        if audit.wizard_context_notes:
-            lines.append(f"{r.md_wizard_notes}\n")
-            for n in audit.wizard_context_notes:
-                lines.append(f"- {n}")
-            lines.append("")
-        if audit.wizard_signal_trace_lines:
-            lines.append(f"{r.md_audit_trail}\n")
-            for trace_line in audit.wizard_signal_trace_lines:
-                lines.append(f"- {trace_line}")
-            lines.append("")
-        if audit.top_model_gap_messages:
-            lines.append(f"{r.md_gap_precheck}\n")
-            for m in audit.top_model_gap_messages:
-                lines.append(f"- {m}")
-            lines.append("")
-        if audit.anti_pattern_summaries:
-            lines.append(f"{r.md_anti_patterns}\n")
-            for a in audit.anti_pattern_summaries:
-                lines.append(f"- {a}")
-            lines.append("")
 
-    if lvl != ReportLevel.EXECUTIVE:
-        lines.append(f"{r.md_arch_overview}\n")
-        ar = payload.architecture
-        lines.append(ar.narrative + "\n")
-        lines.append(f"{r.md_main_components}\n")
-        lines.append("\n".join(f"- {c}" for c in ar.main_components[:15]))
-        lines.append(f"\n{r.md_main_flows}\n")
-        lines.append("\n".join(f"- {f}" for f in ar.main_flows[:15]))
-        lines.append(f"\n{r.md_meth_used_vs_rec}\n")
-        lines.append(f"- {r.md_used} {ar.methodology_used}")
-        lines.append(f"- {r.md_recommended} {ar.methodology_recommended or r.nd}")
-        if ar.recommendation_reason:
-            lines.append(f"- {r.md_reason} {ar.recommendation_reason}")
+def _md_guided_audit(lines: list[str], payload: PremiumReportPayload, r: PremiumRenderCopy) -> None:
+    if not payload.guided_modeling_audit:
+        return
+    audit = payload.guided_modeling_audit
+    lines.append(f"{r.md_guided_context}\n")
+    if audit.model_quality_summary_line:
+        lines.append(f"- {r.md_model_quality} {audit.model_quality_summary_line}\n")
+    if audit.methodology_completeness_line:
+        lines.append(f"- {r.md_methodology_line} {audit.methodology_completeness_line}\n")
+    if audit.wizard_context_notes:
+        lines.append(f"{r.md_wizard_notes}\n")
+        for n in audit.wizard_context_notes:
+            lines.append(f"- {n}")
+        lines.append("")
+    if audit.wizard_signal_trace_lines:
+        lines.append(f"{r.md_audit_trail}\n")
+        for trace_line in audit.wizard_signal_trace_lines:
+            lines.append(f"- {trace_line}")
+        lines.append("")
+    if audit.top_model_gap_messages:
+        lines.append(f"{r.md_gap_precheck}\n")
+        for m in audit.top_model_gap_messages:
+            lines.append(f"- {m}")
+        lines.append("")
+    if audit.anti_pattern_summaries:
+        lines.append(f"{r.md_anti_patterns}\n")
+        for a in audit.anti_pattern_summaries:
+            lines.append(f"- {a}")
         lines.append("")
 
-    if lvl != ReportLevel.EXECUTIVE:
-        lines.append(f"{r.md_stats_distribution}\n")
-        d = payload.distributions
-        lines.append(
-            _md_table(
-                [r.hdr_metric, r.hdr_value],
-                [[r.md_total_threats_metric, str(d.total_threats)]],
-                r.md_no_data,
-            )
-        )
-        lines.append(f"{r.md_by_stride}\n")
-        lines.append(
-            _md_table(
-                [r.hdr_stride, r.hdr_n],
-                [[k, str(v)] for k, v in d.by_stride.items()],
-                r.md_no_data,
-            )
-        )
-        lines.append(f"{r.md_heatmap_stride_sev}\n")
-        for sk, row in d.heatmap_stride_severity.items():
-            lines.append(f"**{sk}:** " + ", ".join(f"{bk}={bv}" for bk, bv in row.items()))
-        lines.append(f"\n{r.md_ranking_components}\n")
-        lines.append(
-            _md_table(
-                [r.hdr_component, r.hdr_score],
-                [[str(a), f"{b:.3f}"] for a, b in d.top_components_ranked[:10]],
-                r.md_no_data,
-            )
-        )
-        lines.append("")
 
+def _md_architecture_and_stats(lines: list[str], payload: PremiumReportPayload, r: PremiumRenderCopy) -> None:
+    if payload.level == ReportLevel.EXECUTIVE:
+        return
+    lines.append(f"{r.md_arch_overview}\n")
+    ar = payload.architecture
+    lines.append(ar.narrative + "\n")
+    lines.append(f"{r.md_main_components}\n")
+    lines.append("\n".join(f"- {c}" for c in ar.main_components[:15]))
+    lines.append(f"\n{r.md_main_flows}\n")
+    lines.append("\n".join(f"- {f}" for f in ar.main_flows[:15]))
+    lines.append(f"\n{r.md_meth_used_vs_rec}\n")
+    lines.append(f"- {r.md_used} {ar.methodology_used}")
+    lines.append(f"- {r.md_recommended} {ar.methodology_recommended or r.nd}")
+    if ar.recommendation_reason:
+        lines.append(f"- {r.md_reason} {ar.recommendation_reason}")
+    lines.append("")
+
+    lines.append(f"{r.md_stats_distribution}\n")
+    d = payload.distributions
+    lines.append(
+        _md_table([r.hdr_metric, r.hdr_value], [[r.md_total_threats_metric, str(d.total_threats)]], r.md_no_data)
+    )
+    lines.append(f"{r.md_by_stride}\n")
+    lines.append(_md_table([r.hdr_stride, r.hdr_n], [[k, str(v)] for k, v in d.by_stride.items()], r.md_no_data))
+    lines.append(f"{r.md_heatmap_stride_sev}\n")
+    for sk, row in d.heatmap_stride_severity.items():
+        lines.append(f"**{sk}:** " + ", ".join(f"{bk}={bv}" for bk, bv in row.items()))
+    lines.append(f"\n{r.md_ranking_components}\n")
+    lines.append(
+        _md_table(
+            [r.hdr_component, r.hdr_score],
+            [[str(a), f"{b:.3f}"] for a, b in d.top_components_ranked[:10]],
+            r.md_no_data,
+        )
+    )
+    lines.append("")
+
+
+def _md_top_risks(lines: list[str], payload: PremiumReportPayload, r: PremiumRenderCopy) -> None:
     lines.append(f"{r.md_top10_risks}\n")
     lines.append(
         _md_table(
@@ -166,41 +160,45 @@ def render_premium_markdown(payload: PremiumReportPayload) -> str:
     )
     lines.append("")
 
-    if lvl != ReportLevel.EXECUTIVE:
-        lines.append(f"{r.md_root_cause_groups}\n")
-        for rc_group in payload.root_cause_groups[:15]:
-            lines.append(f"### {rc_group.display_name} (`{rc_group.key}`)\n")
-            lines.append(f"- {r.md_occurrences_backlog} {rc_group.threat_count}")
-            lines.append(f"- {r.md_single_fix} {rc_group.single_fix_recommendation[:400]}")
-            lines.append(f"- {r.md_controls} {', '.join(rc_group.suggested_controls)}\n")
 
-        lines.append(f"{r.md_exploit_sample}\n")
-        for exp_prof in payload.exploitability_profiles[:10]:
-            lines.append(f"### {exp_prof.threat_id}\n")
-            lines.append(f"- {exp_prof.notes}")
-            lines.append(
-                f"- {r.md_locality} {exp_prof.attack_locality} · {r.md_external} {exp_prof.requires_external_access} · "
-                f"{r.md_mitm} {exp_prof.requires_mitm}\n"
-            )
+def _md_deep_details(lines: list[str], payload: PremiumReportPayload, r: PremiumRenderCopy) -> None:
+    if payload.level == ReportLevel.EXECUTIVE:
+        return
+    lines.append(f"{r.md_root_cause_groups}\n")
+    for rc_group in payload.root_cause_groups[:15]:
+        lines.append(f"### {rc_group.display_name} (`{rc_group.key}`)\n")
+        lines.append(f"- {r.md_occurrences_backlog} {rc_group.threat_count}")
+        lines.append(f"- {r.md_single_fix} {rc_group.single_fix_recommendation[:400]}")
+        lines.append(f"- {r.md_controls} {', '.join(rc_group.suggested_controls)}\n")
 
-        lines.append(f"{r.md_business_impact_labels}\n")
-        for biz_row in payload.business_impacts[:10]:
-            lines.append(f"- **{biz_row.threat_id}:** {', '.join(biz_row.labels)} — _{biz_row.rationale}_\n")
+    lines.append(f"{r.md_exploit_sample}\n")
+    for exp_prof in payload.exploitability_profiles[:10]:
+        lines.append(f"### {exp_prof.threat_id}\n")
+        lines.append(f"- {exp_prof.notes}")
+        lines.append(
+            f"- {r.md_locality} {exp_prof.attack_locality} · {r.md_external} {exp_prof.requires_external_access} · "
+            f"{r.md_mitm} {exp_prof.requires_mitm}\n"
+        )
 
-    if lvl != ReportLevel.EXECUTIVE:
-        lines.append(f"{r.md_quick_wins}\n")
-        for qw in payload.quick_wins:
-            lines.append(f"- **{qw.title}** (`{qw.backlog_item_id}`): {qw.rationale[:300]}\n")
+    lines.append(f"{r.md_business_impact_labels}\n")
+    for biz_row in payload.business_impacts[:10]:
+        lines.append(f"- **{biz_row.threat_id}:** {', '.join(biz_row.labels)} — _{biz_row.rationale}_\n")
 
-        lines.append(f"{r.md_ownership}\n")
-        for ow in payload.ownership:
-            role = ow.suggested_owner_role or r.md_to_define
-            lines.append(f"- **{role}:** {len(ow.backlog_item_ids)} {r.md_items} {r.md_em_dash} {ow.explanation}\n")
+    lines.append(f"{r.md_quick_wins}\n")
+    for qw in payload.quick_wins:
+        lines.append(f"- **{qw.title}** (`{qw.backlog_item_id}`): {qw.rationale[:300]}\n")
 
-        lines.append(f"{r.md_strategic}\n")
-        for s in payload.strategic_recommendations:
-            lines.append(f"### {s.title}\n{s.detail}\n")
+    lines.append(f"{r.md_ownership}\n")
+    for ow in payload.ownership:
+        role = ow.suggested_owner_role or r.md_to_define
+        lines.append(f"- **{role}:** {len(ow.backlog_item_ids)} {r.md_items} {r.md_em_dash} {ow.explanation}\n")
 
+    lines.append(f"{r.md_strategic}\n")
+    for s in payload.strategic_recommendations:
+        lines.append(f"### {s.title}\n{s.detail}\n")
+
+
+def _md_roadmap(lines: list[str], payload: PremiumReportPayload, r: PremiumRenderCopy) -> None:
     lines.append(f"{r.md_roadmap}\n")
     for ph in payload.roadmap:
         lines.append(f"### {ph.title}\n")
@@ -208,36 +206,46 @@ def render_premium_markdown(payload: PremiumReportPayload) -> str:
             lines.append(f"- {it}")
         lines.append("")
 
-    if payload.baseline_diff and payload.baseline_diff.has_baseline:
-        lines.append(f"{r.md_baseline_diff}\n")
-        lines.append(payload.baseline_diff.narrative + "\n")
-        lines.append(f"{r.md_new} {', '.join(payload.baseline_diff.threats_added[:20])}\n")
-        lines.append(f"{r.md_removed} {', '.join(payload.baseline_diff.threats_removed[:20])}\n")
-        bd = payload.baseline_diff
-        if (
-            bd.semantic_insights_from_analysis
-            or bd.semantic_improved
-            or bd.semantic_worsened
-            or bd.semantic_risk_impact
-        ):
-            lines.append(f"\n{r.md_semantic_diff}\n")
-            lines.append(f"{r.md_semantic_diff_note}\n")
-            for x in bd.semantic_insights_from_analysis[:10]:
-                lines.append(f"- {x}")
-            if bd.semantic_improved:
-                lines.append(f"\n{r.md_improved}")
-                for x in bd.semantic_improved[:8]:
-                    lines.append(f"- {x}")
-            if bd.semantic_worsened:
-                lines.append(f"\n{r.md_attention}")
-                for x in bd.semantic_worsened[:8]:
-                    lines.append(f"- {x}")
-            if bd.semantic_risk_impact:
-                lines.append(f"\n{r.md_risk_impact_reading}")
-                for x in bd.semantic_risk_impact[:6]:
-                    lines.append(f"- {x}")
-            lines.append("")
 
+def _md_baseline_semantic(lines: list[str], bd: object, r: PremiumRenderCopy) -> None:
+    if not (
+        bd.semantic_insights_from_analysis  # type: ignore[attr-defined]
+        or bd.semantic_improved  # type: ignore[attr-defined]
+        or bd.semantic_worsened  # type: ignore[attr-defined]
+        or bd.semantic_risk_impact  # type: ignore[attr-defined]
+    ):
+        return
+    lines.append(f"\n{r.md_semantic_diff}\n")
+    lines.append(f"{r.md_semantic_diff_note}\n")
+    for x in bd.semantic_insights_from_analysis[:10]:  # type: ignore[attr-defined]
+        lines.append(f"- {x}")
+    if bd.semantic_improved:  # type: ignore[attr-defined]
+        lines.append(f"\n{r.md_improved}")
+        for x in bd.semantic_improved[:8]:  # type: ignore[attr-defined]
+            lines.append(f"- {x}")
+    if bd.semantic_worsened:  # type: ignore[attr-defined]
+        lines.append(f"\n{r.md_attention}")
+        for x in bd.semantic_worsened[:8]:  # type: ignore[attr-defined]
+            lines.append(f"- {x}")
+    if bd.semantic_risk_impact:  # type: ignore[attr-defined]
+        lines.append(f"\n{r.md_risk_impact_reading}")
+        for x in bd.semantic_risk_impact[:6]:  # type: ignore[attr-defined]
+            lines.append(f"- {x}")
+    lines.append("")
+
+
+def _md_baseline_diff(lines: list[str], payload: PremiumReportPayload, r: PremiumRenderCopy) -> None:
+    if not (payload.baseline_diff and payload.baseline_diff.has_baseline):
+        return
+    lines.append(f"{r.md_baseline_diff}\n")
+    lines.append(payload.baseline_diff.narrative + "\n")
+    lines.append(f"{r.md_new} {', '.join(payload.baseline_diff.threats_added[:20])}\n")
+    lines.append(f"{r.md_removed} {', '.join(payload.baseline_diff.threats_removed[:20])}\n")
+    _md_baseline_semantic(lines, payload.baseline_diff, r)
+
+
+def _md_tail_sections(lines: list[str], payload: PremiumReportPayload, r: PremiumRenderCopy) -> None:
+    lvl = payload.level
     if lvl != ReportLevel.EXECUTIVE and payload.deduplication:
         lines.append(f"{r.md_dedup}\n")
         for dg in payload.deduplication[:10]:
@@ -266,5 +274,19 @@ def render_premium_markdown(payload: PremiumReportPayload) -> str:
             lines.append(f"- {v}")
         lines.append("")
 
+
+def render_premium_markdown(payload: PremiumReportPayload) -> str:
+    """Gera Markdown completo; profundidade controlada por `payload.level`."""
+    r = premium_render_copy(payload.locale)
+    lines: list[str] = []
+    _md_cover_and_disclaimer(lines, payload, r)
+    _md_executive_summary(lines, payload, r)
+    _md_guided_audit(lines, payload, r)
+    _md_architecture_and_stats(lines, payload, r)
+    _md_top_risks(lines, payload, r)
+    _md_deep_details(lines, payload, r)
+    _md_roadmap(lines, payload, r)
+    _md_baseline_diff(lines, payload, r)
+    _md_tail_sections(lines, payload, r)
     lines.append(f"---\n{r.md_footer}\n")
     return "\n".join(lines)

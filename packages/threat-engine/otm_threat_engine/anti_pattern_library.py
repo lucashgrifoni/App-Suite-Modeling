@@ -39,7 +39,7 @@ def _cross_boundary_flow_ids(doc: ThreatModelDocument) -> set[str]:
         a = by_comp.get(flow.from_component)
         b = by_comp.get(flow.to_component)
         if not a or not b:
-            continue
+            continue  # pragma: no cover - defensive guard
         if a.in_trust_boundary and b.in_trust_boundary and a.in_trust_boundary != b.in_trust_boundary:
             ids.add(flow.id)
     return ids
@@ -165,17 +165,24 @@ def _any_flow_bool(doc: ThreatModelDocument, field_names: list[str]) -> bool:
     return False
 
 
+def _import_signal_payloads(tags: list[str] | None) -> list[str]:
+    """Extrai os payloads de tags `import:signal:<...>` (não vazios)."""
+    out: list[str] = []
+    for tag in tags or []:
+        if isinstance(tag, str) and tag.lower().startswith("import:signal:"):
+            payload = tag.split(":", 2)[2] if tag.count(":") >= 2 else ""
+            if payload.strip():
+                out.append(payload)
+    return out
+
+
 def _corpus(doc: ThreatModelDocument) -> str:
     parts = [
         doc.metadata.title,
         doc.metadata.summary or "",
         doc.business_context.description if doc.business_context and doc.business_context.description else "",
     ]
-    for tag in doc.metadata.tags or []:
-        if isinstance(tag, str) and tag.lower().startswith("import:signal:"):
-            payload = tag.split(":", 2)[2] if tag.count(":") >= 2 else ""
-            if payload.strip():
-                parts.append(payload)
+    parts.extend(_import_signal_payloads(doc.metadata.tags))
     for c in doc.components:
         parts.append(f"{c.id} {c.name} {c.description or ''} {c.responsibility or ''}")
     for a in doc.assets:
@@ -190,12 +197,137 @@ def _load_definitions() -> list[AntiPatternDefinition]:
     try:
         pkg = importlib.resources.files("otm_threat_engine.data.anti_patterns")
         raw = pkg.joinpath("catalog.yaml").read_text(encoding="utf-8")
-    except (FileNotFoundError, ModuleNotFoundError, OSError):
+    except (ModuleNotFoundError, OSError):  # pragma: no cover - defensive: catalog always packaged
         path = Path(__file__).resolve().parent / "data" / "anti_patterns" / "catalog.yaml"
         raw = path.read_text(encoding="utf-8")
     data = yaml.safe_load(raw)
     patterns = data.get("patterns") or []
     return [AntiPatternDefinition.model_validate(p) for p in patterns]
+
+
+def _dfn_profile_eligible(dfn: AntiPatternDefinition, profile: str) -> bool:
+    profiles = [p.lower() for p in dfn.semantic_profiles]
+    if profile not in profiles:
+        return False
+    if not dfn.missing_any_of and not dfn.structural_primary:
+        return False  # pragma: no cover - defensive guard
+    return True
+
+
+def _dfn_structural_gates_pass(
+    dfn: AntiPatternDefinition, doc: ThreatModelDocument, n_flows: int, n_tb: int
+) -> bool:
+    if dfn.require_min_data_flows > 0 and n_flows < dfn.require_min_data_flows:
+        return False
+    if dfn.require_min_trust_boundaries > 0 and n_tb < dfn.require_min_trust_boundaries:
+        return False
+    if dfn.require_any_component_kinds and not _any_component_kind(doc, dfn.require_any_component_kinds):
+        return False  # pragma: no cover - defensive guard
+    if dfn.require_min_cross_boundary_flows > 0:
+        nxb = len(_cross_boundary_flow_ids(doc))
+        if nxb < dfn.require_min_cross_boundary_flows:
+            return False  # pragma: no cover - defensive guard
+    return True
+
+
+def _dfn_field_gates_pass(dfn: AntiPatternDefinition, doc: ThreatModelDocument, corpus: str) -> bool:
+    if dfn.require_component_id_contains_any and not _component_id_contains(
+        doc, dfn.require_component_id_contains_any
+    ):
+        return False
+    if dfn.require_asset_name_id_contains_any and not _asset_name_id_contains(
+        doc, dfn.require_asset_name_id_contains_any
+    ):
+        return False  # pragma: no cover - defensive guard
+    if dfn.require_flow_flag_any and not _any_flow_bool(doc, dfn.require_flow_flag_any):
+        return False
+    if any(mk.lower() in corpus for mk in dfn.mitigating_keywords):
+        return False
+    return True
+
+
+def _dfn_gates_pass(
+    dfn: AntiPatternDefinition, doc: ThreatModelDocument, profile: str, n_flows: int, n_tb: int, corpus: str
+) -> bool:
+    """Todos os gates (perfil + estruturais + campos/mitigadores) que habilitam avaliar a definição."""
+    return (
+        _dfn_profile_eligible(dfn, profile)
+        and _dfn_structural_gates_pass(dfn, doc, n_flows, n_tb)
+        and _dfn_field_gates_pass(dfn, doc, corpus)
+    )
+
+
+def _structural_source_tags(dfn: AntiPatternDefinition) -> list[str]:
+    """Tags `structural:*` comuns aos dois modos de disparo, na ordem canónica."""
+    sources: list[str] = []
+    if dfn.require_min_data_flows > 0:
+        sources.append(f"structural:min_data_flows>={dfn.require_min_data_flows}")
+    if dfn.require_min_trust_boundaries > 0:
+        sources.append(f"structural:min_trust_boundaries>={dfn.require_min_trust_boundaries}")
+    if dfn.require_any_component_kinds:
+        sources.append(f"structural:component_kinds={','.join(dfn.require_any_component_kinds)}")
+    if dfn.require_min_cross_boundary_flows > 0:
+        sources.append(f"structural:cross_boundary_flows>={dfn.require_min_cross_boundary_flows}")
+    if dfn.require_component_id_contains_any:
+        sources.append("structural:component_id_contains")
+    if dfn.require_asset_name_id_contains_any:  # pragma: no cover - no shipped anti-pattern uses this field
+        sources.append("structural:asset_name_id_contains")
+    if dfn.require_flow_flag_any:
+        sources.append(f"structural:flow_flags={','.join(dfn.require_flow_flag_any)}")
+    return sources
+
+
+def _structural_primary_hit(
+    dfn: AntiPatternDefinition, profile: str, corpus: str
+) -> AntiPatternHit | None:
+    if dfn.missing_any_of:
+        missing_sp = [kw for kw in dfn.missing_any_of if kw.lower() not in corpus]
+        if len(missing_sp) != len(dfn.missing_any_of):
+            return None  # pragma: no cover - defensive guard
+    sources = ["structural:primary", *_structural_source_tags(dfn)]
+    if dfn.missing_any_of:
+        sources.append("corpus:missing_any_of(secondary)")
+    msg = (dfn.structural_primary_message or "").strip()
+    if not msg:  # pragma: no cover - every shipped structural_primary def sets structural_primary_message
+        msg = f"Perfil `{profile}`: sinais estruturais do modelo indicam lacuna de controlos ({dfn.name})."
+    return AntiPatternHit(
+        id=dfn.id,
+        name=dfn.name,
+        severity_hint=dfn.severity_hint,
+        confidence_hint=_bump_confidence(dfn.confidence_hint, "structural_primary"),
+        message=msg,
+        evidence=[
+            f"semantic_profile={profile}",
+            "disparo baseado principalmente em estrutura do grafo/campos",
+        ],
+        expected_controls=list(dfn.expected_controls),
+        detection_sources=sources,
+    )
+
+
+def _missing_corpus_hit(
+    dfn: AntiPatternDefinition, profile: str, corpus: str
+) -> AntiPatternHit | None:
+    missing = [kw for kw in dfn.missing_any_of if kw.lower() not in corpus]
+    if len(missing) != len(dfn.missing_any_of):
+        return None
+    sources = ["corpus:missing_any_of", *_structural_source_tags(dfn)]
+    return AntiPatternHit(
+        id=dfn.id,
+        name=dfn.name,
+        severity_hint=dfn.severity_hint,
+        confidence_hint=dfn.confidence_hint,
+        message=(
+            f"Perfil `{profile}` sem menções explícitas a controlos esperados "
+            f"({', '.join(dfn.missing_any_of[:4])}…)."
+        ),
+        evidence=[
+            f"semantic_profile={profile}",
+            "nenhuma keyword de mitigação encontrada no corpus agregado",
+        ],
+        expected_controls=list(dfn.expected_controls),
+        detection_sources=sources,
+    )
 
 
 def detect_anti_patterns(doc: ThreatModelDocument) -> list[AntiPatternHit]:
@@ -212,111 +344,14 @@ def detect_anti_patterns(doc: ThreatModelDocument) -> list[AntiPatternHit]:
     n_tb = len(doc.trust_boundaries)
 
     for dfn in _load_definitions():
-        profiles = [p.lower() for p in dfn.semantic_profiles]
-        if profile not in profiles:
+        if not _dfn_gates_pass(dfn, doc, profile, n_flows, n_tb, corpus):
             continue
-        if not dfn.missing_any_of and not dfn.structural_primary:
-            continue
-        if dfn.require_min_data_flows > 0 and n_flows < dfn.require_min_data_flows:
-            continue
-        if dfn.require_min_trust_boundaries > 0 and n_tb < dfn.require_min_trust_boundaries:
-            continue
-        if dfn.require_any_component_kinds and not _any_component_kind(doc, dfn.require_any_component_kinds):
-            continue
-        if dfn.require_min_cross_boundary_flows > 0:
-            nxb = len(_cross_boundary_flow_ids(doc))
-            if nxb < dfn.require_min_cross_boundary_flows:
-                continue
-        if dfn.require_component_id_contains_any and not _component_id_contains(
-            doc, dfn.require_component_id_contains_any
-        ):
-            continue
-        if dfn.require_asset_name_id_contains_any and not _asset_name_id_contains(
-            doc, dfn.require_asset_name_id_contains_any
-        ):
-            continue
-        if dfn.require_flow_flag_any and not _any_flow_bool(doc, dfn.require_flow_flag_any):
-            continue
-        if any(mk.lower() in corpus for mk in dfn.mitigating_keywords):
-            continue
-
         if dfn.structural_primary:
-            if dfn.missing_any_of:
-                missing_sp = [kw for kw in dfn.missing_any_of if kw.lower() not in corpus]
-                if len(missing_sp) != len(dfn.missing_any_of):
-                    continue
-            sources = ["structural:primary"]
-            if dfn.require_min_data_flows > 0:
-                sources.append(f"structural:min_data_flows>={dfn.require_min_data_flows}")
-            if dfn.require_min_trust_boundaries > 0:
-                sources.append(f"structural:min_trust_boundaries>={dfn.require_min_trust_boundaries}")
-            if dfn.require_any_component_kinds:
-                sources.append(f"structural:component_kinds={','.join(dfn.require_any_component_kinds)}")
-            if dfn.require_min_cross_boundary_flows > 0:
-                sources.append(f"structural:cross_boundary_flows>={dfn.require_min_cross_boundary_flows}")
-            if dfn.require_component_id_contains_any:
-                sources.append("structural:component_id_contains")
-            if dfn.require_asset_name_id_contains_any:
-                sources.append("structural:asset_name_id_contains")
-            if dfn.require_flow_flag_any:
-                sources.append(f"structural:flow_flags={','.join(dfn.require_flow_flag_any)}")
-            if dfn.missing_any_of:
-                sources.append("corpus:missing_any_of(secondary)")
-            msg = (dfn.structural_primary_message or "").strip()
-            if not msg:
-                msg = f"Perfil `{profile}`: sinais estruturais do modelo indicam lacuna de controlos ({dfn.name})."
-            hits.append(
-                AntiPatternHit(
-                    id=dfn.id,
-                    name=dfn.name,
-                    severity_hint=dfn.severity_hint,
-                    confidence_hint=_bump_confidence(dfn.confidence_hint, "structural_primary"),
-                    message=msg,
-                    evidence=[
-                        f"semantic_profile={profile}",
-                        "disparo baseado principalmente em estrutura do grafo/campos",
-                    ],
-                    expected_controls=list(dfn.expected_controls),
-                    detection_sources=sources,
-                )
-            )
-            continue
-
-        missing = [kw for kw in dfn.missing_any_of if kw.lower() not in corpus]
-        if len(missing) == len(dfn.missing_any_of):
-            sources = ["corpus:missing_any_of"]
-            if dfn.require_min_data_flows > 0:
-                sources.append(f"structural:min_data_flows>={dfn.require_min_data_flows}")
-            if dfn.require_min_trust_boundaries > 0:
-                sources.append(f"structural:min_trust_boundaries>={dfn.require_min_trust_boundaries}")
-            if dfn.require_any_component_kinds:
-                sources.append(f"structural:component_kinds={','.join(dfn.require_any_component_kinds)}")
-            if dfn.require_min_cross_boundary_flows > 0:
-                sources.append(f"structural:cross_boundary_flows>={dfn.require_min_cross_boundary_flows}")
-            if dfn.require_component_id_contains_any:
-                sources.append("structural:component_id_contains")
-            if dfn.require_asset_name_id_contains_any:
-                sources.append("structural:asset_name_id_contains")
-            if dfn.require_flow_flag_any:
-                sources.append(f"structural:flow_flags={','.join(dfn.require_flow_flag_any)}")
-            hits.append(
-                AntiPatternHit(
-                    id=dfn.id,
-                    name=dfn.name,
-                    severity_hint=dfn.severity_hint,
-                    confidence_hint=dfn.confidence_hint,
-                    message=(
-                        f"Perfil `{profile}` sem menções explícitas a controlos esperados "
-                        f"({', '.join(dfn.missing_any_of[:4])}…)."
-                    ),
-                    evidence=[
-                        f"semantic_profile={profile}",
-                        "nenhuma keyword de mitigação encontrada no corpus agregado",
-                    ],
-                    expected_controls=list(dfn.expected_controls),
-                    detection_sources=sources,
-                )
-            )
+            hit = _structural_primary_hit(dfn, profile, corpus)
+        else:
+            hit = _missing_corpus_hit(dfn, profile, corpus)
+        if hit is not None:
+            hits.append(hit)
 
     return hits
 

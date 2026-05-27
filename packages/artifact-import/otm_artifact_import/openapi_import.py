@@ -95,28 +95,57 @@ def _count_operations(paths: dict[str, Any] | None) -> tuple[int, list[str]]:
     return n, detail[:40]
 
 
+def _detect_openapi_header(data: dict[str, Any]) -> tuple[str, list[str], bool, list[str], str, str | None]:
+    """Devolve (version, servers, has_auth, scheme_names, title, unknown_msg-ou-None) por dialecto."""
+    if "openapi" in data:
+        has_auth, scheme_names = _security_hints_v3(data)
+        title = str((data.get("info") or {}).get("title") or "API OpenAPI")
+        return str(data.get("openapi") or ""), _collect_servers_v3(data), has_auth, scheme_names, title, None
+    if data.get("swagger"):
+        has_auth, scheme_names = _security_hints_v2(data)
+        title = str((data.get("info") or {}).get("title") or "API Swagger")
+        return str(data.get("swagger") or "2.0"), _collect_servers_v2(data), has_auth, scheme_names, title, None
+    return (
+        "?",
+        [],
+        False,
+        [],
+        "API (formato desconhecido)",
+        "Chave raiz 'openapi' ou 'swagger' não encontrada — não é um OpenAPI/Swagger reconhecido.",
+    )
+
+
+def _infer_authenticated(data: dict[str, Any], paths: dict[str, Any]) -> bool | None:
+    """Inferência de autenticação: segurança global > consenso por operação > segurança por path."""
+    any_sec: list[bool] = []
+    for item in paths.values():
+        if not isinstance(item, dict):
+            continue  # pragma: no cover - defensive guard
+        for method, op in item.items():
+            if method.lower() in _HTTP_METHODS and isinstance(op, dict) and "security" in op:
+                any_sec.append(bool(op.get("security")))
+    auth_from_ops = all(any_sec) if any_sec else None
+
+    if _root_security_required(data):
+        return True
+    if auth_from_ops is not None:
+        return auth_from_ops
+    path_level_sec = [
+        x for x in (_operation_security_required(item) for item in paths.values() if isinstance(item, dict)) if x is not None
+    ]
+    if path_level_sec:
+        return all(path_level_sec)
+    return None
+
+
 def import_openapi_text(text: str, *, filename: str = "openapi.yaml") -> ArtifactImportResult:
     data = load_object_from_text(text)
     inferences: list[InferenceRecord] = []
     unknowns: list[str] = []
 
-    if "openapi" in data:
-        version = str(data.get("openapi") or "")
-        servers = _collect_servers_v3(data)
-        has_auth, scheme_names = _security_hints_v3(data)
-        title = str((data.get("info") or {}).get("title") or "API OpenAPI")
-    elif data.get("swagger"):
-        version = str(data.get("swagger") or "2.0")
-        servers = _collect_servers_v2(data)
-        has_auth, scheme_names = _security_hints_v2(data)
-        title = str((data.get("info") or {}).get("title") or "API Swagger")
-    else:
-        unknowns.append("Chave raiz 'openapi' ou 'swagger' não encontrada — não é um OpenAPI/Swagger reconhecido.")
-        title = "API (formato desconhecido)"
-        version = "?"
-        servers = []
-        has_auth = False
-        scheme_names = []
+    version, servers, has_auth, scheme_names, title, header_unknown = _detect_openapi_header(data)
+    if header_unknown:
+        unknowns.append(header_unknown)
 
     paths = data.get("paths")
     if not isinstance(paths, dict):
@@ -177,30 +206,8 @@ def import_openapi_text(text: str, *, filename: str = "openapi.yaml") -> Artifac
     ]
 
     flows: list[DataFlow] = []
-    auth_from_ops: bool | None = None
     if op_count > 0:
-        any_sec: list[bool] = []
-        for _pth, item in paths.items():
-            if not isinstance(item, dict):
-                continue
-            for method, op in item.items():
-                if method.lower() not in _HTTP_METHODS or not isinstance(op, dict):
-                    continue
-                if "security" in op:
-                    any_sec.append(bool(op.get("security")))
-        if any_sec:
-            auth_from_ops = all(any_sec) if any_sec else None
-
-        root_sec = _root_security_required(data)
-        path_level_sec = [_operation_security_required(item) for item in paths.values() if isinstance(item, dict)]
-        path_level_sec = [x for x in path_level_sec if x is not None]
-        authenticated: bool | None = None
-        if root_sec:
-            authenticated = True
-        elif auth_from_ops is not None:
-            authenticated = auth_from_ops
-        elif path_level_sec:
-            authenticated = all(path_level_sec)
+        authenticated = _infer_authenticated(data, paths)
 
         flows.append(
             DataFlow(

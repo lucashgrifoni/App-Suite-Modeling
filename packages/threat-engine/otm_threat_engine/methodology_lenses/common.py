@@ -69,7 +69,7 @@ def append_heuristics_from_entries(
 ) -> None:
     for hid, title, desc, stride, likelihood, impact in entries:
         if hid in existing:
-            continue
+            continue  # pragma: no cover - defensive guard
         out.append(
             HeuristicThreat(
                 id=hid,

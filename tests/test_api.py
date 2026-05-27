@@ -607,3 +607,44 @@ def test_health_unauthenticated_even_when_api_key_set(monkeypatch: pytest.Monkey
     monkeypatch.setenv("OTM_API_KEY", "integration-test-secret")
     r = client.get("/health")
     assert r.status_code == 200
+
+
+# --- Assisted import: upload route contract + size guard (R5-01) ---
+
+_IMPORT_MAX_BYTES = 2 * 1024 * 1024
+
+
+def test_import_openapi_accepts_small_spec(client: TestClient) -> None:
+    spec = json.dumps({"openapi": "3.0.0", "info": {"title": "T", "version": "1"}, "paths": {}})
+    r = client.post(
+        "/v1/imports/openapi",
+        files={"file": ("api.json", spec.encode("utf-8"), "application/json")},
+    )
+    assert r.status_code == 200
+    body = r.json()
+    assert "document" in body and "inferences" in body
+
+
+def test_import_openapi_rejects_oversized_artifact(client: TestClient) -> None:
+    # One byte over the 2 MiB cap must be rejected with 413, regardless of content.
+    oversized = b"x" * (_IMPORT_MAX_BYTES + 1)
+    r = client.post(
+        "/v1/imports/openapi",
+        files={"file": ("big.json", oversized, "application/json")},
+    )
+    assert r.status_code == 413
+    assert "2 MiB" in r.json()["detail"]
+
+
+def test_import_openapi_accepts_artifact_at_limit(client: TestClient) -> None:
+    # Exactly at the cap is valid YAML/JSON-shape-agnostic input: must not 413 on size alone.
+    # Pad a tiny valid spec up to the limit with a comment so size == cap but parsing still works.
+    base = "openapi: 3.0.0\ninfo: {title: T, version: '1'}\npaths: {}\n"
+    pad = "#" + "y" * (_IMPORT_MAX_BYTES - len(base.encode("utf-8")) - 2) + "\n"
+    payload = (base + pad).encode("utf-8")
+    assert len(payload) == _IMPORT_MAX_BYTES
+    r = client.post(
+        "/v1/imports/openapi",
+        files={"file": ("at_limit.yaml", payload, "application/yaml")},
+    )
+    assert r.status_code != 413

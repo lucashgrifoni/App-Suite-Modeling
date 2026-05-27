@@ -3,12 +3,26 @@
 from __future__ import annotations
 
 import typer
+from otm_industry_packs.models import TemplateInfo
 from rich.panel import Panel
 
 from otm_cli.application import templates_service as tmpl
 from otm_cli.commands.bootstrap import console
 from otm_cli.commands.handle_errors import exit_on_cli_error
 from otm_cli.shared.errors import CliUserError
+
+
+def _print_template_infos(infos: list[TemplateInfo]) -> None:
+    """Imprime o catálogo de templates (id, título e metadados opcionais)."""
+    console.print("[bold]Templates[/bold] (use: [cyan]otm init -t ID[/cyan]):")
+    for info in infos:
+        console.print(f"  • [cyan]{info.id}[/cyan] — {info.title}")
+        if info.suggested_pack:
+            console.print(f"    suggested pack: {info.suggested_pack}")
+        if info.complexity:
+            console.print(f"    complexity: {info.complexity}")
+        if info.category_label:
+            console.print(f"    category: {info.category_label}")
 
 
 def build_templates_app() -> typer.Typer:
@@ -20,17 +34,7 @@ def build_templates_app() -> typer.Typer:
     @templates_app.callback(invoke_without_command=True)
     def templates_callback(ctx: typer.Context) -> None:
         if ctx.invoked_subcommand is None:
-            infos = tmpl.list_template_infos()
-            console.print("[bold]Templates[/bold] (use: [cyan]otm init -t ID[/cyan]):")
-            for info in infos:
-                line = f"  • [cyan]{info.id}[/cyan] — {info.title}"
-                console.print(line)
-                if info.suggested_pack:
-                    console.print(f"    suggested pack: {info.suggested_pack}")
-                if info.complexity:
-                    console.print(f"    complexity: {info.complexity}")
-                if info.category_label:
-                    console.print(f"    category: {info.category_label}")
+            _print_template_infos(tmpl.list_template_infos())
 
     @templates_app.command("list")
     def cmd_templates_list(
@@ -44,17 +48,7 @@ def build_templates_app() -> typer.Typer:
         q: str | None = typer.Option(None, "--query", "-q", help="Free text (id, title, description, tags)."),
     ) -> None:
         """List templates with optional filters."""
-        infos = tmpl.list_template_infos(category=category, tag=tag, complexity=complexity, q=q)
-        console.print("[bold]Templates[/bold] (use: [cyan]otm init -t ID[/cyan]):")
-        for info in infos:
-            line = f"  • [cyan]{info.id}[/cyan] — {info.title}"
-            console.print(line)
-            if info.suggested_pack:
-                console.print(f"    suggested pack: {info.suggested_pack}")
-            if info.complexity:
-                console.print(f"    complexity: {info.complexity}")
-            if info.category_label:
-                console.print(f"    category: {info.category_label}")
+        _print_template_infos(tmpl.list_template_infos(category=category, tag=tag, complexity=complexity, q=q))
 
     @templates_app.command("show")
     def cmd_templates_show(

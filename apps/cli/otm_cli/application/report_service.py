@@ -94,6 +94,6 @@ def run_report(
     html = render_premium_html(payload)
     try:
         pdf_bytes = html_to_pdf_bytes(html)
-    except ImportError as e:
+    except ImportError as e:  # pragma: no cover - defensive: report PDF extra installed in supported envs
         raise ReportPdfDependencyError(str(e)) from e
     return ReportPremiumPdfResult(pdf_bytes=pdf_bytes, default_path=Path("report-premium.pdf"))

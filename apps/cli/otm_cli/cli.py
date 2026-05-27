@@ -61,7 +61,7 @@ app.add_typer(import_cmd.build_import_app())
 app.add_typer(templates_cmd.build_templates_app(), name="templates")
 
 
-def run() -> None:
+def run() -> None:  # pragma: no cover - console-script entrypoint (exercised as a process)
     app()
 
 

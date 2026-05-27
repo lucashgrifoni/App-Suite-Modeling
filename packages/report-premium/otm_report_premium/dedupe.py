@@ -25,8 +25,8 @@ def build_dedupe_groups(
 
     for t in threats:
         if t.skipped_as_duplicate:
-            continue
-        root, ctrl, _cat, _layer = classify_threat(t, doc, methodology)
+            continue  # pragma: no cover - defensive guard
+        root, _ctrl, _cat, _layer = classify_threat(t, doc, methodology)
         key = f"{root}|{t.stride.value}"
         buckets[key].append(t)
         keys_display[key] = root

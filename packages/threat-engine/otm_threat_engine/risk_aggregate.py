@@ -47,13 +47,57 @@ class DecisionCockpitSummary(BaseModel):
     next_reviews: list[str] = Field(default_factory=list)
 
 
-def build_aggregate_and_cockpit(result: AnalysisResult) -> dict[str, AggregateRiskSummary | DecisionCockpitSummary]:
-    active = [h for h in result.heuristic_threats if _active(h)]
+def _add_score(d: dict[str, float], key: str | None, sc: float) -> None:
+    if key:
+        d[key] = d.get(key, 0.0) + sc
+
+
+def _aggregate_by_target(
+    active: list[HeuristicThreat],
+) -> tuple[dict[str, float], dict[str, float], dict[str, float], Counter[str]]:
+    """Acumula score por componente/fluxo/ativo e conta famílias de achados."""
+    by_comp: dict[str, float] = {}
+    by_flow: dict[str, float] = {}
+    by_asset: dict[str, float] = {}
+    families: Counter[str] = Counter()
+    for h in active:
+        sc = float(h.risk.score) if h.risk.score is not None else 0.0
+        _add_score(by_comp, h.target_component_id, sc)
+        _add_score(by_flow, h.target_data_flow_id, sc)
+        _add_score(by_asset, h.target_asset_id, sc)
+        if h.finding_family:
+            families[h.finding_family] += 1
+        prefix = (h.id.split("_", 1)[0] if h.id else "") or ""
+        if prefix:
+            families[prefix] += 1
+    return by_comp, by_flow, by_asset, families
+
+
+def _posture_and_headline(mx: float | None) -> tuple[Literal["low", "moderate", "high", "elevated"], str]:
+    if mx is None or mx < 6:
+        return "low", "Postura agregada baixa com as heurísticas actuais (rever cobertura do modelo)."
+    if mx < 12:
+        return "moderate", "Postura moderada: priorizar superfícies nos top rankings."
+    if mx < 20:
+        return "high", "Postura elevada — concentrar mitigação nos maiores scores."
+    return "elevated", "Postura crítica agregada — tratamento prioritário recomendado."
+
+
+def _score_stats(
+    active: list[HeuristicThreat],
+) -> tuple[list[float], float, float | None, float | None, Counter[str]]:
+    """Estatísticas de score: (scores, total, média, máximo, distribuição por severidade)."""
     scores = [float(h.risk.score) for h in active if h.risk.score is not None]
     total = float(sum(scores)) if scores else 0.0
     mean = (total / len(scores)) if scores else None
     mx = max(scores) if scores else None
     sev = Counter(_severity_bucket(s) for s in scores)
+    return scores, total, mean, mx, sev
+
+
+def build_aggregate_and_cockpit(result: AnalysisResult) -> dict[str, AggregateRiskSummary | DecisionCockpitSummary]:
+    active = [h for h in result.heuristic_threats if _active(h)]
+    _scores, total, mean, mx, sev = _score_stats(active)
     top_threats_sorted = sorted(active, key=lambda h: -(float(h.risk.score) if h.risk.score is not None else 0.0))[:8]
     top_threat_payload = [
         {
@@ -65,23 +109,7 @@ def build_aggregate_and_cockpit(result: AnalysisResult) -> dict[str, AggregateRi
         for h in top_threats_sorted
     ]
 
-    by_comp: dict[str, float] = {}
-    by_flow: dict[str, float] = {}
-    by_asset: dict[str, float] = {}
-    families: Counter[str] = Counter()
-    for h in active:
-        sc = float(h.risk.score) if h.risk.score is not None else 0.0
-        if h.target_component_id:
-            by_comp[h.target_component_id] = by_comp.get(h.target_component_id, 0) + sc
-        if h.target_data_flow_id:
-            by_flow[h.target_data_flow_id] = by_flow.get(h.target_data_flow_id, 0) + sc
-        if h.target_asset_id:
-            by_asset[h.target_asset_id] = by_asset.get(h.target_asset_id, 0) + sc
-        if h.finding_family:
-            families[h.finding_family] += 1
-        prefix = (h.id.split("_", 1)[0] if h.id else "") or ""
-        if prefix:
-            families[prefix] += 1
+    by_comp, by_flow, by_asset, families = _aggregate_by_target(active)
 
     def _top(score_map: dict[str, float], n: int = 5) -> list[dict[str, Any]]:
         return [
@@ -108,18 +136,7 @@ def build_aggregate_and_cockpit(result: AnalysisResult) -> dict[str, AggregateRi
         mitigation_starters=mitigations[:12],
     )
 
-    if mx is None or mx < 6:
-        posture: Literal["low", "moderate", "high", "elevated"] = "low"
-        headline = "Postura agregada baixa com as heurísticas actuais (rever cobertura do modelo)."
-    elif mx < 12:
-        posture = "moderate"
-        headline = "Postura moderada: priorizar superfícies nos top rankings."
-    elif mx < 20:
-        posture = "high"
-        headline = "Postura elevada — concentrar mitigação nos maiores scores."
-    else:
-        posture = "elevated"
-        headline = "Postura crítica agregada — tratamento prioritário recomendado."
+    posture, headline = _posture_and_headline(mx)
 
     cockpit = DecisionCockpitSummary(
         risk_posture=posture,

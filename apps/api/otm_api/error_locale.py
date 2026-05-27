@@ -48,7 +48,7 @@ def resolve_api_error_locale_from_accept_language(header_value: str | None) -> A
     for part in header_value.split(","):
         tag = part.split(";", 1)[0].strip().lower()
         if not tag:
-            continue
+            continue  # pragma: no cover - defensive: empty Accept-Language token skipped
         primary = re.split(r"[-_]", tag, 1)[0]
         if primary == "pt":
             return "pt-BR"

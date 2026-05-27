@@ -9,6 +9,9 @@ from otm_threat_engine.ai_modeling.corpus import build_ai_calibration_corpus
 from otm_threat_engine.methodology_lenses.common import has_any, has_any_token, has_safe_ai_marker
 
 _PII_LITERAL = "dados pessoais"
+_MODEL_PROVIDER = "model provider"
+_DATA_LAKE = "data lake"
+_INGESTAO = "ingestão"
 
 _TIE_PRIORITY: dict[ThreatModelMethodology, int] = {
     ThreatModelMethodology.PLOT4AI: 7,
@@ -40,6 +43,85 @@ def build_recommendation_context_text(doc: ThreatModelDocument) -> str:
     return build_ai_calibration_corpus(doc)
 
 
+def _plot4ai_text_signals(text: str) -> list[tuple[str, str]]:
+    """Sinais textuais concretos de PLOT4ai como pares (bit, evidência), em ordem de prioridade."""
+    llm = has_any(text, ("large language", "language model", "chatbot", "copilot")) or has_any_token(text, ("llm",))
+    prompt_to_model = has_any(
+        text, ("prompt", "orchestrator", "orquestra", "prompt-orchestrator", "normalized_prompt")
+    ) and has_any(
+        text,
+        (
+            "llm",
+            "rag",
+            "agent",
+            "embedding",
+            "vector",
+            "chatbot",
+            "copilot",
+            "completion",
+            "inference",
+            _MODEL_PROVIDER,
+        ),
+    )
+    rag = has_any(
+        text, ("rag", "retrieval", "vector", "embedding", "knowledge assistant", "vector_database")
+    ) or has_any_token(text, ("rag",))
+    agent = has_any(
+        text,
+        ("agent", "tool-use", "tool use", "function calling", "tool-gateway", "ai agent", "tool_gateway"),
+    )
+    provider = has_any(
+        text,
+        (
+            "openai",
+            "anthropic",
+            "bedrock",
+            "vertex ai",
+            "vertex generative",
+            "external_ai",
+            "llm-provider",
+            "llm provider",
+            _MODEL_PROVIDER,
+            "external-model-provider",
+            "external model",
+        ),
+    )
+    inference = has_any(text, ("inference", "inferência", "inferencia", "classification pipeline")) and (
+        has_any(text, ("embedding", "orchestrator", _MODEL_PROVIDER, "generative"))
+        or has_any_token(text, ("llm",))
+        or has_safe_ai_marker(text)
+    )
+    rules: list[tuple[bool, str, str]] = [
+        (llm, "LLM, chat ou copiloto descritos", "O título, resumo ou componentes mencionam LLM/chatbot/copilot."),
+        (
+            prompt_to_model,
+            "orquestração de prompts ou entrada normalizada para modelo",
+            "Há orquestração de prompts ou cadeia explícita até ao fornecedor de modelo.",
+        ),
+        (
+            rag,
+            "RAG, retrieval ou armazenamento vectorial",
+            "Retrieval, RAG, vector DB ou embeddings aparecem no modelo.",
+        ),
+        (
+            agent,
+            "agente com tool-use ou gateway de ações",
+            "Agente, ferramentas, gateway de ações ou function calling estão modelados.",
+        ),
+        (
+            provider,
+            "provedor ou endpoint externo de modelo",
+            "Integrações nomeiam fornecedor de LLM ou serviço de inferência terceiro.",
+        ),
+        (
+            inference,
+            "pipeline de inferência com IA",
+            "Pipeline de processamento referencia inferência ligada a componentes de IA.",
+        ),
+    ]
+    return [(bit, evidence) for matched, bit, evidence in rules if matched]
+
+
 def _plot4ai_recommendation_detail(doc: ThreatModelDocument, text: str) -> tuple[str, list[str]] | None:
     """Razão curta e evidências concretas; retorna None se não houver sinal suficiente de IA."""
     tags_l = [t.lower() for t in (doc.metadata.tags or [])]
@@ -51,70 +133,9 @@ def _plot4ai_recommendation_detail(doc: ThreatModelDocument, text: str) -> tuple
     elif has_safe_ai_marker(text):
         bits.append("sinal técnico de IA no contexto textual")
         ev.append("Token AI aparece com termos técnicos associados (ex.: model/agent/inference).")
-    if has_any(
-        text,
-        ("large language", "language model", "chatbot", "copilot"),
-    ):
-        bits.append("LLM, chat ou copiloto descritos")
-        ev.append("O título, resumo ou componentes mencionam LLM/chatbot/copilot.")
-    elif has_any_token(text, ("llm",)):
-        bits.append("LLM, chat ou copiloto descritos")
-        ev.append("O título, resumo ou componentes mencionam LLM/chatbot/copilot.")
-    if has_any(text, ("prompt", "orchestrator", "orquestra", "prompt-orchestrator", "normalized_prompt")):
-        if has_any(
-            text,
-            (
-                "llm",
-                "rag",
-                "agent",
-                "embedding",
-                "vector",
-                "chatbot",
-                "copilot",
-                "completion",
-                "inference",
-                "model provider",
-            ),
-        ):
-            bits.append("orquestração de prompts ou entrada normalizada para modelo")
-            ev.append("Há orquestração de prompts ou cadeia explícita até ao fornecedor de modelo.")
-    if has_any(text, ("rag", "retrieval", "vector", "embedding", "knowledge assistant", "vector_database")):
-        bits.append("RAG, retrieval ou armazenamento vectorial")
-        ev.append("Retrieval, RAG, vector DB ou embeddings aparecem no modelo.")
-    elif has_any_token(text, ("rag",)):
-        bits.append("RAG, retrieval ou armazenamento vectorial")
-        ev.append("Retrieval, RAG, vector DB ou embeddings aparecem no modelo.")
-    if has_any(
-        text,
-        ("agent", "tool-use", "tool use", "function calling", "tool-gateway", "ai agent", "tool_gateway"),
-    ):
-        bits.append("agente com tool-use ou gateway de ações")
-        ev.append("Agente, ferramentas, gateway de ações ou function calling estão modelados.")
-    if has_any(
-        text,
-        (
-            "openai",
-            "anthropic",
-            "bedrock",
-            "vertex ai",
-            "vertex generative",
-            "external_ai",
-            "llm-provider",
-            "llm provider",
-            "model provider",
-            "external-model-provider",
-            "external model",
-        ),
-    ):
-        bits.append("provedor ou endpoint externo de modelo")
-        ev.append("Integrações nomeiam fornecedor de LLM ou serviço de inferência terceiro.")
-    if has_any(text, ("inference", "inferência", "inferencia", "classification pipeline")) and (
-        has_any(text, ("embedding", "orchestrator", "model provider", "generative"))
-        or has_any_token(text, ("llm",))
-        or has_safe_ai_marker(text)
-    ):
-        bits.append("pipeline de inferência com IA")
-        ev.append("Pipeline de processamento referencia inferência ligada a componentes de IA.")
+    for bit, evidence in _plot4ai_text_signals(text):
+        bits.append(bit)
+        ev.append(evidence)
     if not bits:
         return None
     reason = "PLOT4ai recomendado por " + ", ".join(bits) + "."
@@ -151,7 +172,7 @@ def _apply_declared_methodology_template_alignment(
         # Vocabulário ETL/pipeline no texto não deve sobrepor um template que já fixou STRIDE.
         if has_any(
             mega,
-            ("etl", "ingest", "ingestão", "transform", "warehouse", "data lake", "pipeline", "armazém"),
+            ("etl", "ingest", _INGESTAO, "transform", "warehouse", _DATA_LAKE, "pipeline", "armazém"),
         ):
             scores[ThreatModelMethodology.NIST_DATA_CENTRIC] -= 22.0
             pos.append("STRIDE+batch: atenua bónus semântico ETL/pipeline face ao template")
@@ -161,23 +182,8 @@ def _apply_declared_methodology_template_alignment(
         pos.append("template declara NIST em pipeline de dados → reforço data-centric")
 
 
-def compute_methodology_ranking(doc: ThreatModelDocument) -> MethodologyRanking:
-    """
-    Pontua todas as metodologias e escolhe a vencedora por ranking (empates quebrados por `_TIE_PRIORITY`).
-
-    Evita o viés da «primeira regra que casa» que empurrava NIST/PLOT4AI/PASTA de forma desproporcional.
-    """
-    text = build_recommendation_context_text(doc)
-    sector = doc.model_info.industry_sector
-    sys_t = doc.model_info.system_type
-    tags_l = [t.lower() for t in (doc.metadata.tags or [])]
-    comp_blob = " ".join(f"{c.name or ''} {c.id or ''}" for c in doc.components).lower()
-    flow_blob = " ".join(f"{f.name or ''} {f.id or ''}" for f in doc.data_flows).lower()
-    mega = f"{text} {comp_blob} {flow_blob}"
-
-    scores: dict[ThreatModelMethodology, float] = {m: 0.0 for m in ThreatModelMethodology}
+def _score_stride(sys_t: SystemType, sector: IndustrySector, mega: str) -> tuple[float, list[str]]:
     pos: list[str] = []
-
     stride = 8.0
     if sys_t in (SystemType.WEB_APPLICATION, SystemType.API_BACKEND, SystemType.HYBRID):
         stride += 22
@@ -193,15 +199,18 @@ def compute_methodology_ranking(doc: ThreatModelDocument) -> MethodologyRanking:
         stride += 10
     if sys_t == SystemType.BATCH_DATA_PIPELINE:
         stride -= 10
-    if has_any(mega, ("etl", "ingest", "ingestão", "transform", "data warehouse", "data lake", "pipeline")):
+    if has_any(mega, ("etl", "ingest", _INGESTAO, "transform", "data warehouse", _DATA_LAKE, "pipeline")):
         stride -= 14
-    scores[ThreatModelMethodology.STRIDE] = stride
+    return stride, pos
 
+
+def _score_nist(sys_t: SystemType, sector: IndustrySector, mega: str) -> tuple[float, list[str]]:
+    pos: list[str] = []
     nist = 5.0
     if sys_t == SystemType.BATCH_DATA_PIPELINE:
         nist += 38
         pos.append("batch_data_pipeline → NIST data-centric")
-    if has_any(mega, ("etl", "ingest", "ingestão", "transform", "warehouse", "data lake", "pipeline", "armazém")):
+    if has_any(mega, ("etl", "ingest", _INGESTAO, "transform", "warehouse", _DATA_LAKE, "pipeline", "armazém")):
         nist += 26
         pos.append("vocabulário ETL/pipeline")
     if sector == IndustrySector.FINANCE:
@@ -219,8 +228,13 @@ def compute_methodology_ranking(doc: ThreatModelDocument) -> MethodologyRanking:
         nist -= 16
     if has_any(mega, ("privileg", "admin", "pam", "jump", "consola privilegiada", "administrador")):
         nist -= 8
-    scores[ThreatModelMethodology.NIST_DATA_CENTRIC] = nist
+    return nist, pos
 
+
+def _score_linddun(
+    doc: ThreatModelDocument, sector: IndustrySector, mega: str, tags_l: list[str]
+) -> tuple[float, list[str]]:
+    pos: list[str] = []
     ld = 3.0
     if sector == IndustrySector.HEALTHCARE:
         ld += 34
@@ -233,19 +247,21 @@ def compute_methodology_ranking(doc: ThreatModelDocument) -> MethodologyRanking:
         ld += min(52, 18 + hits * 14)
     if any(t in tags_l for t in ("healthcare", "phi", "clinical")):
         ld += 8
-    decl = doc.model_info.methodology
-    if decl == ThreatModelMethodology.LINDDUN:
+    if doc.model_info.methodology == ThreatModelMethodology.LINDDUN:
         ld += 5
-    scores[ThreatModelMethodology.LINDDUN] = ld
+    return ld, pos
 
+
+def _score_plot4ai(doc: ThreatModelDocument, text: str) -> tuple[float, list[str]]:
     plot = _plot4ai_recommendation_detail(doc, text)
-    p4 = 0.0
-    if plot is not None:
-        ev_count = max(3, len(plot[1]))
-        p4 = 40.0 + min(42.0, 6.0 * float(ev_count))
-        pos.append("sinais AI/LLM/RAG/PLOT4ai")
-    scores[ThreatModelMethodology.PLOT4AI] = p4
+    if plot is None:
+        return 0.0, []
+    ev_count = max(3, len(plot[1]))
+    return 40.0 + min(42.0, 6.0 * float(ev_count)), ["sinais AI/LLM/RAG/PLOT4ai"]
 
+
+def _score_pasta(mega: str) -> tuple[float, list[str]]:
+    pos: list[str] = []
     pasta = 4.0
     if has_any(mega, ("kill chain", "threat chain", "attack chain", "risk-centric", "cadeia de risco")):
         pasta += 34
@@ -256,9 +272,12 @@ def compute_methodology_ranking(doc: ThreatModelDocument) -> MethodologyRanking:
         pasta += 12
     if has_any(mega, ("enterprise", "avançad", "advanced")) and pasta > 14:
         pasta += 4
-    scores[ThreatModelMethodology.PASTA] = pasta
+    return pasta, pos
 
-    oct = 2.0
+
+def _score_octave(mega: str) -> tuple[float, list[str]]:
+    pos: list[str] = []
+    octave = 2.0
     if has_any(
         mega,
         (
@@ -272,16 +291,67 @@ def compute_methodology_ranking(doc: ThreatModelDocument) -> MethodologyRanking:
             "bia",
         ),
     ):
-        oct += 30
+        octave += 30
         pos.append("contexto OCTAVE/BIA/inventário explícito")
     if has_any(mega, ("crown jewel", "ativos críticos", "critical asset")):
-        oct += 14
-    scores[ThreatModelMethodology.OCTAVE_ALLEGRO] = oct
+        octave += 14
+    return octave, pos
 
+
+def _score_cia(mega: str) -> tuple[float, list[str]]:
     cia = 2.0
     if has_any(mega, ("workshop", "executivo", "rápido", "iniciante")):
         cia += 24
-    scores[ThreatModelMethodology.CIA_DIE] = cia
+    return cia, []
+
+
+def _ranking_confidence(gap: float, top: float) -> Literal["low", "medium", "high"]:
+    if gap >= 12 or top >= 48:
+        return "high"
+    if gap >= 5 or top >= 28:
+        return "medium"
+    return "low"
+
+
+def _counter_signals(
+    scores: dict[ThreatModelMethodology, float], winner: ThreatModelMethodology, top: float
+) -> list[str]:
+    counters: list[str] = []
+    for m, v in scores.items():
+        if m != winner and top - v <= 8:
+            counters.append(f"{m.value} competiu com {v:.1f} pts (Δ {top - v:.1f})")
+    return counters
+
+
+def compute_methodology_ranking(doc: ThreatModelDocument) -> MethodologyRanking:
+    """
+    Pontua todas as metodologias e escolhe a vencedora por ranking (empates quebrados por `_TIE_PRIORITY`).
+
+    Evita o viés da «primeira regra que casa» que empurrava NIST/PLOT4AI/PASTA de forma desproporcional.
+    """
+    text = build_recommendation_context_text(doc)
+    sector = doc.model_info.industry_sector
+    sys_t = doc.model_info.system_type
+    tags_l = [t.lower() for t in (doc.metadata.tags or [])]
+    comp_blob = " ".join(f"{c.name or ''} {c.id or ''}" for c in doc.components).lower()
+    flow_blob = " ".join(f"{f.name or ''} {f.id or ''}" for f in doc.data_flows).lower()
+    mega = f"{text} {comp_blob} {flow_blob}"
+
+    scores: dict[ThreatModelMethodology, float] = dict.fromkeys(ThreatModelMethodology, 0.0)
+    pos: list[str] = []
+
+    scored: list[tuple[ThreatModelMethodology, tuple[float, list[str]]]] = [
+        (ThreatModelMethodology.STRIDE, _score_stride(sys_t, sector, mega)),
+        (ThreatModelMethodology.NIST_DATA_CENTRIC, _score_nist(sys_t, sector, mega)),
+        (ThreatModelMethodology.LINDDUN, _score_linddun(doc, sector, mega, tags_l)),
+        (ThreatModelMethodology.PLOT4AI, _score_plot4ai(doc, text)),
+        (ThreatModelMethodology.PASTA, _score_pasta(mega)),
+        (ThreatModelMethodology.OCTAVE_ALLEGRO, _score_octave(mega)),
+        (ThreatModelMethodology.CIA_DIE, _score_cia(mega)),
+    ]
+    for methodology, (score, signals) in scored:
+        scores[methodology] = score
+        pos.extend(signals)
 
     _apply_declared_methodology_template_alignment(doc, scores, sector, sys_t, mega, pos)
 
@@ -292,17 +362,8 @@ def compute_methodology_ranking(doc: ThreatModelDocument) -> MethodologyRanking:
     second_v = scores[second] if second is not None else 0.0
     gap = top - second_v
 
-    if gap >= 12 or top >= 48:
-        conf: Literal["low", "medium", "high"] = "high"
-    elif gap >= 5 or top >= 28:
-        conf = "medium"
-    else:
-        conf = "low"
-
-    counters: list[str] = []
-    for m, v in scores.items():
-        if m != winner and top - v <= 8:
-            counters.append(f"{m.value} competiu com {v:.1f} pts (Δ {top - v:.1f})")
+    conf = _ranking_confidence(gap, top)
+    counters = _counter_signals(scores, winner, top)
 
     support_unique = list(dict.fromkeys(pos))[:12]
     reason = (

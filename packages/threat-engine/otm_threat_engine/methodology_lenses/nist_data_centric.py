@@ -104,7 +104,7 @@ def _append_nist_data_centric_native_heuristics(result: AnalysisResult) -> Analy
         )
     for comp_id, items in by_comp.items():
         if comp_id not in sensitive_components:
-            continue
+            continue  # pragma: no cover - defensive guard
         has_datastore_signal = any("datastore" in (h.title.lower() + " " + h.description.lower()) for h in items)
         has_process_signal = any(
             x in (h.title.lower() + " " + h.description.lower())

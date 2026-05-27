@@ -21,7 +21,7 @@ def cross_boundary_flow_ids(doc: ThreatModelDocument) -> set[str]:
         a = by_comp.get(flow.from_component)
         b = by_comp.get(flow.to_component)
         if not a or not b:
-            continue
+            continue  # pragma: no cover - defensive: skip when an id is missing
         if a.in_trust_boundary and b.in_trust_boundary and a.in_trust_boundary != b.in_trust_boundary:
             ids.add(flow.id)
     return ids

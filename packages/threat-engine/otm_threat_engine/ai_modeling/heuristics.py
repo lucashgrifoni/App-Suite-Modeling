@@ -118,40 +118,15 @@ def _sensitive_controls_mentioned(text: str) -> bool:
     )
 
 
-def extra_plot4ai_heuristic_entries(
-    doc: ThreatModelDocument, bundle: AiSignalBundle
-) -> list[tuple[str, str, str, StrideCategory, int, int]]:
-    """Entradas condicionais; não duplicam `plot4ai.py` base mas reforçam cenários modernos."""
-    text = _corpus_lower(doc)
-    out: list[tuple[str, str, str, StrideCategory, int, int]] = []
-
-    if bundle.vector_embedding and bundle.retrieval_grounding:
-        out.append(
-            (
-                "plot4ai_rag_vector_composition",
-                "[plot4ai] RAG com vector store — superfície composta",
-                "RAG inferido por sinais de retrieval e embeddings/vector store no modelo: "
-                "rever isolamento de índices, filtros tenant-aware e políticas de ingestão.",
-                StrideCategory.INFORMATION_DISCLOSURE,
-                4,
-                5,
-            )
-        )
-    if bundle.provider_inference and (
+def _plot4ai_entry_flags(
+    doc: ThreatModelDocument, bundle: AiSignalBundle, text: str
+) -> tuple[bool, bool, bool, bool, bool, bool]:
+    """Condições (em ordem) para as entradas PLOT4ai extra — isola a lógica booleana."""
+    rag_vector = bundle.vector_embedding and bundle.retrieval_grounding
+    third_party = bundle.provider_inference and (
         bundle.model_interaction or has_any(text, ("completion", "chat", "inference endpoint", "api.openai", "llm"))
-    ):
-        out.append(
-            (
-                "plot4ai_third_party_model_dependency",
-                "[plot4ai] Dependência de inferência em fornecedor terceiro",
-                "Provedor ou endpoint externo referido com interação LLM — rever continuidade, "
-                "termos de dados, classificação de prompts/respostas e plano de contingência.",
-                StrideCategory.TAMPERING,
-                3,
-                4,
-            )
-        )
-    if bundle.agent_tool and (
+    )
+    agent_external = bundle.agent_tool and (
         has_any(
             text,
             (
@@ -167,8 +142,56 @@ def extra_plot4ai_heuristic_entries(
             ),
         )
         or _agent_tooling_reaches_non_llm_external(doc)
-    ):
-        out.append(
+    )
+    observability_gap = not bundle.explicit_governance_evidence and (
+        (bundle.agent_tool and bundle.provider_inference) or (bundle.prompt_input and _sensitive_data_mentioned(text))
+    )
+    sensitive_prompt = (
+        _sensitive_data_mentioned(text) and bundle.prompt_input and not _sensitive_controls_mentioned(text)
+    )
+    grounding_weak = (
+        bundle.retrieval_grounding
+        and has_any(text, ("rag", "retrieval", "grounding"))
+        and not has_any(text, ("citation", "attribution", "provenance", "fonte"))
+    )
+    return rag_vector, third_party, agent_external, observability_gap, sensitive_prompt, grounding_weak
+
+
+def extra_plot4ai_heuristic_entries(
+    doc: ThreatModelDocument, bundle: AiSignalBundle
+) -> list[tuple[str, str, str, StrideCategory, int, int]]:
+    """Entradas condicionais; não duplicam `plot4ai.py` base mas reforçam cenários modernos."""
+    text = _corpus_lower(doc)
+    rag_vector, third_party, agent_external, observability_gap, sensitive_prompt, grounding_weak = (
+        _plot4ai_entry_flags(doc, bundle, text)
+    )
+    candidates: list[tuple[bool, tuple[str, str, str, StrideCategory, int, int]]] = [
+        (
+            rag_vector,
+            (
+                "plot4ai_rag_vector_composition",
+                "[plot4ai] RAG com vector store — superfície composta",
+                "RAG inferido por sinais de retrieval e embeddings/vector store no modelo: "
+                "rever isolamento de índices, filtros tenant-aware e políticas de ingestão.",
+                StrideCategory.INFORMATION_DISCLOSURE,
+                4,
+                5,
+            ),
+        ),
+        (
+            third_party,
+            (
+                "plot4ai_third_party_model_dependency",
+                "[plot4ai] Dependência de inferência em fornecedor terceiro",
+                "Provedor ou endpoint externo referido com interação LLM — rever continuidade, "
+                "termos de dados, classificação de prompts/respostas e plano de contingência.",
+                StrideCategory.TAMPERING,
+                3,
+                4,
+            ),
+        ),
+        (
+            agent_external,
             (
                 "plot4ai_agent_external_toolchain",
                 "[plot4ai] Agent execution risk com dependências externas",
@@ -177,12 +200,10 @@ def extra_plot4ai_heuristic_entries(
                 StrideCategory.ELEVATION_OF_PRIVILEGE,
                 4,
                 5,
-            )
-        )
-    if not bundle.explicit_governance_evidence and (
-        (bundle.agent_tool and bundle.provider_inference) or (bundle.prompt_input and _sensitive_data_mentioned(text))
-    ):
-        out.append(
+            ),
+        ),
+        (
+            observability_gap,
             (
                 "plot4ai_observability_gap",
                 "[plot4ai] Lacuna de observabilidade/auditoria no fluxo de IA",
@@ -191,10 +212,10 @@ def extra_plot4ai_heuristic_entries(
                 StrideCategory.REPUDIATION,
                 3,
                 4,
-            )
-        )
-    if _sensitive_data_mentioned(text) and bundle.prompt_input and not _sensitive_controls_mentioned(text):
-        out.append(
+            ),
+        ),
+        (
+            sensitive_prompt,
             (
                 "plot4ai_sensitive_prompt_surface",
                 "[plot4ai] Dados sensíveis em contexto de prompt",
@@ -203,17 +224,10 @@ def extra_plot4ai_heuristic_entries(
                 StrideCategory.INFORMATION_DISCLOSURE,
                 4,
                 5,
-            )
-        )
-    if (
-        bundle.retrieval_grounding
-        and has_any(text, ("rag", "retrieval", "grounding"))
-        and not has_any(
-            text,
-            ("citation", "attribution", "provenance", "fonte"),
-        )
-    ):
-        out.append(
+            ),
+        ),
+        (
+            grounding_weak,
             (
                 "plot4ai_grounding_attribution_weak",
                 "[plot4ai] Grounding com atribuição pouco explícita",
@@ -222,10 +236,10 @@ def extra_plot4ai_heuristic_entries(
                 StrideCategory.TAMPERING,
                 3,
                 4,
-            )
-        )
-
-    return out
+            ),
+        ),
+    ]
+    return [entry for flag, entry in candidates if flag]
 
 
 def extra_entries_from_document(doc: ThreatModelDocument) -> list[tuple[str, str, str, StrideCategory, int, int]]:

@@ -51,6 +51,52 @@ def _structural_headline(agg: DiffAggregate) -> tuple[str, str, list[str]] | Non
     return best[1], best[2], best[3]
 
 
+def _risk_score_explanation(
+    result: ThreatModelComparisonResult, explanation_no: int
+) -> ExplanationRecord | None:
+    rd = result.risk_delta
+    if rd.analysis_max_score_delta is None or abs(rd.analysis_max_score_delta) < 0.5:
+        return None
+    direction = "subiu" if rd.analysis_max_score_delta > 0 else "desceu"
+    return ExplanationRecord(
+        id=explanation_id(explanation_no, prefix="exp_cmp"),
+        type=ExplanationType.RISK_SCORE,
+        category=ExplanationCategory.RISK,
+        subject="Risco agregado (score máximo)",
+        message=(
+            f"O score máximo entre heurísticas ativas {direction} "
+            f"(Δ {rd.analysis_max_score_delta:+.1f}): "
+            f"{rd.analysis_max_score_baseline} → {rd.analysis_max_score_revised}."
+        ),
+        evidence=["Δ calculado entre resultados de `analyze` em ambos os lados."],
+        confidence="medium",
+        related_entities=[RelatedEntityRef(entity_kind="analysis_diff", entity_id="max_risk")],
+    )
+
+
+def _key_insight_explanation(
+    result: ThreatModelComparisonResult, out: list[ExplanationRecord], explanation_no: int
+) -> ExplanationRecord | None:
+    if not result.key_insights:
+        return None
+    head = result.key_insights[0]
+    if any(e.message == head for e in out):
+        return None
+    extra_ev = list(result.key_insights[1:3]) if len(result.key_insights) > 1 else []
+    return ExplanationRecord(
+        id=explanation_id(explanation_no, prefix="exp_cmp"),
+        type=ExplanationType.AGGREGATION,
+        category=ExplanationCategory.DIFF,
+        subject="Síntese comparativa",
+        message=head[:500],
+        evidence=extra_ev,
+        confidence="medium",
+        related_entities=[
+            RelatedEntityRef(entity_kind="comparison", entity_id="key_insight"),
+        ],
+    )
+
+
 def build_comparison_explanations(result: ThreatModelComparisonResult) -> list[ExplanationRecord]:
     """Gera poucos `ExplanationRecord` acionáveis; não duplica texto longo dos relatórios."""
     out: list[ExplanationRecord] = []
@@ -101,44 +147,15 @@ def build_comparison_explanations(result: ThreatModelComparisonResult) -> list[E
             )
         )
 
-    rd = result.risk_delta
-    if rd.analysis_max_score_delta is not None and abs(rd.analysis_max_score_delta) >= 0.5:
-        up = rd.analysis_max_score_delta > 0
-        out.append(
-            ExplanationRecord(
-                id=explanation_id(take(), prefix="exp_cmp"),
-                type=ExplanationType.RISK_SCORE,
-                category=ExplanationCategory.RISK,
-                subject="Risco agregado (score máximo)",
-                message=(
-                    f"O score máximo entre heurísticas ativas {'subiu' if up else 'desceu'} "
-                    f"(Δ {rd.analysis_max_score_delta:+.1f}): "
-                    f"{rd.analysis_max_score_baseline} → {rd.analysis_max_score_revised}."
-                ),
-                evidence=["Δ calculado entre resultados de `analyze` em ambos os lados."],
-                confidence="medium",
-                related_entities=[RelatedEntityRef(entity_kind="analysis_diff", entity_id="max_risk")],
-            )
-        )
+    risk_rec = _risk_score_explanation(result, n + 1)
+    if risk_rec is not None:
+        out.append(risk_rec)
+        take()
 
-    if result.key_insights:
-        head = result.key_insights[0]
-        if not any(e.message == head for e in out):
-            extra_ev = list(result.key_insights[1:3]) if len(result.key_insights) > 1 else []
-            out.append(
-                ExplanationRecord(
-                    id=explanation_id(take(), prefix="exp_cmp"),
-                    type=ExplanationType.AGGREGATION,
-                    category=ExplanationCategory.DIFF,
-                    subject="Síntese comparativa",
-                    message=head[:500],
-                    evidence=extra_ev,
-                    confidence="medium",
-                    related_entities=[
-                        RelatedEntityRef(entity_kind="comparison", entity_id="key_insight"),
-                    ],
-                )
-            )
+    insight_rec = _key_insight_explanation(result, out, n + 1)
+    if insight_rec is not None:
+        out.append(insight_rec)
+        take()
 
     if not out and result.structural_insights:
         extra_ev = list(result.structural_insights[1:3])
