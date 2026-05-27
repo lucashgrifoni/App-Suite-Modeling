@@ -8,12 +8,8 @@
  */
 
 import type { components } from "./generated/openapi";
-import type { OtmDocument } from "./document";
 
 type Schemas = components["schemas"];
-
-/** Mapa de schemas — útil para testes de drift TS ↔ OpenAPI. */
-export type ApiSchemaMap = Schemas;
 
 export type TemplateListItem = Schemas["TemplateListItem"];
 export type ValidateResponse = Schemas["ValidateResponse"];
@@ -161,4 +157,4 @@ export interface ApiErrorBody {
   errors?: unknown;
 }
 
-export type { OtmDocument };
+export type { OtmDocument } from "./document";

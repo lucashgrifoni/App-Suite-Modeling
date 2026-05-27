@@ -6,7 +6,7 @@
 import type { OtmDocument } from "../types/document";
 
 /** Alinhado a `ENTITY_ID_PATTERN` em `otm_core_schema.entity_id` (só IDs técnicos). */
-export const OTM_ENTITY_ID_REGEX = /^[a-zA-Z0-9_][a-zA-Z0-9_.-]*$/;
+export const OTM_ENTITY_ID_REGEX = /^\w[\w.-]*$/;
 
 /**
  * Normaliza texto digitado/colado num ID que satisfaz {@link OTM_ENTITY_ID_REGEX}.
@@ -25,8 +25,8 @@ export const OTM_ENTITY_ID_REGEX = /^[a-zA-Z0-9_][a-zA-Z0-9_.-]*$/;
  */
 export function sanitizeEntityIdInput(raw: string): string {
   if (typeof raw !== "string" || raw === "") return "";
-  const ascii = raw.normalize("NFKD").replace(/[\u0300-\u036f]/g, "");
-  const replaced = ascii.replace(/[^a-zA-Z0-9_.-]/g, "_");
+  const ascii = raw.normalize("NFKD").replaceAll(/[\u0300-\u036f]/g, "");
+  const replaced = ascii.replaceAll(/[^\w.-]/g, "_");
   return replaced.replace(/^[.-]+/, "");
 }
 

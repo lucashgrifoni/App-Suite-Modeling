@@ -50,9 +50,10 @@ describe("getInitialLocaleFromWindow (English-first)", () => {
   });
 
   function stubWindow(stored: string | null): void {
-    vi.stubGlobal("window", {
-      localStorage: { getItem: (_k: string) => stored },
-    });
+    // Presence of `window` marks a browser env; localStorage lives on globalThis
+    // (in a real browser `window === globalThis`), matching the production access.
+    vi.stubGlobal("window", { localStorage: { getItem: (_k: string) => stored } });
+    vi.stubGlobal("localStorage", { getItem: (_k: string) => stored });
   }
 
   it("abre em en por padrão quando não há preferência guardada", () => {

@@ -36,7 +36,8 @@ export async function listTemplates(params?: TemplateListQuery): Promise<Templat
   if (params?.complexity) sp.set("complexity", params.complexity);
   if (params?.q) sp.set("q", params.q);
   const qs = sp.toString();
-  return apiFetch(`/v1/templates${qs ? `?${qs}` : ""}`);
+  const suffix = qs ? `?${qs}` : "";
+  return apiFetch(`/v1/templates${suffix}`);
 }
 
 export async function getTemplate(templateId: string): Promise<TemplateListItem> {

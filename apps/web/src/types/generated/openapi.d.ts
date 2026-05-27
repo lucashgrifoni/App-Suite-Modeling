@@ -555,6 +555,20 @@ export interface components {
              * @description Anti-padrões de modelagem alinhados ao template_semantic_profile.
              */
             anti_pattern_hits?: components["schemas"]["AntiPatternHit"][];
+            /**
+             * Aggregate Risk
+             * @description Consolidação agregada de severidades, tops e temas (serializável JSON).
+             */
+            aggregate_risk?: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Decision Cockpit
+             * @description Resumo executivo de postura e próximos passos.
+             */
+            decision_cockpit?: {
+                [key: string]: unknown;
+            } | null;
         };
         /**
          * AnalysisSummary
@@ -1373,6 +1387,35 @@ export interface components {
             methodology_fit_matrix?: {
                 [key: string]: string;
             };
+            /**
+             * Structure Score
+             * @description Completude estrutural (componentes, fronteiras, fluxos).
+             * @default 0
+             */
+            structure_score: number;
+            /**
+             * Methodology Score
+             * @description Aderência do modelo à metodologia declarada no documento.
+             * @default 0
+             */
+            methodology_score: number;
+            /**
+             * Context Score
+             * @description Riqueza de contexto de negócio e classificação de dados.
+             * @default 0
+             */
+            context_score: number;
+            /**
+             * Overall Score
+             * @description Combinação explícita (média ponderada) dos três eixos.
+             * @default 0
+             */
+            overall_score: number;
+            /**
+             * Methodology Fit Reasons
+             * @description Por que strong/partial/weak para a metodologia efectiva do documento.
+             */
+            methodology_fit_reasons?: string[];
         };
         /** ModifiedEntity */
         ModifiedEntity: {
@@ -1485,6 +1528,21 @@ export interface components {
             reason: string;
             /** Explanations */
             explanations?: components["schemas"]["ExplanationRecord"][];
+            /** Methodology Scores */
+            methodology_scores?: {
+                [key: string]: number;
+            } | null;
+            runner_up_methodology?: components["schemas"]["ThreatModelMethodology"] | null;
+            /** Runner Up Score */
+            runner_up_score?: number | null;
+            /** Score Gap */
+            score_gap?: number | null;
+            /** Recommendation Confidence */
+            recommendation_confidence?: string | null;
+            /** Top Supporting Signals */
+            top_supporting_signals?: string[];
+            /** Counter Signals */
+            counter_signals?: string[];
         };
         /** RecommendationDelta */
         RecommendationDelta: {

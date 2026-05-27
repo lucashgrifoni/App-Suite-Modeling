@@ -6,7 +6,7 @@ import i18n from "../i18n/i18n";
 import { sanitizeDiagramLabel } from "../utils/diagramSanitize";
 
 function safeText(s: string, max = 2000): string {
-  return sanitizeDiagramLabel(s, max).replace(/[^\S\r\n]+/g, " ");
+  return sanitizeDiagramLabel(s, max).replaceAll(/[^\S\r\n]+/g, " ");
 }
 
 function pdfT(lng: ExportArtifactLocale): TFunction {

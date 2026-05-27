@@ -2,6 +2,12 @@ import { useTranslation } from "react-i18next";
 import type { AnalysisResult } from "../../types/api";
 import { Badge } from "../ui/Badge";
 
+function completenessBadgeTone(s: string): "ok" | "warn" | "neutral" {
+  if (s === "complete") return "ok";
+  if (s === "partial") return "warn";
+  return "neutral";
+}
+
 export function ModelQualityStrip({ analysis }: Readonly<{ analysis: AnalysisResult }>) {
   const { t } = useTranslation();
   const pq = analysis.model_quality_precheck;
@@ -21,12 +27,6 @@ export function ModelQualityStrip({ analysis }: Readonly<{ analysis: AnalysisRes
     if (s === "partial") return t("modelQuality.statePartial");
     if (s === "degraded") return t("modelQuality.stateDegraded");
     return s;
-  }
-
-  function completenessBadgeTone(s: string): "ok" | "warn" | "neutral" {
-    if (s === "complete") return "ok";
-    if (s === "partial") return "warn";
-    return "neutral";
   }
 
   if (!pq && !mc && ap.length === 0) return null;

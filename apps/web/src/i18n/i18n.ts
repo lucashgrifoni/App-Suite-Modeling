@@ -19,7 +19,7 @@ const resources = {
  */
 void i18n.use(initReactI18next).init({
   resources,
-  lng: typeof window !== "undefined" ? getInitialLocaleFromWindow() : "en",
+  lng: "window" in globalThis ? getInitialLocaleFromWindow() : "en",
   fallbackLng: "en",
   supportedLngs: ["pt-BR", "en"],
   interpolation: {
@@ -35,11 +35,11 @@ void i18n.use(initReactI18next).init({
   },
 });
 
-if (typeof window !== "undefined") {
+if ("window" in globalThis) {
   i18n.on("languageChanged", (lng: string) => {
     const safe = parseStoredLocale(lng) ?? ("en" as SupportedLocale);
     try {
-      window.localStorage.setItem(LOCALE_STORAGE_KEY, safe);
+      globalThis.localStorage.setItem(LOCALE_STORAGE_KEY, safe);
     } catch {
       /* quota / private mode */
     }

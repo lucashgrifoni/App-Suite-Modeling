@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type SyntheticEvent } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router-dom";
 import { importArtifact } from "../api/otmApi";
@@ -43,7 +43,7 @@ export function ImportPage() {
     return t("import.confidenceLow");
   }
 
-  async function onSubmit(e: React.FormEvent) {
+  async function onSubmit(e: SyntheticEvent) {
     e.preventDefault();
     if (!file) {
       const msg = t("import.pickFile");

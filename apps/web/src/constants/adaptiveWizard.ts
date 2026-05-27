@@ -124,7 +124,7 @@ export function setAdaptiveAnswer(
 ): string[] {
   const base = (tags ?? []).filter((t) => {
     const p = parseAdaptiveTag(t);
-    return !(p && p.profile === profile && p.id === promptId);
+    return !(p?.profile === profile && p?.id === promptId);
   });
   if (answer === "unk") {
     return base;
@@ -140,7 +140,7 @@ export function getAdaptiveAnswer(
 ): AdaptiveAnswer | null {
   for (const t of tags ?? []) {
     const p = parseAdaptiveTag(t);
-    if (p && p.profile === profile && p.id === promptId) return p.answer;
+    if (p?.profile === profile && p?.id === promptId) return p.answer;
   }
   return null;
 }

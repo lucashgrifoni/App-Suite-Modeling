@@ -60,6 +60,12 @@ function resultsPaths() {
 }
 
 test("catalog -> wizard -> review works for all template cases", async ({ page }) => {
+  // External "App-vuln" lab suite: only runs when its dataset env vars are provided
+  // (driven by its own harness). Without them, skip cleanly instead of failing the run.
+  test.skip(
+    !process.env.APPVULN_UI_MATRIX || !process.env.APPVULN_RESULTS_ROOT,
+    "APPVULN_UI_MATRIX/APPVULN_RESULTS_ROOT not set — external App-vuln dataset suite.",
+  );
   test.setTimeout(20 * 60 * 1000);
   const cases = loadCases();
   const paths = resultsPaths();

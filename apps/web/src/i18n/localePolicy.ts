@@ -47,8 +47,9 @@ export function resolveInitialLocaleFromNavigator(languages: readonly string[]):
  * ditar o idioma inicial — continua exportada como utilitário reutilizável.
  */
 export function getInitialLocaleFromWindow(): SupportedLocale {
-  if (typeof window === "undefined") return "en";
-  const stored = parseStoredLocale(window.localStorage.getItem(LOCALE_STORAGE_KEY));
-  if (stored) return stored;
+  if ("window" in globalThis) {
+    const stored = parseStoredLocale(globalThis.localStorage.getItem(LOCALE_STORAGE_KEY));
+    if (stored) return stored;
+  }
   return "en";
 }

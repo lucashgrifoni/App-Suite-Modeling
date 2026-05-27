@@ -27,7 +27,7 @@ export class ErrorBoundary extends Component<Props, State> {
     console.error("[otm-web] ErrorBoundary", error, info.componentStack);
   }
 
-  private reload = () => {
+  private readonly reload = () => {
     this.setState({ error: null });
     globalThis.location?.reload();
   };

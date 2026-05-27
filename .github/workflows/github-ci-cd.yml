@@ -157,6 +157,12 @@ jobs:
         working-directory: apps/web
         run: npm ci
 
+      # Mirror of the Python `OpenAPI contract not stale` gate for the web side:
+      # fails if the committed generated TS types drift from contracts/openapi.json.
+      - name: Contracts (web types in sync)
+        working-directory: apps/web
+        run: npm run contracts:check
+
       - name: UI build (standard)
         if: runner.os != 'Windows'
         working-directory: apps/web

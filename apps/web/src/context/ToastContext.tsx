@@ -13,6 +13,20 @@ import { usePrefersReducedMotion } from "../hooks/usePrefersReducedMotion";
 
 export type ToastVariant = "success" | "error" | "warning" | "info";
 
+/**
+ * Toast ids are React keys for ephemeral UI notifications — not a security token.
+ * Prefer `crypto.randomUUID()` when available; otherwise a monotonic counter keeps
+ * ids collision-free without `Math.random()` (which Sonar flags as weak crypto).
+ */
+let toastSeq = 0;
+function nextToastId(): string {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  toastSeq += 1;
+  return `toast-${Date.now()}-${toastSeq}`;
+}
+
 export interface ToastItem {
   id: string;
   message: string;
@@ -54,10 +68,9 @@ function ToastViewport({
 }>) {
   if (toasts.length === 0) return null;
   return (
-    <div
+    <section
       className="pointer-events-none fixed bottom-4 right-4 z-[200] flex max-h-[min(40vh,320px)] w-[min(100vw-2rem,22rem)] flex-col gap-2 p-0 sm:bottom-6 sm:right-6"
       aria-labelledby={titleId}
-      role="region"
     >
       <span id={titleId} className="sr-only">
         {regionLabel}
@@ -84,7 +97,7 @@ function ToastViewport({
           </li>
         ))}
       </ul>
-    </div>
+    </section>
   );
 }
 
@@ -98,7 +111,7 @@ export function ToastProvider({ children }: Readonly<{ children: ReactNode }>) {
   const dismiss = useCallback((id: string) => {
     const t = timers.current.get(id);
     if (t !== undefined) {
-      window.clearTimeout(t);
+      globalThis.clearTimeout(t);
       timers.current.delete(id);
     }
     setToasts((prev) => prev.filter((x) => x.id !== id));
@@ -106,12 +119,9 @@ export function ToastProvider({ children }: Readonly<{ children: ReactNode }>) {
 
   const push = useCallback(
     (message: string, variant: ToastVariant = "info", durationMs = 5200) => {
-      const id =
-        typeof crypto !== "undefined" && crypto.randomUUID
-          ? crypto.randomUUID()
-          : `toast-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const id = nextToastId();
       setToasts((prev) => [...prev.slice(-4), { id, message, variant }]);
-      const tid = window.setTimeout(() => dismiss(id), durationMs);
+      const tid = globalThis.setTimeout(() => dismiss(id), durationMs);
       timers.current.set(id, tid);
     },
     [dismiss],

@@ -14,9 +14,9 @@ export function AnalysisMetricsGrid({ analysis }: Readonly<{ analysis: AnalysisR
         label={t("metrics.maxLi")}
         value={maxScore == null ? "—" : String(maxScore)}
         footer={
-          maxScore != null ? (
+          maxScore == null ? null : (
             <RiskScoreBar score={maxScore} caption={t("metrics.riskCaption")} />
-          ) : null
+          )
         }
       />
       <StatCard label={t("metrics.engine")} value={analysis.engine_version} small />

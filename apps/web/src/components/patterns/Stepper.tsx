@@ -17,19 +17,21 @@ export function Stepper({
           const done = i < currentIndex;
           const active = i === currentIndex;
           const clickable = onStepClick && i <= currentIndex;
+          let stateClass: string;
+          if (active) {
+            stateClass = "bg-gradient-to-r from-otm-primary to-otm-accent text-otm-green-950 shadow-otm-glow";
+          } else if (done) {
+            stateClass = "border border-otm-border-strong bg-otm-surface-3 text-otm-text hover:border-otm-mint-400/40";
+          } else {
+            stateClass = "cursor-not-allowed border border-otm-border bg-otm-surface-1/60 text-otm-text-subtle";
+          }
           return (
             <li key={s.id}>
               <button
                 type="button"
                 disabled={!clickable}
                 onClick={() => clickable && onStepClick?.(i)}
-                className={`group relative overflow-hidden rounded-full px-3.5 py-1.5 text-xs font-semibold transition duration-otm ease-otm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--otm-ring)] ${
-                  active
-                    ? "bg-gradient-to-r from-otm-primary to-otm-accent text-otm-green-950 shadow-otm-glow"
-                    : done
-                      ? "border border-otm-border-strong bg-otm-surface-3 text-otm-text hover:border-otm-mint-400/40"
-                      : "cursor-not-allowed border border-otm-border bg-otm-surface-1/60 text-otm-text-subtle"
-                }`}
+                className={`group relative overflow-hidden rounded-full px-3.5 py-1.5 text-xs font-semibold transition duration-otm ease-otm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--otm-ring)] ${stateClass}`}
               >
                 <span className="relative z-10">
                   {i + 1}. {s.label}

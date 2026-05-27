@@ -22,7 +22,7 @@ test.describe("i18n pt-BR / en", () => {
     await page.getByTestId("language-switcher").selectOption("en");
     await expect(page.getByRole("heading", { level: 1, name: /step by step/i })).toBeVisible();
     await expect
-      .poll(async () => page.evaluate((key) => window.localStorage.getItem(key), LOCALE_KEY))
+      .poll(async () => page.evaluate((key) => globalThis.localStorage.getItem(key), LOCALE_KEY))
       .toBe("en");
     await page.reload();
     await expect(page.getByTestId("language-switcher")).toHaveValue("en");

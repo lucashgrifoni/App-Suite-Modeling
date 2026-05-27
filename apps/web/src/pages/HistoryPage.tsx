@@ -111,7 +111,9 @@ function HistoryCard({
           type="button"
           variant="ghost"
           className="!py-1.5 !text-xs"
-          onClick={() => void onPdf(entry.id)}
+          onClick={() => {
+            onPdf(entry.id);
+          }}
         >
           {t("history.pdfSnapshot")}
         </Button>
@@ -133,7 +135,7 @@ export function HistoryPage() {
   const newestId = entries[0]?.id ?? null;
 
   function confirmRestore(id: string) {
-    if (!window.confirm(t("history.confirmRestore"))) {
+    if (!globalThis.confirm(t("history.confirmRestore"))) {
       return;
     }
     restore(id);
@@ -142,7 +144,7 @@ export function HistoryPage() {
   }
 
   function handleExport(id: string) {
-    if (!window.confirm(t("history.confirmExport"))) {
+    if (!globalThis.confirm(t("history.confirmExport"))) {
       return;
     }
     restore(id);
@@ -157,7 +159,7 @@ export function HistoryPage() {
       const blob = await generateReportPdfBlob(e.document, e.analysis, {
         locale: resolveExportArtifactLocale(undefined, i18n.language),
       });
-      const safe = e.title.replace(/[^\w\-]+/g, "_").slice(0, 40);
+      const safe = e.title.replaceAll(/[^\w-]+/g, "_").slice(0, 40);
       downloadPdfBlob(blob, `otm-report-${safe}-${e.createdAt}.pdf`);
       toast.success(t("history.toastPdfOk"));
     } catch {

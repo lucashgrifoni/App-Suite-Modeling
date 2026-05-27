@@ -24,12 +24,12 @@ export function RiskScoreBar({
     score == null
       ? t("riskBar.noScore")
       : t("riskBar.liAria", { score: s, max: maxScore });
-  const footer =
-    caption !== undefined
-      ? caption
-      : variant === "default"
-        ? t("riskBar.scaleFooter")
-        : null;
+  let footer: string | null;
+  if (caption === undefined) {
+    footer = variant === "default" ? t("riskBar.scaleFooter") : null;
+  } else {
+    footer = caption;
+  }
   const showFooter =
     footer != null && String(footer).length > 0 && variant !== "compact" && variant !== "none";
 

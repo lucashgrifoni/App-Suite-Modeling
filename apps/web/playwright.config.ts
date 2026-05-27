@@ -11,6 +11,20 @@ export default defineConfig({
     trace: "retain-on-failure",
     /* E2E fixtures assert PT-BR copy; pin locale so host browser language does not flip expected strings. */
     locale: "pt-BR",
+    /*
+     * Product policy is English-first: the app ignores navigator.language and reads the initial
+     * locale only from localStorage (see src/i18n/localePolicy.ts:getInitialLocaleFromWindow).
+     * Seed the stored preference so the PT-BR fixtures keep asserting the Portuguese journey.
+     */
+    storageState: {
+      cookies: [],
+      origins: [
+        {
+          origin: "http://127.0.0.1:4173",
+          localStorage: [{ name: "otm.web.locale", value: "pt-BR" }],
+        },
+      ],
+    },
   },
   webServer: {
     command: "node ./node_modules/vite/bin/vite.js --host 127.0.0.1 --port 4173",

@@ -6,7 +6,7 @@ export function Skeleton({
 }: Readonly<HTMLAttributes<HTMLDivElement>>) {
   return (
     <div
-      role="presentation"
+      aria-hidden
       className={`relative overflow-hidden rounded-md bg-otm-surface-3 ${className}`}
       {...rest}
     >
@@ -19,10 +19,14 @@ export function Skeleton({
 }
 
 export function SkeletonText({ lines = 3 }: Readonly<{ lines?: number }>) {
+  const rows = Array.from({ length: lines }, (_, i) => ({
+    id: `skeleton-row-${i}`,
+    width: i === lines - 1 ? "w-2/3" : "w-full",
+  }));
   return (
     <div className="space-y-2" aria-busy="true" aria-live="polite">
-      {Array.from({ length: lines }).map((_, i) => (
-        <Skeleton key={i} className={`h-3 ${i === lines - 1 ? "w-2/3" : "w-full"}`} />
+      {rows.map((row) => (
+        <Skeleton key={row.id} className={`h-3 ${row.width}`} />
       ))}
     </div>
   );

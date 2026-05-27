@@ -15,8 +15,8 @@ export type ThemePreference = "dark" | "light" | "system";
 export function resolveEffectiveTheme(preference: ThemePreference): "dark" | "light" {
   if (preference === "dark") return "dark";
   if (preference === "light") return "light";
-  if (typeof window === "undefined" || !window.matchMedia) return "dark";
-  return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+  if (globalThis.window === undefined || !globalThis.matchMedia) return "dark";
+  return globalThis.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
 }
 
 function readStoredPreference(): ThemePreference {
@@ -30,7 +30,7 @@ function readStoredPreference(): ThemePreference {
 }
 
 function applyDomTheme(effective: "dark" | "light") {
-  document.documentElement.setAttribute("data-theme", effective);
+  document.documentElement.dataset.theme = effective;
 }
 
 interface ThemeState {
@@ -42,7 +42,7 @@ interface ThemeState {
 const ThemeContext = createContext<ThemeState | null>(null);
 
 export function ThemeProvider({ children }: Readonly<{ children: ReactNode }>) {
-  const [preference, setPreferenceState] = useState<ThemePreference>(() => readStoredPreference());
+  const [preference, setPreference] = useState<ThemePreference>(() => readStoredPreference());
   const [effective, setEffective] = useState<"dark" | "light">(() =>
     resolveEffectiveTheme(readStoredPreference()),
   );
@@ -55,7 +55,7 @@ export function ThemeProvider({ children }: Readonly<{ children: ReactNode }>) {
 
   useEffect(() => {
     if (preference !== "system") return;
-    const mq = window.matchMedia("(prefers-color-scheme: light)");
+    const mq = globalThis.matchMedia("(prefers-color-scheme: light)");
     const sync = () => {
       const e = resolveEffectiveTheme("system");
       setEffective(e);
@@ -65,8 +65,8 @@ export function ThemeProvider({ children }: Readonly<{ children: ReactNode }>) {
     return () => mq.removeEventListener("change", sync);
   }, [preference]);
 
-  const setPreference = useCallback((p: ThemePreference) => {
-    setPreferenceState(p);
+  const changePreference = useCallback((p: ThemePreference) => {
+    setPreference(p);
     try {
       localStorage.setItem(STORAGE_KEY, p);
     } catch {
@@ -78,9 +78,9 @@ export function ThemeProvider({ children }: Readonly<{ children: ReactNode }>) {
     () => ({
       preference,
       effective,
-      setPreference,
+      setPreference: changePreference,
     }),
-    [preference, effective, setPreference],
+    [preference, effective, changePreference],
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;

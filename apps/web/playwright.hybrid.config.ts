@@ -18,6 +18,18 @@ export default defineConfig({
   use: {
     baseURL: "http://127.0.0.1:4173",
     trace: "retain-on-failure",
+    /* Match the standard config: PT-BR copy is asserted, but the app is English-first and reads
+       the initial locale only from localStorage (src/i18n/localePolicy.ts). Pin locale + seed it. */
+    locale: "pt-BR",
+    storageState: {
+      cookies: [],
+      origins: [
+        {
+          origin: "http://127.0.0.1:4173",
+          localStorage: [{ name: "otm.web.locale", value: "pt-BR" }],
+        },
+      ],
+    },
   },
   webServer: [
     {

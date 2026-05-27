@@ -13,6 +13,7 @@
     "contracts:generate": "node ./node_modules/openapi-typescript/bin/cli.js ../../contracts/openapi.json -o src/types/generated/openapi.d.ts",
     "contracts:sync": "npm run contracts:export && npm run contracts:generate",
     "contracts:verify": "python ../../scripts/verify_openapi_up_to_date.py",
+    "contracts:check": "node scripts/contracts-check.mjs",
     "ci:build": "npm run typecheck && npm run build",
     "ci:build:portable": "npm run typecheck:portable && npm run build:portable",
     "e2e:smoke": "node ./node_modules/@playwright/test/cli.js test e2e/smoke.spec.ts --project=chromium",

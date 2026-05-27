@@ -37,21 +37,16 @@ function buildEntry(
     systemType: document.model.system_type,
     maxScore,
     summaryLine: `${document.metadata.title} · L×I máx. ${maxScore ?? "—"}`,
-    document: JSON.parse(JSON.stringify(document)) as OtmDocument,
-    analysis: analysis ? (JSON.parse(JSON.stringify(analysis)) as AnalysisResult) : null,
+    document: structuredClone(document),
+    analysis: analysis ? structuredClone(analysis) : null,
   };
 }
 
 export function AnalysisHistoryProvider({ children }: Readonly<{ children: ReactNode }>) {
   const { document, analysis, setDocument, setAnalysis } = useSession();
-  const [version, setVersion] = useState(0);
+  const [entries, setEntries] = useState<AnalysisHistoryEntry[]>(() => loadHistory());
 
-  const entries = useMemo(() => {
-    void version;
-    return loadHistory();
-  }, [version]);
-
-  const refresh = useCallback(() => setVersion((v) => v + 1), []);
+  const refresh = useCallback(() => setEntries(loadHistory()), []);
 
   const appendSnapshot = useCallback(
     (trigger: "analysis" | "export") => {
