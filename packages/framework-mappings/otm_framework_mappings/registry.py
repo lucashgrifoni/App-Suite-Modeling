@@ -63,7 +63,7 @@ class StrideFrameworkRegistry:
     def from_yaml_bytes(cls, raw: bytes) -> StrideFrameworkRegistry:
         obj = yaml.safe_load(raw)
         if not isinstance(obj, dict):
-            raise ValueError("YAML de mapeamento deve ser um objeto na raiz.")  # pragma: no cover - defensive: packaged data is a valid mapping
+            raise ValueError("YAML de mapeamento deve ser um objeto na raiz.")  # noqa: E501  # pragma: no cover - defensive: packaged data is a valid mapping
         parsed = RawStrideMapFile.model_validate(obj)
         return cls.from_raw_file(parsed)
 

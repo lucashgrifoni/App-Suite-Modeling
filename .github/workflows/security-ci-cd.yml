@@ -32,10 +32,9 @@
 #   - WARNING = medium-severity findings
 #   - ERROR   = high-severity findings
 #
-# Required repository or organization secrets:
-#   - SNYK_TOKEN          : Snyk Code and Snyk Open Source scans
-#   - GITLEAKS_LICENSE    : required only for organizations using the paid
-#                           gitleaks-action license
+# Required repository or organization secrets (names only):
+#   `SNYK_TOKEN`        for Snyk Code and Snyk Open Source scans.
+#   `GITLEAKS_LICENSE`  only when the org uses the paid gitleaks-action license.
 #
 # GITHUB_TOKEN is supplied automatically by GitHub Actions.
 # SARIF uploads require `security-events: write`. This permission is set at

@@ -145,7 +145,7 @@ def register_unhandled_exception_handler(app: FastAPI) -> None:
 
     @app.exception_handler(Exception)
     async def _unhandled(request: Request, exc: Exception) -> JSONResponse:
-        if isinstance(exc, StarletteHTTPException):  # pragma: no cover - FastAPI's own HTTPException handler intercepts first
+        if isinstance(exc, StarletteHTTPException):  # noqa: E501  # pragma: no cover - FastAPI's HTTPException handler intercepts first
             return JSONResponse(
                 status_code=exc.status_code,
                 content={"detail": exc.detail},

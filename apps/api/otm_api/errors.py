@@ -45,10 +45,13 @@ def _truncate(value: Any, *, depth: int = 0) -> Any:
     if isinstance(value, bytes):
         if len(value) <= _MAX_INPUT_CHARS:
             return value.decode("utf-8", "replace")
-        return f"{value[:_MAX_INPUT_CHARS].decode('utf-8', 'replace')}…[{len(value) - _MAX_INPUT_CHARS} bytes suppressed]"
+        head = value[:_MAX_INPUT_CHARS].decode("utf-8", "replace")
+        suppressed = len(value) - _MAX_INPUT_CHARS
+        return f"{head}…[{suppressed} bytes suppressed]"
     if isinstance(value, list):
         if len(value) > 50:
-            return [_truncate(v, depth=depth + 1) for v in value[:50]] + [f"…[{len(value) - 50} items suppressed]"]
+            head = [_truncate(v, depth=depth + 1) for v in value[:50]]
+            return [*head, f"…[{len(value) - 50} items suppressed]"]
         return [_truncate(v, depth=depth + 1) for v in value]
     if isinstance(value, dict):
         if len(value) > 50:

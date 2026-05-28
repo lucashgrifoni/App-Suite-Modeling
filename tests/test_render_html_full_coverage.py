@@ -17,8 +17,8 @@ from otm_report_premium.render_html import render_premium_html  # noqa: E402
 def _banded_doc():
     base = create_blank_document()
     threats = [
-        Threat(id=f"t{i}", title=f"T{i}", stride=StrideCategory.TAMPERING, risk=build_risk_assessment(l, i_))
-        for i, (l, i_) in enumerate([(5, 5), (3, 5), (3, 3), (1, 2), (2, 2), (4, 4)])
+        Threat(id=f"t{i}", title=f"T{i}", stride=StrideCategory.TAMPERING, risk=build_risk_assessment(lk, i_))
+        for i, (lk, i_) in enumerate([(5, 5), (3, 5), (3, 3), (1, 2), (2, 2), (4, 4)])
     ]
     return base.model_copy(update={"threats": threats})
 
@@ -27,10 +27,10 @@ def _heuristics():
     return [
         HeuristicThreat(
             id=f"h{i}", title=f"H{i}", description="d",
-            stride=StrideCategory.SPOOFING, risk=build_risk_assessment(l, im),
+            stride=StrideCategory.SPOOFING, risk=build_risk_assessment(lk, im),
             target_component_id="c1",
         )
-        for i, (l, im) in enumerate([(5, 5), (3, 4), (2, 2), (1, 2)])
+        for i, (lk, im) in enumerate([(5, 5), (3, 4), (2, 2), (1, 2)])
     ]
 
 

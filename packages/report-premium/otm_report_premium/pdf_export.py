@@ -24,5 +24,5 @@ def html_to_pdf_bytes(html: str) -> bytes:
     enc = html.encode("utf-8")
     status = pisa.CreatePDF(enc, dest=out, encoding="utf-8")
     if status.err:
-        raise RuntimeError("PDF generation failed (xhtml2pdf reported an error).")  # pragma: no cover - defensive: xhtml2pdf error path
+        raise RuntimeError("PDF generation failed (xhtml2pdf reported an error).")  # noqa: E501  # pragma: no cover - defensive: xhtml2pdf error path
     return out.getvalue()

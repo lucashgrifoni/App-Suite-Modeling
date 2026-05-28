@@ -1,6 +1,8 @@
 import type { AnalysisHistoryEntry } from "../types/analysisHistory";
 
-const KEY = "otm.analysis.history";
+// localStorage namespace for the analysis history list. Not a secret — it is
+// a public identifier inside the browser's per-origin storage.
+const STORAGE_NAMESPACE = "otm.analysis.history";
 const MAX_ENTRIES = 20;
 
 function isEntry(x: unknown): x is AnalysisHistoryEntry {
@@ -15,7 +17,7 @@ function isEntry(x: unknown): x is AnalysisHistoryEntry {
 
 export function loadHistory(): AnalysisHistoryEntry[] {
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = localStorage.getItem(STORAGE_NAMESPACE);
     if (!raw) return [];
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) return [];
@@ -27,7 +29,7 @@ export function loadHistory(): AnalysisHistoryEntry[] {
 
 export function saveHistory(entries: AnalysisHistoryEntry[]): void {
   try {
-    localStorage.setItem(KEY, JSON.stringify(entries.slice(0, MAX_ENTRIES)));
+    localStorage.setItem(STORAGE_NAMESPACE, JSON.stringify(entries.slice(0, MAX_ENTRIES)));
   } catch {
     /* quota */
   }

@@ -22,7 +22,7 @@ def _cmp_semantic_diff(lines: list[str], result: ThreatModelComparisonResult) ->
     worsened = sem.worsened or []
     risk_impact = sem.risk_impact or []
     scs = sem.structural_change_summary or []
-    if not (improved or worsened or risk_impact or scs):  # pragma: no cover - structural_change_summary always populated
+    if not (improved or worsened or risk_impact or scs):  # noqa: E501  # pragma: no cover - structural_change_summary always populated
         return
     lines.extend(["", "### Diff semântico (resumo)", ""])
     lines.append(

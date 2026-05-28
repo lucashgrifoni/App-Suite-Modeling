@@ -1,12 +1,14 @@
 import type { XYPosition } from "reactflow";
 
-const KEY = "otm.web.diagramLayout";
+// sessionStorage namespace for the per-tab diagram layout map. Not a secret —
+// it is a public identifier inside the browser's per-origin storage.
+const STORAGE_NAMESPACE = "otm.web.diagramLayout";
 
 export type DiagramLayoutMap = Record<string, XYPosition>;
 
 export function loadDiagramLayout(): DiagramLayoutMap {
   try {
-    const raw = sessionStorage.getItem(KEY);
+    const raw = sessionStorage.getItem(STORAGE_NAMESPACE);
     if (!raw) return {};
     const parsed = JSON.parse(raw) as unknown;
     if (!parsed || typeof parsed !== "object") return {};
@@ -27,7 +29,7 @@ export function saveDiagramLayoutPatch(componentId: string, pos: XYPosition): vo
   try {
     const cur = loadDiagramLayout();
     cur[componentId] = pos;
-    sessionStorage.setItem(KEY, JSON.stringify(cur));
+    sessionStorage.setItem(STORAGE_NAMESPACE, JSON.stringify(cur));
   } catch {
     /* quota */
   }
@@ -35,7 +37,7 @@ export function saveDiagramLayoutPatch(componentId: string, pos: XYPosition): vo
 
 export function clearDiagramLayout(): void {
   try {
-    sessionStorage.removeItem(KEY);
+    sessionStorage.removeItem(STORAGE_NAMESPACE);
   } catch {
     /* ignore */
   }

@@ -119,3 +119,11 @@ ignore_missing_imports = true
 "packages/artifact-import/**" = ["E501"]
 "packages/threat-engine/otm_threat_engine/remediation/**" = ["E501"]
 "tests/test_artifact_import.py" = ["E501"]
+# Tests carry long literal fixtures (Terraform/YAML/JSON snippets, threat
+# titles, parametrized cases) where breaking the line hurts readability.
+"tests/test_analysis_markdown_helpers_coverage.py" = ["E501"]
+"tests/test_artifact_import_coverage.py" = ["E501"]
+"tests/test_builder_bands_coverage.py" = ["E501"]
+"tests/test_fit_and_prioritize_coverage.py" = ["E501"]
+"tests/test_misc_small_coverage.py" = ["E501"]
+"tests/test_recommendation_coverage.py" = ["E501"]

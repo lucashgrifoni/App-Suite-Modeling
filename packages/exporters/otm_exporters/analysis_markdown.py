@@ -195,7 +195,7 @@ def _append_risk_categories_block(
         k = risk_category_key(h)
         if k in buckets and len(buckets[k]) < top_n:
             buckets[k].append(h)
-    if not any(buckets[k] for k in order):  # pragma: no cover - risk_category_key always maps to a bucket (default "stride")
+    if not any(buckets[k] for k in order):  # noqa: E501  # pragma: no cover - risk_category_key always maps to a bucket
         return
     lines.append(msgs.risk_categories_title)
     lines.append("")

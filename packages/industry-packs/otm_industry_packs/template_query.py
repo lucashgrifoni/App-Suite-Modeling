@@ -14,7 +14,7 @@ def load_all_template_infos() -> list[TemplateInfo]:
         if info:
             out.append(info)
         else:
-            out.append(TemplateInfo(id=tid, title=tid, description=""))  # pragma: no cover - defensive: shipped templates always have a manifest
+            out.append(TemplateInfo(id=tid, title=tid, description=""))  # noqa: E501  # pragma: no cover - defensive: shipped templates always have a manifest
     return out
 
 
@@ -24,7 +24,7 @@ def get_template_info(template_id: str) -> TemplateInfo | None:
     info = load_template_info(template_id)
     if info:
         return info
-    return TemplateInfo(id=template_id, title=template_id, description="")  # pragma: no cover - defensive: shipped templates always have a manifest
+    return TemplateInfo(id=template_id, title=template_id, description="")  # noqa: E501  # pragma: no cover - defensive: shipped templates always have a manifest
 
 
 def filter_template_infos(

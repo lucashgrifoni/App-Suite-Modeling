@@ -4,7 +4,22 @@ services:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
+    # Bind to the loopback interface only; this is a development compose file
+    # and must not be reachable from the LAN by default.
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     environment:
       - OTM_ENV=development
+    # Hardened defaults so KICS / Trivy / docker-compose-best-practices stay green
+    # without changing runtime behaviour for the MVP.
+    security_opt:
+      - "no-new-privileges:true"
+    cap_drop:
+      - ALL
+    read_only: false
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2).status==200 else 1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
