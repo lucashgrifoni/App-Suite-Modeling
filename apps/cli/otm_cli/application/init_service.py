@@ -8,6 +8,7 @@ from pathlib import Path
 from otm_core_schema import BLANK_DOCUMENT_YAML
 from otm_industry_packs.loader import load_template_info, load_template_yaml
 
+from otm_cli.shared.emit import write_text_file
 from otm_cli.shared.errors import CliUserError
 
 INIT_TEMPLATE = BLANK_DOCUMENT_YAML
@@ -45,7 +46,7 @@ def run_init(
                 cause="the template ID is not in the embedded catalog.",
                 next_step="run `otm templates list`.",
             ) from e
-        path.write_text(body, encoding="utf-8")
+        write_text_file(content=body, output=path)
         info = load_template_info(template)
         return InitResult(
             path=path,
@@ -54,7 +55,7 @@ def run_init(
             suggested_pack=info.suggested_pack if info else None,
             message_key="template",
         )
-    path.write_text(INIT_TEMPLATE, encoding="utf-8")
+    write_text_file(content=INIT_TEMPLATE, output=path)
     return InitResult(
         path=path,
         used_template=False,

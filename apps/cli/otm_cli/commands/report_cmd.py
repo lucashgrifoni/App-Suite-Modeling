@@ -18,6 +18,7 @@ from otm_cli.application.report_service import (
 )
 from otm_cli.commands.bootstrap import console
 from otm_cli.commands.handle_errors import exit_on_cli_error
+from otm_cli.shared.emit import write_text_file
 from otm_cli.shared.errors import CliUserError
 
 
@@ -95,7 +96,10 @@ def register(app: typer.Typer) -> None:
 
         if isinstance(outcome, ReportLegacyResult):
             if output:
-                output.write_text(outcome.text, encoding="utf-8")
+                try:
+                    write_text_file(content=outcome.text, output=output)
+                except CliUserError as e:
+                    exit_on_cli_error(console, e)
                 console.print(f"[green]Report[/green] → {output.resolve()}")
             else:
                 print(outcome.text, end="")
@@ -103,7 +107,10 @@ def register(app: typer.Typer) -> None:
 
         if isinstance(outcome, ReportPremiumMarkdownResult):
             if output:
-                output.write_text(outcome.text, encoding="utf-8")
+                try:
+                    write_text_file(content=outcome.text, output=output)
+                except CliUserError as e:
+                    exit_on_cli_error(console, e)
                 console.print(f"[green]Report premium (Markdown)[/green] → {output.resolve()}")
             else:
                 print(outcome.text, end="")

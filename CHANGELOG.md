@@ -13,6 +13,47 @@ This project follows **Keep a Changelog** and **Semantic Versioning**.
 
 ---
 
+## [7.6.0] — 2026-05-28
+
+### Summary
+End-user validation hardening release: CLI now fails gracefully on missing output directories and refuses contradictory analyze flags, the Windows console renders accents/em-dashes/emojis correctly, the API caps echoed input in `422` responses, the diagram component stabilizes React Flow renders, and `otm import repo` can emit a chainable `.otm.yaml` seed. No public contract change beyond the new optional `--draft-out` flag and the additional 422 truncation; existing pipelines keep working.
+
+### Highlights
+- **CLI** `otm import repo` ganhou `--draft-out <path.otm.yaml>` que materializa um *seed* canónico mínimo (componentes, fronteira, fluxos e ativos) directamente encadeável em `otm validate` / `otm analyze`.
+- **CLI** força `UTF-8` em `stdout` / `stderr` no entrypoint e desactiva `legacy_windows` no Rich console: em PowerShell 7, Windows Terminal e VS Code, acentos `pt-BR`, em-dashes `—`, bullets `·`, setas `→` e emojis aparecem íntegros sem `chcp 65001`.
+- **API** `RequestValidationError` agora trunca strings/listas/dicts grandes no campo `errors[].input` (cap em 256 chars) — uma `422` para um `title` de 200 KB cabe em <1 KB.
+- **UI** `ThreatModelDiagram` move `nodeTypes`/`edgeTypes` para escopo de módulo com `Object.freeze` e centraliza o `markerEnd` de edges, silenciando o aviso "new nodeTypes object" do React Flow em StrictMode.
+
+### Fixed
+- `otm init` deixou de vazar `FileNotFoundError` quando o diretório pai não existe: a CLI agora devolve `Failure: cannot write to ...` + `Next step: create the directory first` (`apps/cli/otm_cli/application/init_service.py`).
+- `otm analyze --json-out`, `otm precheck --json-out`, `otm diff-analysis --json-out`, `otm report -o`, `otm diagram -o`, `otm export -o`, `otm backlog -o`, `otm import openapi/terraform/k8s/repo --output/--json-out/--explain-out/--draft-out`, e `otm diff --json-out` deixaram de vazar tracebacks quando o diretório de saída não existe; todos passam pelo helper único `shared/emit.write_text_file` + `write_json_file` que valida o `parent` e levanta `CliUserError` legível.
+- `otm analyze -m <metodologia> --auto-methodology` deixou de aceitar silenciosamente o conflito; agora dispara `BadParameter` ("mutually exclusive; pass only one") em vez de executar `stride` ignorando o pedido de recomendação automática.
+
+### Changed
+- `apps/cli/otm_cli/main.py` configura `PYTHONIOENCODING=utf-8` e chama `sys.stdout.reconfigure(encoding="utf-8", errors="replace")` antes de importar `otm_cli.cli`.
+- `apps/cli/otm_cli/commands/bootstrap.py` instancia o Rich `Console(..., legacy_windows=False)` para preservar caixas/painéis íntegros no Windows moderno.
+- `apps/web/src/components/diagram/ThreatModelDiagram.tsx`: `EDGE_MARKER_END` ao módulo, `nodeTypes` e `edgeTypes` `Object.freeze` no escopo do ficheiro, e a `<ReactFlow>` recebe ambos.
+
+### Security
+- 422 da API deixa de ecoar input completo: o handler em `apps/api/otm_api/errors.py` trunca strings com mais de 256 caracteres com sufixo `…[N chars suppressed]`, listas longas com `…[N items suppressed]` e limita aninhamento, reduzindo amplificação por *input echo* em cenários hostis.
+- `SECURITY.md` ganhou uma secção *Postura de implantação* explicando que a API e a UI são desenhadas para uso local; quando expostas, é necessário activar `slowapi`, `OptionalApiKeyMiddleware` e restringir `CORS`.
+
+### Docs
+- `docs/README.md` actualiza a referência de versão para `7.6.0` (resolvia drift contra `pyproject.toml`).
+- `docs/features/CLI.md` documenta a nova mensagem de erro para `-o`/`--json-out` em directório inexistente, a exclusividade `--methodology` vs `--auto-methodology`, e a postura UTF-8 no Windows.
+- `docs/features/ARTIFACT_IMPORT.md` clarifica o âmbito de `otm import repo` ("scan pragmático") e documenta `--draft-out` como caminho oficial para encadear em `validate`/`analyze`.
+
+### Repository hygiene
+- `.gitignore` passa a ignorar `_tortura_sandbox/`, `.playwright-mcp/` e `ui-*.png` (artefactos locais da validação extrema).
+
+### Tests
+- Nova suite `tests/test_cli_write_paths_and_flag_conflicts.py` cobre os caminhos que antes vazavam traceback e a exclusividade `-m` ↔ `--auto-methodology`.
+- Nova suite `tests/test_api_errors_truncate.py` valida o cap de 256 chars em strings/dicts/listas e a preservação dos demais campos do `errors[]`.
+- Nova suite `tests/test_cli_import_draft.py` cobre `scan_payload_to_draft_yaml` (estrutura, ativo de sessão, marcação de `/admin`, ausência de inferências) e o encadeamento `import repo --draft-out` → `validate`.
+- Suite total: **951 passed, 1 skipped** + **17 testes regressivos novos**.
+
+---
+
 ## [7.5.0] — 2026-04-09
 
 ### Summary

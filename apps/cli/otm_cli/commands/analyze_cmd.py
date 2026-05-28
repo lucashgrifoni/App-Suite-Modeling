@@ -21,7 +21,10 @@ from otm_cli.shared.errors import CliUserError
 
 def _emit_json_output(result: AnalysisResult, json_out: Path, *, quiet: bool) -> None:
     payload = result.model_dump(mode="json")
-    write_json_file(payload=payload, output=json_out)
+    try:
+        write_json_file(payload=payload, output=json_out)
+    except CliUserError as e:
+        exit_on_cli_error(console, e)
     if not quiet:
         console.print(f"[green]Analysis written to[/green] {json_out.resolve()}")
 
@@ -115,6 +118,11 @@ def register(app: typer.Typer) -> None:
         ),
     ) -> None:
         """Run the engine (STRIDE heuristics, boundaries, L×I risk, optional pack)."""
+        if methodology is not None and auto_methodology:
+            raise typer.BadParameter(
+                "`--methodology/-m` and `--auto-methodology` are mutually exclusive; pass only one.",
+                param_hint="--methodology / --auto-methodology",
+            )
         try:
             result = run_analyze(
                 path,

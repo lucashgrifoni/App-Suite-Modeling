@@ -32,7 +32,10 @@ def register(app: typer.Typer) -> None:
             exit_on_cli_error(console, e)
 
         if json_out:
-            write_json_file(payload=payload, output=json_out)
+            try:
+                write_json_file(payload=payload, output=json_out)
+            except CliUserError as e:
+                exit_on_cli_error(console, e)
             console.print(f"[green]Analysis diff written to[/green] {json_out.resolve()}")
         if fmt == DiffFormat.json:
             print(json.dumps(payload, indent=2, ensure_ascii=False))

@@ -59,3 +59,8 @@ apps/web/playwright-report/
 melhorias app modeling/
 ARQUIVO_DA_META.md
 _analysis_outputs/
+
+# End-user / Playwright validation artefacts (local only)
+_tortura_sandbox/
+.playwright-mcp/
+ui-*.png

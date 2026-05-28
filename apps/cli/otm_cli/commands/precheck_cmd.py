@@ -39,7 +39,10 @@ def register(app: typer.Typer) -> None:
         except CliUserError as e:
             exit_on_cli_error(console, e)
         if json_out:
-            write_json_file(payload=payload, output=json_out)
+            try:
+                write_json_file(payload=payload, output=json_out)
+            except CliUserError as e:
+                exit_on_cli_error(console, e)
             console.print(f"[green]Pre-check written to[/green] {json_out.resolve()}")
         else:
             console.print(

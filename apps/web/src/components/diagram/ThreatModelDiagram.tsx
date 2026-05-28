@@ -42,18 +42,25 @@ function buildNodes(doc: OtmDocument, editMode: boolean): Node<OtmNodeData>[] {
   }));
 }
 
+// Module-scoped marker config so each edge reuses the same object reference and
+// React Flow's prop-stability heuristic does not flag the diagram on re-render.
+const EDGE_MARKER_END = { type: MarkerType.ArrowClosed, color: "var(--otm-mint-400)" } as const;
+
 function buildEdges(doc: OtmDocument, editMode: boolean): Edge[] {
   return doc.data_flows.map((f) => ({
     id: f.id,
     source: f.from_component,
     target: f.to_component,
     label: f.name ? sanitizeDiagramLabel(f.name) : undefined,
-    markerEnd: { type: MarkerType.ArrowClosed, color: "var(--otm-mint-400)" },
+    markerEnd: EDGE_MARKER_END,
     deletable: editMode,
   }));
 }
 
-const nodeTypes = { otm: ComponentNode };
+// Module-scoped to keep the reference stable across re-renders and React
+// StrictMode double-mounts — silences React Flow warning #002.
+const nodeTypes = Object.freeze({ otm: ComponentNode });
+const edgeTypes = Object.freeze({});
 
 function docStructureKey(doc: OtmDocument): string {
   return JSON.stringify({
@@ -290,6 +297,7 @@ function ThreatModelDiagramInner({
           onNodesDelete={editMode ? onNodesDelete : undefined}
           onSelectionChange={onSelectionChange}
           nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
           nodesDraggable={editMode}
           nodesConnectable={editMode}
           elementsSelectable

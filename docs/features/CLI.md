@@ -95,3 +95,9 @@ Para `plot4ai`, a saída também pode incluir `ai_system_context` (camadas detec
 
 - Mensagens de sucesso e painéis usam **Rich** (muitas vezes em **stderr**); dados puros (YAML/JSON/MD/Mermaid) vão para **stdout** quando não há `-o`.
 - Erros de schema listam caminhos Pydantic de forma legível.
+- Quando `-o` / `--json-out` / `--output` aponta para um diretório que não existe, a CLI emite um erro de utilizador (sem stack trace) com a sugestão de criar o diretório.
+- `--methodology` e `--auto-methodology` são mutuamente exclusivos em `analyze`; passe apenas um.
+
+### Windows — caracteres acentuados, setas e emojis
+
+Desde `v7.6.0`, o entrypoint `otm` força UTF-8 em `stdout`/`stderr` (`PYTHONIOENCODING=utf-8` + `sys.stdout.reconfigure`) e o console Rich corre com `legacy_windows=False`. Em terminais modernos (Windows Terminal, PowerShell 7, VS Code) acentos `pt-BR`, setas `→`, em-dashes `—` e emojis aparecem íntegros sem `chcp 65001`. Em sessões antigas de `cmd.exe`, se notar mojibake, rode `chcp 65001` antes do comando.

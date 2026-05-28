@@ -31,9 +31,14 @@ Geração **semiautomática** de rascunho (`ThreatModelDocument`) a partir de ev
 otm import openapi ./spec.yaml --output draft.otm.yaml --explain-out explain.json
 otm import terraform ./infra --output draft.otm.yaml
 otm import k8s ./manifests --output draft.otm.yaml
+otm import repo ./meu-servico --json-out scan.json --draft-out draft.otm.yaml
 ```
 
 Sem `--output`, o YAML é escrito para **stdout**.
+
+### `otm import repo` — scan pragmático de repositório
+
+`otm import repo` é um varredor heurístico **leve** sobre fontes Node/Express (`routes`, `upload`, `session`, `external fetch`, `eval`). A saída principal é o JSON de **inferências** (`--json-out`); use `--draft-out` para também emitir um `.otm.yaml` *semente* derivado dessas inferências (componentes-fronteira, ativos placeholder e fluxos a partir de rotas detectadas). O *draft* é deliberadamente mínimo — encadeia diretamente em `otm validate` / `otm analyze`, mas existe para ser editado por um humano, não como "modelo pronto".
 
 ## API (`/v1/imports`)
 
