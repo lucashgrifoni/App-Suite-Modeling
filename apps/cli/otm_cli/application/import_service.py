@@ -196,9 +196,7 @@ def scan_payload_to_draft_yaml(payload: dict[str, Any]) -> str:
             }
         )
 
-    summary_bits = [
-        f"Draft gerado por `otm import repo` a partir de {len(inferences)} inferência(s)."
-    ]
+    summary_bits = [f"Draft gerado por `otm import repo` a partir de {len(inferences)} inferência(s)."]
     if admin_files:
         summary_bits.append("Rotas /admin detectadas — revisar fronteira e autorização.")
     if files_with_sessions:
@@ -212,8 +210,7 @@ def scan_payload_to_draft_yaml(payload: dict[str, Any]) -> str:
         "name": "Perímetro inferido",
         "members": member_ids[:_DRAFT_MAX_COMPONENTS],
         "inference_note": (
-            "Fronteira derivada do scan de repositório — revise membros, "
-            "fluxos cruzados e exposição externa."
+            "Fronteira derivada do scan de repositório — revise membros, fluxos cruzados e exposição externa."
         ),
     }
 

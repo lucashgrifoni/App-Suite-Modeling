@@ -343,7 +343,7 @@ def test_terraform_public_gateway_wide_net() -> None:
     # Load balancer (GATEWAY) with a 0.0.0.0/0 rule -> public gateway + external flow.
     tf = (
         'resource "aws_lb" "alb" {\n'
-        "  ingress { cidr_blocks = [\"0.0.0.0/0\"] }\n"
+        '  ingress { cidr_blocks = ["0.0.0.0/0"] }\n'
         "}\n"
         'resource "helm_release" "h" { name = "x" }\n'
     )

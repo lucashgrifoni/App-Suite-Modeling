@@ -261,9 +261,7 @@ def _append_quality_score_delta(
     if bq is None or rq is None or bq.score_0_100 == rq.score_0_100:
         return
     delta = rq.score_0_100 - bq.score_0_100
-    insights.append(
-        f"Pré-check de qualidade: score {bq.score_0_100} → {rq.score_0_100} (banda {bq.band} → {rq.band})."
-    )
+    insights.append(f"Pré-check de qualidade: score {bq.score_0_100} → {rq.score_0_100} (banda {bq.band} → {rq.band}).")
     if delta > 0:
         improved.append(f"Model quality +{delta} pts — modelo mais completo ou explícito.")
     elif delta < 0:
@@ -281,9 +279,7 @@ def _append_methodology_state_delta(
     rc = revised_analysis.methodology_completeness
     if bc is None or rc is None or bc.state.value == rc.state.value:
         return
-    insights.append(
-        f"Completude metodológica: {bc.state.value} → {rc.state.value}; rever interpretação dos achados."
-    )
+    insights.append(f"Completude metodológica: {bc.state.value} → {rc.state.value}; rever interpretação dos achados.")
     if rc.state.value == "degraded":
         worsened.append("Metodologia degrada — achados podem estar mais fracos ou genéricos.")
     else:

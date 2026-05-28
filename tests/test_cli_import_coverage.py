@@ -178,9 +178,7 @@ def test_import_k8s_missing_path_errors(runner: CliRunner, tmp_path: Path) -> No
 
 def _make_node_repo(root: Path) -> None:
     root.mkdir(parents=True, exist_ok=True)
-    (root / "package.json").write_text(
-        json.dumps({"name": "svc", "dependencies": {"express": "^4"}}), encoding="utf-8"
-    )
+    (root / "package.json").write_text(json.dumps({"name": "svc", "dependencies": {"express": "^4"}}), encoding="utf-8")
     (root / "server.js").write_text(
         "const express = require('express');\n"
         "const app = express();\n"

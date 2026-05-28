@@ -14,7 +14,9 @@ from otm_threat_engine.recommendation_gate import (
 
 def test_document_markdown_empty_sections() -> None:
     # No components / flows / boundaries -> each section's early-return is taken.
-    doc = create_blank_document().model_copy(update={"components": [], "data_flows": [], "trust_boundaries": [], "assets": []})
+    doc = create_blank_document().model_copy(
+        update={"components": [], "data_flows": [], "trust_boundaries": [], "assets": []}
+    )
     md = export_document_markdown(doc)
     assert isinstance(md, str)
 

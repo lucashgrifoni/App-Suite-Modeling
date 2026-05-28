@@ -617,9 +617,7 @@ def build_premium_report_payload(
         risk_label=_risk_label(max_score, b),
     )
 
-    arch = _build_architecture(
-        doc, b, meth, recommendation, include_mermaid=include_mermaid, level=level
-    )
+    arch = _build_architecture(doc, b, meth, recommendation, include_mermaid=include_mermaid, level=level)
 
     distributions = _build_distributions(
         total_threats=total_threats,

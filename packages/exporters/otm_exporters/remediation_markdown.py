@@ -5,9 +5,7 @@ from __future__ import annotations
 from otm_threat_engine.remediation import BacklogItem, RemediationBacklog
 
 
-def _append_item_details(
-    lines: list[str], id_to_item: dict[str, BacklogItem], title: str, ids: list[str]
-) -> None:
+def _append_item_details(lines: list[str], id_to_item: dict[str, BacklogItem], title: str, ids: list[str]) -> None:
     lines.extend([f"## {title}", ""])
     if not ids:
         lines.append("_Nenhum._")

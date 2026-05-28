@@ -25,9 +25,7 @@ def _cmp_semantic_diff(lines: list[str], result: ThreatModelComparisonResult) ->
     if not (improved or worsened or risk_impact or scs):  # noqa: E501  # pragma: no cover - structural_change_summary always populated
         return
     lines.extend(["", "### Diff semântico (resumo)", ""])
-    lines.append(
-        "_Agregado heurístico (estrutura + análise). Não atribui causalidade fina a campos individuais._"
-    )
+    lines.append("_Agregado heurístico (estrutura + análise). Não atribui causalidade fina a campos individuais._")
     lines.append("")
     _cmp_bullets(lines, "_Mudanças estruturais (contagens de IDs):_", scs, 6)
     _cmp_bullets(lines, "_Melhorias / convergência:_", improved, 8)

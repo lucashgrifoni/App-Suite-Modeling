@@ -88,16 +88,12 @@ def test_scan_payload_to_draft_yaml_emits_valid_yaml() -> None:
 def test_scan_payload_to_draft_yaml_handles_no_inferences() -> None:
     text = scan_payload_to_draft_yaml({"root": "/x", "inferences": []})
     parsed = yaml.safe_load(text)
-    assert parsed["components"] == [
-        {"id": "ext_user", "name": "Cliente externo", "kind": "external_entity"}
-    ]
+    assert parsed["components"] == [{"id": "ext_user", "name": "Cliente externo", "kind": "external_entity"}]
     assert parsed["data_flows"] == []
     assert "Nenhuma rota detectada" in parsed["metadata"]["summary"]
 
 
-def test_cli_import_repo_draft_chains_into_validate(
-    runner: CliRunner, tmp_path: Path
-) -> None:
+def test_cli_import_repo_draft_chains_into_validate(runner: CliRunner, tmp_path: Path) -> None:
     # Minimal Node-shaped repo with one express route.
     repo = tmp_path / "svc"
     routes = repo / "src" / "routes"

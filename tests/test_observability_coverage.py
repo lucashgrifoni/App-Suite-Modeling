@@ -31,8 +31,13 @@ def test_json_formatter_with_extra_and_exception() -> None:
     except ValueError:
         exc_info = sys.exc_info()
     rec = logging.LogRecord(
-        name="otm.api", level=logging.ERROR, pathname=__file__, lineno=1,
-        msg="http_request", args=(), exc_info=exc_info,
+        name="otm.api",
+        level=logging.ERROR,
+        pathname=__file__,
+        lineno=1,
+        msg="http_request",
+        args=(),
+        exc_info=exc_info,
     )
     rec.request_id = "rid-1"
     rec.method = "GET"
@@ -55,12 +60,22 @@ def test_json_formatter_minimal_record() -> None:
 
 def test_log_http_request_with_and_without_exc() -> None:
     _log_http_request(
-        event_name="http_request_completed", request_id="r", method="GET",
-        path="/", status_code=200, duration_ms=2.5,
+        event_name="http_request_completed",
+        request_id="r",
+        method="GET",
+        path="/",
+        status_code=200,
+        duration_ms=2.5,
     )
     _log_http_request(
-        event_name="http_request_failed", request_id="r", method="POST",
-        path="/e", status_code=500, duration_ms=3.0, level=logging.ERROR, exc_type="RuntimeError",
+        event_name="http_request_failed",
+        request_id="r",
+        method="POST",
+        path="/e",
+        status_code=500,
+        duration_ms=3.0,
+        level=logging.ERROR,
+        exc_type="RuntimeError",
     )
 
 

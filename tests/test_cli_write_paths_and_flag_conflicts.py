@@ -33,9 +33,7 @@ def test_write_json_file_raises_cli_user_error_when_parent_missing(tmp_path: Pat
     assert "parent directory does not exist" in exc.value.cause
 
 
-def test_init_in_missing_directory_exits_with_friendly_error(
-    runner: CliRunner, tmp_path: Path
-) -> None:
+def test_init_in_missing_directory_exits_with_friendly_error(runner: CliRunner, tmp_path: Path) -> None:
     target = tmp_path / "no_such_dir" / "model.otm.yaml"
     result = runner.invoke(app, ["init", str(target)])
     assert result.exit_code != 0
@@ -45,9 +43,7 @@ def test_init_in_missing_directory_exits_with_friendly_error(
     assert not target.exists()
 
 
-def test_analyze_with_json_out_in_missing_directory_exits_cleanly(
-    runner: CliRunner, tmp_path: Path
-) -> None:
+def test_analyze_with_json_out_in_missing_directory_exits_cleanly(runner: CliRunner, tmp_path: Path) -> None:
     model = tmp_path / "model.otm.yaml"
     runner.invoke(app, ["init", str(model)])
     target = tmp_path / "no_such_dir" / "out.json"
@@ -73,22 +69,16 @@ def test_validate_still_works_after_emit_change(
     assert result.exit_code == 0
 
 
-def test_analyze_methodology_and_auto_methodology_are_mutually_exclusive(
-    runner: CliRunner, tmp_path: Path
-) -> None:
+def test_analyze_methodology_and_auto_methodology_are_mutually_exclusive(runner: CliRunner, tmp_path: Path) -> None:
     model = tmp_path / "model.otm.yaml"
     runner.invoke(app, ["init", str(model)])
-    result = runner.invoke(
-        app, ["analyze", str(model), "-m", "stride", "--auto-methodology"]
-    )
+    result = runner.invoke(app, ["analyze", str(model), "-m", "stride", "--auto-methodology"])
     assert result.exit_code != 0
     combined = (result.stdout or "") + (result.stderr or "")
     assert "mutually exclusive" in combined
 
 
-def test_init_template_in_missing_directory_exits_with_friendly_error(
-    runner: CliRunner, tmp_path: Path
-) -> None:
+def test_init_template_in_missing_directory_exits_with_friendly_error(runner: CliRunner, tmp_path: Path) -> None:
     target = tmp_path / "absent" / "from_template.otm.yaml"
     result = runner.invoke(app, ["init", str(target), "-t", "saas-web"])
     assert result.exit_code != 0

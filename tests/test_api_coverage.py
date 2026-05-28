@@ -123,9 +123,7 @@ def test_remediation_invalid_analysis_is_422(client: TestClient) -> None:
 # --- /v1/imports/{terraform,kubernetes} routes ---
 
 _TF = 'resource "aws_s3_bucket" "b" { bucket = "x" }\nresource "aws_db_instance" "d" { engine = "postgres" }\n'
-_K8S = (
-    "apiVersion: v1\nkind: Service\nmetadata: {name: api}\nspec: {ports: [{port: 80}], selector: {app: api}}\n"
-)
+_K8S = "apiVersion: v1\nkind: Service\nmetadata: {name: api}\nspec: {ports: [{port: 80}], selector: {app: api}}\n"
 
 
 def test_import_terraform_route_ok(client: TestClient) -> None:

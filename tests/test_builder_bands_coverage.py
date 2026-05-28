@@ -26,7 +26,11 @@ def _doc_with_banded_threats():
 
 def _heuristic(score_l: int, score_i: int) -> HeuristicThreat:
     return HeuristicThreat(
-        id="h", title="h", description="d", stride=StrideCategory.TAMPERING, risk=build_risk_assessment(score_l, score_i)
+        id="h",
+        title="h",
+        description="d",
+        stride=StrideCategory.TAMPERING,
+        risk=build_risk_assessment(score_l, score_i),
     )
 
 

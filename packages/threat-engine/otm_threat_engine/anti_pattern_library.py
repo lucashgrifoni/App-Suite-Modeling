@@ -214,9 +214,7 @@ def _dfn_profile_eligible(dfn: AntiPatternDefinition, profile: str) -> bool:
     return True
 
 
-def _dfn_structural_gates_pass(
-    dfn: AntiPatternDefinition, doc: ThreatModelDocument, n_flows: int, n_tb: int
-) -> bool:
+def _dfn_structural_gates_pass(dfn: AntiPatternDefinition, doc: ThreatModelDocument, n_flows: int, n_tb: int) -> bool:
     if dfn.require_min_data_flows > 0 and n_flows < dfn.require_min_data_flows:
         return False
     if dfn.require_min_trust_boundaries > 0 and n_tb < dfn.require_min_trust_boundaries:
@@ -231,9 +229,7 @@ def _dfn_structural_gates_pass(
 
 
 def _dfn_field_gates_pass(dfn: AntiPatternDefinition, doc: ThreatModelDocument, corpus: str) -> bool:
-    if dfn.require_component_id_contains_any and not _component_id_contains(
-        doc, dfn.require_component_id_contains_any
-    ):
+    if dfn.require_component_id_contains_any and not _component_id_contains(doc, dfn.require_component_id_contains_any):
         return False
     if dfn.require_asset_name_id_contains_any and not _asset_name_id_contains(
         doc, dfn.require_asset_name_id_contains_any
@@ -277,9 +273,7 @@ def _structural_source_tags(dfn: AntiPatternDefinition) -> list[str]:
     return sources
 
 
-def _structural_primary_hit(
-    dfn: AntiPatternDefinition, profile: str, corpus: str
-) -> AntiPatternHit | None:
+def _structural_primary_hit(dfn: AntiPatternDefinition, profile: str, corpus: str) -> AntiPatternHit | None:
     if dfn.missing_any_of:
         missing_sp = [kw for kw in dfn.missing_any_of if kw.lower() not in corpus]
         if len(missing_sp) != len(dfn.missing_any_of):
@@ -305,9 +299,7 @@ def _structural_primary_hit(
     )
 
 
-def _missing_corpus_hit(
-    dfn: AntiPatternDefinition, profile: str, corpus: str
-) -> AntiPatternHit | None:
+def _missing_corpus_hit(dfn: AntiPatternDefinition, profile: str, corpus: str) -> AntiPatternHit | None:
     missing = [kw for kw in dfn.missing_any_of if kw.lower() not in corpus]
     if len(missing) != len(dfn.missing_any_of):
         return None
@@ -318,8 +310,7 @@ def _missing_corpus_hit(
         severity_hint=dfn.severity_hint,
         confidence_hint=dfn.confidence_hint,
         message=(
-            f"Perfil `{profile}` sem menções explícitas a controlos esperados "
-            f"({', '.join(dfn.missing_any_of[:4])}…)."
+            f"Perfil `{profile}` sem menções explícitas a controlos esperados ({', '.join(dfn.missing_any_of[:4])}…)."
         ),
         evidence=[
             f"semantic_profile={profile}",

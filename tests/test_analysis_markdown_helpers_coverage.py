@@ -38,7 +38,9 @@ _CLUSTERS = [
 
 @pytest.mark.parametrize("family,title", _CLUSTERS)
 def test_cluster_suppressible_each_family(family: str, title: str) -> None:
-    flags = {f: (f == family) for f in ("webhook", "coupon", "payment_entitlement", "authorization", "balance", "cancel")}
+    flags = {
+        f: (f == family) for f in ("webhook", "coupon", "payment_entitlement", "authorization", "balance", "cancel")
+    }
     h = _t("stride_generic", title, StrideCategory.TAMPERING)
     assert am._cluster_suppressible(h=h, flags=flags) is True
 

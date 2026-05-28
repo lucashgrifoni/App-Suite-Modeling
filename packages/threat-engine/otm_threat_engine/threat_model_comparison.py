@@ -182,8 +182,7 @@ def _build_risk_delta(analysis: AnalysisDiff | None, *, residual_changed: bool) 
         analysis_max_score_baseline=analysis.max_risk_before if analysis else None,
         analysis_max_score_revised=analysis.max_risk_after if analysis else None,
         analysis_max_score_delta=analysis.max_risk_delta if analysis else None,
-        heuristic_increased_ids=[h.threat_id for h in mods if (h.score_delta or 0) > 0]
-        + [h.threat_id for h in added],
+        heuristic_increased_ids=[h.threat_id for h in mods if (h.score_delta or 0) > 0] + [h.threat_id for h in added],
         heuristic_decreased_ids=[h.threat_id for h in mods if (h.score_delta or 0) < 0]
         + [h.threat_id for h in removed],
         document_residual_aggregate_changed=residual_changed,

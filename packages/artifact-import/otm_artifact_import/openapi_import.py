@@ -131,7 +131,9 @@ def _infer_authenticated(data: dict[str, Any], paths: dict[str, Any]) -> bool | 
     if auth_from_ops is not None:
         return auth_from_ops
     path_level_sec = [
-        x for x in (_operation_security_required(item) for item in paths.values() if isinstance(item, dict)) if x is not None
+        x
+        for x in (_operation_security_required(item) for item in paths.values() if isinstance(item, dict))
+        if x is not None
     ]
     if path_level_sec:
         return all(path_level_sec)

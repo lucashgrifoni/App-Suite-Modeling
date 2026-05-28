@@ -8,7 +8,9 @@ from otm_core_schema import ThreatModelDocument, create_blank_document
 from otm_threat_engine import recommend_methodology
 
 
-def _doc(system_type: str | None = None, sector: str | None = None, summary: str = "", title: str = "App") -> ThreatModelDocument:
+def _doc(
+    system_type: str | None = None, sector: str | None = None, summary: str = "", title: str = "App"
+) -> ThreatModelDocument:
     d: dict[str, Any] = create_blank_document().model_dump(mode="python", by_alias=True)
     m = d.setdefault("model", {})
     if system_type:

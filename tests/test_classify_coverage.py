@@ -60,8 +60,11 @@ def test_classify_ai_context_via_plot4ai() -> None:
 def test_classify_ai_context_via_keywords() -> None:
     doc = create_blank_document()
     t = HeuristicThreat(
-        id="t2", title="LLM prompt injection", description="rag inference risk",
-        stride=StrideCategory.TAMPERING, risk=build_risk_assessment(3, 3),
+        id="t2",
+        title="LLM prompt injection",
+        description="rag inference risk",
+        stride=StrideCategory.TAMPERING,
+        risk=build_risk_assessment(3, 3),
     )
     _root, _ctrl, cat, _ = classify_threat(t, doc, ThreatModelMethodology.STRIDE)
     assert cat == "ai_ml_specific"
@@ -71,7 +74,10 @@ def test_effort_and_impact_helpers() -> None:
     low = _threat(StrideCategory.REPUDIATION)
     assert effort_for_threat(low, "non_repudiation_and_audit") in {"low", "medium", "high"}
     high = HeuristicThreat(
-        id="t3", title="x", description="d", stride=StrideCategory.ELEVATION_OF_PRIVILEGE,
+        id="t3",
+        title="x",
+        description="d",
+        stride=StrideCategory.ELEVATION_OF_PRIVILEGE,
         risk=build_risk_assessment(5, 5),
     )
     assert effort_for_threat(high, "identity_and_authorization_gaps") in {"high", "medium"}

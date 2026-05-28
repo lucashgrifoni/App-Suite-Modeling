@@ -46,9 +46,7 @@ _REPORT_MODELS = [
 def test_render_markdown_all_levels_locales(model: Path, level: ReportLevel, locale: str) -> None:
     doc = load_document_from_yaml_path(model)
     analysis = _analysis(model)
-    md, pdf = render_premium(
-        doc, analysis, level=level, output_format=ReportFormat.MARKDOWN, locale=locale
-    )
+    md, pdf = render_premium(doc, analysis, level=level, output_format=ReportFormat.MARKDOWN, locale=locale)
     assert md and isinstance(md, str)
     assert pdf is None
 

@@ -34,7 +34,10 @@ def test_prioritize_helpers() -> None:
     )
 
     t = HeuristicThreat(
-        id="h", title="t", description="d", stride=StrideCategory.ELEVATION_OF_PRIVILEGE,
+        id="h",
+        title="t",
+        description="d",
+        stride=StrideCategory.ELEVATION_OF_PRIVILEGE,
         risk=build_risk_assessment(4, 4),
     )
     assert _risk_score(t) == 16.0
@@ -47,7 +50,9 @@ def test_prioritize_helpers() -> None:
 def test_risk_score_falls_back_to_likelihood_impact() -> None:
     from otm_report_premium.prioritize import _risk_score
 
-    t = HeuristicThreat(id="h2", title="t", description="d", stride=StrideCategory.TAMPERING, risk=build_risk_assessment(3, 3))
+    t = HeuristicThreat(
+        id="h2", title="t", description="d", stride=StrideCategory.TAMPERING, risk=build_risk_assessment(3, 3)
+    )
     # force score None to exercise the fallback path
     t2 = t.model_copy(update={"risk": t.risk.model_copy(update={"score": None})})
     assert _risk_score(t2) == float(t2.risk.likelihood * t2.risk.impact)

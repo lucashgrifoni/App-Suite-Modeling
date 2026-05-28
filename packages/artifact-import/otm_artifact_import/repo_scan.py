@@ -62,17 +62,32 @@ def _read_text_files(root: Path, *, max_files: int = 200) -> list[tuple[Path, st
 # Sinais simples Python (regex já compilado, kind, template de mensagem, evidência,
 # confiança, stack_hint fixo — None usa o stack derivado do ficheiro).
 _PY_SIMPLE_SIGNALS: tuple[tuple[re.Pattern[str], str, str, str, str, str | None], ...] = (
-    (_PY_UPLOAD, "python_upload", "Upload multipart / `UploadFile` / ficheiros em `{rel}`",
-     "UploadFile|File(|request.files", "medium", None),
-    (_PY_AUTH_DEPS, "python_auth_layer", "Dependências de auth/sessão (Depends/OAuth2/sessão) em `{rel}`",
-     "Depends|OAuth2|Bearer|Session", "low", None),
-    (_PY_HTTP_OUT, "python_external_http",
-     "Cliente HTTP externo (httpx/requests/aiohttp) em `{rel}` — rever SSRF/exfiltração",
-     "httpx|requests|aiohttp", "medium", "python_web"),
-    (_PY_ADMIN_PATH, "admin_route", "Possível caminho `/admin` em `{rel}`",
-     "/admin", "medium", "python_web"),
-    (_PY_DEBUG_PATH, "debug_route", "Possível rota de debug em `{rel}`",
-     "/debug", "low", "python_web"),
+    (
+        _PY_UPLOAD,
+        "python_upload",
+        "Upload multipart / `UploadFile` / ficheiros em `{rel}`",
+        "UploadFile|File(|request.files",
+        "medium",
+        None,
+    ),
+    (
+        _PY_AUTH_DEPS,
+        "python_auth_layer",
+        "Dependências de auth/sessão (Depends/OAuth2/sessão) em `{rel}`",
+        "Depends|OAuth2|Bearer|Session",
+        "low",
+        None,
+    ),
+    (
+        _PY_HTTP_OUT,
+        "python_external_http",
+        "Cliente HTTP externo (httpx/requests/aiohttp) em `{rel}` — rever SSRF/exfiltração",
+        "httpx|requests|aiohttp",
+        "medium",
+        "python_web",
+    ),
+    (_PY_ADMIN_PATH, "admin_route", "Possível caminho `/admin` em `{rel}`", "/admin", "medium", "python_web"),
+    (_PY_DEBUG_PATH, "debug_route", "Possível rota de debug em `{rel}`", "/debug", "low", "python_web"),
 )
 
 # Regexes Node/Express (nível de módulo: compiladas uma vez).
@@ -101,23 +116,32 @@ _JS_CHILD_RE = re.compile(
 
 # Sinais simples JS (regex, kind, template de mensagem, evidência, confiança).
 _JS_SIMPLE_SIGNALS: tuple[tuple[re.Pattern[str], str, str, str, str], ...] = (
-    (_JS_MULTER_RE, "upload", "Possível upload de ficheiros (`multer`/upload) em `{rel}`",
-     "multer|upload.single|upload.array", "medium"),
-    (_JS_SESSION_RE, "session", "Sessão/cookies prováveis em `{rel}`",
-     "express-session", "medium"),
-    (_JS_FETCH_RE, "external_fetch", "Chamadas HTTP externas (axios/fetch) em `{rel}`",
-     "axios|fetch", "low"),
-    (_JS_EVAL_RE, "dangerous_eval", "Possível eval/exec em `{rel}` — rever risco de injeção",
-     "eval|exec", "high"),
-    (_JS_AUTH_RE, "auth_middleware", "Padrões de autenticação/autorização em `{rel}`",
-     "passport|jwt|authMiddleware", "low"),
-    (_JS_ADMIN_RE, "admin_route", "Possível rota ou prefixo `/admin` em `{rel}`",
-     "/admin", "medium"),
-    (_JS_DEBUG_RE, "debug_route", "Possível rota de debug em `{rel}` — rever exposição",
-     "/debug|__debug", "low"),
-    (_JS_CHILD_RE, "child_process",
-     "Uso de child_process/spawn/execFile em `{rel}` — rever superfície de comando",
-     "child_process|spawn|execFile", "medium"),
+    (
+        _JS_MULTER_RE,
+        "upload",
+        "Possível upload de ficheiros (`multer`/upload) em `{rel}`",
+        "multer|upload.single|upload.array",
+        "medium",
+    ),
+    (_JS_SESSION_RE, "session", "Sessão/cookies prováveis em `{rel}`", "express-session", "medium"),
+    (_JS_FETCH_RE, "external_fetch", "Chamadas HTTP externas (axios/fetch) em `{rel}`", "axios|fetch", "low"),
+    (_JS_EVAL_RE, "dangerous_eval", "Possível eval/exec em `{rel}` — rever risco de injeção", "eval|exec", "high"),
+    (
+        _JS_AUTH_RE,
+        "auth_middleware",
+        "Padrões de autenticação/autorização em `{rel}`",
+        "passport|jwt|authMiddleware",
+        "low",
+    ),
+    (_JS_ADMIN_RE, "admin_route", "Possível rota ou prefixo `/admin` em `{rel}`", "/admin", "medium"),
+    (_JS_DEBUG_RE, "debug_route", "Possível rota de debug em `{rel}` — rever exposição", "/debug|__debug", "low"),
+    (
+        _JS_CHILD_RE,
+        "child_process",
+        "Uso de child_process/spawn/execFile em `{rel}` — rever superfície de comando",
+        "child_process|spawn|execFile",
+        "medium",
+    ),
 )
 
 
@@ -285,9 +309,7 @@ def _detected_stacks(files: list[tuple[Path, str]], unique: list[dict[str, Any]]
     return sorted(stack_set)
 
 
-def _collect_modeling_hints(
-    kinds_present: set[Any], unique: list[dict[str, Any]]
-) -> list[dict[str, Any]]:
+def _collect_modeling_hints(kinds_present: set[Any], unique: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Sugestões de modelagem derivadas dos kinds detectados (ordem preservada)."""
     hints: list[dict[str, Any]] = []
     if "upload" in kinds_present:

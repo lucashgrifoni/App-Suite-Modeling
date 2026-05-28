@@ -162,8 +162,8 @@ def extra_plot4ai_heuristic_entries(
 ) -> list[tuple[str, str, str, StrideCategory, int, int]]:
     """Entradas condicionais; não duplicam `plot4ai.py` base mas reforçam cenários modernos."""
     text = _corpus_lower(doc)
-    rag_vector, third_party, agent_external, observability_gap, sensitive_prompt, grounding_weak = (
-        _plot4ai_entry_flags(doc, bundle, text)
+    rag_vector, third_party, agent_external, observability_gap, sensitive_prompt, grounding_weak = _plot4ai_entry_flags(
+        doc, bundle, text
     )
     candidates: list[tuple[bool, tuple[str, str, str, StrideCategory, int, int]]] = [
         (

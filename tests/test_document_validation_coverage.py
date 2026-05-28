@@ -64,9 +64,7 @@ def _mutators() -> dict[str, Callable[[dict[str, Any]], None]]:
         d["threats"].append({"id": "t_a", "title": "T", "stride": "tampering", "target_asset_id": "ghost_asset"})
 
     def bad_threat_evidence(d: dict[str, Any]) -> None:
-        d["threats"].append(
-            {"id": "t_e", "title": "T", "stride": "tampering", "evidence_suggestion_ids": ["ghost_ev"]}
-        )
+        d["threats"].append({"id": "t_e", "title": "T", "stride": "tampering", "evidence_suggestion_ids": ["ghost_ev"]})
 
     def bad_mitigation_threat(d: dict[str, Any]) -> None:
         d["mitigations"].append({"id": "m_x", "title": "M", "threat_ids": ["ghost_threat"]})

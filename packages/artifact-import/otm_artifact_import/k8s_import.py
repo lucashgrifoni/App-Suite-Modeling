@@ -50,8 +50,12 @@ def _extract_container_images(pod_spec: dict[str, Any]) -> list[str]:
 
 
 def _handle_ingress(
-    name: str, doc: dict[str, Any], filename: str, tb_edge: str,
-    components: list[Component], ingresses: list[IngressRef],
+    name: str,
+    doc: dict[str, Any],
+    filename: str,
+    tb_edge: str,
+    components: list[Component],
+    ingresses: list[IngressRef],
 ) -> None:
     cid = slug_id(f"ing_{name}", prefix="ing")
     hosts = _extract_hosts_from_rules(doc.get("rules") or [])
@@ -70,8 +74,13 @@ def _handle_ingress(
 
 
 def _handle_service(
-    name: str, doc: dict[str, Any], filename: str, tb_cluster: str,
-    components: list[Component], services: dict[str, str], inf: InfFn,
+    name: str,
+    doc: dict[str, Any],
+    filename: str,
+    tb_cluster: str,
+    components: list[Component],
+    services: dict[str, str],
+    inf: InfFn,
 ) -> None:
     cid = slug_id(f"svc_{name}", prefix="svc")
     services[name] = cid
@@ -96,8 +105,12 @@ def _handle_service(
 
 
 def _handle_deployment(
-    name: str, doc: dict[str, Any], filename: str, tb_cluster: str,
-    components: list[Component], deployments: dict[str, str],
+    name: str,
+    doc: dict[str, Any],
+    filename: str,
+    tb_cluster: str,
+    components: list[Component],
+    deployments: dict[str, str],
 ) -> None:
     cid = slug_id(f"dep_{name}", prefix="dep")
     deployments[name] = cid
@@ -118,9 +131,7 @@ def _handle_deployment(
     )
 
 
-def _handle_configmap(
-    name: str, filename: str, tb_cluster: str, components: list[Component], inf: InfFn
-) -> None:
+def _handle_configmap(name: str, filename: str, tb_cluster: str, components: list[Component], inf: InfFn) -> None:
     cid = slug_id(f"cfg_{name}", prefix="cfg")
     components.append(
         Component(
@@ -141,9 +152,15 @@ def _handle_configmap(
 
 
 def _parse_workloads(
-    docs: list[Any], filename: str, tb_edge: str, tb_cluster: str,
-    components: list[Component], ingresses: list[IngressRef],
-    services: dict[str, str], deployments: dict[str, str], inf: InfFn,
+    docs: list[Any],
+    filename: str,
+    tb_edge: str,
+    tb_cluster: str,
+    components: list[Component],
+    ingresses: list[IngressRef],
+    services: dict[str, str],
+    deployments: dict[str, str],
+    inf: InfFn,
 ) -> None:
     for doc in docs:
         kind = str(doc.get("kind") or "")
@@ -210,8 +227,12 @@ def _ingress_backend_service_names(spec: dict[str, Any] | None) -> list[str]:
 
 
 def _build_ingress_flows(
-    docs: list[Any], ingresses: list[IngressRef], services: dict[str, str],
-    filename: str, inf: InfFn, unknowns: list[str],
+    docs: list[Any],
+    ingresses: list[IngressRef],
+    services: dict[str, str],
+    filename: str,
+    inf: InfFn,
+    unknowns: list[str],
 ) -> list[DataFlow]:
     flows: list[DataFlow] = []
     for ing_id, ing_name, hosts in ingresses:

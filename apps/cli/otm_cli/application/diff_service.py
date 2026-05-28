@@ -107,9 +107,7 @@ def _field_section_lines(result: Any) -> list[str]:
 def _id_section_block(name: str, id_section: Any) -> list[str]:
     if not (id_section.added or id_section.removed or id_section.modified):
         return []
-    lines = [
-        f"[{name}] +{len(id_section.added)} / -{len(id_section.removed)} / ~{len(id_section.modified)}"
-    ]
+    lines = [f"[{name}] +{len(id_section.added)} / -{len(id_section.removed)} / ~{len(id_section.modified)}"]
     if id_section.added:
         lines.append(f"  added: {', '.join(id_section.added)}")
     if id_section.removed:

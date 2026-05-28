@@ -26,8 +26,11 @@ def _banded_doc():
 def _heuristics():
     return [
         HeuristicThreat(
-            id=f"h{i}", title=f"H{i}", description="d",
-            stride=StrideCategory.SPOOFING, risk=build_risk_assessment(lk, im),
+            id=f"h{i}",
+            title=f"H{i}",
+            description="d",
+            stride=StrideCategory.SPOOFING,
+            risk=build_risk_assessment(lk, im),
             target_component_id="c1",
         )
         for i, (lk, im) in enumerate([(5, 5), (3, 4), (2, 2), (1, 2)])

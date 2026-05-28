@@ -43,9 +43,7 @@ def test_operation_security_required_variants() -> None:
 
 def test_count_operations_edges() -> None:
     assert oi._count_operations(None) == (0, [])
-    n, detail = oi._count_operations(
-        {"/p": {"get": {"operationId": "g"}, "bogus": 1, "post": {}}, "/q": "not-a-dict"}
-    )
+    n, detail = oi._count_operations({"/p": {"get": {"operationId": "g"}, "bogus": 1, "post": {}}, "/q": "not-a-dict"})
     # get -> "g"; post (empty dict is still a dict) -> "post /p"; bogus(int) and /q(str) skipped
     assert n == 2 and "g" in detail
 
@@ -75,8 +73,11 @@ def test_corpus_openapi_rich() -> None:
 
 def test_corpus_kubernetes_rich() -> None:
     docs = [
-        {"kind": "Deployment", "metadata": {"name": "llm-gateway"},
-         "spec": {"template": {"spec": {"containers": [{"image": "vllm/serve:1", "name": "llm"}]}}}},
+        {
+            "kind": "Deployment",
+            "metadata": {"name": "llm-gateway"},
+            "spec": {"template": {"spec": {"containers": [{"image": "vllm/serve:1", "name": "llm"}]}}},
+        },
         {"kind": "Service", "metadata": {"name": "vector-db"}, "spec": {"type": "LoadBalancer"}},
         {"kind": "Ingress", "metadata": {"name": "i"}, "spec": {"rules": [{"host": "ai.example.com"}]}},
     ]
@@ -127,7 +128,7 @@ def test_corpus_openapi_normalized_ai_surface() -> None:
         "paths": {
             "/completions": {"post": {"operationId": "complete"}},  # completion api (no 'chat')
             "/vector-search": {"post": {"operationId": "vsearch"}},  # vector search
-            "/predict": {"post": {"operationId": "predict"}},        # inference
+            "/predict": {"post": {"operationId": "predict"}},  # inference
         },
         "tags": [{"name": "ml"}, {"name": "ai"}, {"notname": 1}],
     }

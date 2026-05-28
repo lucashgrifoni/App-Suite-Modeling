@@ -51,9 +51,7 @@ def _structural_headline(agg: DiffAggregate) -> tuple[str, str, list[str]] | Non
     return best[1], best[2], best[3]
 
 
-def _risk_score_explanation(
-    result: ThreatModelComparisonResult, explanation_no: int
-) -> ExplanationRecord | None:
+def _risk_score_explanation(result: ThreatModelComparisonResult, explanation_no: int) -> ExplanationRecord | None:
     rd = result.risk_delta
     if rd.analysis_max_score_delta is None or abs(rd.analysis_max_score_delta) < 0.5:
         return None

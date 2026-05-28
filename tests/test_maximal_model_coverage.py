@@ -24,8 +24,12 @@ def _maximal() -> ThreatModelDocument:
     d["components"].extend(
         [
             {
-                "id": "admin_console", "name": "Admin Console", "kind": "process",
-                "in_trust_boundary": tb, "supports_admin_operations": True, "privilege_level": "admin",
+                "id": "admin_console",
+                "name": "Admin Console",
+                "kind": "process",
+                "in_trust_boundary": tb,
+                "supports_admin_operations": True,
+                "privilege_level": "admin",
             },
             {"id": "store_db", "name": "DB", "kind": "datastore", "in_trust_boundary": tb},
             {"id": "edge_gw", "name": "Gateway", "kind": "gateway", "in_trust_boundary": tb},
@@ -35,16 +39,23 @@ def _maximal() -> ThreatModelDocument:
     )
     d.setdefault("assets", []).append(
         {
-            "id": "pii_asset", "name": "Customer PII", "data_classification": "confidential",
-            "business_criticality": "critical", "related_component_ids": ["store_db"],
+            "id": "pii_asset",
+            "name": "Customer PII",
+            "data_classification": "confidential",
+            "business_criticality": "critical",
+            "related_component_ids": ["store_db"],
         }
     )
     for fl in d.get("data_flows") or []:
         fl.update(
             {
-                "encrypted": False, "authenticated": False, "public_exposure": True,
-                "affects_privileged_state": True, "stores_sensitive_data": True,
-                "supports_file_upload": True, "input_from_untrusted_source": True,
+                "encrypted": False,
+                "authenticated": False,
+                "public_exposure": True,
+                "affects_privileged_state": True,
+                "stores_sensitive_data": True,
+                "supports_file_upload": True,
+                "input_from_untrusted_source": True,
                 "supports_external_fetch": True,
             }
         )

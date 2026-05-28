@@ -441,8 +441,12 @@ def test_run_diff_analysis_text_with_remap(tmp_path: Path) -> None:
 
     def _h(hid: str) -> HeuristicThreat:
         return HeuristicThreat(
-            id=hid, title="Same Title", description="d", stride=StrideCategory.TAMPERING,
-            risk=build_risk_assessment(3, 3), target_component_id="c1",
+            id=hid,
+            title="Same Title",
+            description="d",
+            stride=StrideCategory.TAMPERING,
+            risk=build_risk_assessment(3, 3),
+            target_component_id="c1",
         )
 
     base = analyze_document(create_blank_document()).model_copy(update={"heuristic_threats": [_h("old_id")]})
@@ -549,8 +553,12 @@ def test_field_changes_heuristic_framework_refs() -> None:
 
     def _h(refs: list) -> HeuristicThreat:
         return HeuristicThreat(
-            id="h", title="T", description="d", stride=StrideCategory.TAMPERING,
-            risk=build_risk_assessment(3, 3), framework_refs=refs,
+            id="h",
+            title="T",
+            description="d",
+            stride=StrideCategory.TAMPERING,
+            risk=build_risk_assessment(3, 3),
+            framework_refs=refs,
         )
 
     a = _h([FrameworkRef(framework="NIST", control_id="AC-1")])
@@ -568,7 +576,6 @@ def test_run_backlog_unsupported_extension(tmp_path: Path) -> None:
     f.write_text("not yaml or json", encoding="utf-8")
     with pytest.raises(CliUserError):  # unsupported extension -> raises
         run_backlog(f, document=None, pack=None, fmt=BacklogFormat.markdown, group_by=None)
-
 
 
 def test_k8s_find_ingress_spec_no_match_returns_none() -> None:

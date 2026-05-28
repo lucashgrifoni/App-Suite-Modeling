@@ -160,9 +160,7 @@ def _payload_with_top_tier(tier: str, *, severity: float | None, composite: floa
     base = payload.top_risks[0] if payload.top_risks else None
     if base is None:
         pytest.skip("no top risks to craft from")
-    crafted = base.model_copy(
-        update={"priority_tier": tier, "severity_score": severity, "composite_score": composite}
-    )
+    crafted = base.model_copy(update={"priority_tier": tier, "severity_score": severity, "composite_score": composite})
     return payload.model_copy(update={"top_risks": [crafted]})
 
 

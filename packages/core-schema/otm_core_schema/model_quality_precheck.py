@@ -91,9 +91,7 @@ def _count_rich_components(doc: ThreatModelDocument) -> int:
 
 
 def _count_classified_assets(doc: ThreatModelDocument) -> int:
-    return sum(
-        1 for a in doc.assets if a.data_classification is not None or (a.sensitivity and len(a.sensitivity) > 2)
-    )
+    return sum(1 for a in doc.assets if a.data_classification is not None or (a.sensitivity and len(a.sensitivity) > 2))
 
 
 # Each criterion returns (structure_delta, context_delta, check). Collecting them in a list
@@ -102,10 +100,14 @@ def _check_assets(doc: ThreatModelDocument) -> tuple[int, int, QualityCheckItem]
     if doc.assets:
         msg = f"{len(doc.assets)} ativo(s) declarado(s)."
         return 12, 10, QualityCheckItem(code="assets_present", passed=True, message=msg)
-    return 0, 0, QualityCheckItem(
-        code="assets_present",
-        passed=False,
-        message="Nenhum ativo — priorização e NIST data-centric ficam fracas.",
+    return (
+        0,
+        0,
+        QualityCheckItem(
+            code="assets_present",
+            passed=False,
+            message="Nenhum ativo — priorização e NIST data-centric ficam fracas.",
+        ),
     )
 
 
@@ -114,10 +116,14 @@ def _check_trust_boundaries(doc: ThreatModelDocument) -> tuple[int, int, Quality
         validated = sum(1 for b in doc.trust_boundaries if b.user_validated is True)
         msg = f"{len(doc.trust_boundaries)} fronteira(s); {validated} validada(s) pelo modelador."
         return 16, 0, QualityCheckItem(code="trust_boundaries", passed=True, message=msg)
-    return 0, 0, QualityCheckItem(
-        code="trust_boundaries",
-        passed=False,
-        message="Sem trust boundaries — cruzamentos de perímetro sub-representados.",
+    return (
+        0,
+        0,
+        QualityCheckItem(
+            code="trust_boundaries",
+            passed=False,
+            message="Sem trust boundaries — cruzamentos de perímetro sub-representados.",
+        ),
     )
 
 
@@ -126,10 +132,14 @@ def _check_flow_semantics(doc: ThreatModelDocument, rich_flows: int) -> tuple[in
         passed = rich_flows >= len(doc.data_flows) // 2 or rich_flows >= 2
         msg = f"{rich_flows} fluxo(s) com semântica ou exposição explícita."
         return min(22, 4 + rich_flows * 4), 0, QualityCheckItem(code="flow_semantics", passed=passed, message=msg)
-    return 0, 0, QualityCheckItem(
-        code="flow_semantics",
-        passed=False,
-        message="Fluxos majoritariamente genéricos — achados tendem a ser genéricos.",
+    return (
+        0,
+        0,
+        QualityCheckItem(
+            code="flow_semantics",
+            passed=False,
+            message="Fluxos majoritariamente genéricos — achados tendem a ser genéricos.",
+        ),
     )
 
 
@@ -141,24 +151,36 @@ def _check_component_context(rich_components: int) -> tuple[int, int, QualityChe
             0,
             QualityCheckItem(code="component_context", passed=rich_components >= 2, message=msg),
         )
-    return 0, 0, QualityCheckItem(
-        code="component_context",
-        passed=False,
-        message="Componentes sem metadata de função/privilégio.",
+    return (
+        0,
+        0,
+        QualityCheckItem(
+            code="component_context",
+            passed=False,
+            message="Componentes sem metadata de função/privilégio.",
+        ),
     )
 
 
 def _check_business_context(doc: ThreatModelDocument) -> tuple[int, int, QualityCheckItem]:
     if _has_business_objectives(doc):
-        return 0, 18, QualityCheckItem(
-            code="business_context",
-            passed=True,
-            message="Objetivos de negócio ou goals declarados.",
+        return (
+            0,
+            18,
+            QualityCheckItem(
+                code="business_context",
+                passed=True,
+                message="Objetivos de negócio ou goals declarados.",
+            ),
         )
-    return 0, 0, QualityCheckItem(
-        code="business_context",
-        passed=False,
-        message="Sem objetivos de negócio — PASTA/risk-centric degradam.",
+    return (
+        0,
+        0,
+        QualityCheckItem(
+            code="business_context",
+            passed=False,
+            message="Sem objetivos de negócio — PASTA/risk-centric degradam.",
+        ),
     )
 
 
@@ -166,10 +188,14 @@ def _check_data_classification(doc: ThreatModelDocument, classified: int) -> tup
     if classified > 0:
         msg = f"{classified} ativo(s) com classificação ou sensibilidade."
         return 0, 20, QualityCheckItem(code="data_classification", passed=True, message=msg)
-    return 0, 0, QualityCheckItem(
-        code="data_classification",
-        passed=bool(doc.assets),
-        message="Classificação de dados ausente ou só textual — NIST DC pode ser ruidoso.",
+    return (
+        0,
+        0,
+        QualityCheckItem(
+            code="data_classification",
+            passed=bool(doc.assets),
+            message="Classificação de dados ausente ou só textual — NIST DC pode ser ruidoso.",
+        ),
     )
 
 

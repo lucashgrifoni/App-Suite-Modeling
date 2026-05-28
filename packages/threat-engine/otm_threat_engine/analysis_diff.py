@@ -66,9 +66,7 @@ def _field_changes_heuristic(before: HeuristicThreat, after: HeuristicThreat) ->
     return out
 
 
-def _methodology_insights_delta(
-    baseline: AnalysisResult, revised: AnalysisResult
-) -> MethodologyInsightsDelta | None:
+def _methodology_insights_delta(baseline: AnalysisResult, revised: AnalysisResult) -> MethodologyInsightsDelta | None:
     bi = baseline.methodology_insights
     ai = revised.methodology_insights
     if not (bi or ai):
