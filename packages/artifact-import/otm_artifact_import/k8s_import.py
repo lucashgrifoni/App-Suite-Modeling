@@ -345,7 +345,7 @@ def import_kubernetes_text(text: str, *, filename: str = "manifests.yaml") -> Ar
             InferenceRecord(
                 id=f"inf_{inf_idx:03d}",
                 message=msg,
-                confidence=conf,  # type: ignore[arg-type]
+                confidence=conf,
                 source="kubernetes",
                 related_component_ids=list(related or []),
             )

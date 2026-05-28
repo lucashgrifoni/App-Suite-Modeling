@@ -93,7 +93,7 @@ def import_helm_text(text: str, *, filename: str = "chart.yaml") -> ArtifactImpo
             InferenceRecord(
                 id=f"inf_{inf_idx:03d}",
                 message=msg,
-                confidence=conf,  # type: ignore[arg-type]
+                confidence=conf,
                 source="helm",
                 related_component_ids=list(related or []),
             )

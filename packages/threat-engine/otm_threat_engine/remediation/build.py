@@ -170,10 +170,10 @@ def _item_from_threat(
         grouped_root_cause=rid,
         architecture_layer=layer,
         priority_rank=1,
-        priority_label=plab,  # type: ignore[arg-type]
+        priority_label=plab,
         priority_explanation=pexpl,
-        effort_estimate=effort,  # type: ignore[arg-type]
-        impact_estimate=impact,  # type: ignore[arg-type]
+        effort_estimate=effort,
+        impact_estimate=impact,
         recommended_owner=owner,
         owner_explanation=owner_expl,
         quick_win=qw,

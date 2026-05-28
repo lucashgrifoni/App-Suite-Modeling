@@ -112,6 +112,10 @@ warn_unused_ignores = true
 show_error_codes = true
 # Pacotes irmãos sem stubs: foco inicial em core-schema + API; expandir gradualmente.
 ignore_missing_imports = true
+# Pydantic v2 ships a mypy plugin that maps aliased fields (`model` alias on
+# `model_info`) to their Python attribute names, so constructors accept both.
+# Required since mypy>=2 tightened call-arg checks on aliased fields.
+plugins = ["pydantic.mypy"]
 
 [tool.ruff.lint.per-file-ignores]
 # Mensagens de inferência e docstrings PT-PT tendem a ultrapassar 100 carateres.

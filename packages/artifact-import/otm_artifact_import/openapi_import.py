@@ -169,7 +169,7 @@ def import_openapi_text(text: str, *, filename: str = "openapi.yaml") -> Artifac
             InferenceRecord(
                 id=f"inf_{inf_idx:03d}",
                 message=message,
-                confidence=confidence,  # type: ignore[arg-type]
+                confidence=confidence,
                 source="openapi",
                 related_component_ids=list(related or []),
             )

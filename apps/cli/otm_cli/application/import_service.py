@@ -159,8 +159,8 @@ def scan_payload_to_draft_yaml(payload: dict[str, Any]) -> str:
 
     data_flows: list[dict[str, Any]] = []
     for file_path, routes in files_with_routes.items():
-        comp_id = file_to_component_id.get(file_path)
-        if not comp_id:
+        target_comp_id = file_to_component_id.get(file_path)
+        if not target_comp_id:
             continue
         for route in routes:
             if len(data_flows) >= _DRAFT_MAX_FLOWS:
@@ -170,7 +170,7 @@ def scan_payload_to_draft_yaml(payload: dict[str, Any]) -> str:
                     "id": f"flow_{_slug(route)[:32]}_{len(data_flows)}",
                     "name": route,
                     "from_component": "ext_user",
-                    "to_component": comp_id,
+                    "to_component": target_comp_id,
                 }
             )
         if len(data_flows) >= _DRAFT_MAX_FLOWS:

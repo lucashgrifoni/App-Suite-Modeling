@@ -45,18 +45,19 @@ def _truncate(value: Any, *, depth: int = 0) -> Any:
     if isinstance(value, bytes):
         if len(value) <= _MAX_INPUT_CHARS:
             return value.decode("utf-8", "replace")
-        head = value[:_MAX_INPUT_CHARS].decode("utf-8", "replace")
+        decoded_head = value[:_MAX_INPUT_CHARS].decode("utf-8", "replace")
         suppressed = len(value) - _MAX_INPUT_CHARS
-        return f"{head}…[{suppressed} bytes suppressed]"
+        return f"{decoded_head}…[{suppressed} bytes suppressed]"
     if isinstance(value, list):
         if len(value) > 50:
-            head = [_truncate(v, depth=depth + 1) for v in value[:50]]
-            return [*head, f"…[{len(value) - 50} items suppressed]"]
+            list_head: list[Any] = [_truncate(v, depth=depth + 1) for v in value[:50]]
+            list_head.append(f"…[{len(value) - 50} items suppressed]")
+            return list_head
         return [_truncate(v, depth=depth + 1) for v in value]
     if isinstance(value, dict):
         if len(value) > 50:
-            head = list(value.items())[:50]
-            out: dict[str, Any] = {str(k): _truncate(v, depth=depth + 1) for k, v in head}
+            dict_head_items = list(value.items())[:50]
+            out: dict[str, Any] = {str(k): _truncate(v, depth=depth + 1) for k, v in dict_head_items}
             out["__suppressed__"] = f"{len(value) - 50} keys suppressed"
             return out
         return {str(k): _truncate(v, depth=depth + 1) for k, v in value.items()}

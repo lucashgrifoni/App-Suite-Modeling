@@ -81,7 +81,7 @@ def import_terraform_text(text: str, *, filename: str = "bundle.tf") -> Artifact
             InferenceRecord(
                 id=f"inf_{inf_idx:03d}",
                 message=msg,
-                confidence=conf,  # type: ignore[arg-type]
+                confidence=conf,
                 source="terraform",
                 related_component_ids=list(related or []),
             )
