@@ -107,7 +107,10 @@ def _slug(text: str) -> str:
 
 
 def _short_file_id(file_path: str) -> str:
-    name = Path(file_path).stem
+    # Normalize Windows-style separators because the Node scanner emits paths
+    # such as `src\routes\admin.js` regardless of the host OS — without this,
+    # the helper would yield `src_routes_admin` on Linux runners.
+    name = Path(file_path.replace("\\", "/")).stem
     return _slug(name)[:24]
 
 
