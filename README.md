@@ -177,17 +177,12 @@ otm analyze examples/minimal.otm.yaml --methodology stride
 
 ## Screenshots
 
-Add PNGs under [`docs/screenshots/`](docs/screenshots/README.md) and swap the placeholders below. Framing guide: [`docs/features/SCREENSHOT_GUIDE.md`](docs/features/SCREENSHOT_GUIDE.md).
+| Product overview | Analysis output |
+|---|---|
+| [![App Suite Modeling — landing page](docs/screenshots/home.png)](docs/screenshots/home.png) | [![Analysis with STRIDE threats and scoring](docs/screenshots/analysis.png)](docs/screenshots/analysis.png) |
+| Landing: hero + primary CTAs (new model, import, templates). | Methodology selection, model metrics, and suggested threats with likelihood × impact scoring. |
 
-| Area | Placeholder / file | What it should show |
-|------|---------------------|----------------------|
-| **Product overview** | `docs/screenshots/home.png` | Landing: hero + primary CTAs (new model, import, templates). |
-| **Web interface** | `docs/screenshots/wizard.png` | One clear wizard step with real labels. |
-| **Analysis output** | `docs/screenshots/analysis.png` | Methodology + threat summary / metrics. |
-| **Report export** | `docs/screenshots/export.png` | Export options or PDF action. |
-| **CLI usage** | *(terminal capture or secondary README asset)* | `validate` / `analyze` / `report` in a readable terminal. |
-
-*(Images intentionally omitted until maintainers publish captures—keeps the repo honest.)*
+Additional captures (a wizard step, export/PDF action, and a CLI session) land under [`docs/screenshots/`](docs/screenshots/README.md) as they are produced. Framing guide: [`docs/features/SCREENSHOT_GUIDE.md`](docs/features/SCREENSHOT_GUIDE.md).
 
 ---
 
@@ -267,7 +262,7 @@ Please **do not** file public issues with exploitable vulnerability details. Use
 
 ## Versioning
 
-Package version lives in `pyproject.toml` (currently **7.6.0**, aligned with `apps/web/package.json`). Tags, RCs, and the relationship to historical milestones (e.g. documented `v0.1.0` scope) are explained in [docs/VERSIONING_AND_TAGS.md](docs/VERSIONING_AND_TAGS.md). Release history: [CHANGELOG.md](CHANGELOG.md).
+Package version lives in `pyproject.toml` (currently **7.6.1**, aligned with `apps/web/package.json`). Tags, RCs, and the relationship to historical milestones (e.g. documented `v0.1.0` scope) are explained in [docs/VERSIONING_AND_TAGS.md](docs/VERSIONING_AND_TAGS.md). Release history: [CHANGELOG.md](CHANGELOG.md).
 
 ---
 

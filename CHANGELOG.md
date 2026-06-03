@@ -13,6 +13,27 @@ This project follows **Keep a Changelog** and **Semantic Versioning**.
 
 ---
 
+## [7.6.1] — 2026-06-03
+
+### Summary
+Maintenance and publication-readiness release. Clears the remaining CI quality gates from the 7.6.0 line, fixes cross-platform file-id handling in repository import, embeds real product screenshots in the README, and aligns the package version with the four post-7.6.0 commits. **No public CLI / API / UI contract change.**
+
+### Fixed
+- `otm import repo`: `_short_file_id` normalizes Windows backslash separators so generated component IDs are stable across operating systems.
+
+### CI / Quality
+- Cleared the Ruff format gate (`ruff format` across 34 files) and the Mypy (monorepo) gate by enabling the `pydantic.mypy` plugin for aliased-field call-args.
+- Cleared lint, KICS (Checkmarx IaC), Snyk Code, and Docker hardening gates.
+
+### Docs
+- README embeds real product screenshots (landing page + analysis output) under `docs/screenshots/` in place of the previous placeholders.
+- Refreshed the maintainer release assessment for the 7.6.x line (`docs/internal/reports/`).
+
+### Repository hygiene
+- Package version aligned to `7.6.1` across `pyproject.toml`, `apps/web/package.json`, and the web lockfile.
+
+---
+
 ## [7.6.0] — 2026-05-28
 
 ### Summary

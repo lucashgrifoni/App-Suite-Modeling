@@ -1,5 +1,50 @@
 # Avaliação final de lançamento (GO / NO-GO) — App Suite Modeling / open-threat-model
 
+> **Reavaliação atual:** `7.6.1` — 2026-06-03 (secção abaixo). A avaliação original `7.2.0` (2026-04-01) é mantida como **histórico** mais adiante.
+
+---
+
+## 2026-06-03 — Reavaliação em `v7.6.1` (corrente)
+
+**Tipo:** Release/launch readiness + OSS publication readiness  
+**Versão de pacote:** `7.6.1` (`pyproject.toml`, `apps/web/package.json`, lockfile alinhados)  
+**Decisão:** **GO — publicar como OSS público.**
+
+### Evidência verificada nesta rodada
+
+| Critério | Resultado | Fonte |
+|----------|-----------|-------|
+| Testes | **951 passed / 1 skipped** | CHANGELOG 7.6.0 + runs CI |
+| Cobertura / qualidade | **100%**, SonarQube Quality Gate **OK**, 0 issues/bugs/vulns/hotspots | STATUS sessão 2026-05-27 |
+| CI funcional (GitHub CI/CD) | **Verde** no HEAD (`a3de5a0`) | `gh run view` |
+| CI de segurança (Security CI/CD) | **Verde** no push de 2026-05-28; vermelho apenas em runs *scheduled*/*PR* | `gh run view` |
+| Causa do vermelho | **GHAS code scanning desligado em repo privado** (CodeQL + upload SARIF exigem-no) — não há *findings* reais | logs do run scheduled 26744057797 |
+| Segredos no histórico | **gitleaks: no leaks found** (110 commits, 5.32 MB) | scan local |
+| Vazamento de e-mail/caminho local | Nenhum em ficheiros rastreados (só username/URL pública do GitHub) | grep tracked |
+| Dependabot | **0 alertas abertos** | `gh api dependabot/alerts` |
+| OSS hygiene | LICENSE MIT, SECURITY, CONTRIBUTING, CODE_OF_CONDUCT, templates issue/PR, CODEOWNERS | repo |
+| Screenshots no README | **Embebidos** (landing + análise) sob `docs/screenshots/` | README |
+
+### Porque é GO
+
+O único gate vermelho (Security CI/CD em *scheduled*/*PR*) **resolve-se ao tornar o repositório público**: em repos públicos, CodeQL, upload de SARIF e *dependency review* são gratuitos. Como a publicação é o objetivo declarado, o ato de publicar fecha o gate em vez de o contornar. Não há *findings* de segurança reais a bloquear, nem segredos no histórico, nem claims enganosas no README (tabela de maturidade honesta: sem persistência server-side por defeito, perímetro de API opcional, import como rascunho).
+
+### Condições / pós-publicação (não bloqueantes)
+
+1. **Visibilidade pública** reativa code scanning/CodeQL/dependency-review (grátis) — re-correr Security CI/CD e confirmar verde.
+2. **Branch protection** em `main` (estava deixada de fora por ser repo solo privado).
+3. **Deprecação Node 20 → Node 24** em algumas actions (apenas *warning* atual; acompanhar antes de set/2026).
+4. Tag **`v7.6.1`** publicada + GitHub Release a partir do CHANGELOG.
+
+### Risco residual
+
+- Análise é **heurística/assistiva**, não prova de completude (já explícito no README/KNOWN_LIMITATIONS).
+- API/UI desenhadas para uso local; exposição à internet exige `slowapi`, API key opcional e CORS restrito (documentado em SECURITY.md e DEPLOYMENT_INVARIANTS).
+
+---
+
+## 2026-04-01 — Avaliação original em `v7.2.0` (histórico)
+
 **Data:** 2026-04-01  
 **Tipo:** Auditoria de *release readiness* / *launch readiness* (open source)  
 **Versão de pacote referida:** `7.2.0` (`pyproject.toml`, `apps/web/package.json`)
