@@ -18,7 +18,7 @@ export function Button({
 }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: keyof typeof variants }) {
   return (
     <button
-      className={`inline-flex items-center justify-center rounded-otm-md px-4 py-2 text-sm font-semibold transition duration-otm ease-otm motion-reduce:transition-none motion-reduce:active:scale-100 ${variants[variant]} ${className}`}
+      className={`inline-flex items-center justify-center rounded-otm-md px-4 py-2 text-sm font-semibold transition duration-otm ease-otm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--otm-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--otm-surface-base)] motion-reduce:transition-none motion-reduce:active:scale-100 ${variants[variant]} ${className}`}
       {...props}
     />
   );

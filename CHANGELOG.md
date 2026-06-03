@@ -13,6 +13,17 @@ This project follows **Keep a Changelog** and **Semantic Versioning**.
 
 ---
 
+## [7.6.3] — 2026-06-03
+
+### Fixed
+- **Web UI accessibility:** `Button` now renders an explicit keyboard-scoped `focus-visible` ring, matching the focus treatment of `Input` / `Select` / `Checkbox` (it previously relied only on the global outline, which the gradient variant could visually clip).
+- **Web UI contrast:** lifted the dark-theme `--otm-text-subtle` token from `#5f7a6d` (~4.1:1) to `#789684` to clear WCAG AA (4.5:1) on the darkest surfaces, while keeping it clearly dimmer than `--otm-text-muted` (hierarchy preserved).
+
+### CI
+- Bumped `aquasecurity/trivy-action` to `v0.36.0` and `gitleaks/gitleaks-action` to `v3.0.0`, clearing the GitHub Actions Node 20 deprecation warnings (both now run on Node 24).
+
+---
+
 ## [7.6.2] — 2026-06-03
 
 ### Security

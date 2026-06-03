@@ -37,7 +37,9 @@
 
   --otm-text: #e8f5ef;
   --otm-text-muted: #93b0a3;
-  --otm-text-subtle: #5f7a6d;
+  /* Lifted from #5f7a6d (~4.1:1) to clear WCAG AA 4.5:1 on the darkest surface
+     while staying clearly dimmer than --otm-text-muted (hierarchy preserved). */
+  --otm-text-subtle: #789684;
 
   --otm-surface-base: var(--otm-green-900);
   --otm-surface-1: var(--otm-green-850);
