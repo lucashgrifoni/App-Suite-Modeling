@@ -13,6 +13,16 @@ This project follows **Keep a Changelog** and **Semantic Versioning**.
 
 ---
 
+## [7.6.2] — 2026-06-03
+
+### Security
+- **Web (`apps/web`):** bump `react-router-dom` floor to `^7.14.2`; the lockfile now resolves `react-router` / `react-router-dom` `7.14.0 → 7.16.0`, fixing a **Critical** *Deserialization of Untrusted Data* advisory in `react-router` ([SNYK-JS-REACTROUTER-17137394](https://security.snyk.io/vuln/SNYK-JS-REACTROUTER-17137394)). Surfaced by the Snyk Open Source gate once code scanning re-enabled on the public repository; not yet present in the GitHub Advisory database at release time.
+
+### Notes
+- Supersedes `7.6.1`, whose security pipeline failed on the advisory above. `7.6.1` carries no contract change of its own; adopters should use `7.6.2`.
+
+---
+
 ## [7.6.1] — 2026-06-03
 
 ### Summary
