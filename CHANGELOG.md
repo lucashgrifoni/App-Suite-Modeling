@@ -8,8 +8,12 @@ This project follows **Keep a Changelog** and **Semantic Versioning**.
 
 ## [Unreleased]
 
-### Added
-- Upcoming improvements and features under development
+### Security
+- **Web (`apps/web`):** bump `dompurify` `3.4.7 → 3.4.11` (transitive via `jspdf`), fixing three **Medium** DOMPurify advisories ([SNYK-JS-DOMPURIFY-17342528](https://security.snyk.io/vuln/SNYK-JS-DOMPURIFY-17342528), `-17344549`, `-17375136`); bump `vite → 8.0.16` (dev server / build tooling — **not** shipped in `dist/`) clearing [GHSA-fx2h-pf6j-xcff](https://github.com/advisories/GHSA-fx2h-pf6j-xcff) and [GHSA-v6wh-96g9-6wx3](https://github.com/advisories/GHSA-v6wh-96g9-6wx3); pin `js-yaml ≥ 4.2.0` via `overrides` to clear a **Medium** advisory reached through `openapi-typescript → @redocly/openapi-core`. `npm audit` now reports **0 vulnerabilities**.
+- **GitHub Pages (`gitpage`):** bump `vite → 8.0.16`, clearing the same dev-tooling advisory; `npm audit` clean.
+
+### CI
+- **Security CI/CD** now degrades gracefully across contexts. A `preflight` job detects code-scanning availability (public repo or Advanced Security) and the Dependabot run context; SARIF upload, CodeQL, and Dependency Review are **skipped (not failed)** when unavailable, and Snyk/Gitleaks skip cleanly on Dependabot's read-only token. The scanners themselves remain hard gates on real findings. This clears the perpetual red on scheduled runs and Dependabot PRs without weakening detection, and re-activates full SARIF reporting automatically when the repository is public.
 
 ---
 
