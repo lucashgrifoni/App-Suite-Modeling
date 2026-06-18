@@ -12,6 +12,24 @@
 # adaptation is the extra Semgrep `--config rules/semgrep/appsec-runtime-footguns.yml`,
 # which keeps this repository's custom runtime-footgun rule pack as a gate.
 #
+# Graceful degradation (why this pipeline stays honest in every context):
+#   A `preflight` job computes two facts that GitHub does NOT let every event
+#   know directly:
+#     - code_scanning : true when the repo is PUBLIC or has GitHub Advanced
+#                       Security enabled. SARIF upload, CodeQL, and Dependency
+#                       Review only work then; on a private repo without GHAS
+#                       they fail with "Resource not accessible by integration"
+#                       / "Code scanning is not enabled".
+#     - is_dependabot : true on Dependabot-authored runs, which receive a
+#                       read-only token and NO repository secrets, so
+#                       secret-dependent (Snyk) and security-events:write
+#                       (SARIF upload, dependency-review) steps fail-closed.
+#   The actual SCANNERS still hard-gate on real findings (Trivy exit-code,
+#   Semgrep --error, Snyk threshold, KICS fail_on). Only the steps that
+#   STRUCTURALLY cannot run in a given context are skipped, so a green run
+#   means "no findings", not "scanner silently disabled". When the repo is
+#   public (or GHAS is on), every upload runs and the Security tab is populated.
+#
 # Supply-chain hardening:
 #   - Third-party and first-party actions are pinned to immutable commit SHAs.
 #   - The trailing comment records the semantic tag used to resolve the SHA.
@@ -76,9 +94,59 @@ env:
   SNYK_SEVERITY_THRESHOLD: "medium"
 
 jobs:
+  preflight:
+    name: Preflight - context
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      # 'true' when SARIF upload / CodeQL / Dependency Review can succeed
+      # (public repo OR Advanced Security enabled), else 'false'.
+      code_scanning: ${{ steps.ctx.outputs.code_scanning }}
+      # 'true' on Dependabot-authored runs (read-only token, no secrets).
+      is_dependabot: ${{ steps.ctx.outputs.is_dependabot }}
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@8d3c67de8e2fe68ef647c8db1e6a09f647780f40 # v2
+        with:
+          egress-policy: audit
+
+      - name: Determine context
+        id: ctx
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          if [ "$ACTOR" = "dependabot[bot]" ]; then
+            echo "is_dependabot=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "is_dependabot=false" >> "$GITHUB_OUTPUT"
+          fi
+          # Visibility is always readable with the default token; Advanced
+          # Security status may not be (defaults to empty -> treated as off).
+          VIS="$(gh api "repos/$REPO" --jq '.visibility' 2>/dev/null || echo unknown)"
+          GHAS="$(gh api "repos/$REPO" --jq '.security_and_analysis.advanced_security.status' 2>/dev/null || echo unknown)"
+          if [ "$VIS" = "public" ] || [ "$GHAS" = "enabled" ]; then
+            echo "code_scanning=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "code_scanning=false" >> "$GITHUB_OUTPUT"
+          fi
+          {
+            echo "### Security CI preflight"
+            echo "- visibility: \`$VIS\`"
+            echo "- advanced_security: \`$GHAS\`"
+            echo "- dependabot: \`$ACTOR\`"
+            echo ""
+            echo "When code scanning is unavailable, SARIF-upload / CodeQL /"
+            echo "Dependency-Review steps are skipped (not failed); scanners still gate."
+          } >> "$GITHUB_STEP_SUMMARY"
+
   sast-semgrep:
     name: SAST - Semgrep
     runs-on: ubuntu-latest
+    needs: preflight
     timeout-minutes: 30
     permissions:
       contents: read
@@ -117,7 +185,9 @@ jobs:
             .
 
       - name: Upload Semgrep SARIF
-        if: always()
+        # Best-effort: only when code scanning is available. The scan above is
+        # the hard gate (--error); the upload only feeds the Security tab.
+        if: ${{ always() && needs.preflight.outputs.code_scanning == 'true' }}
         uses: github/codeql-action/upload-sarif@9e0d7b8d25671d64c341c19c0152d693099fb5ba # v4.35.5
         with:
           sarif_file: semgrep.sarif
@@ -126,10 +196,13 @@ jobs:
   sast-snyk-code:
     name: SAST - Snyk Code
     runs-on: ubuntu-latest
+    needs: preflight
     timeout-minutes: 25
     permissions:
       contents: read
       security-events: write
+    env:
+      SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
     steps:
       - name: Harden runner
         uses: step-security/harden-runner@8d3c67de8e2fe68ef647c8db1e6a09f647780f40 # v2
@@ -147,23 +220,23 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
 
       - name: Install Snyk CLI
+        # Snyk needs a token + repo secrets, which Dependabot runs do not get.
+        if: ${{ needs.preflight.outputs.is_dependabot == 'false' && env.SNYK_TOKEN != '' }}
         run: npm install -g snyk
 
       - name: Authenticate Snyk
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        if: ${{ needs.preflight.outputs.is_dependabot == 'false' && env.SNYK_TOKEN != '' }}
         run: snyk auth "$SNYK_TOKEN"
 
       - name: Run Snyk Code
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        if: ${{ needs.preflight.outputs.is_dependabot == 'false' && env.SNYK_TOKEN != '' }}
         run: >
           snyk code test
           --severity-threshold=${{ env.SNYK_SEVERITY_THRESHOLD }}
           --sarif-file-output=snyk-code.sarif
 
       - name: Upload Snyk Code SARIF
-        if: always()
+        if: ${{ always() && needs.preflight.outputs.code_scanning == 'true' && needs.preflight.outputs.is_dependabot == 'false' && env.SNYK_TOKEN != '' }}
         uses: github/codeql-action/upload-sarif@9e0d7b8d25671d64c341c19c0152d693099fb5ba # v4.35.5
         with:
           sarif_file: snyk-code.sarif
@@ -172,6 +245,10 @@ jobs:
   sast-codeql:
     name: SAST - CodeQL
     runs-on: ubuntu-latest
+    needs: preflight
+    # CodeQL writes results to code scanning; only runnable when available and
+    # not on Dependabot's restricted token.
+    if: ${{ needs.preflight.outputs.code_scanning == 'true' && needs.preflight.outputs.is_dependabot == 'false' }}
     timeout-minutes: 45
     permissions:
       contents: read
@@ -209,10 +286,13 @@ jobs:
   sca-snyk:
     name: SCA - Snyk Open Source
     runs-on: ubuntu-latest
+    needs: preflight
     timeout-minutes: 25
     permissions:
       contents: read
       security-events: write
+    env:
+      SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
     steps:
       - name: Harden runner
         uses: step-security/harden-runner@8d3c67de8e2fe68ef647c8db1e6a09f647780f40 # v2
@@ -230,16 +310,15 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
 
       - name: Install Snyk CLI
+        if: ${{ needs.preflight.outputs.is_dependabot == 'false' && env.SNYK_TOKEN != '' }}
         run: npm install -g snyk
 
       - name: Authenticate Snyk
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        if: ${{ needs.preflight.outputs.is_dependabot == 'false' && env.SNYK_TOKEN != '' }}
         run: snyk auth "$SNYK_TOKEN"
 
       - name: Run Snyk Open Source scan
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        if: ${{ needs.preflight.outputs.is_dependabot == 'false' && env.SNYK_TOKEN != '' }}
         run: >
           snyk test
           --all-projects
@@ -247,7 +326,7 @@ jobs:
           --sarif-file-output=snyk-oss.sarif
 
       - name: Upload Snyk Open Source SARIF
-        if: always()
+        if: ${{ always() && needs.preflight.outputs.code_scanning == 'true' && needs.preflight.outputs.is_dependabot == 'false' && env.SNYK_TOKEN != '' }}
         uses: github/codeql-action/upload-sarif@9e0d7b8d25671d64c341c19c0152d693099fb5ba # v4.35.5
         with:
           sarif_file: snyk-oss.sarif
@@ -256,6 +335,7 @@ jobs:
   sca-trivy:
     name: SCA - Trivy
     runs-on: ubuntu-latest
+    needs: preflight
     timeout-minutes: 20
     permissions:
       contents: read
@@ -285,7 +365,7 @@ jobs:
           skip-dirs: ${{ env.TRIVY_SKIP_DIRS }}
 
       - name: Upload Trivy dependency SARIF
-        if: always()
+        if: ${{ always() && needs.preflight.outputs.code_scanning == 'true' }}
         uses: github/codeql-action/upload-sarif@9e0d7b8d25671d64c341c19c0152d693099fb5ba # v4.35.5
         with:
           sarif_file: trivy-deps.sarif
@@ -294,6 +374,7 @@ jobs:
   iac-and-pipeline-trivy:
     name: IaC and Pipeline - Trivy
     runs-on: ubuntu-latest
+    needs: preflight
     timeout-minutes: 20
     permissions:
       contents: read
@@ -322,7 +403,7 @@ jobs:
           skip-dirs: ${{ env.TRIVY_SKIP_DIRS }}
 
       - name: Upload Trivy IaC SARIF
-        if: always()
+        if: ${{ always() && needs.preflight.outputs.code_scanning == 'true' }}
         uses: github/codeql-action/upload-sarif@9e0d7b8d25671d64c341c19c0152d693099fb5ba # v4.35.5
         with:
           sarif_file: trivy-iac.sarif
@@ -331,6 +412,7 @@ jobs:
   iac-kics:
     name: IaC - KICS (Checkmarx)
     runs-on: ubuntu-latest
+    needs: preflight
     timeout-minutes: 20
     permissions:
       contents: read
@@ -358,7 +440,7 @@ jobs:
           exclude_paths: ".git,node_modules,dist,build,coverage"
 
       - name: Upload KICS SARIF
-        if: always()
+        if: ${{ always() && needs.preflight.outputs.code_scanning == 'true' }}
         uses: github/codeql-action/upload-sarif@9e0d7b8d25671d64c341c19c0152d693099fb5ba # v4.35.5
         with:
           sarif_file: kics-results/results.sarif
@@ -367,6 +449,7 @@ jobs:
   secrets-trivy:
     name: Secrets - Trivy
     runs-on: ubuntu-latest
+    needs: preflight
     timeout-minutes: 20
     permissions:
       contents: read
@@ -395,7 +478,7 @@ jobs:
           skip-dirs: ${{ env.TRIVY_SKIP_DIRS }}
 
       - name: Upload Trivy secrets SARIF
-        if: always()
+        if: ${{ always() && needs.preflight.outputs.code_scanning == 'true' }}
         uses: github/codeql-action/upload-sarif@9e0d7b8d25671d64c341c19c0152d693099fb5ba # v4.35.5
         with:
           sarif_file: trivy-secrets.sarif
@@ -404,6 +487,7 @@ jobs:
   secrets-history-gitleaks:
     name: Secrets History - Gitleaks
     runs-on: ubuntu-latest
+    needs: preflight
     timeout-minutes: 20
     permissions:
       contents: read
@@ -420,6 +504,9 @@ jobs:
           fetch-depth: 0
 
       - name: Scan git history for leaked secrets
+        # Dependabot's restricted token cannot drive gitleaks-action's PR API
+        # calls; history is already gated on push/schedule runs to main.
+        if: ${{ needs.preflight.outputs.is_dependabot == 'false' }}
         uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -431,7 +518,10 @@ jobs:
   dependency-review:
     name: SCA - Dependency Review (PR)
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
+    needs: preflight
+    # Dependency Review needs code scanning APIs (GHAS on private repos) and a
+    # writable token, which Dependabot PRs do not have.
+    if: ${{ github.event_name == 'pull_request' && needs.preflight.outputs.code_scanning == 'true' && needs.preflight.outputs.is_dependabot == 'false' }}
     timeout-minutes: 15
     permissions:
       contents: read
