@@ -40,7 +40,10 @@ def _status(
 
 
 def _group_heuristics(result: AnalysisResult) -> dict[str, list[str]]:
-    by_layer: dict[str, list[str]] = {lid: [] for lid in set(PLOT4AI_HEURISTIC_LAYER.values())}
+    # `dict.fromkeys` keeps a deterministic, first-seen layer order; a plain
+    # `set(...)` would iterate in PYTHONHASHSEED-randomized order, making the
+    # serialized `heuristic_ids_by_layer` key order non-reproducible across runs.
+    by_layer: dict[str, list[str]] = {lid: [] for lid in dict.fromkeys(PLOT4AI_HEURISTIC_LAYER.values())}
     for h in result.heuristic_threats:
         if not h.id.startswith("plot4ai_"):
             continue

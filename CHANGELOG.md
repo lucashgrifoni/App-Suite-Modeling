@@ -19,6 +19,11 @@ This project follows **Keep a Changelog** and **Semantic Versioning**.
 
 ### Tests
 - **Web UI:** added a Vitest component/hook/context/storage layer (jsdom + Testing Library) — 40 new unit tests covering `apiFetch` error mapping, analysis filters, browser-storage helpers, `ThemeContext`, `ToastContext`, `RiskScoreBar`, `StatusPill`, `EmptyState`, and `ErrorBoundary` (68 web unit tests total). Wired `vitest` into the GitHub CI/CD web job so unit tests now gate on every push and PR (previously only the build + Playwright E2E ran).
+- **Python:** added the API error-truncation defensive branches (`errors.py` now 100%), a path-traversal security regression suite, and engine-defect regressions (PLOT4ai key-order seed independence; data-flow scoring). Suite is now **966 tests**.
+
+### Fixed
+- **Engine determinism (PLOT4ai):** `ai_system_context.heuristic_ids_by_layer` is now emitted in a stable canonical layer order. It was seeded from a `set(...)`, so the serialized key order varied with `PYTHONHASHSEED` across runs and broke byte-for-byte reproducibility of PLOT4ai analysis JSON (snapshots, signing, diffs). Values were already sorted — only the key order was affected.
+- **Engine risk scoring (data flows):** an unencrypted data flow that does **not** cross a trust boundary is no longer double-counted. The STRIDE builder OR-ed "unencrypted" into the boundary-crossing signal while `risk_calc` already applied a dedicated encryption penalty, inflating such flows to L×I `5×5` (25, *critical*) instead of `4×4` (16, *high*). **Behavioral note:** this lowers scores and shifts the severity distribution for unencrypted internal flows (boundary-crossing and encrypted flows are unchanged); pinned analysis snapshots were regenerated accordingly.
 
 ---
 

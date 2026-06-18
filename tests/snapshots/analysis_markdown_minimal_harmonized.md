@@ -8,7 +8,7 @@
 - Heurísticas base já cobertas: 0
 - Ameaças do pack (novas): 0
 - Ameaças do pack (já cobertas): 0
-- Maior score heurístico (L×I): **25.0**
+- Maior score heurístico (L×I): **20.0**
 
 ### Referências a frameworks (agregado)
 
@@ -21,25 +21,25 @@ Contagem de referências `framework:control_id` nas heurísticas (por catálogo 
 
 ### Consolidação de risco e cockpit executivo
 
-- **Ameaças activas:** 21 · **Score total:** 324.0 · **Média / máx:** 15.43 / 25.0
-- **Distribuição por severidade:** `{'high': 10, 'medium': 4, 'critical': 7}`
+- **Ameaças activas:** 21 · **Score total:** 290.0 · **Média / máx:** 13.81 / 20.0
+- **Distribuição por severidade:** `{'high': 14, 'medium': 4, 'critical': 3}`
 - **Top ameaças (score):**
-  - `eng_flow_to_db_tampering` — [tampering] Canal do fluxo to_db (score 25.0)
-  - `eng_flow_to_db_information_disclosure` — [information_disclosure] Canal do fluxo to_db (score 25.0)
   - `eng_api_spoofing` — [spoofing] API (public_api) (score 20.0)
   - `eng_api_elevation_of_privilege` — [elevation_of_privilege] API (public_api) (score 20.0)
   - `eng_flow_http_in_tampering` — [tampering] Atravessa fronteira — http_in (score 20.0)
+  - `eng_flow_to_db_tampering` — [tampering] Canal do fluxo to_db (score 16.0)
+  - `eng_flow_to_db_information_disclosure` — [information_disclosure] Canal do fluxo to_db (score 16.0)
 - **Componentes mais críticos:** `api` (85.0), `worker` (51.0), `db` (45.0), `user` (21.0)
-- **Fluxos mais críticos:** `to_db` (50.0), `to_worker` (40.0), `http_in` (20.0)
+- **Fluxos mais críticos:** `to_db` (32.0), `to_worker` (24.0), `http_in` (20.0)
 - **Temas dominantes:** eng: 20; biz: 1
 - **Mitigação inicial:**
-  - Priorizar `eng_flow_to_db_tampering` em `to_db` (score 25.0).
-  - Priorizar `eng_flow_to_db_information_disclosure` em `to_db` (score 25.0).
   - Priorizar `eng_api_spoofing` em `api` (score 20.0).
   - Priorizar `eng_api_elevation_of_privilege` em `api` (score 20.0).
   - Priorizar `eng_flow_http_in_tampering` em `http_in` (score 20.0).
+  - Priorizar `eng_flow_to_db_tampering` em `to_db` (score 16.0).
+  - Priorizar `eng_flow_to_db_information_disclosure` em `to_db` (score 16.0).
 - **Postura:** `elevated` — Postura crítica agregada — tratamento prioritário recomendado.
-  - 21 achados heurísticos activos; soma de scores ≈ 324.0.
+  - 21 achados heurísticos activos; soma de scores ≈ 290.0.
   - Ordenar backlog pelos `top_threats` e validar com donos de sistema.
   - *Rever:* Rever controlos nas fronteiras com fluxos de maior risco acumulado.
   - *Rever:* Confirmar classificação e retenção nos ativos mais expostos.
@@ -61,12 +61,12 @@ Contagem de referências `framework:control_id` nas heurísticas (por catálogo 
 
 ### Resumo executivo
 
-- Total de ameaças ativas: **21** · Maior score: **25.0**
+- Total de ameaças ativas: **21** · Maior score: **20.0**
 - Metodologia aplicada: **stride**
 - Prioridade imediata:
-  - [tampering] Canal do fluxo to_db (score 25.0) em `to_db`
-  - [information_disclosure] Canal do fluxo to_db (score 25.0) em `to_db`
   - [spoofing] API (public_api) (score 20.0) em `api`
+  - [elevation_of_privilege] API (public_api) (score 20.0) em `api`
+  - [tampering] Atravessa fronteira — http_in (score 20.0) em `http_in`
 
 ### Categorias de risco (top)
 
@@ -78,26 +78,22 @@ Bloco curto para leitura humana; a lista completa permanece abaixo (com rastreab
 
 #### Técnico clássico (STRIDE)
 
-- [tampering] Canal do fluxo to_db (`eng_flow_to_db_tampering`) em `to_db` — score 25.0
-- [information_disclosure] Canal do fluxo to_db (`eng_flow_to_db_information_disclosure`) em `to_db` — score 25.0
+- [spoofing] API (public_api) (`eng_api_spoofing`) em `api` — score 20.0
+- [elevation_of_privilege] API (public_api) (`eng_api_elevation_of_privilege`) em `api` — score 20.0
 
 ### Ameaças sugeridas (harmonizadas)
 
 Visualização priorizada por especificidade (`biz_*`) com redução de redundância semântica.
 
-- **[tampering] Canal do fluxo to_db** (`eng_flow_to_db_tampering`) → alvo `to_db` — score 25.0  
-  - Frameworks: `owasp_tm:STRIDE-T`, `owasp_asvs:V5.1.1`, `owasp_asvs:V14.1.1`, `nist_csf:PR.DS-06`, `nist_csf:PR.PS-01`, `iso_27001:A.8.9`, `iso_27001:A.8.12`
-- **[information_disclosure] Canal do fluxo to_db** (`eng_flow_to_db_information_disclosure`) → alvo `to_db` — score 25.0  
-  - Frameworks: `owasp_tm:STRIDE-I`, `owasp_asvs:V8.3.1`, `owasp_asvs:V9.1.1`, `nist_csf:PR.DS-01`, `nist_csf:PR.DS-02`, `iso_27001:A.8.11`, `iso_27001:A.5.14`
 - **[spoofing] API (public_api)** (`eng_api_spoofing`) → alvo `api` — score 20.0  
   - Frameworks: `owasp_tm:STRIDE-S`, `owasp_asvs:V2.2.1`, `owasp_asvs:V3.2.1`, `nist_csf:PR.AA-01`, `nist_csf:PR.AA-05`, `iso_27001:A.8.5`, `iso_27001:A.5.16`
 - **[elevation_of_privilege] API (public_api)** (`eng_api_elevation_of_privilege`) → alvo `api` — score 20.0  
   - Frameworks: `owasp_tm:STRIDE-E`, `owasp_asvs:V4.1.1`, `owasp_asvs:V4.2.1`, `nist_csf:PR.AC-01`, `nist_csf:PR.AC-04`, `iso_27001:A.8.2`, `iso_27001:A.8.3`
 - **[tampering] Atravessa fronteira — http_in** (`eng_flow_http_in_tampering`) → alvo `http_in` — score 20.0  
   - Frameworks: `owasp_tm:STRIDE-T`, `owasp_asvs:V5.1.1`, `owasp_asvs:V14.1.1`, `nist_csf:PR.DS-06`, `nist_csf:PR.PS-01`, `iso_27001:A.8.9`, `iso_27001:A.8.12`
-- **[tampering] Canal do fluxo to_worker** (`eng_flow_to_worker_tampering`) → alvo `to_worker` — score 20.0  
+- **[tampering] Canal do fluxo to_db** (`eng_flow_to_db_tampering`) → alvo `to_db` — score 16.0  
   - Frameworks: `owasp_tm:STRIDE-T`, `owasp_asvs:V5.1.1`, `owasp_asvs:V14.1.1`, `nist_csf:PR.DS-06`, `nist_csf:PR.PS-01`, `iso_27001:A.8.9`, `iso_27001:A.8.12`
-- **[information_disclosure] Canal do fluxo to_worker** (`eng_flow_to_worker_information_disclosure`) → alvo `to_worker` — score 20.0  
+- **[information_disclosure] Canal do fluxo to_db** (`eng_flow_to_db_information_disclosure`) → alvo `to_db` — score 16.0  
   - Frameworks: `owasp_tm:STRIDE-I`, `owasp_asvs:V8.3.1`, `owasp_asvs:V9.1.1`, `nist_csf:PR.DS-01`, `nist_csf:PR.DS-02`, `iso_27001:A.8.11`, `iso_27001:A.5.14`
 - **[tampering] API (public_api)** (`eng_api_tampering`) → alvo `api` — score 15.0  
   - Frameworks: `owasp_tm:STRIDE-T`, `owasp_asvs:V5.1.1`, `owasp_asvs:V14.1.1`, `nist_csf:PR.DS-06`, `nist_csf:PR.PS-01`, `iso_27001:A.8.9`, `iso_27001:A.8.12`
@@ -119,6 +115,10 @@ Visualização priorizada por especificidade (`biz_*`) com redução de redundâ
   - Frameworks: `owasp_tm:STRIDE-S`, `owasp_asvs:V2.2.1`, `owasp_asvs:V3.2.1`, `nist_csf:PR.AA-01`, `nist_csf:PR.AA-05`, `iso_27001:A.8.5`, `iso_27001:A.5.16`
 - **[elevation_of_privilege] Worker** (`eng_worker_elevation_of_privilege`) → alvo `worker` — score 12.0  
   - Frameworks: `owasp_tm:STRIDE-E`, `owasp_asvs:V4.1.1`, `owasp_asvs:V4.2.1`, `nist_csf:PR.AC-01`, `nist_csf:PR.AC-04`, `iso_27001:A.8.2`, `iso_27001:A.8.3`
+- **[tampering] Canal do fluxo to_worker** (`eng_flow_to_worker_tampering`) → alvo `to_worker` — score 12.0  
+  - Frameworks: `owasp_tm:STRIDE-T`, `owasp_asvs:V5.1.1`, `owasp_asvs:V14.1.1`, `nist_csf:PR.DS-06`, `nist_csf:PR.PS-01`, `iso_27001:A.8.9`, `iso_27001:A.8.12`
+- **[information_disclosure] Canal do fluxo to_worker** (`eng_flow_to_worker_information_disclosure`) → alvo `to_worker` — score 12.0  
+  - Frameworks: `owasp_tm:STRIDE-I`, `owasp_asvs:V8.3.1`, `owasp_asvs:V9.1.1`, `nist_csf:PR.DS-01`, `nist_csf:PR.DS-02`, `iso_27001:A.8.11`, `iso_27001:A.5.14`
 - **[repudiation] Usuário** (`eng_user_repudiation`) → alvo `user` — score 9.0  
   - Frameworks: `owasp_tm:STRIDE-R`, `owasp_asvs:V7.1.1`, `nist_csf:PR.PS-04`, `nist_csf:DE.CM-03`, `iso_27001:A.8.17`, `iso_27001:A.8.15`
 - **[tampering] Worker** (`eng_worker_tampering`) → alvo `worker` — score 9.0  
@@ -145,7 +145,7 @@ Motivos estruturados gerados pelo motor (metodologia, achados, risco). Detalhe c
 - **[threat_heuristic/threat]** [spoofing] Worker — Heurística identificou spoofing em Worker (worker) com base no desenho e no motor STRIDE.
 - **[threat_heuristic/threat]** [tampering] Worker — Heurística identificou tampering em Worker (worker) com base no desenho e no motor STRIDE.
 
-… e mais 17 entradas no JSON.
+… e mais 13 entradas no JSON.
 
 ### Próximos passos sugeridos
 

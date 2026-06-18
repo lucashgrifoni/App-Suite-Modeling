@@ -77,7 +77,11 @@ def append_flow_heuristics(
             seen_stride.add(stride_val)
             stride = StrideCategory(stride_val)
             key = (None, flow.id, stride.value)
-            raw = likelihood_impact_for_data_flow(flow, crosses_boundary=crosses or unencrypted)
+            # Pass only the real boundary-crossing signal: `likelihood_impact_for_data_flow`
+            # already applies a dedicated penalty for `flow.encrypted is False`/`None`,
+            # so OR-ing `unencrypted` here double-counted it (inflating an unencrypted,
+            # non-crossing flow to L×I 5×5 instead of 4×4).
+            raw = likelihood_impact_for_data_flow(flow, crosses_boundary=crosses)
             li = apply_pack_to_li(raw[0], raw[1], pack)
             is_duplicate = key in existing
             _append_heuristic_threat(
