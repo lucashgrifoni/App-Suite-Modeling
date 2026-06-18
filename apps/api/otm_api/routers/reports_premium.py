@@ -100,5 +100,5 @@ def post_premium_report(body: PremiumReportBody) -> PlainTextResponse | Response
 
     if fmt == ReportFormat.MARKDOWN:
         return PlainTextResponse(md, media_type="text/markdown; charset=utf-8")
-    assert pdf is not None
+    assert pdf is not None  # type narrowing; pdf is always set for the non-Markdown branch  # nosec B101
     return Response(content=pdf, media_type="application/pdf")

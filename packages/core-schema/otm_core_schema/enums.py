@@ -81,7 +81,7 @@ class AssetKind(StrEnum):
     AUDIT_LOG = "audit_log"
     UPLOADED_CONTENT = "uploaded_content"
     ADMIN_CAPABILITY = "admin_capability"
-    CONFIGURATION_SECRET = "configuration_secret"
+    CONFIGURATION_SECRET = "configuration_secret"  # data-classification enum value, not a credential  # nosec B105
 
 
 class CriticalityLevel(StrEnum):
