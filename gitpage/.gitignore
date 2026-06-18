@@ -4,3 +4,10 @@ dist
 *.local
 .env
 .env.*.local
+
+# design-sync tooling: local scratch, installed scripts/node_modules (~43M),
+# build bundles, caches, and machine state. Kept out of the repo; track design
+# source deliberately if/when reviewed (incl. font licensing) before publishing.
+.design-sync/
+.ds-sync/
+ds-bundle/

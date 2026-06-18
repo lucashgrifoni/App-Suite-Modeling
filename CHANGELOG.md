@@ -8,8 +8,10 @@ This project follows **Keep a Changelog** and **Semantic Versioning**.
 
 ## [Unreleased]
 
-### Added
-- Upcoming improvements and features under development
+### Maintenance
+- **Dependencies:** refreshed `apps/web` and `gitpage` to the latest in-range versions (React 19.2.7, i18next 26.3.1, react-i18next 17.0.8, @playwright/test 1.61, Vitest, @vitejs/plugin-react 6.0.2, autoprefixer 10.5.0, lucide-react 0.577.0, and other in-range updates). `npm audit` remains **0** in both projects. Clears the open Dependabot npm PRs.
+- **CI:** bumped pinned GitHub Actions to current SHAs — `step-security/harden-runner`, `actions/checkout`, and `github/codeql-action` (v4.36.2).
+- **Repo hygiene:** `gitpage/.gitignore` now excludes the local `design-sync` tooling directories (scratch, ~43M of installed scripts/`node_modules`, and build bundles).
 
 ---
 
