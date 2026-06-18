@@ -57,7 +57,7 @@ def _openapi_path_parts(paths: Any) -> tuple[list[str], list[str]]:
         if not isinstance(item, dict):
             continue  # pragma: no cover - defensive guard
         for method, op in item.items():
-            if method.lower() in _HTTP_METHODS:
+            if isinstance(method, str) and method.lower() in _HTTP_METHODS:
                 op_parts.extend(_openapi_op_parts(op))
     return path_keys, op_parts
 
@@ -100,7 +100,7 @@ def _k8s_metadata_parts(meta: Any) -> list[str]:
     ann = meta.get("annotations")
     if isinstance(ann, dict):
         for ky, val in list(ann.items())[:24]:
-            if any(
+            if isinstance(ky, str) and any(
                 x in ky.lower() for x in ("description", "sidecar", "model", "inference", "gpu", "vertex", "openai")
             ):
                 out.append(f"{ky}={val}")

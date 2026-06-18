@@ -86,6 +86,10 @@ def _count_operations(paths: dict[str, Any] | None) -> tuple[int, list[str]]:
         if not isinstance(item, dict):
             continue
         for method, op in item.items():
+            # YAML 1.1 maps bare keys like on/off/yes/no to bool and numeric
+            # keys to int; guard before calling str methods on the path-item key.
+            if not isinstance(method, str):
+                continue
             lm = method.lower()
             if lm not in _HTTP_METHODS or not isinstance(op, dict):
                 continue
@@ -122,7 +126,12 @@ def _infer_authenticated(data: dict[str, Any], paths: dict[str, Any]) -> bool | 
         if not isinstance(item, dict):
             continue  # pragma: no cover - defensive guard
         for method, op in item.items():
-            if method.lower() in _HTTP_METHODS and isinstance(op, dict) and "security" in op:
+            if (
+                isinstance(method, str)
+                and method.lower() in _HTTP_METHODS
+                and isinstance(op, dict)
+                and "security" in op
+            ):
                 any_sec.append(bool(op.get("security")))
     auth_from_ops = all(any_sec) if any_sec else None
 
