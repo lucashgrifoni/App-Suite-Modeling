@@ -8,6 +8,13 @@ This project follows **Keep a Changelog** and **Semantic Versioning**.
 
 ## [Unreleased]
 
+### Added
+- Upcoming improvements and features under development
+
+---
+
+## [7.6.4] — 2026-06-18
+
 ### Security
 - **API / industry-pack loader — path traversal (High, fixed):** `load_pack`, `load_template_yaml`, and `load_template_info` now reject any id that is not present in the embedded catalog *before* touching the filesystem. Previously an attacker-controlled `pack_id` (e.g. via unauthenticated `POST /v1/models/compare` with `run_analysis: true`) could contain `../` or an absolute path and make the loader read an arbitrary local `.yaml` file; combined with the validation-error echo below, the file's parsed contents were disclosed in the `422` body. Added an end-to-end regression test.
 - **API — bounded validation-error echo:** domain `422` responses (`validate` / `precheck` / `analyze` / `diff` / `compare`) now truncate the echoed `input`/`ctx` to the same 256-character cap already applied to request-validation errors, so these errors can no longer reflect unbounded parsed content back to the client (closes the disclosure amplifier above and a ~1.6× response-amplification vector).
