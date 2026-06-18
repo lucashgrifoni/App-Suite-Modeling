@@ -15,6 +15,9 @@ This project follows **Keep a Changelog** and **Semantic Versioning**.
 ### CI
 - **Security CI/CD** now degrades gracefully across contexts. A `preflight` job detects code-scanning availability (public repo or Advanced Security) and the Dependabot run context; SARIF upload, CodeQL, and Dependency Review are **skipped (not failed)** when unavailable, and Snyk/Gitleaks skip cleanly on Dependabot's read-only token. The scanners themselves remain hard gates on real findings. This clears the perpetual red on scheduled runs and Dependabot PRs without weakening detection, and re-activates full SARIF reporting automatically when the repository is public.
 
+### Tests
+- **Web UI:** added a Vitest component/hook/context/storage layer (jsdom + Testing Library) — 40 new unit tests covering `apiFetch` error mapping, analysis filters, browser-storage helpers, `ThemeContext`, `ToastContext`, `RiskScoreBar`, `StatusPill`, `EmptyState`, and `ErrorBoundary` (68 web unit tests total). Wired `vitest` into the GitHub CI/CD web job so unit tests now gate on every push and PR (previously only the build + Playwright E2E ran).
+
 ---
 
 ## [7.6.3] — 2026-06-03

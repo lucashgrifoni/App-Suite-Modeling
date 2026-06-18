@@ -163,6 +163,10 @@ jobs:
         working-directory: apps/web
         run: npm run contracts:check
 
+      - name: Unit tests (Vitest)
+        working-directory: apps/web
+        run: npm test
+
       - name: UI build (standard)
         if: runner.os != 'Windows'
         working-directory: apps/web
