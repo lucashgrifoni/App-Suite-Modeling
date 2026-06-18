@@ -11,6 +11,7 @@ from otm_api.api_error_messages import (
     msg_document_validation_error,
     msg_template_invalid,
 )
+from otm_api.errors import _truncated_errors
 from otm_api.services.documents import document_from_payload
 
 
@@ -22,8 +23,14 @@ def _pydantic_error_items(exc: PydanticValidationError) -> list[dict[str, Any]]:
     objetos ``Exception`` (ex.: ``ValueError`` em validação de referências de
     fluxos). Isso quebra ``JSONResponse`` do FastAPI com TypeError e aparece
     como 500 genérico no cliente.
+
+    O campo ``input`` (e ``ctx``) é truncado com o mesmo limite das respostas
+    422 de ``RequestValidationError`` (256 carateres): mantém a resposta
+    delimitada perante payloads enormes e evita que estes erros de domínio
+    ecoem conteúdo arbitrário não-delimitado de volta ao cliente.
     """
-    return cast(list[dict[str, Any]], exc.errors(include_context=False))
+    items = cast(list[dict[str, Any]], exc.errors(include_context=False))
+    return _truncated_errors(items)
 
 
 def error_detail(

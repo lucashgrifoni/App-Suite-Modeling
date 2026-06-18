@@ -34,9 +34,14 @@ def list_template_ids() -> list[str]:
 
 
 def load_pack(pack_id: str) -> PackDefinition:
+    # `pack_id` is attacker-controllable (API body / CLI flag). Accept only ids
+    # that are real packs in the embedded catalog; this rejects path traversal
+    # (`../`), absolute paths, and any other id before touching the filesystem,
+    # so the loader can never read a YAML file outside `data/packs/`.
+    known = list_pack_ids()
+    if pack_id not in known:
+        raise FileNotFoundError(f"Pack desconhecido: {pack_id!r} (use: {known})")
     path = _data_dir() / "packs" / f"{pack_id}.yaml"
-    if not path.is_file():
-        raise FileNotFoundError(f"Pack desconhecido: {pack_id!r} (use: {list_pack_ids()})")
     raw = yaml.safe_load(path.read_text(encoding="utf-8"))
     if not isinstance(raw, dict):  # pragma: no cover - defensive: packaged pack yaml is a valid mapping
         raise ValueError(f"Pack inválido: {path}")
@@ -45,14 +50,21 @@ def load_pack(pack_id: str) -> PackDefinition:
 
 def load_template_yaml(template_id: str) -> str:
     """Conteúdo textual do template (OTM YAML)."""
+    # Same membership check as `load_pack`: only ids present in the embedded
+    # catalog are read, rejecting traversal/absolute paths at the boundary.
+    known = list_template_ids()
+    if template_id not in known:
+        raise FileNotFoundError(f"Template desconhecido: {template_id!r} (use: {known})")
     path = _data_dir() / "templates" / f"{template_id}.otm.yaml"
-    if not path.is_file():
-        raise FileNotFoundError(f"Template desconhecido: {template_id!r} (use: {list_template_ids()})")
     return path.read_text(encoding="utf-8")
 
 
 def load_template_info(template_id: str) -> TemplateInfo | None:
     """Manifest opcional `templates/<id>.meta.json`."""
+    # Unknown / traversal ids resolve to "no manifest" rather than reading the
+    # filesystem at an attacker-chosen path.
+    if template_id not in list_template_ids():
+        return None
     path = _data_dir() / "templates" / f"{template_id}.meta.json"
     if not path.is_file():
         return None  # pragma: no cover - defensive: shipped templates always have a manifest
