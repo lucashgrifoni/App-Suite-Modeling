@@ -1,6 +1,10 @@
-# Mapeamento funcional STRIDE → referências de controlo (MVP).
+# Mapeamento funcional STRIDE → referências (MVP).
 # IDs ASVS alinhados a OWASP ASVS 4.0.3; NIST CSF 2.0; ISO/IEC 27001:2022 Annex A.
 # OWASP TM: categorização metodológica (Cheat Sheet / guia STRIDE), não um ID normativo único.
+# CAPEC/CWE: padrões de ataque (MITRE CAPEC) e fraquezas (MITRE CWE) por categoria STRIDE,
+#   para rastreabilidade (STRIDE → CAPEC → CWE). Mapeamento ao nível da categoria (não por
+#   ameaça específica); assistivo, não exaustivo. control_id é o identificador canónico
+#   (ex.: CAPEC-151 -> capec.mitre.org/data/definitions/151.html; CWE-287 -> cwe.mitre.org).
 
 version: "1"
 
@@ -9,6 +13,12 @@ by_stride:
     - framework: owasp_tm
       control_id: STRIDE-S
       notes: "Tratar falsificação de identidade na matriz STRIDE e no diagrama (OWASP Threat Modeling Cheat Sheet)."
+    - framework: capec
+      control_id: CAPEC-151
+      notes: "Identity Spoofing — falsificação de identidade de um ator ou componente (MITRE CAPEC-151)."
+    - framework: cwe
+      control_id: CWE-287
+      notes: "Improper Authentication — autenticação ausente ou insuficiente (MITRE CWE-287)."
     - framework: owasp_asvs
       control_id: V2.2.1
       notes: "Verificação de identidade reforçada (MFA onde aplicável) — ASVS V2 Authentication."
@@ -32,6 +42,12 @@ by_stride:
     - framework: owasp_tm
       control_id: STRIDE-T
       notes: "Modelar alteração não autorizada de dados ou fluxos (STRIDE Tampering)."
+    - framework: capec
+      control_id: CAPEC-184
+      notes: "Software Integrity Attack — adulteração da integridade de software/dados (MITRE CAPEC-184)."
+    - framework: cwe
+      control_id: CWE-345
+      notes: "Insufficient Verification of Data Authenticity — verificação de autenticidade insuficiente (MITRE CWE-345)."
     - framework: owasp_asvs
       control_id: V5.1.1
       notes: "Validação de entrada e integridade — ASVS V5 Validation, Sanitization and Encoding."
@@ -55,6 +71,12 @@ by_stride:
     - framework: owasp_tm
       control_id: STRIDE-R
       notes: "Avaliar se atores podem negar ações; ligar a logging e auditoria."
+    - framework: capec
+      control_id: CAPEC-93
+      notes: "Log Injection-Tampering-Forging — manipulação de registos que permite repúdio (MITRE CAPEC-93)."
+    - framework: cwe
+      control_id: CWE-778
+      notes: "Insufficient Logging — registo de eventos de segurança insuficiente (MITRE CWE-778)."
     - framework: owasp_asvs
       control_id: V7.1.1
       notes: "Registo de eventos de segurança — ASVS V7 Error Handling and Logging."
@@ -75,6 +97,12 @@ by_stride:
     - framework: owasp_tm
       control_id: STRIDE-I
       notes: "Expor dados sensíveis no modelo e controlos de confidencialidade."
+    - framework: capec
+      control_id: CAPEC-118
+      notes: "Collect and Analyze Information — recolha de informação exposta (MITRE CAPEC-118)."
+    - framework: cwe
+      control_id: CWE-200
+      notes: "Exposure of Sensitive Information to an Unauthorized Actor (MITRE CWE-200)."
     - framework: owasp_asvs
       control_id: V8.3.1
       notes: "Proteção de dados sensíveis em repouso — ASVS V8 Data Protection."
@@ -98,6 +126,12 @@ by_stride:
     - framework: owasp_tm
       control_id: STRIDE-D
       notes: "Disponibilidade e abuso de recursos no modelo de ameaças."
+    - framework: capec
+      control_id: CAPEC-125
+      notes: "Flooding — exaustão de recursos por inundação (MITRE CAPEC-125)."
+    - framework: cwe
+      control_id: CWE-400
+      notes: "Uncontrolled Resource Consumption — consumo de recursos sem limite (MITRE CWE-400)."
     - framework: owasp_asvs
       control_id: V11.1.1
       notes: "Lógica de negócio e quotas — ASVS V11 Business Logic."
@@ -115,6 +149,12 @@ by_stride:
     - framework: owasp_tm
       control_id: STRIDE-E
       notes: "Rever superfícies de autorização e escalação no diagrama."
+    - framework: capec
+      control_id: CAPEC-233
+      notes: "Privilege Escalation — obtenção de privilégios acima dos autorizados (MITRE CAPEC-233)."
+    - framework: cwe
+      control_id: CWE-269
+      notes: "Improper Privilege Management — gestão de privilégios incorreta (MITRE CWE-269)."
     - framework: owasp_asvs
       control_id: V4.1.1
       notes: "Controlos de acesso — ASVS V4 Access Control."
