@@ -7,12 +7,24 @@ from .models import PremiumReportPayload
 from .report_i18n import PremiumRenderCopy, premium_render_copy
 
 
+def _md_cell(value: str) -> str:
+    """Escape a value for safe use inside a Markdown table cell.
+
+    Attacker-controlled fields (component names, threat titles) can contain a
+    pipe — which would add columns — or a line break — which would split one
+    logical row across physical lines. Escape the pipe and flatten line breaks
+    so the table structure stays intact.
+    """
+    text = value.replace("\r", " ").replace("\n", " ")
+    return text.replace("\\", "\\\\").replace("|", "\\|")
+
+
 def _md_table(headers: list[str], rows: list[list[str]], empty_msg: str) -> str:
     if not rows:
         return f"{empty_msg}\n"
-    h = "| " + " | ".join(headers) + " |\n"
+    h = "| " + " | ".join(_md_cell(x) for x in headers) + " |\n"
     sep = "| " + " | ".join("---" for _ in headers) + " |\n"
-    body = "".join("| " + " | ".join(row) + " |\n" for row in rows)
+    body = "".join("| " + " | ".join(_md_cell(c) for c in row) + " |\n" for row in rows)
     return h + sep + body
 
 

@@ -6,7 +6,14 @@ Estrutura nós/arestas: `tests/test_exporters.py` (`flowchart_mermaid`).
 
 from __future__ import annotations
 
+import re
+
 from otm_core_schema import ThreatModelDocument
+
+# Line breaks / control chars would let an attacker-controlled component or
+# data-flow name inject extra Mermaid statements (new nodes/edges) into the
+# generated diagram source.
+_LABEL_CONTROL_RE = re.compile(r"[\r\n\t\f\v]+")
 
 
 def export_flowchart_mermaid(doc: ThreatModelDocument) -> str:
@@ -35,4 +42,8 @@ def _mermaid_node_id(raw: str) -> str:
 
 
 def _mermaid_label(raw: str) -> str:
-    return raw.replace('"', "'")
+    # Collapse line breaks/control chars to a space (prevents statement injection)
+    # and neutralize the characters that terminate a label: `"` closes a quoted
+    # node label and `|` closes an unquoted edge label.
+    text = _LABEL_CONTROL_RE.sub(" ", raw)
+    return text.replace('"', "'").replace("|", "/")
