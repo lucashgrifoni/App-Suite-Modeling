@@ -45,7 +45,8 @@ def build_import_app() -> typer.Typer:
         name="import",
         help=(
             "Assisted import: build a canonical [bold]draft[/bold] "
-            "from artifacts (OpenAPI, Terraform, K8s) or [cyan]repo[/cyan] (Node/Express signals)."
+            "from artifacts (OpenAPI, Terraform, K8s) or [cyan]repo[/cyan] (Node/Express signals); "
+            "or convert an [cyan]otm[/cyan] (Open Threat Model) file losslessly."
         ),
         no_args_is_help=True,
     )
@@ -123,6 +124,29 @@ def build_import_app() -> typer.Typer:
             exit_on_cli_error(console, e)
 
         _emit_draft(yaml_text, explain_payload, output=output, explain_out=explain_out)
+
+    @import_cmd.command("otm")
+    def cmd_import_otm(
+        spec: Annotated[Path, typer.Argument(help="Open Threat Model (OTM 0.2.0) file (YAML or JSON).")],
+        output: Annotated[
+            Path | None,
+            typer.Option("--output", "-o", help="Write canonical `.otm.yaml`."),
+        ] = None,
+    ) -> None:
+        """Convert an Open Threat Model (IriusRisk OTM) file into the canonical format."""
+        try:
+            yaml_text = import_app.import_otm(spec)
+        except CliUserError as e:
+            exit_on_cli_error(console, e)
+
+        if output:
+            try:
+                write_text_file(content=yaml_text, output=output)
+            except CliUserError as e:
+                exit_on_cli_error(console, e)
+            console.print(f"[green]Imported OTM[/green] → {output.resolve()}")
+        else:
+            print(yaml_text, end="")
 
     @import_cmd.command("repo")
     def cmd_import_repo(

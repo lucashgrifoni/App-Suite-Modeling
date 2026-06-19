@@ -81,6 +81,30 @@ def import_kubernetes(target: Path) -> tuple[str, dict[str, Any] | None, list[An
     return yaml_text, explain_payload, list(result.inferences)
 
 
+def import_otm(path: Path) -> str:
+    """Convert an Open Threat Model (OTM 0.2.0) file into a canonical `.otm.yaml`."""
+    from otm_artifact_import.otm_native import import_otm_text
+    from pydantic import ValidationError
+
+    if not path.is_file():
+        raise CliUserError(
+            exit_code=1,
+            failed="OTM file.",
+            cause=f"not a file: {path}",
+            next_step=_CONFIRM_PATH,
+        )
+    try:
+        doc = import_otm_text(path.read_text(encoding="utf-8"))
+    except (ValueError, ValidationError) as e:
+        raise CliUserError(
+            exit_code=1,
+            failed=f"OTM import of `{path}`.",
+            cause=str(e),
+            next_step="confirm the file is a valid Open Threat Model (otm-0.2.0) document.",
+        ) from e
+    return dump_document_to_yaml(doc)
+
+
 def scan_repo(root: Path) -> dict[str, Any]:
     from otm_artifact_import import scan_node_express_repo
 

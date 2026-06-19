@@ -20,6 +20,7 @@ class ExportFormat(StrEnum):
     yaml = "yaml"
     json = "json"
     md = "md"
+    otm = "otm"
 
 
 class MethodologyOption(StrEnum):
