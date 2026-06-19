@@ -41,6 +41,9 @@ concurrency:
 jobs:
   analysis:
     name: Scorecard analysis
+    # OpenSSF Scorecard targets public OSS posture (and the badge / public API).
+    # Skip gracefully while the repo is private; it re-activates when public.
+    if: ${{ github.event.repository.private == false }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:

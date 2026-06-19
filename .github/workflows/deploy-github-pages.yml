@@ -43,6 +43,10 @@ env:
 jobs:
   build:
     name: Build GitHub Pages artifact
+    # GitHub Pages publishing is unavailable on user-owned private repositories.
+    # Skip the whole pipeline gracefully while private (deploy `needs: build`, so
+    # it skips too); it re-activates automatically when the repo is public.
+    if: ${{ github.event.repository.private == false }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:

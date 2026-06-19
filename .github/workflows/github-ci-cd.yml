@@ -178,7 +178,10 @@ jobs:
         run: npm run ci:build:portable
 
       - name: Attest UI build provenance (SLSA)
-        if: runner.os != 'Windows' && github.event_name != 'pull_request'
+        # SLSA build-provenance attestation is unavailable on user-owned private
+        # repositories (it requires a public repo). Skip it gracefully when the
+        # repo is private so the build stays green; it re-activates when public.
+        if: runner.os != 'Windows' && github.event_name != 'pull_request' && github.event.repository.private == false
         uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
         with:
           subject-path: apps/web/dist/**
