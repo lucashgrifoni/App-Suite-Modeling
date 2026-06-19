@@ -7,6 +7,7 @@ from typing import Annotated
 
 import typer
 from otm_core_schema.enums import ThreatModelMethodology
+from otm_exporters import export_analysis_sarif
 from otm_framework_mappings import framework_display_name
 from otm_threat_engine.result import AnalysisResult
 from rich.panel import Panel
@@ -14,7 +15,7 @@ from rich.panel import Panel
 from otm_cli.application.analyze_service import run_analyze
 from otm_cli.commands.bootstrap import console
 from otm_cli.commands.handle_errors import exit_on_cli_error
-from otm_cli.shared.emit import write_json_file
+from otm_cli.shared.emit import write_json_file, write_text_file
 from otm_cli.shared.enums import MethodologyOption
 from otm_cli.shared.errors import CliUserError
 
@@ -27,6 +28,15 @@ def _emit_json_output(result: AnalysisResult, json_out: Path, *, quiet: bool) ->
         exit_on_cli_error(console, e)
     if not quiet:
         console.print(f"[green]Analysis written to[/green] {json_out.resolve()}")
+
+
+def _emit_sarif_output(result: AnalysisResult, sarif_out: Path, *, quiet: bool) -> None:
+    try:
+        write_text_file(content=export_analysis_sarif(result), output=sarif_out)
+    except CliUserError as e:
+        exit_on_cli_error(console, e)
+    if not quiet:
+        console.print(f"[green]SARIF written to[/green] {sarif_out.resolve()}")
 
 
 def _emit_analysis_panel(result: AnalysisResult) -> None:
@@ -93,6 +103,11 @@ def register(app: typer.Typer) -> None:
             "--json-out",
             help="Write full analysis result to JSON.",
         ),
+        sarif_out: Path | None = typer.Option(
+            None,
+            "--sarif-out",
+            help="Write suggested threats as SARIF 2.1.0 (e.g. for GitHub code scanning).",
+        ),
         pack: str | None = typer.Option(
             None,
             "--pack",
@@ -135,6 +150,8 @@ def register(app: typer.Typer) -> None:
 
         if json_out:
             _emit_json_output(result, json_out, quiet=quiet)
+        if sarif_out:
+            _emit_sarif_output(result, sarif_out, quiet=quiet)
         if quiet:
             raise typer.Exit(0)
 

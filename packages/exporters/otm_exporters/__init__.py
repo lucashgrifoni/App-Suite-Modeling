@@ -17,6 +17,10 @@ from otm_exporters.analysis_markdown import (
     export_analysis_markdown,
     export_document_and_analysis_markdown,
 )
+from otm_exporters.analysis_sarif import (
+    export_analysis_sarif,
+    export_analysis_sarif_obj,
+)
 from otm_exporters.bundle_json import (
     export_bundle_json,
     export_threat_model_bundle_json,
@@ -41,6 +45,8 @@ __all__ = [
     "export_analysis_json",
     "export_analysis_json_obj",
     "export_analysis_markdown",
+    "export_analysis_sarif",
+    "export_analysis_sarif_obj",
     "export_bundle_json",
     "export_document_and_analysis_markdown",
     "export_document_json",
