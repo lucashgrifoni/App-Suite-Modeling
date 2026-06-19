@@ -163,7 +163,7 @@ def otm_to_document(otm: dict[str, Any]) -> ThreatModelDocument:
         assets.append(Asset(id=aid, name=str(a.get("name") or a["id"]), description=a.get("description")))
 
     return ThreatModelDocument(
-        model=ModelInfo(),
+        model_info=ModelInfo(),
         metadata=Metadata(title=title, summary=summary, tags=["imported", "otm"]),
         components=components,
         data_flows=flows,
