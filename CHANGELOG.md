@@ -6,7 +6,7 @@ This project follows **Keep a Changelog** and **Semantic Versioning**.
 
 ---
 
-## [Unreleased]
+## [7.7.0] — 2026-07-09
 
 ### Added
 - **Threat traceability (CAPEC/CWE):** every generated STRIDE threat now carries a MITRE **CAPEC** attack-pattern and **CWE** weakness reference (e.g. Spoofing → `CAPEC-151` / `CWE-287`, Information Disclosure → `CAPEC-118` / `CWE-200`), alongside the existing OWASP ASVS / NIST CSF / ISO 27001 control references. Surfaced in `framework_ref_counts_by_catalog` and in the Markdown/JSON exports. Implemented data-driven via the STRIDE map — **no schema or OpenAPI contract change**. First step of the documented evolution plan ([docs/internal/reports/IMPROVEMENT_RESEARCH_2026-06.md](docs/internal/reports/IMPROVEMENT_RESEARCH_2026-06.md)).
