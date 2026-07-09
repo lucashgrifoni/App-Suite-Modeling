@@ -44,6 +44,32 @@ def test_ai_map_shape_is_valid_and_ids_are_wellformed() -> None:
                 raise AssertionError(f"{hid}: unexpected framework {r.framework} in AI map")
 
 
+def test_atlas_notes_use_current_canonical_technique_names() -> None:
+    """Regression: AML.T0024 shipped as 'Exfiltration via ML Inference API'.
+
+    MITRE ATLAS renamed several techniques from 'ML' to 'AI'; per the canonical
+    `mitre-atlas/atlas-data` (dist/ATLAS.yaml), AML.T0024 is 'Exfiltration via AI
+    Inference API'. The note is a user-facing factual claim, so guard the rename.
+    """
+    reg = default_ai_heuristic_registry()
+    expected_names = {
+        "AML.T0051": "LLM Prompt Injection",
+        "AML.T0024": "Exfiltration via AI Inference API",
+        "AML.T0034": "Cost Harvesting",
+    }
+    seen: set[str] = set()
+    for refs in reg._by_heuristic.values():  # noqa: SLF001 - test asserts packaged data shape
+        for r in refs:
+            if r.framework != "mitre_atlas":
+                continue
+            seen.add(r.control_id)
+            note = r.notes or ""
+            want = expected_names[r.control_id]
+            assert want in note, f"{r.control_id}: note must name it '{want}'"
+            assert "ML Inference API" not in note, f"{r.control_id}: stale pre-rename ATLAS name"
+    assert seen == set(expected_names), f"ATLAS ids in map ({seen}) drifted from the verified set"
+
+
 def test_plot4ai_threats_carry_owasp_llm_refs_additively() -> None:
     doc = load_document_from_yaml_path(_LLM_EXAMPLE)
     result = analyze_document(doc, methodology=ThreatModelMethodology.PLOT4AI)

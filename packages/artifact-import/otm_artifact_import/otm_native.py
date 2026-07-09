@@ -10,6 +10,12 @@ Scope: the structural model — project/metadata, trust zones, components,
 dataflows, assets. OTM `threats`/`mitigations` are user-authored content; they
 are not re-mapped here (our engine derives threats), but the round-trip of the
 architecture is faithful.
+
+Known fidelity limits on export (`document_to_otm`): OTM expresses risk as 0-100
+integers while the canonical document uses enums, so asset
+`data_classification`/`business_criticality` and trust-boundary trust level are
+emitted as the neutral constant 50 rather than translated. Re-importing therefore
+restores the architecture, not those risk attributes.
 """
 
 from __future__ import annotations
@@ -33,6 +39,23 @@ from otm_artifact_import.builders import slug_id
 OTM_VERSION = "0.2.0"
 _DEFAULT_TRUST_RATING = 50
 _DEFAULT_ASSET_RISK = 50
+
+
+def _entries(otm: dict[str, Any], key: str) -> list[Any]:
+    """Read an OTM collection, rejecting a present-but-non-array value.
+
+    Absent/null means "no entries". Anything else must be an array: a truthy scalar
+    (`components: 5`) would otherwise raise `TypeError: 'int' object is not iterable`,
+    and a string or mapping would silently iterate its characters/keys. Raising here
+    (rather than coercing to `[]`) keeps a malformed file from importing as an empty
+    model — the caller turns this into a friendly error.
+    """
+    value = otm.get(key)
+    if value is None:
+        return []
+    if not isinstance(value, list):
+        raise ValueError(f"OTM field `{key}` must be an array, got {type(value).__name__}.")
+    return value
 
 
 def _kind_from_otm_type(otm_type: Any) -> ComponentKind:
@@ -94,7 +117,7 @@ def otm_to_document(otm: dict[str, Any]) -> ThreatModelDocument:
 
     boundaries: list[TrustBoundary] = []
     boundary_ids: set[str] = set()
-    for tz in otm.get("trustZones") or []:
+    for tz in _entries(otm, "trustZones"):
         if not isinstance(tz, dict) or tz.get("id") is None:
             continue
         bid = remap(tz["id"], prefix="tz")
@@ -107,7 +130,7 @@ def otm_to_document(otm: dict[str, Any]) -> ThreatModelDocument:
 
     components: list[Component] = []
     comp_ids: set[str] = set()
-    for c in otm.get("components") or []:
+    for c in _entries(otm, "components"):
         if not isinstance(c, dict) or c.get("id") is None:
             continue
         cid = remap(c["id"], prefix="comp")
@@ -130,7 +153,7 @@ def otm_to_document(otm: dict[str, Any]) -> ThreatModelDocument:
 
     flows: list[DataFlow] = []
     flow_ids: set[str] = set()
-    for df in otm.get("dataflows") or []:
+    for df in _entries(otm, "dataflows"):
         if not isinstance(df, dict) or df.get("id") is None:
             continue
         src = remap(df["source"], prefix="comp") if df.get("source") is not None else None
@@ -153,7 +176,7 @@ def otm_to_document(otm: dict[str, Any]) -> ThreatModelDocument:
 
     assets: list[Asset] = []
     asset_ids: set[str] = set()
-    for a in otm.get("assets") or []:
+    for a in _entries(otm, "assets"):
         if not isinstance(a, dict) or a.get("id") is None:
             continue
         aid = remap(a["id"], prefix="asset")

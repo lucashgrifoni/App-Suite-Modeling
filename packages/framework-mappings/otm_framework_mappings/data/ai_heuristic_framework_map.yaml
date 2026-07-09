@@ -12,8 +12,10 @@
 #             LLM07 System Prompt Leakage, LLM08 Vector and Embedding Weaknesses,
 #             LLM09 Misinformation, LLM10 Unbounded Consumption.
 # mitre_atlas : MITRE ATLAS techniques (ex.: AML.T0051 -> atlas.mitre.org).
+#             Nomes conforme `mitre-atlas/atlas-data` (dist/ATLAS.yaml), a fonte
+#             canónica — a MITRE renomeou algumas técnicas de "ML" para "AI".
 #             Incluídas apenas técnicas com id verificado: AML.T0051
-#             (LLM Prompt Injection), AML.T0024 (Exfiltration via ML Inference
+#             (LLM Prompt Injection), AML.T0024 (Exfiltration via AI Inference
 #             API), AML.T0034 (Cost Harvesting).
 #
 # Mapeamento assistivo ao nível da heurística; rastreabilidade, não exaustivo.
@@ -80,7 +82,7 @@ by_heuristic:
       notes: "Cost Harvesting — elevar custo do serviço de IA além da capacidade normal (MITRE ATLAS, tática Impact)."
     - framework: mitre_atlas
       control_id: AML.T0024
-      notes: "Exfiltration via ML Inference API — extração de comportamento/modelo via API de inferência (MITRE ATLAS)."
+      notes: "Exfiltration via AI Inference API — extração de comportamento/modelo via API de inferência (MITRE ATLAS)."
 
   plot4ai_agent_tool_execution:
     - framework: owasp_llm

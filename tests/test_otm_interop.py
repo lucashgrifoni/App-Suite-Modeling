@@ -87,6 +87,39 @@ def test_import_otm_text_rejects_non_mapping() -> None:
         import_otm_text("- just\n- a\n- list\n")
 
 
+def test_otm_collection_key_must_be_an_array_not_a_scalar() -> None:
+    """Regression: a truthy non-list collection value used to raise an uncaught TypeError.
+
+    `for x in otm.get(key) or []` only substituted falsy values, so `components: 5` reached
+    the loop and crashed. A str/dict silently iterated characters/keys instead. Both now
+    raise a ValueError the CLI renders as a friendly error, rather than importing an empty
+    model (silent data loss) or printing a stack trace.
+    """
+    import pytest
+
+    for key in ("trustZones", "components", "dataflows", "assets"):
+        for bad in (5, 1.5, True, "abc", {"a": 1}):
+            with pytest.raises(ValueError, match=f"`{key}` must be an array"):
+                otm_to_document({"project": {"id": "p", "name": "P"}, key: bad})
+
+    # Absent / null / empty stay valid and mean "no entries".
+    for value in (None, []):
+        doc = otm_to_document({"project": {"id": "p", "name": "P"}, "components": value})
+        assert doc.components == []
+
+
+def test_cli_import_otm_malformed_collection_is_a_friendly_error(tmp_path: Path) -> None:
+    """The CLI must surface a CliUserError (exit 1), never an unhandled TypeError traceback."""
+    bad = tmp_path / "hostile.otm.yaml"
+    bad.write_text('otmVersion: "0.2.0"\nproject:\n  id: p\n  name: Demo\ndataflows: 3\n', encoding="utf-8")
+
+    r = CliRunner().invoke(app, ["import", "otm", str(bad), "-o", str(tmp_path / "out.yaml")])
+    assert r.exit_code == 1
+    combined = (r.stdout or "") + (r.stderr or "")
+    assert "must be an array" in combined
+    assert "Traceback" not in combined and "TypeError" not in combined
+
+
 def test_cli_export_otm_then_import_round_trip(tmp_path: Path) -> None:
     runner = CliRunner()
     otm_file = tmp_path / "model.otm.json"

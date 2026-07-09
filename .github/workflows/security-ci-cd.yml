@@ -24,11 +24,15 @@
 #                       read-only token and NO repository secrets, so
 #                       secret-dependent (Snyk) and security-events:write
 #                       (SARIF upload, dependency-review) steps fail-closed.
-#   The Snyk jobs additionally PROBE the token at `snyk auth`: a present-but-
-#   unusable SNYK_TOKEN (expired / deprovisioned -> SNYK-0005 / HTTP 401) skips
-#   the scan with a Step Summary note instead of reddening every push. Snyk
-#   stays a hard gate whenever the token authenticates; rotate the secret to
-#   restore coverage (the skip is loud, never silent).
+#   The Snyk jobs additionally PROBE the token at `snyk auth` and split the two
+#   failure classes:
+#     - auth rejection (expired / deprovisioned -> SNYK-0005 / HTTP 401): the scan
+#       structurally cannot run, so it SKIPS with a Step Summary note instead of
+#       reddening every push. Rotate the secret to restore coverage.
+#     - any other error (Snyk outage, 429 rate-limit, DNS/TLS): the scan COULD have
+#       run, so the job FAILS CLOSED and loud. A transient error must never drop
+#       Snyk coverage behind a green check.
+#   Snyk stays a hard gate on real findings whenever the token authenticates.
 #   The actual SCANNERS still hard-gate on real findings (Trivy exit-code,
 #   Semgrep --error, Snyk threshold, KICS fail_on). Only the steps that
 #   STRUCTURALLY cannot run in a given context are skipped, so a green run
@@ -232,20 +236,32 @@ jobs:
       - name: Authenticate Snyk
         id: snyk_auth
         if: ${{ needs.preflight.outputs.is_dependabot == 'false' && env.SNYK_TOKEN != '' }}
-        # Probe the token. A present-but-unusable token (expired / deprovisioned,
-        # Snyk SNYK-0005 / HTTP 401) must SKIP the scan honestly, not redden every
-        # push forever — the same graceful-degradation contract as the code-scanning
-        # gates above. Snyk stays a hard gate whenever the token authenticates.
+        # Probe the token, and distinguish the two failure classes:
+        #   - AUTH REJECTION (expired / deprovisioned token -> SNYK-0005 / HTTP 401):
+        #     structurally cannot run. Skip the scan with a Step Summary note instead of
+        #     reddening every push forever — same contract as the code-scanning gates above.
+        #   - ANY OTHER failure (Snyk outage, 429 rate-limit, DNS/TLS/network): the gate
+        #     COULD have run. Fail closed and loud, so a transient error never silently
+        #     drops Snyk coverage behind a green check.
+        # Snyk stays a hard gate on real findings whenever the token authenticates.
         run: |
-          if snyk auth "$SNYK_TOKEN"; then
+          set +e
+          auth_out="$(snyk auth "$SNYK_TOKEN" 2>&1)"
+          auth_rc=$?
+          set -e
+          if [ "$auth_rc" -eq 0 ]; then
             echo "ok=true" >> "$GITHUB_OUTPUT"
-          else
+          elif printf '%s' "$auth_out" | grep -qiE 'SNYK-0005|401|authentication error|not recognized|not provisioned'; then
             echo "ok=false" >> "$GITHUB_OUTPUT"
             {
               echo "### Snyk Code skipped - SNYK_TOKEN not usable"
-              echo "\`snyk auth\` failed (token present but unauthorized - e.g. expired or deprovisioned)."
+              echo "\`snyk auth\` was rejected (token present but unauthorized - expired or deprovisioned)."
               echo "Rotate the \`SNYK_TOKEN\` secret to restore Snyk coverage. Scan skipped, not failed."
             } >> "$GITHUB_STEP_SUMMARY"
+          else
+            printf '%s\n' "$auth_out"
+            echo "::error::snyk auth failed for a non-authentication reason (exit ${auth_rc}). Failing closed so the Snyk gate is not silently dropped."
+            exit "$auth_rc"
           fi
 
       - name: Run Snyk Code
@@ -336,20 +352,27 @@ jobs:
       - name: Authenticate Snyk
         id: snyk_auth
         if: ${{ needs.preflight.outputs.is_dependabot == 'false' && env.SNYK_TOKEN != '' }}
-        # Probe the token. A present-but-unusable token (expired / deprovisioned,
-        # Snyk SNYK-0005 / HTTP 401) must SKIP the scan honestly, not redden every
-        # push forever — the same graceful-degradation contract as the code-scanning
-        # gates above. Snyk stays a hard gate whenever the token authenticates.
+        # Same two-class probe as the Snyk Code job: skip only on a genuine auth
+        # rejection; fail closed on any other error so an outage or rate-limit
+        # cannot silently drop the Snyk gate behind a green check.
         run: |
-          if snyk auth "$SNYK_TOKEN"; then
+          set +e
+          auth_out="$(snyk auth "$SNYK_TOKEN" 2>&1)"
+          auth_rc=$?
+          set -e
+          if [ "$auth_rc" -eq 0 ]; then
             echo "ok=true" >> "$GITHUB_OUTPUT"
-          else
+          elif printf '%s' "$auth_out" | grep -qiE 'SNYK-0005|401|authentication error|not recognized|not provisioned'; then
             echo "ok=false" >> "$GITHUB_OUTPUT"
             {
               echo "### Snyk Open Source skipped - SNYK_TOKEN not usable"
-              echo "\`snyk auth\` failed (token present but unauthorized - e.g. expired or deprovisioned)."
+              echo "\`snyk auth\` was rejected (token present but unauthorized - expired or deprovisioned)."
               echo "Rotate the \`SNYK_TOKEN\` secret to restore Snyk coverage. Scan skipped, not failed."
             } >> "$GITHUB_STEP_SUMMARY"
+          else
+            printf '%s\n' "$auth_out"
+            echo "::error::snyk auth failed for a non-authentication reason (exit ${auth_rc}). Failing closed so the Snyk gate is not silently dropped."
+            exit "$auth_rc"
           fi
 
       - name: Run Snyk Open Source scan
