@@ -6,6 +6,8 @@ import html
 import re
 from typing import Literal
 
+from otm_threat_engine.severity import severity_for_score
+
 from .branding import report_logo_data_uri
 from .enums import ReportLevel
 from .models import PremiumReportPayload, TopRiskItem
@@ -260,16 +262,11 @@ def _esc(s: str) -> str:
 
 
 def _severity_band(score: float | None) -> tuple[str, str]:
-    """(label, css_class) for table column."""
+    """(label, css_class) for table column — derived from the engine's canonical band."""
     if score is None:
         return "—", "sev-low"
-    if score >= 20:
-        return "Critical", "sev-critical"
-    if score >= 15:
-        return "High", "sev-high"
-    if score >= 9:
-        return "Medium", "sev-medium"
-    return "Low", "sev-low"
+    band = severity_for_score(score)
+    return band.capitalize(), f"sev-{band}"
 
 
 def _tier_badge_class(tier: str) -> str:

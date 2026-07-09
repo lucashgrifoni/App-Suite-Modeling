@@ -19,6 +19,7 @@ from otm_threat_engine.analysis_diff import diff_analysis_results
 from otm_threat_engine.methodologies import recommend_methodology
 from otm_threat_engine.result import AnalysisResult, HeuristicThreat
 from otm_threat_engine.semantic_comparison import semantic_diff_from_analyses_only
+from otm_threat_engine.severity import severity_for_score
 
 from .dedupe import build_dedupe_groups
 from .enums import ReportLevel
@@ -60,13 +61,8 @@ def _app_version() -> str:
 
 
 def _band_for_score(raw: float) -> str:
-    if raw >= 20:
-        return "critical"
-    if raw >= 15:
-        return "high"
-    if raw >= 9:
-        return "medium"
-    return "low"
+    """Delegates to the engine's canonical band so the report and `otm analyze` agree."""
+    return severity_for_score(raw)
 
 
 def _severity_band(t: HeuristicThreat) -> str:

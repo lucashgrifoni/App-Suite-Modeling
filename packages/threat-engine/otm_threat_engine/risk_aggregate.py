@@ -8,6 +8,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field
 
 from otm_threat_engine.result import AnalysisResult, HeuristicThreat
+from otm_threat_engine.severity import severity_for_score
 
 
 def _active(h: HeuristicThreat) -> bool:
@@ -15,13 +16,7 @@ def _active(h: HeuristicThreat) -> bool:
 
 
 def _severity_bucket(score: float) -> str:
-    if score >= 20:
-        return "critical"
-    if score >= 12:
-        return "high"
-    if score >= 6:
-        return "medium"
-    return "low"
+    return severity_for_score(score)
 
 
 class AggregateRiskSummary(BaseModel):

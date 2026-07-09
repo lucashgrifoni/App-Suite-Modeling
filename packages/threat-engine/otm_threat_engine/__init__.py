@@ -41,6 +41,13 @@ from otm_threat_engine.result import (
     StructuralFinding,
     TrustBoundaryFinding,
 )
+from otm_threat_engine.severity import (
+    SEVERITY_ORDER,
+    Severity,
+    severity_at_least,
+    severity_for_score,
+    severity_rank,
+)
 from otm_threat_engine.threat_model_comparison import compare_threat_models
 from otm_threat_engine.version import ENGINE_VERSION
 
@@ -67,4 +74,9 @@ __all__ = [
     "MethodologyRecommendation",
     "merge_heuristic_threats",
     "recommend_methodology",
+    "SEVERITY_ORDER",
+    "Severity",
+    "severity_at_least",
+    "severity_for_score",
+    "severity_rank",
 ]

@@ -6,6 +6,16 @@ This project follows **Keep a Changelog** and **Semantic Versioning**.
 
 ---
 
+## [Unreleased]
+
+### Fixed
+- **One canonical severity band.** The engine banded threats `critical ≥ 20 / high ≥ 12 / medium ≥ 6`, while the premium report banded them `critical ≥ 20 / high ≥ 15 / medium ≥ 9`. The same threat scoring `12` was therefore reported as **high** by `otm analyze` (and in `summary.severity_distribution`, the JSON/API contract, and the SARIF levels) but as **medium** by the premium report and its HTML. A new `otm_threat_engine.severity.severity_for_score` is now the single source of truth, and the engine aggregate, the premium payload (`by_severity_band`), and the premium HTML all delegate to it. The engine band wins because it feeds the machine-readable contract; the practical effect is that premium reports now label scores `6–8` as *medium* (was *low*) and `12–14` as *high* (was *medium*) — a more conservative, and now consistent, labelling. No test previously discriminated the two bands, which is why the divergence survived; boundary tests were added.
+
+### Added
+- **`severity_for_score` / `severity_at_least` / `SEVERITY_ORDER`** exported from `otm_threat_engine`, so any surface (reports, exporters, CI gates) can label severity without redefining the thresholds.
+
+---
+
 ## [7.7.0] — 2026-07-09
 
 ### Added
