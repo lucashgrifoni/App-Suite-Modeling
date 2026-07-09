@@ -14,6 +14,12 @@ Documento objetivo para utilizadores e mantenedores. Complementa o [congelamento
 - **PLOT4ai:** matching “token-safe” reduz ruído; textos ambíguos ou muito curtos ainda podem gerar sinais imperfeitos (ver `features/PLOT4AI_AI_SYSTEM.md`).
 - **Maturidade variável:** STRIDE é o mais maduro; outras metodologias são **Evolving** ou **Specialized** (ver matriz em `internal/decisions/RELEASE_SCOPE_FREEZE.md`).
 
+## Gate de deriva na CI (`otm diff --fail-on`)
+
+- **Renomear componentes ou fluxos gera ruído:** o id da heurística deriva do alvo, logo renomear um componente muda a assinatura da ameaça e ela aparece como **nova**. O relatório do gate mostra as remoções emparelhadas, tornando o rename evidente, mas o build reprova. Renomeie em PRs separados das mudanças de arquitectura.
+- **Só é significativo dentro de uma versão do motor:** heurísticas evoluem entre versões. `otm diff --with-analysis` analisa ambos os lados no mesmo processo (seguro); `otm diff-analysis` recusa gatear dois `analyze.json` com `engine_version` diferente (exit `1`).
+- **O gate herda os limites das heurísticas:** um gate verde significa "nenhuma ameaça *heurística* nova acima do limiar", não "o modelo é seguro". Ver `CI_AND_SECURITY_EVIDENCE.md` §8.
+
 ## Import de artefatos
 
 - **Rascunho, não verdade:** imports produzem `.otm.yaml` para revisão; nomes, trust boundaries e classificação de dados podem exigir ajuste manual.

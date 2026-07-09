@@ -81,6 +81,33 @@ def _methodology_insights_delta(baseline: AnalysisResult, revised: AnalysisResul
     )
 
 
+def _pair_signature_remaps(
+    b_act: dict[str, HeuristicThreat],
+    a_act: dict[str, HeuristicThreat],
+    *,
+    added_ids: list[str],
+    removed_ids: list[str],
+) -> dict[str, str]:
+    """1:1 pairing `added_id -> removed_id` for threats that only changed id.
+
+    Two entities are the same threat when their signature (stride, targets, title) matches.
+    Pairing is one-to-one and deterministic: ids are iterated in sorted order and a removed
+    id, once claimed, cannot be claimed again. The signature deliberately excludes the score,
+    so a paired threat may still have *worsened* — callers must compare scores rather than
+    assume a remap is a no-op.
+    """
+    rem_by_sig: dict[tuple[Any, ...], list[str]] = {}
+    for hid in removed_ids:
+        rem_by_sig.setdefault(_heuristic_signature(b_act[hid]), []).append(hid)
+
+    pairs: dict[str, str] = {}
+    for hid in added_ids:
+        bucket = rem_by_sig.get(_heuristic_signature(a_act[hid]))
+        if bucket:
+            pairs[hid] = bucket.pop(0)
+    return pairs
+
+
 def _build_heuristic_section(
     b_act: dict[str, HeuristicThreat],
     a_act: dict[str, HeuristicThreat],
@@ -88,14 +115,45 @@ def _build_heuristic_section(
     added_ids: list[str],
     removed_ids: list[str],
     common: set[str],
+    remap_pairs: dict[str, str],
 ) -> HeuristicThreatDeltaSection:
     section = HeuristicThreatDeltaSection()
+    removed_to_added = {removed: added for added, removed in remap_pairs.items()}
+
     for hid in added_ids:
-        section.added.append(HeuristicThreatDelta(threat_id=hid, change="added", score_after=a_act[hid].risk.score))
-    for hid in removed_ids:
-        section.removed.append(
-            HeuristicThreatDelta(threat_id=hid, change="removed", score_before=b_act[hid].risk.score)
+        paired = remap_pairs.get(hid)
+        after = a_act[hid].risk.score
+        if paired is None:
+            section.added.append(HeuristicThreatDelta(threat_id=hid, change="added", score_after=after))
+            continue
+        # Same threat, new id. Carry the baseline score so consumers (e.g. the CI gate) can
+        # tell an inert rename from a rename that also raised the risk.
+        before = b_act[paired].risk.score
+        delta = None if before is None or after is None else float(after) - float(before)
+        section.added.append(
+            HeuristicThreatDelta(
+                threat_id=hid,
+                change="added",
+                match_kind="signature_remap",
+                paired_id=paired,
+                score_before=before,
+                score_after=after,
+                score_delta=delta,
+            )
         )
+
+    for hid in removed_ids:
+        paired_add = removed_to_added.get(hid)
+        section.removed.append(
+            HeuristicThreatDelta(
+                threat_id=hid,
+                change="removed",
+                match_kind="signature_remap" if paired_add else "id",
+                paired_id=paired_add,
+                score_before=b_act[hid].risk.score,
+            )
+        )
+
     for hid in sorted(common):
         ch = _field_changes_heuristic(b_act[hid], a_act[hid])
         if not ch:
@@ -116,26 +174,13 @@ def _build_heuristic_section(
     return section
 
 
-def _signature_remap_hints(
-    b_act: dict[str, HeuristicThreat],
-    a_act: dict[str, HeuristicThreat],
-    *,
-    added_ids: list[str],
-    removed_ids: list[str],
-) -> list[str]:
-    hints: list[str] = []
-    rem_by_sig: dict[tuple[Any, ...], str] = {}
-    for hid in removed_ids:
-        rem_by_sig[_heuristic_signature(b_act[hid])] = hid
-    for hid in added_ids:
-        sig = _heuristic_signature(a_act[hid])
-        if sig in rem_by_sig:
-            ob = rem_by_sig[sig]
-            hints.append(
-                f"Possível remapeamento de heurística: baseline `{ob}` → revisão `{hid}` "
-                f"(mesma assinatura: stride/alvos/título)."
-            )
-    return hints
+def _signature_remap_hints(remap_pairs: dict[str, str]) -> list[str]:
+    """Human-readable hints, derived from the same 1:1 pairing the deltas carry."""
+    return [
+        f"Possível remapeamento de heurística: baseline `{removed}` → revisão `{added}` "
+        f"(mesma assinatura: stride/alvos/título)."
+        for added, removed in remap_pairs.items()
+    ]
 
 
 def diff_analysis_results(baseline: AnalysisResult, revised: AnalysisResult) -> AnalysisDiff:
@@ -164,8 +209,11 @@ def diff_analysis_results(baseline: AnalysisResult, revised: AnalysisResult) -> 
     if max_b is not None or max_a is not None:
         max_delta = float(max_a or 0.0) - float(max_b or 0.0)
 
-    section = _build_heuristic_section(b_act, a_act, added_ids=added_ids, removed_ids=removed_ids, common=common)
-    hints = _signature_remap_hints(b_act, a_act, added_ids=added_ids, removed_ids=removed_ids)
+    remap_pairs = _pair_signature_remaps(b_act, a_act, added_ids=added_ids, removed_ids=removed_ids)
+    section = _build_heuristic_section(
+        b_act, a_act, added_ids=added_ids, removed_ids=removed_ids, common=common, remap_pairs=remap_pairs
+    )
+    hints = _signature_remap_hints(remap_pairs)
 
     cats_b = baseline.summary.framework_ref_counts_by_catalog
     cats_a = revised.summary.framework_ref_counts_by_catalog

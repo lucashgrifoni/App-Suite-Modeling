@@ -9,6 +9,7 @@ from typing import Any
 from otm_core_schema import diff_documents
 from otm_exporters import export_comparison_markdown
 from otm_threat_engine import AnalysisResult, analyze_document
+from otm_threat_engine.comparison_models import AnalysisDiff
 from otm_threat_engine.threat_model_comparison import compare_threat_models
 
 from otm_cli.shared.document_loader import load_otm_document, load_pack_or_raise
@@ -144,13 +145,14 @@ def run_model_diff(
     pack: str | None,
     fmt: DiffFormat,
     summary_only: bool,
-) -> tuple[dict, str | None, str | None, str | None]:
+) -> tuple[dict, str | None, str | None, str | None, AnalysisDiff | None]:
     """
-    Return (out_payload, json_body_to_print, markdown_body, text_panel_body).
+    Return (out_payload, json_body_to_print, markdown_body, text_panel_body, analysis_diff).
 
     json_body_to_print: only when fmt==json (preformatted string).
     markdown_body: only when fmt==markdown.
     text_panel_body: multi-line text for Panel in text mode.
+    analysis_diff: heuristic/risk delta, present only when `with_analysis` — what the CI gate evaluates.
     """
     doc_a = load_otm_document(
         baseline,
@@ -183,17 +185,19 @@ def run_model_diff(
     else:
         out_payload = diff_documents(doc_a, doc_b).model_dump(mode="json")
 
+    analysis_diff = full.analysis
+
     if fmt == DiffFormat.json:
-        return out_payload, json.dumps(out_payload, indent=2, ensure_ascii=False), None, None
+        return out_payload, json.dumps(out_payload, indent=2, ensure_ascii=False), None, None, analysis_diff
 
     if fmt == DiffFormat.markdown:
-        return out_payload, None, export_comparison_markdown(full), None
+        return out_payload, None, export_comparison_markdown(full), None, analysis_diff
 
     if summary_only:
         lines2 = [full.summary.headline, "", "Insights:"]
         for ins in full.key_insights[:25]:
             lines2.append(f"- {ins}")
-        return out_payload, None, None, "\n".join(lines2)
+        return out_payload, None, None, "\n".join(lines2), analysis_diff
 
     result = full.structural
     lines = _diff_header_lines(full, with_analysis)
@@ -202,4 +206,4 @@ def run_model_diff(
     lines.extend(_field_section_lines(result))
     lines.extend(_id_section_lines(result))
     text = "\n".join(lines).rstrip() + "\n"
-    return out_payload, None, None, text
+    return out_payload, None, None, text, analysis_diff

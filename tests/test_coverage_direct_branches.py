@@ -455,7 +455,7 @@ def test_run_diff_analysis_text_with_remap(tmp_path: Path) -> None:
     rf = tmp_path / "r.json"
     bf.write_text(json.dumps(base.model_dump(mode="json")), encoding="utf-8")
     rf.write_text(json.dumps(rev.model_dump(mode="json")), encoding="utf-8")
-    _payload, lines = run_diff_analysis(bf, rf, fmt=DiffFormat.text)
+    _payload, lines, _ad = run_diff_analysis(bf, rf, fmt=DiffFormat.text)
     # same-signature rename -> signature_remap_hints rendered (text branch)
     assert lines is not None and any("remap" in ln.lower() or "→" in ln for ln in lines)
 
@@ -522,7 +522,7 @@ def test_model_diff_more_than_12_modified(tmp_path: Path) -> None:
     rf = tmp_path / "r.otm.yaml"
     bf.write_text(yaml.safe_dump(base.model_dump(mode="json", by_alias=True)), encoding="utf-8")
     rf.write_text(yaml.safe_dump(revised.model_dump(mode="json", by_alias=True)), encoding="utf-8")
-    _payload, _j, _m, text = run_model_diff(
+    _payload, _j, _m, text, _ad = run_model_diff(
         bf, rf, with_analysis=False, pack=None, fmt=DiffFormat.text, summary_only=False
     )
     assert text is not None and "more modified" in text  # >12 modified -> truncation summary branch

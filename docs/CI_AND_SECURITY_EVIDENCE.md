@@ -165,3 +165,73 @@ API keys/OAuth2/mTLS + testes de autorização + OpenAPI/UI alinhados ao fluxo c
 
 - Job `trivy-image`: `docker build -f apps/api/Dockerfile -t otm-api:ci .` seguido de `aquasecurity/trivy-action@0.35.0` com `severity: CRITICAL,HIGH` e `exit-code: 1`.
 - Complementa pip-audit (Python na host) com visão de **imagem** (OS + dependências instaladas na layer).
+
+---
+
+## 8. Gate de deriva do modelo de ameaças (`otm diff --fail-on`)
+
+O análogo, em threat modeling, de um security gate: um PR que **acrescenta risco novo** reprova o build.
+O baseline é o modelo commitado — não é preciso ficheiro de supressão, porque o risco pré-existente
+aparece dos dois lados do diff e nunca conta como novo.
+
+### Flags
+
+| Flag | Efeito |
+| --- | --- |
+| `--fail-on <none\|low\|medium\|high\|critical>` | Reprova se uma ameaça **nova** ou **agravada** atinge a banda (inclusive). Implica `--with-analysis`. |
+| `--fail-on-risk-increase` | Reprova se o score máximo sobe, mesmo sem mudar de banda. |
+
+Disponíveis em `otm diff` (corre o motor nos dois `.otm.yaml`) e em `otm diff-analysis`
+(compara dois `analyze.json` já produzidos).
+
+### Códigos de saída
+
+| Código | Significado |
+| --- | --- |
+| `0` | Sem reprovação (e sempre, quando nenhuma flag de gate é usada). |
+| `1` | Erro de utilização: ficheiro inexistente, YAML inválido, `--fail-on` inválido. |
+| `3` | **Gate reprovou.** |
+
+`3` distingue "a política falhou" de "o comando falhou" — um operador de CI não pode confundir um
+caminho mal escrito com uma violação de política.
+
+### O que dispara — e o que nunca dispara
+
+Dispara: ameaça **nova** na banda ou acima; ameaça **agravada** que *cruza* para a banda (ex.: `medium → high`).
+Uma ameaça cujo id mudou (o motor emite `signature_remap_hints`) é comparada com o gémeo removido, por
+score: um rename inerte não reprova, mas um rename que também sobe de banda **reprova**.
+
+Nunca dispara: remoções, melhorias, descidas de score, renames inertes, mudança de metodologia, nem
+subidas *dentro* da mesma banda (ex.: `21 → 22`) — para essas existe `--fail-on-risk-increase`.
+
+Ameaças novas sem score são reportadas como `unranked` no relatório do gate, nunca ignoradas em silêncio.
+
+### Receita (GitHub Actions)
+
+```yaml
+- name: Threat-model drift gate
+  run: |
+    otm diff \
+      "$(git show origin/main:threat-model.otm.yaml > /tmp/baseline.otm.yaml && echo /tmp/baseline.otm.yaml)" \
+      threat-model.otm.yaml \
+      --fail-on high \
+      --json-out threat-model-diff.json
+
+- name: Upload diff artifact
+  if: always()          # o artefacto é escrito ANTES do gate reprovar
+  uses: actions/upload-artifact@v4
+  with:
+    name: threat-model-diff
+    path: threat-model-diff.json
+```
+
+O relatório do gate vai para **stderr** e o payload para **stdout**, por isso
+`otm diff … --format json --fail-on high > diff.json` mantém `diff.json` como JSON válido.
+Num pipe, use `set -o pipefail` para não perder o código de saída.
+
+### Restrições
+
+- Em `otm diff-analysis`, gatear dois `analyze.json` produzidos por **versões diferentes do motor** é
+  recusado (exit `1`): a churn de heurísticas seria indistinguível de deriva real do modelo.
+- Renomear um componente ou fluxo muda o alvo da heurística e, por isso, a sua assinatura: as ameaças
+  associadas surgem como novas. O relatório mostra as remoções emparelhadas, tornando o rename evidente.
