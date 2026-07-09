@@ -24,6 +24,11 @@
 #                       read-only token and NO repository secrets, so
 #                       secret-dependent (Snyk) and security-events:write
 #                       (SARIF upload, dependency-review) steps fail-closed.
+#   The Snyk jobs additionally PROBE the token at `snyk auth`: a present-but-
+#   unusable SNYK_TOKEN (expired / deprovisioned -> SNYK-0005 / HTTP 401) skips
+#   the scan with a Step Summary note instead of reddening every push. Snyk
+#   stays a hard gate whenever the token authenticates; rotate the secret to
+#   restore coverage (the skip is loud, never silent).
 #   The actual SCANNERS still hard-gate on real findings (Trivy exit-code,
 #   Semgrep --error, Snyk threshold, KICS fail_on). Only the steps that
 #   STRUCTURALLY cannot run in a given context are skipped, so a green run
@@ -225,18 +230,33 @@ jobs:
         run: npm install -g snyk
 
       - name: Authenticate Snyk
+        id: snyk_auth
         if: ${{ needs.preflight.outputs.is_dependabot == 'false' && env.SNYK_TOKEN != '' }}
-        run: snyk auth "$SNYK_TOKEN"
+        # Probe the token. A present-but-unusable token (expired / deprovisioned,
+        # Snyk SNYK-0005 / HTTP 401) must SKIP the scan honestly, not redden every
+        # push forever — the same graceful-degradation contract as the code-scanning
+        # gates above. Snyk stays a hard gate whenever the token authenticates.
+        run: |
+          if snyk auth "$SNYK_TOKEN"; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+            {
+              echo "### Snyk Code skipped - SNYK_TOKEN not usable"
+              echo "\`snyk auth\` failed (token present but unauthorized - e.g. expired or deprovisioned)."
+              echo "Rotate the \`SNYK_TOKEN\` secret to restore Snyk coverage. Scan skipped, not failed."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Run Snyk Code
-        if: ${{ needs.preflight.outputs.is_dependabot == 'false' && env.SNYK_TOKEN != '' }}
+        if: ${{ steps.snyk_auth.outputs.ok == 'true' }}
         run: >
           snyk code test
           --severity-threshold=${{ env.SNYK_SEVERITY_THRESHOLD }}
           --sarif-file-output=snyk-code.sarif
 
       - name: Upload Snyk Code SARIF
-        if: ${{ always() && needs.preflight.outputs.code_scanning == 'true' && needs.preflight.outputs.is_dependabot == 'false' && env.SNYK_TOKEN != '' }}
+        if: ${{ always() && needs.preflight.outputs.code_scanning == 'true' && steps.snyk_auth.outputs.ok == 'true' }}
         uses: github/codeql-action/upload-sarif@8aad20d150bbac5944a9f9d289da16a4b0d87c1e # v4.36.2
         with:
           sarif_file: snyk-code.sarif
@@ -314,11 +334,26 @@ jobs:
         run: npm install -g snyk
 
       - name: Authenticate Snyk
+        id: snyk_auth
         if: ${{ needs.preflight.outputs.is_dependabot == 'false' && env.SNYK_TOKEN != '' }}
-        run: snyk auth "$SNYK_TOKEN"
+        # Probe the token. A present-but-unusable token (expired / deprovisioned,
+        # Snyk SNYK-0005 / HTTP 401) must SKIP the scan honestly, not redden every
+        # push forever — the same graceful-degradation contract as the code-scanning
+        # gates above. Snyk stays a hard gate whenever the token authenticates.
+        run: |
+          if snyk auth "$SNYK_TOKEN"; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+            {
+              echo "### Snyk Open Source skipped - SNYK_TOKEN not usable"
+              echo "\`snyk auth\` failed (token present but unauthorized - e.g. expired or deprovisioned)."
+              echo "Rotate the \`SNYK_TOKEN\` secret to restore Snyk coverage. Scan skipped, not failed."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Run Snyk Open Source scan
-        if: ${{ needs.preflight.outputs.is_dependabot == 'false' && env.SNYK_TOKEN != '' }}
+        if: ${{ steps.snyk_auth.outputs.ok == 'true' }}
         run: >
           snyk test
           --all-projects
@@ -326,7 +361,7 @@ jobs:
           --sarif-file-output=snyk-oss.sarif
 
       - name: Upload Snyk Open Source SARIF
-        if: ${{ always() && needs.preflight.outputs.code_scanning == 'true' && needs.preflight.outputs.is_dependabot == 'false' && env.SNYK_TOKEN != '' }}
+        if: ${{ always() && needs.preflight.outputs.code_scanning == 'true' && steps.snyk_auth.outputs.ok == 'true' }}
         uses: github/codeql-action/upload-sarif@8aad20d150bbac5944a9f9d289da16a4b0d87c1e # v4.36.2
         with:
           sarif_file: snyk-oss.sarif
