@@ -24,3 +24,14 @@ class RawStrideMapFile(BaseModel):
         default_factory=dict,
         description="Metadados ou extensões futuras (includes, tags, …).",
     )
+
+
+class RawHeuristicMapFile(BaseModel):
+    """Mapeamento por id de heurística → referências (lente de IA: OWASP LLM, MITRE ATLAS)."""
+
+    version: str = Field(default="1", description="Versão do ficheiro de dados.")
+    by_heuristic: dict[str, list[RawMappingRow]] = Field(default_factory=dict)
+    extra: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Metadados ou extensões futuras.",
+    )

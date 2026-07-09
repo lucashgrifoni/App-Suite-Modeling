@@ -14,8 +14,8 @@
 
 Contagem de referências `framework:control_id` nas heurísticas (por catálogo canónico):
 
-- **capec** (`capec`): 21
-- **cwe** (`cwe`): 21
+- **MITRE CAPEC** (`capec`): 21
+- **MITRE CWE** (`cwe`): 21
 - **ISO/IEC 27001 (Annex A)** (`iso_27001`): 42
 - **NIST CSF** (`nist_csf`): 39
 - **OWASP ASVS** (`owasp_asvs`): 38
