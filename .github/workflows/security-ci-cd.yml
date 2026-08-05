@@ -248,6 +248,27 @@ jobs:
         if: ${{ needs.preflight.outputs.is_dependabot == 'false' && env.SNYK_TOKEN != '' }}
         run: npm install -g snyk
 
+      - name: Report that Snyk cannot run without a token
+        # A pull request from a fork gets no secrets, so SNYK_TOKEN is empty, the auth step
+        # below is skipped, the scan step after it is skipped, and the job finishes GREEN
+        # having scanned nothing. On a public repository that is precisely the pull request
+        # you least want silently unscanned. Failing is not an option -- it would block every
+        # external contribution over a secret the contributor cannot have -- so the job stays
+        # green and says so loudly instead. A reviewer must never read this check as "scanned".
+        if: ${{ needs.preflight.outputs.is_dependabot == 'false' && env.SNYK_TOKEN == '' }}
+        run: |
+          {
+            echo "### Snyk did NOT run - no token in this context"
+            echo ""
+            echo "\`SNYK_TOKEN\` is empty, which normally means this run came from a fork's"
+            echo "pull request: GitHub does not expose secrets to those. **This job being"
+            echo "green does not mean Snyk scanned anything.**"
+            echo ""
+            echo "Snyk coverage for this change is obtained when a maintainer runs it on a"
+            echo "branch in this repository."
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "::warning::Snyk skipped - no SNYK_TOKEN in this context (fork PR). This green check does NOT mean Snyk scanned."
+
       - name: Authenticate Snyk
         id: snyk_auth
         if: ${{ needs.preflight.outputs.is_dependabot == 'false' && env.SNYK_TOKEN != '' }}
@@ -363,6 +384,27 @@ jobs:
       - name: Install Snyk CLI
         if: ${{ needs.preflight.outputs.is_dependabot == 'false' && env.SNYK_TOKEN != '' }}
         run: npm install -g snyk
+
+      - name: Report that Snyk cannot run without a token
+        # A pull request from a fork gets no secrets, so SNYK_TOKEN is empty, the auth step
+        # below is skipped, the scan step after it is skipped, and the job finishes GREEN
+        # having scanned nothing. On a public repository that is precisely the pull request
+        # you least want silently unscanned. Failing is not an option -- it would block every
+        # external contribution over a secret the contributor cannot have -- so the job stays
+        # green and says so loudly instead. A reviewer must never read this check as "scanned".
+        if: ${{ needs.preflight.outputs.is_dependabot == 'false' && env.SNYK_TOKEN == '' }}
+        run: |
+          {
+            echo "### Snyk did NOT run - no token in this context"
+            echo ""
+            echo "\`SNYK_TOKEN\` is empty, which normally means this run came from a fork's"
+            echo "pull request: GitHub does not expose secrets to those. **This job being"
+            echo "green does not mean Snyk scanned anything.**"
+            echo ""
+            echo "Snyk coverage for this change is obtained when a maintainer runs it on a"
+            echo "branch in this repository."
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "::warning::Snyk skipped - no SNYK_TOKEN in this context (fork PR). This green check does NOT mean Snyk scanned."
 
       - name: Authenticate Snyk
         id: snyk_auth

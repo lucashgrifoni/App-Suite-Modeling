@@ -1,7 +1,9 @@
 # Artefactos e dependências — não são código-fonte da aplicação.
 .git/
-.github/
 .venv/
+# `.github/` NÃO entra aqui. O pipeline corre `--config p/github-actions` precisamente
+# para analisar os workflows; excluí-los fazia o ruleset correr as suas regras YAML sobre
+# 65 ficheiros que não continham um único workflow — configurado, verde e cego ao alvo.
 **/node_modules/
 **/dist/
 **/build/

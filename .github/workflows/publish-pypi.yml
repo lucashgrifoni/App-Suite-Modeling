@@ -87,18 +87,29 @@ jobs:
       - name: Verify metadata renders on PyPI
         run: python -m twine check dist/*
 
-      - name: Verify the built version matches the release tag
+      - name: Verify the built version matches the tag
         # A wheel whose version does not match the tag is the one mistake that cannot be
         # undone: PyPI refuses to reuse a version number, so publishing the wrong one burns
         # it permanently. Check before upload, not after.
-        if: ${{ github.event_name == 'release' }}
+        #
+        # This runs on EVERY ref that could reach the publish job, not only on `release`.
+        # Gating it on the release event left `workflow_dispatch` able to build from any
+        # branch and publish it unchecked -- exactly the path most likely to be taken in a
+        # hurry, and the one where a wrong version costs a number forever.
         run: |
           set -euo pipefail
-          built="$(python -c 'import pathlib,re; p=next(pathlib.Path("dist").glob("*.whl")); print(p.name.split("-")[1])')"
+          built="$(python -c 'import pathlib; p=next(pathlib.Path("dist").glob("*.whl")); print(p.name.split("-")[1])')"
+          echo "built=${built} ref=${GITHUB_REF_NAME} ref_type=${GITHUB_REF_TYPE}"
+
+          if [ "${GITHUB_REF_TYPE}" != "tag" ]; then
+            # A dry run from a branch is legitimate; publishing from one is not.
+            echo "::notice::Ref is not a tag, so there is no version to check against. This build must not be published."
+            exit 0
+          fi
+
           tag="${GITHUB_REF_NAME#v}"
-          echo "built=${built} tag=${tag}"
           if [ "${built}" != "${tag}" ]; then
-            echo "::error::Built version ${built} does not match release tag ${tag}. Bump pyproject.toml or retag."
+            echo "::error::Built version ${built} does not match tag ${tag}. Bump pyproject.toml or retag."
             exit 1
           fi
 
@@ -130,8 +141,12 @@ jobs:
   publish:
     name: Publish to PyPI
     needs: build
-    # A manual dry run stops here by design.
-    if: ${{ github.event_name == 'release' || inputs.dry-run == false }}
+    # A manual dry run stops here by design. A manual NON-dry run additionally has to be on a
+    # tag: `workflow_dispatch` accepts any ref, and publishing a branch build to PyPI burns
+    # that version number permanently for everyone. The release event already implies a tag.
+    if: >-
+      ${{ github.event_name == 'release'
+          || (inputs.dry-run == false && github.ref_type == 'tag') }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment:
