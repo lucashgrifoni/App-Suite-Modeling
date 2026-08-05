@@ -3,14 +3,20 @@
 O veredito é calculado por `otm_threat_engine.gate.evaluate_gate` (função pura). Aqui só
 traduzimos para a linha de comandos.
 
-Contrato de códigos de saída (documentado no `--help`):
+Contrato de códigos de saída:
     0  sucesso, gate não reprovou (e sempre, quando nenhuma flag de gate é usada)
-    1  erro de utilização (ficheiro inexistente, YAML inválido, `--fail-on` inválido)
+    1  erro de utilização levantado pelo CLI: ficheiro inexistente, YAML inválido,
+       `--fail-on` inválido, pack desconhecido, destino de escrita inacessível
+    2  erro de utilização levantado pelo Typer/Click: valor inválido num enum
+       (`--methodology`, `--format`, `--kind`), flag desconhecida, argumento em falta
     3  **gate reprovou** — há ameaças novas ou agravadas acima do limiar
 
-`3` porque `1` já significa erro de utilização neste CLI e `2` já é usado por
-`explain` (kind inválido); confundir "a política falhou" com "o comando falhou" é
-precisamente o que um operador de CI não pode aceitar.
+Um script de CI que queira distinguir "o comando estava mal escrito" de "a política
+falhou" tem de tratar **1 e 2** como erro de utilização. `2` não é exclusivo do
+`explain`: é a convenção do Click para qualquer erro de parsing, e este CLI não a
+sobrepõe. `3` fica reservado para a política precisamente porque `1` e `2` já estão
+tomados — confundir "a política falhou" com "o comando falhou" é o que um operador
+de CI não pode aceitar.
 
 O relatório do gate vai para **stderr**, para sobreviver a `--format json > file.json`
 e a pipes; o stdout mantém-se byte-a-byte igual ao de hoje.

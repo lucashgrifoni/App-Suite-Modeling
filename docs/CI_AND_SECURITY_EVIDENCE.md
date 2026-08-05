@@ -189,8 +189,13 @@ Disponíveis em `otm diff` (corre o motor nos dois `.otm.yaml`) e em `otm diff-a
 | Código | Significado |
 | --- | --- |
 | `0` | Sem reprovação (e sempre, quando nenhuma flag de gate é usada, ou quando o gate não é avaliável). |
-| `1` | Erro de utilização: ficheiro inexistente, YAML inválido, `--fail-on` inválido. |
+| `1` | Erro de utilização **levantado pelo CLI**: ficheiro inexistente, YAML inválido, `--fail-on` inválido, pack desconhecido, destino de escrita inacessível. |
+| `2` | Erro de utilização **levantado pelo Typer/Click**: valor inválido num enum (`--methodology`, `--format`, `--kind`), flag desconhecida, argumento obrigatório em falta. |
 | `3` | **Gate reprovou.** |
+
+> Um script que precise de distinguir "comando mal escrito" de "política falhou" tem de tratar
+> **`1` e `2`** como erro de utilização. O `2` é a convenção do Click para erros de parsing e
+> este CLI não a sobrepõe — o `3` existe justamente porque `1` e `2` já estavam tomados.
 
 `3` distingue "a política falhou" de "o comando falhou" — um operador de CI não pode confundir um
 caminho mal escrito com uma violação de política.

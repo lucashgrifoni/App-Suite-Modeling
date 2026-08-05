@@ -7,7 +7,7 @@ Define architecture once in a **versioned YAML model**, run **multi-methodology 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Node 22+](https://img.shields.io/badge/node-22+-339933?logo=nodedotjs&logoColor=white)](https://nodejs.org/)
 
-> **Python distribution name:** `open-threat-model` (see [`pyproject.toml`](pyproject.toml)). **App Suite Modeling** is the product name in docs and the web UI. Install from a clone: `pip install -e ".[cli]"` (or `.[dev,cli,api]` for full dev parity).
+> **Python distribution name:** [`open-threat-model`](https://pypi.org/project/open-threat-model/) on PyPI — `pip install open-threat-model` gives you the `otm` CLI. **App Suite Modeling** is the product name in docs and the web UI. Contributors install from a clone instead: `pip install -e ".[dev,cli,api]"`.
 
 > **CI:** When the repo is public, add a workflow badge for [`.github/workflows/github-ci-cd.yml`](.github/workflows/github-ci-cd.yml) (replace `OWNER/REPO` in the shield URL).
 
@@ -89,7 +89,17 @@ Deeper maps: [MONOREPO.md](docs/MONOREPO.md) · [REPOSITORY_LAYOUT.md](docs/REPO
 - **Node 22+** if you work on the web UI (matches CI; Node 20 reached end-of-life on 2026-04-30)
 - On Linux, full **dev** installs that pull PDF stacks may need **Cairo** dev packages (see [CONTRIBUTING.md](CONTRIBUTING.md))
 
-**Install (CLI + API + dev tools, recommended for contributors)**
+**Install the CLI (users)**
+
+```bash
+pip install open-threat-model
+otm init my-model.otm.yaml
+otm validate my-model.otm.yaml
+```
+
+That is the whole setup — `otm` ships with the industry packs and framework mappings embedded, so there is nothing else to download.
+
+**Install from a clone (CLI + API + dev tools, for contributors)**
 
 ```bash
 python -m venv .venv
@@ -156,7 +166,7 @@ The hook validates every changed `.otm.yaml` against the canonical schema. `otm 
 
 **Exit codes, for scripting:** `0` no gate trip · `1` usage error · `3` gate tripped. The gate report goes to stderr, so `--format json` keeps stdout parseable. Full recipes in [`docs/CI_AND_SECURITY_EVIDENCE.md`](docs/CI_AND_SECURITY_EVIDENCE.md) §8.
 
-> **PyPI:** the release workflow ([`.github/workflows/publish-pypi.yml`](.github/workflows/publish-pypi.yml)) publishes `open-threat-model` via OIDC trusted publishing, with no stored token. It is wired and verified up to the upload step, but the package is **not on PyPI yet** — that needs a one-time pending publisher created on pypi.org by the repository owner. Until then, install from a clone as above, and let the action install the engine from its own checkout (the default).
+> **PyPI:** `open-threat-model` is published from [`.github/workflows/publish-pypi.yml`](.github/workflows/publish-pypi.yml) via OIDC trusted publishing — no API token is stored in this repository. Each publish verifies that the built version matches the release tag and smoke-tests the wheel in a clean virtualenv before uploading.
 
 ---
 

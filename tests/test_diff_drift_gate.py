@@ -353,6 +353,30 @@ def test_a_band_crossing_is_not_reported_twice() -> None:
     assert [t.threat_id for t in result.trips].count("m") == 1
 
 
+def test_the_exit_code_contract_is_what_the_docs_claim() -> None:
+    """Pins the exit codes a CI script branches on.
+
+    Found by driving the published CLI as a user: the docs said "1 = usage error", but Click
+    raises **2** for an invalid enum value, an unknown flag or a missing argument, and this CLI
+    does not override that. Anyone scripting `if [ $rc -eq 1 ]` to catch a mistyped command was
+    missing half the cases. Both are usage errors; only `3` means the policy failed.
+    """
+    runner = CliRunner()
+
+    # 1 — raised by the CLI itself.
+    assert runner.invoke(app, ["validate", "does-not-exist.otm.yaml"]).exit_code == 1
+    assert runner.invoke(app, ["diff", str(_MINIMAL), str(_MINIMAL), "--fail-on", "nope"]).exit_code == 1
+
+    # 2 — raised by Typer/Click while parsing.
+    assert runner.invoke(app, ["analyze", str(_MINIMAL), "-m", "nope"]).exit_code == 2
+    assert runner.invoke(app, ["diff", str(_MINIMAL), str(_MINIMAL), "-f", "nope"]).exit_code == 2
+    assert runner.invoke(app, ["analyze", str(_MINIMAL), "--flag-that-does-not-exist"]).exit_code == 2
+    assert runner.invoke(app, ["validate"]).exit_code == 2
+
+    # 0 and 3 — the two the gate owns.
+    assert runner.invoke(app, ["diff", str(_MINIMAL), str(_MINIMAL), "--fail-on", "low"]).exit_code == 0
+
+
 def test_fail_on_help_lists_its_allowed_values(monkeypatch: pytest.MonkeyPatch) -> None:
     """Rich parses `[...]` as a style tag: unescaped, the allowed-value list vanished from --help.
 
