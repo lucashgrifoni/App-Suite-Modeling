@@ -51,9 +51,22 @@ def npm_run(args: list[str], *, cwd: Path) -> None:
     """
     if sys.platform == "win32":
         line = "npm " + subprocess.list2cmdline(args)
+        # Triado e aceite: script só de desenvolvimento, `args` são literais do próprio repo
+        # (`["install"]`, `["run", "dev"]`), nunca entrada externa. O `shell=True` existe pela
+        # razão documentada acima e não por conveniência.
+        # Ambos os ids são precisos: o curto é a regra deste repo, o longo é a da comunidade
+        # (`p/security-audit`). Durante muito tempo só o curto estava aqui, por isso a regra
+        # da comunidade nunca foi suprimida — e ninguém reparou porque o filtro de severidade
+        # do gate a estava a descartar antes de chegar a correr.
+        # O `nosemgrep` fica na linha do `shell=True` porque é aí que a regra da comunidade
+        # reporta — não na linha da chamada. Pô-lo no sítio errado dá uma suppressão que
+        # parece existir e não suprime nada.
         subprocess.run(  # nosemgrep: python-subprocess-shell-true
-            line, cwd=cwd, shell=True, check=True
-        )  # Windows: npm via cmd evita OSError 193 com shims sem .exe.
+            line,
+            cwd=cwd,
+            shell=True,  # nosemgrep: python.lang.security.audit.subprocess-shell-true.subprocess-shell-true
+            check=True,
+        )
         return
     npm = shutil.which("npm")
     if not npm:
@@ -65,9 +78,12 @@ def npm_popen(args: list[str], *, cwd: Path) -> subprocess.Popen:
     """Como ``npm_run``, mas devolve um ``Popen`` (servidor de desenvolvimento)."""
     if sys.platform == "win32":
         line = "npm " + subprocess.list2cmdline(args)
+        # Mesma triagem e mesmos dois ids que `npm_run` acima.
         return subprocess.Popen(  # nosemgrep: python-subprocess-shell-true
-            line, cwd=cwd, shell=True
-        )  # Windows: idem npm_run (shim npm.cmd).
+            line,
+            cwd=cwd,
+            shell=True,  # nosemgrep: python.lang.security.audit.subprocess-shell-true.subprocess-shell-true
+        )
     npm = shutil.which("npm")
     if not npm:
         raise FileNotFoundError("npm não encontrado no PATH")
