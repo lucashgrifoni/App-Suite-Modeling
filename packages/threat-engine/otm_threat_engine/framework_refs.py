@@ -64,8 +64,11 @@ def enrich_heuristic_threat(
 ) -> HeuristicThreat:
     reg = _resolve_registry(registry)
     ai_reg = _resolve_ai_registry(ai_registry)
-    # STRIDE refs primeiro (rastreabilidade de categoria), depois refs de IA por id.
-    refs = _dedupe_refs([*reg.refs_for_stride(h.stride), *ai_reg.refs_for_heuristic(h.id)])
+    # Enriquecer ACRESCENTA; não substitui. As refs que a ameaça já traz são as mais
+    # específicas (uma regra da organização declara as dela) e vêm primeiro. Substituí-las
+    # apagava em silêncio a rastreabilidade que o autor da regra escreveu.
+    # Depois STRIDE (rastreabilidade de categoria) e por fim refs de IA por id.
+    refs = _dedupe_refs([*h.framework_refs, *reg.refs_for_stride(h.stride), *ai_reg.refs_for_heuristic(h.id)])
     if not refs:  # pragma: no cover - shipped registry has refs for every StrideCategory
         return h
     return h.model_copy(update={"framework_refs": refs})

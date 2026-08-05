@@ -11,6 +11,8 @@ from otm_industry_packs.models import PackDefinition
 from otm_threat_engine.anti_pattern_library import detect_anti_patterns
 from otm_threat_engine.business_abuse_heuristics import append_business_abuse_heuristics
 from otm_threat_engine.composite_heuristics import append_composite_heuristics
+from otm_threat_engine.custom_rules.models import CustomRuleSet
+from otm_threat_engine.custom_rules.runtime import collect_control_hints, iter_custom_rule_threats
 from otm_threat_engine.engine_finalize import finalize_analysis_with_methodology
 from otm_threat_engine.engine_methodology_runtime import resolve_methodology_selection
 from otm_threat_engine.engine_stride_builder import (
@@ -162,6 +164,8 @@ class ThreatAnalysisEngine:
         self,
         doc: ThreatModelDocument,
         pack: PackDefinition | None = None,
+        *,
+        custom_rules: CustomRuleSet | None = None,
     ) -> AnalysisResult:
         structural = collect_structural_findings(doc)
         trust_findings = analyze_trust_boundary_crossings(doc)
@@ -199,6 +203,13 @@ class ThreatAnalysisEngine:
             covered=covered,
             pack=pack,
         )
+        # Regras da organização correm por último e são aditivas: não suprimem nem são
+        # suprimidas pelas heurísticas base (ver `iter_custom_rule_threats`).
+        if custom_rules is not None:
+            custom_threats, fired_rules = iter_custom_rule_threats(doc, custom_rules)
+            heuristics.extend(custom_threats)
+            pack_hints = [*pack_hints, *collect_control_hints(custom_rules, fired_rules)]
+
         pack_hints = filter_pack_control_hints(doc, pack_hints)
         skipped += suppress_stride_genericity_noise(heuristics)
         _, wizard_notes, boost_trace = apply_wizard_context_to_heuristics(doc, heuristics)
@@ -235,6 +246,7 @@ class ThreatAnalysisEngine:
         *,
         methodology: ThreatModelMethodology | str | None = None,
         auto_recommend: bool = False,
+        custom_rules: CustomRuleSet | None = None,
     ) -> AnalysisResult:
         chosen, rec_reason, meth_exps = resolve_methodology_selection(
             doc,
@@ -242,7 +254,7 @@ class ThreatAnalysisEngine:
             auto_recommend=auto_recommend,
         )
 
-        base = self._analyze_stride_core(doc, pack=pack)
+        base = self._analyze_stride_core(doc, pack=pack, custom_rules=custom_rules)
         final = finalize_analysis_with_methodology(
             doc=doc,
             base=base,
@@ -268,6 +280,7 @@ def analyze_document(
     *,
     methodology: ThreatModelMethodology | str | None = None,
     auto_recommend: bool = False,
+    custom_rules: CustomRuleSet | None = None,
 ) -> AnalysisResult:
     """Atalho funcional equivalente a `ThreatAnalysisEngine().analyze(...)`."""
     return ThreatAnalysisEngine().analyze(
@@ -275,4 +288,5 @@ def analyze_document(
         pack=pack,
         methodology=methodology,
         auto_recommend=auto_recommend,
+        custom_rules=custom_rules,
     )

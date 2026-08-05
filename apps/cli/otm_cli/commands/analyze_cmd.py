@@ -114,6 +114,11 @@ def register(app: typer.Typer) -> None:
             "-p",
             help="Industry pack (see [cyan]otm packs[/cyan]).",
         ),
+        rules: Path | None = typer.Option(
+            None,
+            "--rules",
+            help="Organisation rule file (YAML) with custom heuristics. Additive; does not replace the engine.",
+        ),
         methodology: MethodologyOption | None = typer.Option(
             None,
             "--methodology",
@@ -144,6 +149,7 @@ def register(app: typer.Typer) -> None:
                 pack=pack,
                 methodology=methodology,
                 auto_methodology=auto_methodology,
+                rules=rules,
             )
         except CliUserError as e:
             exit_on_cli_error(console, e)

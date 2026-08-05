@@ -1,0 +1,84 @@
+# Organisation rules — heuristics your team adds without forking the engine.
+#
+#   otm analyze examples/saas-ordering-v1.otm.yaml --rules examples/custom-rules.example.yaml
+#
+# Rules are data, not code. There is no expression language, no regex, and nothing is
+# executed: a rule describes what to look for and what threat to raise when it finds it.
+#
+# Semantics, in full:
+#   - A rule matches exactly one subject: `component:` or `flow:`.
+#   - Inside a match block every key must hold (AND).
+#   - A scalar is equality; a list is "any of these" (OR).
+#   - An unknown field name is an ERROR, not a rule that quietly never fires.
+#   - Absent in the model means `null`, NOT `false`. `encrypted: false` matches only a flow
+#     explicitly marked unencrypted; write `encrypted: [false, null]` to also catch the ones
+#     nobody has answered for yet — usually what you actually want.
+
+id: example-org
+name: "Example organisation rules"
+description: "Illustrative rules. Copy this file into your own repository and edit."
+
+rules:
+  # Component rule. Every datastore must carry the encryption-at-rest control this
+  # organisation standardised on, whatever the generic STRIDE pass already said.
+  - id: datastore_encryption_standard
+    title: "Datastore must use the approved encryption-at-rest standard"
+    stride: information_disclosure
+    match:
+      component:
+        kind: datastore
+    impact_delta: 1
+    refs: ["ORG-SEC-012"]
+    control_hint: "Encryption at rest with the platform-managed key hierarchy"
+
+  # Any-of matching: a list means the value may be any of these.
+  - id: privileged_component_review
+    title: "Privileged component needs a named owner and an access review"
+    stride: elevation_of_privilege
+    match:
+      component:
+        privilege_level: [high, admin, root]
+    likelihood_delta: 1
+    impact_delta: 1
+    refs: ["ORG-SEC-004", "CWE-269"]
+    control_hint: "Quarterly access review with a named accountable owner"
+
+  # Several criteria on one subject: all must hold.
+  - id: code_execution_on_untrusted_input
+    title: "Component executes commands and is exposed to the internet"
+    description: >-
+      This organisation treats command execution on an internet-facing component as a
+      standing review item, independent of how the generic engine scored it.
+    stride: tampering
+    match:
+      component:
+        executes_code_or_commands: true
+        exposure_type: internet
+    likelihood_delta: 1
+    impact_delta: 2
+    refs: ["ORG-SEC-021", "CWE-78"]
+
+  # Flow rule, using the derived `crosses_boundary` matcher. Note the `[false, null]`:
+  # a flow nobody has marked as encrypted is the case worth catching.
+  - id: unencrypted_boundary_crossing
+    title: "Flow crossing a trust boundary is not confirmed encrypted"
+    stride: information_disclosure
+    match:
+      flow:
+        encrypted: [false, null]
+        crosses_boundary: true
+    likelihood_delta: 1
+    impact_delta: 1
+    refs: ["ORG-SEC-007"]
+    control_hint: "TLS 1.2+ on every boundary-crossing flow, with certificate pinning where applicable"
+
+  - id: file_upload_without_auth
+    title: "File upload reachable without authentication"
+    stride: spoofing
+    match:
+      flow:
+        supports_file_upload: true
+        auth_required: [false, null]
+    likelihood_delta: 2
+    impact_delta: 1
+    refs: ["ORG-SEC-033", "CWE-434"]

@@ -5,9 +5,11 @@ from __future__ import annotations
 from pathlib import Path
 
 from otm_threat_engine import AnalysisResult, analyze_document
+from otm_threat_engine.custom_rules import load_custom_rules
 
 from otm_cli.shared.document_loader import load_otm_document, load_pack_or_raise
 from otm_cli.shared.enums import MethodologyOption
+from otm_cli.shared.errors import CliUserError
 
 
 def run_analyze(
@@ -16,6 +18,7 @@ def run_analyze(
     pack: str | None,
     methodology: MethodologyOption | None,
     auto_methodology: bool,
+    rules: Path | None = None,
 ) -> AnalysisResult:
     doc = load_otm_document(
         path,
@@ -30,9 +33,23 @@ def run_analyze(
             failed=f"loading pack `{pack}`.",
             next_step="run `otm packs` and use a listed ID.",
         )
+    ruleset = None
+    if rules:
+        try:
+            ruleset = load_custom_rules(rules)
+        except ValueError as exc:
+            # The engine raises plain ValueError; the CLI owns the exit code and the wording.
+            raise CliUserError(
+                exit_code=1,
+                failed=f"loading custom rules from `{rules}`.",
+                cause=str(exc),
+                next_step="fix the rules file; see docs/features/CUSTOM_RULES.md for the format.",
+            ) from exc
+
     return analyze_document(
         doc,
         pack=pack_def,
         methodology=methodology.value if methodology else None,
         auto_recommend=auto_methodology,
+        custom_rules=ruleset,
     )
