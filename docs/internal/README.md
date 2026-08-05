@@ -28,7 +28,7 @@ Exemplos concretos, para que ninguém precise de descobrir por tentativa:
 | O que o projeto faz e como se usa | [`README.md`](../../README.md) |
 | O que mudou em cada versão | [`CHANGELOG.md`](../../CHANGELOG.md) |
 | Que controlos de segurança correm no CI | [`docs/CI_AND_SECURITY_EVIDENCE.md`](../CI_AND_SECURITY_EVIDENCE.md) |
-| Limitações aceites | [`KNOWN_LIMITATIONS.md`](../../KNOWN_LIMITATIONS.md) |
+| Limitações aceites | [`docs/KNOWN_LIMITATIONS.md`](../KNOWN_LIMITATIONS.md) |
 | Como reportar uma vulnerabilidade | [`SECURITY.md`](../../SECURITY.md) |
 
 Se um documento desta pasta contradisser uma das fontes acima, **a fonte acima ganha**.
