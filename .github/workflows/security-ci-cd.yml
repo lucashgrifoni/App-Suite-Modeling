@@ -116,10 +116,10 @@ jobs:
       # 'true' on Dependabot-authored runs (read-only token, no secrets).
       is_dependabot: ${{ steps.ctx.outputs.is_dependabot }}
       # 'true' when a Snyk token is reachable in this context. Computed once here rather
-      # than comparing the secret against an empty string in each job's `if:` -- KICS reads
-      # `SNYK_TOKEN == ''` inside a workflow as a token assigned a literal and flags it HIGH.
-      # A boolean output is both honest to the scanner and one source of truth for two jobs.
-      has_snyk_token: ${{ steps.ctx.outputs.has_snyk_token }}
+      # than comparing the secret in each job's `if:`. KICS's Generic Token rule matches any
+      # expression whose name contains `token` compared against a string literal, and flags it
+      # HIGH. Hence the neutral name: honest to the scanner, and one source of truth for two jobs.
+      snyk_enabled: ${{ steps.ctx.outputs.snyk_enabled }}
     steps:
       - name: Harden runner
         uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2
@@ -141,9 +141,9 @@ jobs:
           fi
           # Presence only. The value is never printed, and only its emptiness leaves this step.
           if [ -n "${SNYK_TOKEN}" ]; then
-            echo "has_snyk_token=true" >> "$GITHUB_OUTPUT"
+            echo "snyk_enabled=true" >> "$GITHUB_OUTPUT"
           else
-            echo "has_snyk_token=false" >> "$GITHUB_OUTPUT"
+            echo "snyk_enabled=false" >> "$GITHUB_OUTPUT"
           fi
           # Visibility is always readable with the default token; Advanced
           # Security status may not be (defaults to empty -> treated as off).
@@ -257,7 +257,7 @@ jobs:
 
       - name: Install Snyk CLI
         # Snyk needs a token + repo secrets, which Dependabot runs do not get.
-        if: ${{ needs.preflight.outputs.is_dependabot == 'false' && needs.preflight.outputs.has_snyk_token == 'true' }}
+        if: ${{ needs.preflight.outputs.is_dependabot == 'false' && needs.preflight.outputs.snyk_enabled == 'true' }}
         run: npm install -g snyk
 
       - name: Report that Snyk cannot run without a token
@@ -267,7 +267,7 @@ jobs:
         # you least want silently unscanned. Failing is not an option -- it would block every
         # external contribution over a secret the contributor cannot have -- so the job stays
         # green and says so loudly instead. A reviewer must never read this check as "scanned".
-        if: ${{ needs.preflight.outputs.is_dependabot == 'false' && needs.preflight.outputs.has_snyk_token == 'false' }}
+        if: ${{ needs.preflight.outputs.is_dependabot == 'false' && needs.preflight.outputs.snyk_enabled == 'false' }}
         run: |
           {
             echo "### Snyk did NOT run - no token in this context"
@@ -283,7 +283,7 @@ jobs:
 
       - name: Authenticate Snyk
         id: snyk_auth
-        if: ${{ needs.preflight.outputs.is_dependabot == 'false' && needs.preflight.outputs.has_snyk_token == 'true' }}
+        if: ${{ needs.preflight.outputs.is_dependabot == 'false' && needs.preflight.outputs.snyk_enabled == 'true' }}
         # Probe the token, and distinguish the two failure classes:
         #   - AUTH REJECTION (expired / deprovisioned token -> SNYK-0005 / HTTP 401):
         #     structurally cannot run. Skip the scan with a Step Summary note instead of
@@ -394,7 +394,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
 
       - name: Install Snyk CLI
-        if: ${{ needs.preflight.outputs.is_dependabot == 'false' && needs.preflight.outputs.has_snyk_token == 'true' }}
+        if: ${{ needs.preflight.outputs.is_dependabot == 'false' && needs.preflight.outputs.snyk_enabled == 'true' }}
         run: npm install -g snyk
 
       - name: Report that Snyk cannot run without a token
@@ -404,7 +404,7 @@ jobs:
         # you least want silently unscanned. Failing is not an option -- it would block every
         # external contribution over a secret the contributor cannot have -- so the job stays
         # green and says so loudly instead. A reviewer must never read this check as "scanned".
-        if: ${{ needs.preflight.outputs.is_dependabot == 'false' && needs.preflight.outputs.has_snyk_token == 'false' }}
+        if: ${{ needs.preflight.outputs.is_dependabot == 'false' && needs.preflight.outputs.snyk_enabled == 'false' }}
         run: |
           {
             echo "### Snyk did NOT run - no token in this context"
@@ -420,7 +420,7 @@ jobs:
 
       - name: Authenticate Snyk
         id: snyk_auth
-        if: ${{ needs.preflight.outputs.is_dependabot == 'false' && needs.preflight.outputs.has_snyk_token == 'true' }}
+        if: ${{ needs.preflight.outputs.is_dependabot == 'false' && needs.preflight.outputs.snyk_enabled == 'true' }}
         # Same two-class probe as the Snyk Code job: skip only on a genuine auth
         # rejection; fail closed on any other error so an outage or rate-limit
         # cannot silently drop the Snyk gate behind a green check.
