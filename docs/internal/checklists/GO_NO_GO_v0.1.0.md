@@ -1,5 +1,10 @@
 # Gate GO / NO-GO — v0.1.0
 
+> **Registo datado — não é o estado corrente do projeto.** Este documento descreve a
+> versão que existia quando foi escrito; parte do que afirma já foi corrigido. Ver
+> [`docs/internal/README.md`](../README.md) antes de citar qualquer conclusão daqui.
+
+
 **Atualização:** O monorepo está na série **`7.x`** (`pyproject.toml`, `apps/web/package.json`). Onde este documento cita **`0.1.0`**, tratar como **“versão declarada nos ficheiros de projeto no branch a publicar”** (hoje **`7.0.0`**) salvo release histórica explícita.
 
 **Uma página.** Usar no dia da publicação. Detalhes operacionais: [`LAUNCH_CHECKLIST.md`](LAUNCH_CHECKLIST.md) · gates técnicos: [`RELEASE_ENGINEERING_CHECKLIST.md`](RELEASE_ENGINEERING_CHECKLIST.md) · passo a passo: [`PUBLISH_PLAYBOOK.md`](PUBLISH_PLAYBOOK.md).
@@ -28,7 +33,7 @@
 - [ ] **Build UI** — `npm run ci:build` ou `npm run ci:build:portable` **verde**.
 - [ ] **E2E smoke UI** — `npm run e2e:smoke` (ou `e2e:smoke:portable` alinhado ao CI) **verde**; para marcos atuais considerar também `npm run e2e:critical` e `npm run e2e:hybrid` ([`RELEASE_ENGINEERING_CHECKLIST.md`](RELEASE_ENGINEERING_CHECKLIST.md)).
 - [ ] **Artefactos** — wheel gerado com `python -m build` quando for anexar (`dist/*.whl` não vai para o git).
-- [ ] **CI remoto verde** — workflow em `.github/workflows/ci.yml`: jobs `python`, `web` (Ubuntu + Windows), `web-e2e-smoke` concluídos com sucesso no **commit** que receberá a tag.
+- [ ] **CI remoto verde** — workflow em `.github/workflows/github-ci-cd.yml` + `.github/workflows/security-ci-cd.yml`: jobs `python`, `web` (Ubuntu + Windows), `web-e2e-smoke` concluídos com sucesso no **commit** que receberá a tag.
 - [ ] **Sem bloqueadores abertos** — issues/PRs críticos não resolvidos só se houver **decisão explícita** de aceitar risco.
 - [ ] **Pronto para criar a tag** (ex. `v7.0.0`) — `git tag -l` sem conflito com tag já publicada **ou** política de tag já acordada.
 

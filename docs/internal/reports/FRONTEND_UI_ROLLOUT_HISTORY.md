@@ -1,5 +1,10 @@
 # Histórico resumido — evolução da UI (web)
 
+> **Registo datado — não é o estado corrente do projeto.** Este documento descreve a
+> versão que existia quando foi escrito; parte do que afirma já foi corrigido. Ver
+> [`docs/internal/README.md`](../README.md) antes de citar qualquer conclusão daqui.
+
+
 Substitui trilhos documentais paralelos (*modernization* → *refinement phase 2* → *phase 3 polish* → *phase 4 features* → *final release assets*), cada um com plano/validação/handoff. Esses ficheiros foram **removidos na higiene round 2** por duplicarem conhecimento já incorporado no código e na documentação viva.
 
 ## Linha do tempo (alto nível)

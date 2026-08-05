@@ -1,5 +1,10 @@
 # Relatório de decisão — Sonar no pipeline (B-07 / P2)
 
+> **Registo datado — não é o estado corrente do projeto.** Este documento descreve a
+> versão que existia quando foi escrito; parte do que afirma já foi corrigido. Ver
+> [`docs/internal/README.md`](../README.md) antes de citar qualquer conclusão daqui.
+
+
 ## Decisão tomada
 
 **Opção B — remoção honesta** do ficheiro `sonar-project.properties` e **sem** job SonarCloud/SonarQube no GitHub Actions.
@@ -8,7 +13,7 @@
 
 - Existia configuração Sonar **órfã** (sem integração real no CI), gerando a falsa impressão de quality gate.
 - Não há, neste repositório, runner SonarQube self-hosted nem tokens/organização SonarCloud documentados para uso seguro em CI público.
-- Preferiu-se **estado explícito**: qualidade é garantida por **Ruff, Mypy (alvo), pytest, pip-audit, npm audit, E2E** — gates presentes em `.github/workflows/ci.yml`.
+- Preferiu-se **estado explícito**: qualidade é garantida por **Ruff, Mypy (alvo), pytest, pip-audit, npm audit, E2E** — gates presentes em `.github/workflows/github-ci-cd.yml` + `.github/workflows/security-ci-cd.yml`.
 
 ## Impacto
 
@@ -42,6 +47,3 @@ a afirmar o contrário durante meses. O estado real, verificado:
 Se Sonar voltar a ser ligado ao CI, seguir os "Próximos passos" acima e **actualizar esta
 secção no mesmo PR**. A lição desta correcção é que um "estado final verificado" que ninguém
 volta a verificar envelhece para falso.
-
-> Nota: a referência a `.github/workflows/ci.yml` na justificativa acima é histórica; esse
-> ficheiro foi substituído por `github-ci-cd.yml` e `security-ci-cd.yml`.

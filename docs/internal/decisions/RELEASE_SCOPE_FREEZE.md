@@ -1,5 +1,10 @@
 # Congelamento de escopo — v0.1.0
 
+> **Registo datado — não é o estado corrente do projeto.** Este documento descreve a
+> versão que existia quando foi escrito; parte do que afirma já foi corrigido. Ver
+> [`docs/internal/README.md`](../README.md) antes de citar qualquer conclusão daqui.
+
+
 **Data do freeze:** 2026-04-01  
 **Versão coordenada do monorepo (atual):** `7.0.0` em `pyproject.toml` e `apps/web/package.json` (ver [`CHANGELOG.md`](../../../CHANGELOG.md)).  
 **Nome do produto:** App Suite Modeling (`open-threat-model` no PyPI/metadata Python)

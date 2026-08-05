@@ -1,5 +1,10 @@
 # Release Candidate Checklist
 
+> **Registo datado — não é o estado corrente do projeto.** Este documento descreve a
+> versão que existia quando foi escrito; parte do que afirma já foi corrigido. Ver
+> [`docs/internal/README.md`](../README.md) antes de citar qualquer conclusão daqui.
+
+
 Checklist técnico para publicação incremental de **App Suite Modeling**.
 
 ## 1) Checklist técnico obrigatório

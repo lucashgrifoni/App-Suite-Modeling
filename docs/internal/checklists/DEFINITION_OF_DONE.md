@@ -1,5 +1,10 @@
 # Definition of Done — App Suite Modeling
 
+> **Registo datado — não é o estado corrente do projeto.** Este documento descreve a
+> versão que existia quando foi escrito; parte do que afirma já foi corrigido. Ver
+> [`docs/internal/README.md`](../README.md) antes de citar qualquer conclusão daqui.
+
+
 Regras práticas para considerar uma **mudança** pronta para merge na `main` (ou branch de release). Complementa CI e [`RELEASE_ENGINEERING_CHECKLIST.md`](RELEASE_ENGINEERING_CHECKLIST.md).
 
 ---

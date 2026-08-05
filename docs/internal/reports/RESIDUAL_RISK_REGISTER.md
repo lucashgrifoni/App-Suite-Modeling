@@ -1,5 +1,10 @@
 # Residual Risk Register
 
+> **Registo datado — não é o estado corrente do projeto.** Este documento descreve a
+> versão que existia quando foi escrito; parte do que afirma já foi corrigido. Ver
+> [`docs/internal/README.md`](../README.md) antes de citar qualquer conclusão daqui.
+
+
 | Risco residual | Categoria | Impacto | Probabilidade | Área afetada | Bloqueador? | Mitigação atual | Mitigação futura recomendada | Decisão |
 |---|---|---|---|---|---|---|---|---|
 | Genericidade residual leve da camada STRIDE base em parte dos achados | Qualidade analítica | Baixo-Médio | Médio | Motor / relatórios | Não | Camada `biz_*` + harmonização de saída (prioriza achados específicos no relatório) | Refinar deduplicação/ranking incremental por domínio | Aceitar / reduzir depois |

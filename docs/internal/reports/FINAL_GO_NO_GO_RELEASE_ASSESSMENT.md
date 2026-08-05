@@ -1,5 +1,10 @@
 # Avaliação final de lançamento (GO / NO-GO) — App Suite Modeling / open-threat-model
 
+> **Registo datado — não é o estado corrente do projeto.** Este documento descreve a
+> versão que existia quando foi escrito; parte do que afirma já foi corrigido. Ver
+> [`docs/internal/README.md`](../README.md) antes de citar qualquer conclusão daqui.
+
+
 > **Reavaliação atual:** `7.6.1` — 2026-06-03 (secção abaixo). A avaliação original `7.2.0` (2026-04-01) é mantida como **histórico** mais adiante.
 
 ---
@@ -86,7 +91,7 @@ Não foram identificados **blockers éticos ou técnicos** que imponham **NO-GO*
 
 - **Python:** pacote instalável `open-threat-model`, namespaces `otm_*`, extras `api`, `cli`, `dev`, `report`, `artifact_import_ast`.  
 - **Apps:** FastAPI (`otm_api`), Typer (`otm`), React/Vite 8 (`apps/web`).  
-- **CI:** `.github/workflows/ci.yml` — Ruff, Bandit, mypy multi-pacote, pip-audit, pytest, smoke RC, Semgrep, Trivy imagem API, build web (Ubuntu + Windows), npm audit, E2E smoke/critical/hybrid.  
+- **CI:** `.github/workflows/github-ci-cd.yml` + `.github/workflows/security-ci-cd.yml` — Ruff, Bandit, mypy multi-pacote, pip-audit, pytest, smoke RC, Semgrep, Trivy imagem API, build web (Ubuntu + Windows), npm audit, E2E smoke/critical/hybrid.  
 - **Documentação:** dezenas de guias; índice em `docs/README.md`; profundidade em `PROJECT_DEEP_DIVE.md`, layout em `REPOSITORY_LAYOUT.md`.  
 - **Segurança OSS:** `SECURITY.md` com canal privado; política Semgrep; cabeçalhos/CSP documentados para web.
 

@@ -1,5 +1,10 @@
 # Plano de execução por fases — remediação e elevação de qualidade
 
+> **Registo datado — não é o estado corrente do projeto.** Este documento descreve a
+> versão que existia quando foi escrito; parte do que afirma já foi corrigido. Ver
+> [`docs/internal/README.md`](../README.md) antes de citar qualquer conclusão daqui.
+
+
 Este plano traduz o backlog (`FULL_PROJECT_REMEDIATION_BACKLOG.md`) em entregas sequenciadas, com **ganhos**, **riscos** e **dependências**.
 
 ---

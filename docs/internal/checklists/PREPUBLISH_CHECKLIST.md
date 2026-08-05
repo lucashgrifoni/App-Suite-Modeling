@@ -1,5 +1,10 @@
 # Checklist rápido pré-publish (dia D)
 
+> **Registo datado — não é o estado corrente do projeto.** Este documento descreve a
+> versão que existia quando foi escrito; parte do que afirma já foi corrigido. Ver
+> [`docs/internal/README.md`](../README.md) antes de citar qualquer conclusão daqui.
+
+
 Versão curta; decisão GO/NO-GO: [`GO_NO_GO_v0.1.0.md`](GO_NO_GO_v0.1.0.md); detalhe: [`LAUNCH_CHECKLIST.md`](LAUNCH_CHECKLIST.md).
 
 - [ ] Gate [`GO_NO_GO_v0.1.0.md`](GO_NO_GO_v0.1.0.md) = GO

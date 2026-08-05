@@ -1,5 +1,10 @@
 # Auditoria completa de conformidade de engenharia — App Suite Modeling
 
+> **Registo datado — não é o estado corrente do projeto.** Este documento descreve a
+> versão que existia quando foi escrito; parte do que afirma já foi corrigido. Ver
+> [`docs/internal/README.md`](../README.md) antes de citar qualquer conclusão daqui.
+
+
 **Data:** 2026-04-06  
 **Tipo:** auditoria **somente leitura** (sem alterações de código, regras de negócio ou arquitetura).  
 **Escopo auditado:** repositório na íntegra com prioridade no **núcleo do produto** (`packages/*`, `apps/api`, `apps/cli`, `apps/web`, `tests`, `scripts`, `contracts`, `docs`, `.github`, exemplos, Docker).  

@@ -1,5 +1,10 @@
 # Scope freeze — fecho de engenharia (marco atual)
 
+> **Registo datado — não é o estado corrente do projeto.** Este documento descreve a
+> versão que existia quando foi escrito; parte do que afirma já foi corrigido. Ver
+> [`docs/internal/README.md`](../README.md) antes de citar qualquer conclusão daqui.
+
+
 Documento de **fronteira de escopo** para o estado **release-ready** do App Suite Modeling, sem backlog extenso. Complementa o congelamento mais amplo em [`RELEASE_SCOPE_FREEZE.md`](RELEASE_SCOPE_FREEZE.md).
 
 **Versão coordenada do monorepo:** `7.0.0` (`pyproject.toml`, `apps/web/package.json`) — ver [`CHANGELOG.md`](../../../CHANGELOG.md).

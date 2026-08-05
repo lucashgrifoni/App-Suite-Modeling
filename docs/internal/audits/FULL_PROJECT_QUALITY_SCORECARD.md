@@ -1,5 +1,10 @@
 # Scorecard executivo — qualidade e prontidão
 
+> **Registo datado — não é o estado corrente do projeto.** Este documento descreve a
+> versão que existia quando foi escrito; parte do que afirma já foi corrigido. Ver
+> [`docs/internal/README.md`](../README.md) antes de citar qualquer conclusão daqui.
+
+
 **Projeto:** App Suite Modeling  
 **Data de referência da auditoria:** 2026-04-06  
 **Nota geral:** **7,0 / 10**
@@ -29,7 +34,7 @@ EXCELENTE (≥8,5) · BOM (7,0–8,4) · ACEITÁVEL (5,5–6,9) · FRACO (4,0–
 1. CLI monolítica (`apps/cli/otm_cli/cli.py`, ~1272 linhas) — risco de regressão e onboarding lento.
 2. API sem autenticação/autorização — adequado só com trust boundary explícita (rede confiável / gateway).
 3. CORS e métodos/headers abertos no middleware de desenvolvimento — reavaliar para ambientes não locais.
-4. `mypy` presente nas dependências de dev mas **não** executado no CI (`.github/workflows/ci.yml`).
+4. `mypy` presente nas dependências de dev mas **não** executado no CI (`.github/workflows/github-ci-cd.yml` + `.github/workflows/security-ci-cd.yml`).
 5. `sonar-project.properties` sem integração visível no pipeline CI — qualidade “opt-in manual”.
 6. E2E no CI limitado a smoke; suites `e2e:critical` / `e2e:phase4` não bloqueiam merge.
 7. Duas bases de UI (`apps/web`, `gitpage`) — risco de inconsistência visual e de segurança de conteúdo.

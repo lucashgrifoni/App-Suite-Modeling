@@ -1,5 +1,10 @@
 # Log de execução de ferramentas — auditoria de conformidade
 
+> **Registo datado — não é o estado corrente do projeto.** Este documento descreve a
+> versão que existia quando foi escrito; parte do que afirma já foi corrigido. Ver
+> [`docs/internal/README.md`](../README.md) antes de citar qualquer conclusão daqui.
+
+
 **Data:** 2026-04-06  
 **Ambiente:** Windows 10, PowerShell, Python 3.12 (utilizador), repositório local.
 
@@ -45,7 +50,7 @@ Este ficheiro regista apenas o que foi **tentado** nesta auditoria, sem correç�
 - **Comando:** `python -m ruff format --check packages apps tests`
 - **Resultado:** falha (exit 1).
 - **Evidência:** 73 ficheiros “Would reformat”; 187 já formatados.
-- **Observação:** o workflow `.github/workflows/ci.yml` **não** inclui `ruff format --check` — divergência entre “lint limpo” e “formatação canónica”.
+- **Observação:** o workflow `.github/workflows/github-ci-cd.yml` + `.github/workflows/security-ci-cd.yml` **não** inclui `ruff format --check` — divergência entre “lint limpo” e “formatação canónica”.
 
 ### 3. Mypy
 

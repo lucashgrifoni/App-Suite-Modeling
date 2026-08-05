@@ -1,5 +1,10 @@
 # Log de execução — rodada final de release readiness
 
+> **Registo datado — não é o estado corrente do projeto.** Este documento descreve a
+> versão que existia quando foi escrito; parte do que afirma já foi corrigido. Ver
+> [`docs/internal/README.md`](../README.md) antes de citar qualquer conclusão daqui.
+
+
 **Data:** 2026-04-01  
 **Âmbito:** Auditoria GO/NO-GO + melhorias pequenas e seguras (sem refactor estrutural)
 
@@ -14,7 +19,7 @@
 | `docs/MONOREPO.md`, `REPOSITORY_LAYOUT.md`, `PROJECT_DEEP_DIVE.md` | Amostragem de consistência com estrutura real |
 | `docs/VERSIONING_AND_TAGS.md`, `docs/KNOWN_LIMITATIONS.md` | Conflitos narrativos (7.x vs v0.1.0; API 0.x) |
 | OSS | `LICENSE`, `CONTRIBUTING.md`, `SECURITY.md`, existência de `CODE_OF_CONDUCT`, `.github/*` templates |
-| CI | Leitura de `.github/workflows/ci.yml` (Python 3.12, Node 20, jobs) |
+| CI | Leitura de `.github/workflows/github-ci-cd.yml` + `.github/workflows/security-ci-cd.yml` (Python 3.12, Node 20, jobs) |
 | `pyproject.toml` / `apps/web/package.json` | Versões e extras |
 | Quick start real | Execução `otm analyze examples/minimal.otm.yaml --methodology stride` |
 | Testes | `pytest` completo após `pip install -e ".[dev,cli,api]"` |

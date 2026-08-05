@@ -1,5 +1,10 @@
 # Scorecard — auditoria de engenharia completa
 
+> **Registo datado — não é o estado corrente do projeto.** Este documento descreve a
+> versão que existia quando foi escrito; parte do que afirma já foi corrigido. Ver
+> [`docs/internal/README.md`](../README.md) antes de citar qualquer conclusão daqui.
+
+
 **Data:** 2026-04-06  
 **Metodologia:** revisão estática, amostragem de ficheiros críticos, cruzamento com documentação, execução de ferramentas existentes (ver `FULL_ENGINEERING_TOOL_EXECUTION_LOG.md`).
 

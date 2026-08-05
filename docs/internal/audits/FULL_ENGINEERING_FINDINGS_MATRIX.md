@@ -1,5 +1,10 @@
 # Matriz de achados — auditoria de engenharia completa
 
+> **Registo datado — não é o estado corrente do projeto.** Este documento descreve a
+> versão que existia quando foi escrito; parte do que afirma já foi corrigido. Ver
+> [`docs/internal/README.md`](../README.md) antes de citar qualquer conclusão daqui.
+
+
 **Data:** 2026-04-06  
 **Legenda de severidade:** crítica | alta | média | baixa | observação  
 **Legenda de status:** confirmado | forte indício | observação | não verificável  
@@ -103,7 +108,7 @@
 ### AUD-GOV-001 — CI não valida `ruff format`
 
 - **Severidade:** **média**.
-- **Status:** **confirmado** (`.github/workflows/ci.yml` só `ruff check`).
+- **Status:** **confirmado** (`.github/workflows/github-ci-cd.yml` + `.github/workflows/security-ci-cd.yml` só `ruff check`).
 - **Confiança:** alta.
 
 ### AUD-GOV-002 — Mypy parcial + `ignore_missing_imports`

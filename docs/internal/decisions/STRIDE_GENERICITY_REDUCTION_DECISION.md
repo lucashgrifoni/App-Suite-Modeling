@@ -1,5 +1,10 @@
 # Redução de genericidade residual do STRIDE (decisão técnica)
 
+> **Registo datado — não é o estado corrente do projeto.** Este documento descreve a
+> versão que existia quando foi escrito; parte do que afirma já foi corrigido. Ver
+> [`docs/internal/README.md`](../README.md) antes de citar qualquer conclusão daqui.
+
+
 ## Problema atual
 
 O STRIDE base é, por natureza, mais genérico e tende a gerar **múltiplos achados “corretos porém repetitivos”** quando o modelo já possui achados `biz_*` que descrevem melhor a **mesma causa raiz** (ex.: replay de webhook, mismatch pagamento→entitlement, stacking de cupom).

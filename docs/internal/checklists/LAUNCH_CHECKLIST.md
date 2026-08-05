@@ -1,5 +1,10 @@
 # Checklist final de lançamento — v0.1.0
 
+> **Registo datado — não é o estado corrente do projeto.** Este documento descreve a
+> versão que existia quando foi escrito; parte do que afirma já foi corrigido. Ver
+> [`docs/internal/README.md`](../README.md) antes de citar qualquer conclusão daqui.
+
+
 Marque cada item no dia do publish. Um único “não” bloqueia a tag de produção até correção ou nota explícita de exceção.
 
 **Gates de engenharia (comandos):** [`RELEASE_ENGINEERING_CHECKLIST.md`](RELEASE_ENGINEERING_CHECKLIST.md) — typecheck, build web, pytest, `contracts:verify`, `e2e:critical`, `e2e:hybrid`, etc.

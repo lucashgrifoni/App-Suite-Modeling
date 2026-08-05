@@ -1,5 +1,10 @@
 # Relatório de validação — v0.1.0
 
+> **Registo datado — não é o estado corrente do projeto.** Este documento descreve a
+> versão que existia quando foi escrito; parte do que afirma já foi corrigido. Ver
+> [`docs/internal/README.md`](../README.md) antes de citar qualquer conclusão daqui.
+
+
 **Ambiente:** Windows 10 (build 26200), PowerShell  
 **Data:** 2026-04-01  
 **Escopo:** validação manual/automatizada executada na rodada de fechamento; substituir por logs de CI quando aplicável.

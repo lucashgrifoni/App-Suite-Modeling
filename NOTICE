@@ -1,0 +1,103 @@
+App Suite Modeling / open-threat-model
+Copyright (c) Open Threat Model contributors
+Licensed under the MIT License. See LICENSE.
+
+================================================================================
+Third-party frameworks, taxonomies and standards
+================================================================================
+
+This project maps generated threats to public security frameworks so that its
+output is traceable. Understanding exactly what is redistributed matters, so it
+is stated plainly:
+
+WHAT IS REDISTRIBUTED
+  Identifiers and short official names only -- for example "CWE-287",
+  "CAPEC-151", "V2.2.1", "PR.AA-01", "A.8.24", "LLM01:2025", "AML.T0051".
+  These are used as references, the way a bibliography cites a work.
+
+WHAT IS NOT REDISTRIBUTED
+  The normative text of any standard. No control descriptions, requirement
+  text, questionnaire items or guidance are copied from the sources below. All
+  descriptive prose shipped in this repository -- including every `notes` field
+  in the framework map files and every heuristic description -- was written for
+  this project.
+
+WHAT THIS MEANS FOR YOU
+  A mapping here is a pointer for traceability. It is not a certified
+  crosswalk, it is not endorsed by any of the organisations below, and it does
+  not by itself demonstrate compliance with anything. Read the source.
+
+--------------------------------------------------------------------------------
+Sources referenced
+--------------------------------------------------------------------------------
+
+MITRE CWE (Common Weakness Enumeration)
+  https://cwe.mitre.org/
+  (c) The MITRE Corporation.
+
+MITRE CAPEC (Common Attack Pattern Enumeration and Classification)
+  https://capec.mitre.org/
+  (c) The MITRE Corporation.
+
+MITRE ATLAS (Adversarial Threat Landscape for AI Systems)
+  https://atlas.mitre.org/  ·  https://github.com/mitre-atlas/atlas-data
+  (c) The MITRE Corporation.
+  Technique identifiers and names are taken from the canonical machine-readable
+  distribution (dist/ATLAS.yaml) rather than from secondary sources.
+
+OWASP Application Security Verification Standard (ASVS) 4.0.3
+  https://owasp.org/www-project-application-security-verification-standard/
+  (c) The OWASP Foundation. ASVS is published under CC BY-SA 4.0.
+
+OWASP Top 10 for Large Language Model Applications 2025
+  https://genai.owasp.org/llm-top-10/
+  (c) The OWASP Foundation.
+
+NIST Cybersecurity Framework (CSF) 2.0
+  https://www.nist.gov/cyberframework
+  A publication of the U.S. National Institute of Standards and Technology.
+
+ISO/IEC 27001:2022, Annex A
+  https://www.iso.org/standard/27001
+  (c) ISO/IEC. Annex A control identifiers are referenced; the standard itself
+  is copyrighted and is not reproduced here. Obtain it from ISO or a national
+  member body.
+
+PLOT4ai (Practical Library Of Threats 4 Artificial Intelligence)
+  https://plot4.ai/
+  (c) Isabel Barberá. Published under CC BY-SA 4.0.
+  The AI lens in this project is INSPIRED BY the PLOT4ai threat categories and
+  uses names derived from them. The library's own question set and text are not
+  redistributed. If you build on the AI lens, note that PLOT4ai's CC BY-SA 4.0
+  terms apply to material derived from PLOT4ai itself.
+
+Open Threat Model (OTM) standard
+  https://github.com/iriusrisk/OpenThreatModel
+  The OTM interchange format, originated by IriusRisk. This project implements
+  import and export for it. See "Naming" below.
+
+STRIDE
+  Threat categorisation model originated at Microsoft.
+
+--------------------------------------------------------------------------------
+Trademarks
+--------------------------------------------------------------------------------
+
+MITRE, CWE, CAPEC and ATLAS are trademarks of The MITRE Corporation. OWASP and
+ASVS are trademarks of The OWASP Foundation. NIST is a trademark of the U.S.
+National Institute of Standards and Technology. ISO and IEC are trademarks of
+their respective organisations. OCTAVE is a trademark of Carnegie Mellon
+University. PLOT4ai is the work of its author.
+
+None of these organisations endorse, sponsor or are affiliated with this
+project. The names are used solely to identify the frameworks referenced.
+
+--------------------------------------------------------------------------------
+Naming
+--------------------------------------------------------------------------------
+
+The Python distribution is named `open-threat-model` and the canonical document
+uses the `.otm.yaml` extension, because the project implements the Open Threat
+Model interchange format. It is an independent implementation and is not the
+OTM standard itself, nor is it affiliated with IriusRisk. The product name is
+"App Suite Modeling"; `open-threat-model` is the distribution name on PyPI.

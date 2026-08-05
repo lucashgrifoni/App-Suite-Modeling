@@ -1,5 +1,10 @@
 # Scorecard executivo — release readiness (2026-04-01)
 
+> **Registo datado — não é o estado corrente do projeto.** Este documento descreve a
+> versão que existia quando foi escrito; parte do que afirma já foi corrigido. Ver
+> [`docs/internal/README.md`](../README.md) antes de citar qualquer conclusão daqui.
+
+
 **Projeto:** App Suite Modeling / **`open-threat-model`**  
 **Decisão resumida:** **GO WITH CAVEATS** (ver [`FINAL_GO_NO_GO_RELEASE_ASSESSMENT.md`](FINAL_GO_NO_GO_RELEASE_ASSESSMENT.md))
 

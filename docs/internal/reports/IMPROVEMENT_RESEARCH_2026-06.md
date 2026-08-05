@@ -1,5 +1,10 @@
 # Improvement research & evolution plan — App Suite Modeling
 
+> **Registo datado — não é o estado corrente do projeto.** Este documento descreve a
+> versão que existia quando foi escrito; parte do que afirma já foi corrigido. Ver
+> [`docs/internal/README.md`](../README.md) antes de citar qualquer conclusão daqui.
+
+
 > **Date:** 2026-06-18 · **Baseline:** v7.6.4 · **Author:** maintainer research pass
 > **Scope guardrail:** every item below stays inside the project's idea — *threat modeling as code*: one canonical `.otm.yaml` document driving a CLI, a REST API, and a web UI, with a heuristic multi‑methodology engine, artifact import, exports, and diff. Anything that would turn the project into a different product (multi‑tenant SaaS, GUI diagram editor, generic scanner, commercial platform) is listed under **Out of scope** and is **not** planned.
 

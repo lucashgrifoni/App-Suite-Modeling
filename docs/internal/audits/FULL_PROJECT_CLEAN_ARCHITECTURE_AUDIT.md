@@ -1,5 +1,10 @@
 # Auditoria completa — Clean Code, Clean Architecture e qualidade de engenharia
 
+> **Registo datado — não é o estado corrente do projeto.** Este documento descreve a
+> versão que existia quando foi escrito; parte do que afirma já foi corrigido. Ver
+> [`docs/internal/README.md`](../README.md) antes de citar qualquer conclusão daqui.
+
+
 **Projeto:** App Suite Modeling / Open Threat Model  
 **Escopo:** monorepo Python (packages, `apps/api`, `apps/cli`) + SPA React/Vite (`apps/web`) + site estático (`gitpage`) + testes, CI, documentação.  
 **Metodologia:** revisão estática do código e da estrutura, cruzamento com práticas de Clean Code, Clean Architecture, AppSec/DevSecOps e estratégia de testes. **Nenhuma alteração de código** foi feita nesta fase — apenas diagnóstico.
@@ -12,7 +17,7 @@
 
 O projeto apresenta **fundação sólida** para um produto de *threat modeling as code*: schema canónico em Pydantic (`otm_core_schema`), motor de análise modular (`otm_threat_engine`), API FastAPI fina que delega regras aos pacotes de domínio, **testes extensivos** (dezenas de ficheiros em `tests/`) e um **gate explícito de fronteira** entre domínio/motor e frameworks (`scripts/check_core_adapter_boundary.py`). A UI usa **tokens CSS + Tailwind** alinhados (`apps/web/tailwind.config.js`), **code-splitting** por rota (`apps/web/src/App.tsx`) e contratos TypeScript alinhados ao backend (testes de alinhamento em `tests/test_*_ts_contract_alignment.py`).
 
-Os principais **gaps de excelência** concentram-se em: (1) **módulo CLI monolítico** (`apps/cli/otm_cli/cli.py`, ~1270 linhas) com alta carga cognitiva e risco de regressão; (2) **postura de segurança assumida como ferramenta local** (API sem autenticação/autorização, CORS fixo para localhost em `apps/api/otm_api/main.py`) — aceitável como *default de desenvolvimento*, mas **não documentado como trust boundary de deployment** de forma uniforme; (3) **CI sem mypy**, sem análise de dependências Node no pipeline Python, e **E2E mínimo no GitHub Actions** (apenas `e2e:smoke:portable` em `.github/workflows/ci.yml`, enquanto `package.json` define suites mais amplas não obrigatórias no CI); (4) **dependência opcional `sqlalchemy` em `pyproject.toml` [project.optional-dependencies] `api`** sem uso aparente em `apps/api` — ruído de superfície e manutenção; (5) **duas bases front-end** (`apps/web` vs `gitpage`) com risco de **deriva de design system** e esforço duplicado.
+Os principais **gaps de excelência** concentram-se em: (1) **módulo CLI monolítico** (`apps/cli/otm_cli/cli.py`, ~1270 linhas) com alta carga cognitiva e risco de regressão; (2) **postura de segurança assumida como ferramenta local** (API sem autenticação/autorização, CORS fixo para localhost em `apps/api/otm_api/main.py`) — aceitável como *default de desenvolvimento*, mas **não documentado como trust boundary de deployment** de forma uniforme; (3) **CI sem mypy**, sem análise de dependências Node no pipeline Python, e **E2E mínimo no GitHub Actions** (apenas `e2e:smoke:portable` em `.github/workflows/github-ci-cd.yml` + `.github/workflows/security-ci-cd.yml`, enquanto `package.json` define suites mais amplas não obrigatórias no CI); (4) **dependência opcional `sqlalchemy` em `pyproject.toml` [project.optional-dependencies] `api`** sem uso aparente em `apps/api` — ruído de superfície e manutenção; (5) **duas bases front-end** (`apps/web` vs `gitpage`) com risco de **deriva de design system** e esforço duplicado.
 
 **Conclusão operacional:** o projeto está **acima da média** para um OSS de domínio técnico, com **arquitetura em camadas razoável** e **testes fortes no núcleo**, mas **não** cumpre, sem trabalho adicional, o patamar de “excelência técnica” para **exposição genérica na Internet** ou para **equipa grande** sem reduzir dívida no CLI e endurecer gates de CI/segurança.
 
@@ -64,7 +69,7 @@ Os principais **gaps de excelência** concentram-se em: (1) **módulo CLI monol�
 
 - **CLI monolítica:** `apps/cli/otm_cli/cli.py` ~1272 linhas — alto acoplamento, difícil navegação e teste fino sem invocar Typer integralmente.
 - **API “aberta” por omissão:** sem authz; CORS apenas `localhost:5173` — correto para dev, **insuficiente** para multi-tenant ou exposição pública sem camada extra (API gateway, mTLS, etc.).
-- **CI vs qualidade declarada:** `mypy` em `[project.optional-dependencies] dev` mas **ausente** do job `python` em `.github/workflows/ci.yml`.
+- **CI vs qualidade declarada:** `mypy` em `[project.optional-dependencies] dev` mas **ausente** do job `python` em `.github/workflows/github-ci-cd.yml` + `.github/workflows/security-ci-cd.yml`.
 - **Sonar:** `sonar-project.properties` existe, mas **não há job** Sonar no workflow CI analisado — config “órfã” operacionalmente.
 - **E2E:** CI corre só `e2e/smoke.spec.ts`; `e2e:critical` / `e2e:phase4` existem em `apps/web/package.json` mas não bloqueiam merge — risco de regressão UI.
 
@@ -117,9 +122,9 @@ Cada achado inclui: **ID**, **categoria**, **severidade** (Crítica / Alta / Mé
 | A-07 | Frontend / Segurança | Média | Estado sensível ao modelo em `sessionStorage`; depende de não haver XSS e de origem confiável. | `apps/web/src/context/SessionContext.tsx` |
 | A-08 | Frontend / Clean Code | Média | `WizardPage` volumoso — candidato a divisão por passo/feature. | `apps/web/src/pages/WizardPage.tsx` |
 | A-09 | Frontend | Baixa | `apiFetch` aceita URL absoluta — útil para testes, risco se usado incorretamente. | `apps/web/src/api/client.ts` |
-| A-10 | DevSecOps | Alta | `mypy` não corre no CI — tipo estático declarado mas não enforced. | `pyproject.toml`, `.github/workflows/ci.yml` |
-| A-11 | DevSecOps | Média | Sonar configurado em ficheiro mas não integrado no pipeline CI visível. | `sonar-project.properties` vs `.github/workflows/ci.yml` |
-| A-12 | DevSecOps / Testes | Média | E2E além de smoke não é obrigatório no CI. | `apps/web/package.json`, `.github/workflows/ci.yml` |
+| A-10 | DevSecOps | Alta | `mypy` não corre no CI — tipo estático declarado mas não enforced. | `pyproject.toml`, `.github/workflows/github-ci-cd.yml` + `.github/workflows/security-ci-cd.yml` |
+| A-11 | DevSecOps | Média | Sonar configurado em ficheiro mas não integrado no pipeline CI visível. | `sonar-project.properties` vs `.github/workflows/github-ci-cd.yml` + `.github/workflows/security-ci-cd.yml` |
+| A-12 | DevSecOps / Testes | Média | E2E além de smoke não é obrigatório no CI. | `apps/web/package.json`, `.github/workflows/github-ci-cd.yml` + `.github/workflows/security-ci-cd.yml` |
 | A-13 | Manutenibilidade | Baixa | `sqlalchemy` em extras `api` sem uso em `apps/api` (grep sem ocorrências). | `pyproject.toml`, `apps/api` |
 | A-14 | Clean Code / Qualidade | Média | Ruff com conjunto mínimo de regras — menos deteção de complexidade/bugs. | `pyproject.toml` `[tool.ruff.lint] select` |
 | A-15 | Testabilidade | Baixa (forte no geral) | Boa cobertura de testes de domínio; risco residual em caminhos CLI pouco fatiados. | `tests/`, `cli.py` |
@@ -136,7 +141,7 @@ Cada achado inclui: **ID**, **categoria**, **severidade** (Crítica / Alta / Mé
 | `apps/cli/otm_cli/` | Adaptador CLI | `cli.py` domina a superfície — principal dívida estrutural. |
 | `apps/web/src/` | UI | Tokens + lazy loading; páginas grandes em alguns fluxos. |
 | `scripts/check_core_adapter_boundary.py` | Gate arquitetural | Excelente prática automatizada. |
-| `.github/workflows/ci.yml` | CI | Sólido para Python+build web; lacunas mypy/SCA/Sonar/E2E alargado. |
+| `.github/workflows/github-ci-cd.yml` + `.github/workflows/security-ci-cd.yml` | CI | Sólido para Python+build web; lacunas mypy/SCA/Sonar/E2E alargado. |
 
 ---
 

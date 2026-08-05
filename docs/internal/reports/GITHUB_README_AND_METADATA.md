@@ -1,5 +1,10 @@
 # README raiz, metadados OSS e publicação GitHub
 
+> **Registo datado — não é o estado corrente do projeto.** Este documento descreve a
+> versão que existia quando foi escrito; parte do que afirma já foi corrigido. Ver
+> [`docs/internal/README.md`](../README.md) antes de citar qualquer conclusão daqui.
+
+
 Consolidação de `README_RELEASE_VALIDATION.md` e `README_RELEASE_HANDOFF.md` (higiene docs, 2026-04).
 
 ## Âmbito

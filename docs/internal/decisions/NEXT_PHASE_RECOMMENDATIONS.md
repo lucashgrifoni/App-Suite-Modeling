@@ -1,5 +1,10 @@
 # Next Phase Recommendations
 
+> **Registo datado — não é o estado corrente do projeto.** Este documento descreve a
+> versão que existia quando foi escrito; parte do que afirma já foi corrigido. Ver
+> [`docs/internal/README.md`](../README.md) antes de citar qualquer conclusão daqui.
+
+
 ## O que faz sentido fazer depois
 1. **Refino analítico incremental**: reduzir genericidade residual STRIDE com foco em precisão, não volume.
 2. **Priorização econômica**: melhorar ranking para fraude repetível e inconsistência material billing-entitlement.

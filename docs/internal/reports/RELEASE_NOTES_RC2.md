@@ -1,5 +1,10 @@
 # Release Notes - RC2 (publicação incremental controlada)
 
+> **Registo datado — não é o estado corrente do projeto.** Este documento descreve a
+> versão que existia quando foi escrito; parte do que afirma já foi corrigido. Ver
+> [`docs/internal/README.md`](../README.md) antes de citar qualquer conclusão daqui.
+
+
 ## Destaques
 
 - Pipeline de release fortalecida com checklist, smoke suite e playbook operacional.
