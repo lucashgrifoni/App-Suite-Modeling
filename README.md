@@ -131,7 +131,7 @@ otm report examples/minimal.otm.yaml -o REPORT.md
 **GitHub Actions — composite action.** Validates the model, runs the engine, writes SARIF, and optionally fails the build when a pull request adds risk:
 
 ```yaml
-- uses: lucashgrifoni/App-Suite-Modeling@v7.8.0
+- uses: lucashgrifoni/App-Suite-Modeling@v7.9.0
   with:
     model: threat-model.otm.yaml
     # Drift gate: compare against the model as it exists on the base branch.
@@ -140,14 +140,14 @@ otm report examples/minimal.otm.yaml -o REPORT.md
     upload-sarif: "true"   # needs `security-events: write` on the job
 ```
 
-By default the action installs the engine from its own checkout, so the CLI is exactly the version you pinned in `uses:` — there is no skew between the action and the tool. Pass `version: 7.8.0` to install that release from PyPI instead. Outputs: `sarif-file`, `analysis-file`, and `gate-outcome` (`passed`, `tripped`, `not-evaluated`, or `skipped`). See [`action.yml`](action.yml) for every input.
+By default the action installs the engine from its own checkout, so the CLI is exactly the version you pinned in `uses:` — there is no skew between the action and the tool. Pass `version: 7.9.0` to install that release from PyPI instead. Outputs: `sarif-file`, `analysis-file`, and `gate-outcome` (`passed`, `tripped`, `not-evaluated`, or `skipped`). See [`action.yml`](action.yml) for every input.
 
 **pre-commit — catch a malformed model before it is committed:**
 
 ```yaml
 repos:
   - repo: https://github.com/lucashgrifoni/App-Suite-Modeling
-    rev: v7.8.0
+    rev: v7.9.0
     hooks:
       - id: otm-validate
 ```
@@ -296,7 +296,7 @@ Please **do not** file public issues with exploitable vulnerability details. Use
 
 ## Versioning
 
-Package version lives in `pyproject.toml` (currently **7.6.4**, aligned with `apps/web/package.json`). Tags, RCs, and the relationship to historical milestones (e.g. documented `v0.1.0` scope) are explained in [docs/VERSIONING_AND_TAGS.md](docs/VERSIONING_AND_TAGS.md). Release history: [CHANGELOG.md](CHANGELOG.md).
+The package version lives in [`pyproject.toml`](pyproject.toml) and is kept aligned with `apps/web/package.json`. It is deliberately not restated here — a version number copied into prose goes stale the moment it is bumped, and this line said `7.6.4` for three releases. Tags, RCs, and the relationship to historical milestones (e.g. the documented `v0.1.0` scope) are explained in [docs/VERSIONING_AND_TAGS.md](docs/VERSIONING_AND_TAGS.md). Release history: [CHANGELOG.md](CHANGELOG.md).
 
 ---
 

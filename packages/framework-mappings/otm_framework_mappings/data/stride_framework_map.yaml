@@ -55,8 +55,8 @@ by_stride:
       control_id: V14.1.1
       notes: "Ambiente de build e dependências — ASVS V14 Configuration."
     - framework: nist_csf
-      control_id: PR.DS-06
-      notes: "Integridade de software e firmware (NIST CSF 2.0 PR.DS)."
+      control_id: PR.DS-01
+      notes: "Confidencialidade, integridade e disponibilidade dos dados em repouso (NIST CSF 2.0 PR.DS-01)."
     - framework: nist_csf
       control_id: PR.PS-01
       notes: "Configuração e manutenção de componentes de infraestrutura (PR.PS)."
@@ -87,8 +87,8 @@ by_stride:
       control_id: DE.CM-03
       notes: "Atividades de pessoal são monitorizadas para comportamento anómalo (DE.CM)."
     - framework: iso_27001
-      control_id: A.8.17
-      notes: "Registo de eventos (A.8.17)."
+      control_id: A.8.15
+      notes: "Registo de eventos (A.8.15)."
     - framework: iso_27001
       control_id: A.8.15
       notes: "Registo de acessos (A.8.15)."
@@ -116,8 +116,8 @@ by_stride:
       control_id: PR.DS-02
       notes: "Dados em trânsito são protegidos."
     - framework: iso_27001
-      control_id: A.8.11
-      notes: "Criptografia (A.8.11)."
+      control_id: A.8.24
+      notes: "Utilização de criptografia (A.8.24)."
     - framework: iso_27001
       control_id: A.5.14
       notes: "Transferência de informação (A.5.14)."
@@ -142,8 +142,8 @@ by_stride:
       control_id: A.8.6
       notes: "Gestão de capacidade (A.8.6)."
     - framework: iso_27001
-      control_id: A.8.13
-      notes: "Redundância de recursos de processamento (A.8.13)."
+      control_id: A.8.14
+      notes: "Redundância de recursos de tratamento de informação (A.8.14)."
 
   elevation_of_privilege:
     - framework: owasp_tm
@@ -162,11 +162,11 @@ by_stride:
       control_id: V4.2.1
       notes: "Operações com permissão explícita por política."
     - framework: nist_csf
-      control_id: PR.AC-01
-      notes: "Identidades e credenciais são geridas, autenticadas e sujeitas a ciclo de vida (PR.AC)."
+      control_id: PR.AA-01
+      notes: "Identidades e credenciais são geridas ao longo do ciclo de vida (NIST CSF 2.0 PR.AA-01)."
     - framework: nist_csf
-      control_id: PR.AC-04
-      notes: "Permissões de acesso são geridas, incorporando princípio do menor privilégio."
+      control_id: PR.AA-05
+      notes: "Permissões e autorizações seguem o princípio do menor privilégio (NIST CSF 2.0 PR.AA-05)."
     - framework: iso_27001
       control_id: A.8.2
       notes: "Direitos de acesso privilegiado (A.8.2)."

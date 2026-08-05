@@ -13,8 +13,12 @@ A API (`uvicorn otm_api.main:app`) e a UI (`vite`) são desenhadas para **uso lo
 
 Se descobrir uma vulnerabilidade, **não** abra um issue público com detalhes exploitáveis.
 
-Envie um relatório privado aos mantenedores via **GitHub Security Advisories** (preferencial)
-ou pelo canal privado definido no repositório.
+Use o **relatório privado de vulnerabilidades do GitHub**, que é o único canal deste projeto:
+
+**<https://github.com/lucashgrifoni/App-Suite-Modeling/security/advisories/new>**
+
+O relatório fica visível apenas para os mantenedores e para quem reportou, e permite discutir,
+corrigir e publicar o advisory sem nunca expor os detalhes num issue público.
 
 Inclua:
 

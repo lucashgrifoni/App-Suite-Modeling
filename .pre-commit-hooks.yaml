@@ -2,7 +2,7 @@
 #
 #   repos:
 #     - repo: https://github.com/lucashgrifoni/App-Suite-Modeling
-#       rev: v7.8.0
+#       rev: v7.9.0
 #       hooks:
 #         - id: otm-validate
 #

@@ -22,7 +22,26 @@
 3. Restaurar `sonar-project.properties` **no mesmo PR** que o job, com quality gate acordado.
 4. Actualizar este documento e o CHANGELOG.
 
-## Estado final verificado
+## Estado final verificado — **actualizado 2026-08-05**
 
-- Não há `sonar-project.properties` no repositório.
-- O workflow CI não referencia Sonar.
+A decisão original (remover o ficheiro) **foi revertida na prática** e este documento ficou
+a afirmar o contrário durante meses. O estado real, verificado:
+
+- **`sonar-project.properties` existe e está versionado na raiz.** Foi reposto para suportar
+  a campanha de qualidade Sonar corrida localmente (0 issues, quality gate OK), e as suas
+  exclusões de cobertura estão afinadas a ficheiros concretos deste repositório — não é
+  configuração órfã abandonada, é configuração usada manualmente.
+- **Nenhum workflow referencia Sonar** (`git grep -i sonar .github/workflows/` não devolve
+  nada). Continua a não haver quality gate Sonar em CI, e isso é deliberado: não há runner
+  self-hosted nem organização SonarCloud documentada para uso seguro num repositório público.
+- Logo, a preocupação original mantém-se parcialmente válida: **a presença do ficheiro pode
+  sugerir a um leitor que existe um gate Sonar em PR, e não existe.** Quem ler a raiz do
+  repositório deve assumir que a qualidade é garantida por Ruff, Mypy, pytest, os scanners
+  de `security-ci-cd.yml` e os E2E — não por Sonar.
+
+Se Sonar voltar a ser ligado ao CI, seguir os "Próximos passos" acima e **actualizar esta
+secção no mesmo PR**. A lição desta correcção é que um "estado final verificado" que ninguém
+volta a verificar envelhece para falso.
+
+> Nota: a referência a `.github/workflows/ci.yml` na justificativa acima é histórica; esse
+> ficheiro foi substituído por `github-ci-cd.yml` e `security-ci-cd.yml`.

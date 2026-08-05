@@ -52,8 +52,8 @@ export const differentiators = [
     body: "Industry-grade starters that accelerate consistent modeling.",
   },
   {
-    title: "AI modeling",
-    body: "LLM-assisted detection and structuring—guided, not chaotic.",
+    title: "AI system modeling",
+    body: "Detects LLM, RAG, agent and inference components in your architecture and applies the PLOT4ai lens.",
   },
   {
     title: "Export & automation",
@@ -149,7 +149,7 @@ export const features = [
     body: "Preserve reasoning so reviews scale beyond a single expert.",
   },
   {
-    title: "AI detection & modeling",
-    body: "LLM-assisted insights with guardrails for structured outputs.",
+    title: "AI system modeling",
+    body: "PLOT4ai heuristics for AI components, mapped to OWASP LLM Top 10 2025 and MITRE ATLAS.",
   },
 ];

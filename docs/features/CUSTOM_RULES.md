@@ -133,7 +133,7 @@ Rules flow into everything downstream, including the drift gate — so a pull re
 introduces a component violating an organisation rule can fail the build:
 
 ```yaml
-- uses: lucashgrifoni/App-Suite-Modeling@v7.8.0
+- uses: lucashgrifoni/App-Suite-Modeling@v7.9.0
   with:
     model: threat-model.otm.yaml
     baseline: baseline/threat-model.otm.yaml

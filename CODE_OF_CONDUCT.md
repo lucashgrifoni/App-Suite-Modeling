@@ -34,7 +34,9 @@ Este Código de Conduta aplica-se dentro de todos os espaços do projeto, e tamb
 
 ## Execução
 
-Instâncias de comportamento abusivo, de assédio ou de outra forma inaceitável podem ser reportadas aos mantenedores responsáveis pela comunidade. Todas as queixas serão revistas e investigadas de forma rápida e justa.
+Instâncias de comportamento abusivo, de assédio ou de outra forma inaceitável podem ser reportadas de forma privada ao mantenedor via **[GitHub private vulnerability reporting](https://github.com/lucashgrifoni/App-Suite-Modeling/security/advisories/new)** — o mesmo canal privado usado para segurança serve aqui, porque é o único que este projeto oferece com confidencialidade garantida. Todas as queixas serão revistas e investigadas de forma rápida e justa.
+
+Este projeto é mantido por uma única pessoa. Se a queixa for **sobre o mantenedor**, esse canal não é adequado: use o [GitHub Support](https://support.github.com/contact/report-abuse) para reportar abuso, o que é a via correta quando não existe um segundo mantenedor a quem escalar. Dizê-lo explicitamente é mais honesto do que sugerir uma estrutura de governação que não existe.
 
 Todos os mantenedores são obrigados a respeitar a privacidade e a segurança de quem reportar um incidente.
 

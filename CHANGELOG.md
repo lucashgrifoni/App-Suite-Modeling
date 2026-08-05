@@ -6,7 +6,18 @@ This project follows **Keep a Changelog** and **Semantic Versioning**.
 
 ---
 
-## [Unreleased]
+## [7.9.0] — 2026-08-05
+
+### Security
+- **The Semgrep gate was not gating.** `--severity` is a *filter*, and it is repeatable — a single `--severity WARNING` therefore loaded **only** warning-severity rules and silently dropped every ERROR-severity (high) rule in `p/security-audit`, `p/github-actions` and the project's own pack. The gate ran on every push and never saw the findings it existed to catch. Reproduced with a two-rule fixture: the old flags reported *"1 Code rule"*, the fixed ones *"2 Code rules"*. Both severities now run, and the step asserts the exit code explicitly instead of trusting `--error` to fail the job — a security gate that depends on a flag's side effect is one flag change away from passing everything.
+
+### Fixed
+- **Shipped framework mappings cited control IDs that do not exist in the versions the file declares.** The header claims OWASP ASVS 4.0.3, NIST CSF 2.0 and ISO/IEC 27001:2022 Annex A; six entries did not match. `PR.DS-06`, `PR.AC-01` and `PR.AC-04` are **CSF 1.1** — the `PR.AC-*` family became `PR.AA-*` in 2.0 — and three ISO controls pointed at the wrong number: `A.8.17` is clock synchronisation (logging is `A.8.15`), `A.8.11` is data masking (use of cryptography is `A.8.24`), `A.8.13` is information backup (redundancy is `A.8.14`). This matters more than a typo: the product sells standards traceability, and an invented identifier becomes noise somebody quotes in an audit report. Corrected, and a new test pins **every** `control_id` against the declared framework version, so the header is now verified rather than asserted.
+- **The landing page advertised "LLM-assisted" analysis. There is no LLM in the product** — no SDK in any manifest, no HTTP client anywhere under `packages/`, no network egress possible. What exists is the inverse: `ai_modeling/` *detects* LLM, RAG and agent components in the architecture **being modelled**. Both entries now describe what ships.
+- **Every call to action on the published landing page pointed at `https://github.com`.** The repository URL defaulted to a bare placeholder and the Pages workflow never set `VITE_REPO_URL`, so "View on GitHub", "Docs" and "Issues" all dropped the visitor on GitHub's homepage. The default is now this project's repository.
+- **`SECURITY.md` and `CODE_OF_CONDUCT.md` had no reachable reporting channel** — both pointed at "the private channel defined in the repository", which did not exist. Both now link to GitHub private vulnerability reporting directly, and the code of conduct states plainly that this project has a single maintainer and names GitHub Support as the escalation path when the complaint concerns them.
+- **`SONAR_DECISION_REPORT.md` stated as "verified final state" that `sonar-project.properties` had been removed.** The file is tracked at the repository root and was reinstated for the local Sonar campaign. The document now describes the real state, including the residual caveat that its presence can suggest a CI quality gate that does not exist.
+- **The README's Versioning section had said `7.6.4` for three releases.** It no longer restates the version at all — a number copied into prose goes stale the moment it is bumped.
 
 ### Added
 - **Custom rules — organisation heuristics without forking the engine (`otm analyze --rules <file>`).** Every organisation has threat-modelling rules the generic engine cannot know: an internal standard, a control the platform team mandates, a lesson from an incident. Those now go in a YAML file in your own repository and run alongside the engine, feeding the same result, JSON, SARIF and CI gate. Documented in [docs/features/CUSTOM_RULES.md](docs/features/CUSTOM_RULES.md), with a working [`examples/custom-rules.example.yaml`](examples/custom-rules.example.yaml).
