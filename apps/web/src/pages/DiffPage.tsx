@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
-import { Navigate } from "react-router-dom";
+import { Navigate } from "react-router";
 import { compareThreatModels } from "../api/otmApi";
 import { ApiError } from "../api/client";
 import { Alert } from "../components/ui/Alert";

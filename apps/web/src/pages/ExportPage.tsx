@@ -4,7 +4,7 @@ import {
   resolveExportArtifactLocale,
   type ExportArtifactLocale,
 } from "../i18n/exportArtifactLocale";
-import { Navigate } from "react-router-dom";
+import { Navigate } from "react-router";
 import { exportArtifacts, fetchPremiumReport, type PremiumReportLevel } from "../api/otmApi";
 import { ApiError } from "../api/client";
 import { Button } from "../components/ui/Button";

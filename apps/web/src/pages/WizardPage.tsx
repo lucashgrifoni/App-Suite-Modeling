@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
-import { Link, Navigate } from "react-router-dom";
+import { Link, Navigate } from "react-router";
 import { validateDocument } from "../api/otmApi";
 import { ApiError } from "../api/client";
 import { Button } from "../components/ui/Button";

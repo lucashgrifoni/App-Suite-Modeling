@@ -5,7 +5,7 @@ Define architecture once in a **versioned YAML model**, run **multi-methodology 
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-[![Node 20+](https://img.shields.io/badge/node-20+-339933?logo=nodedotjs&logoColor=white)](https://nodejs.org/)
+[![Node 22+](https://img.shields.io/badge/node-22+-339933?logo=nodedotjs&logoColor=white)](https://nodejs.org/)
 
 > **Python distribution name:** `open-threat-model` (see [`pyproject.toml`](pyproject.toml)). **App Suite Modeling** is the product name in docs and the web UI. Install from a clone: `pip install -e ".[cli]"` (or `.[dev,cli,api]` for full dev parity).
 

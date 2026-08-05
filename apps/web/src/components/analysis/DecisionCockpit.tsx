@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { Trans, useTranslation } from "react-i18next";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import type { AnalysisResult, HeuristicThreat } from "../../types/api";
 import { Card } from "../ui/Card";
 import { Badge } from "../ui/Badge";

@@ -1,6 +1,6 @@
 import { Trans, useTranslation } from "react-i18next";
 import { resolveExportArtifactLocale } from "../i18n/exportArtifactLocale";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { Badge } from "../components/ui/Badge";

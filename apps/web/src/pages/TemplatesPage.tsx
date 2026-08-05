@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { instantiateTemplate, listTemplates } from "../api/otmApi";
 import type { TemplateListQuery } from "../api/otmApi";
 import { ApiError } from "../api/client";

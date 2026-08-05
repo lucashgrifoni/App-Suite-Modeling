@@ -97,7 +97,7 @@ concurrency:
 
 env:
   PYTHON_VERSION: "3.13"
-  NODE_VERSION: "20"
+  NODE_VERSION: "22"
   TRIVY_SEVERITY: "MEDIUM,HIGH,CRITICAL"
   TRIVY_SKIP_DIRS: ".git,node_modules,dist,build,coverage"
   SNYK_SEVERITY_THRESHOLD: "medium"
