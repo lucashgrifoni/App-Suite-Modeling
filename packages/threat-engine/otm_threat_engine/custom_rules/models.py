@@ -14,7 +14,7 @@ from __future__ import annotations
 import re
 from typing import Annotated, Any, Literal
 
-from otm_core_schema import Component, DataFlow, StrideCategory
+from otm_core_schema import Asset, Component, DataFlow, StrideCategory
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 #: Ids entram em ids de ameaça gerados, em nomes de ficheiro de relatório e em tabelas
@@ -35,6 +35,7 @@ def _matchable_fields(model: type[BaseModel]) -> dict[str, Any]:
 
 COMPONENT_MATCH_FIELDS = _matchable_fields(Component)
 FLOW_MATCH_FIELDS = {**_matchable_fields(DataFlow), **DERIVED_FLOW_FIELDS}
+ASSET_MATCH_FIELDS = _matchable_fields(Asset)
 
 
 class _MatchBlock(BaseModel):
@@ -64,6 +65,13 @@ class FlowMatch(_MatchBlock):
         return self
 
 
+class AssetMatch(_MatchBlock):
+    @model_validator(mode="after")
+    def _known_fields_only(self) -> AssetMatch:
+        _reject_unknown(self.criteria(), ASSET_MATCH_FIELDS, "asset")
+        return self
+
+
 def _reject_unknown(criteria: dict[str, Any], allowed: dict[str, Any], subject: str) -> None:
     """Um campo escrito com erro é o pior modo de falha possível aqui.
 
@@ -82,23 +90,26 @@ class RuleMatch(BaseModel):
 
     component: ComponentMatch | None = None
     flow: FlowMatch | None = None
+    asset: AssetMatch | None = None
 
     @model_validator(mode="after")
     def _exactly_one_subject(self) -> RuleMatch:
-        chosen = [s for s in ("component", "flow") if getattr(self, s) is not None]
+        chosen = [s for s in ("component", "flow", "asset") if getattr(self, s) is not None]
         if len(chosen) != 1:
             raise ValueError(
-                "a rule matches exactly one subject: give `component:` or `flow:`, not "
-                f"{'both' if len(chosen) > 1 else 'neither'}."
+                "a rule matches exactly one subject: give `component:`, `flow:` or `asset:`, not "
+                f"{'several' if len(chosen) > 1 else 'none'}."
             )
-        block = self.component or self.flow
+        block = self.component or self.flow or self.asset
         if block is not None and not block.criteria():
             raise ValueError("the match block is empty; a rule that matches everything is not a rule.")
         return self
 
     @property
-    def subject(self) -> Literal["component", "flow"]:
-        return "component" if self.component is not None else "flow"
+    def subject(self) -> Literal["component", "flow", "asset"]:
+        if self.component is not None:
+            return "component"
+        return "flow" if self.flow is not None else "asset"
 
 
 class CustomRule(BaseModel):

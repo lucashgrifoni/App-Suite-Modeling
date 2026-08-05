@@ -6,8 +6,10 @@ dados, não código: descrevem o que procurar num modelo e que ameaça emitir qu
 
 from otm_threat_engine.custom_rules.loader import MAX_RULES_FILE_BYTES, load_custom_rules
 from otm_threat_engine.custom_rules.models import (
+    ASSET_MATCH_FIELDS,
     COMPONENT_MATCH_FIELDS,
     FLOW_MATCH_FIELDS,
+    AssetMatch,
     ComponentMatch,
     CustomRule,
     CustomRuleSet,
@@ -21,10 +23,12 @@ from otm_threat_engine.custom_rules.runtime import (
 )
 
 __all__ = [
+    "ASSET_MATCH_FIELDS",
     "COMPONENT_MATCH_FIELDS",
     "FLOW_MATCH_FIELDS",
     "ID_PREFIX",
     "MAX_RULES_FILE_BYTES",
+    "AssetMatch",
     "ComponentMatch",
     "CustomRule",
     "CustomRuleSet",

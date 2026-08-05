@@ -69,9 +69,11 @@ def test_error_message_lists_the_valid_fields() -> None:
 @pytest.mark.parametrize(
     ("match", "expected"),
     [
-        ({}, "not.*neither|neither"),
-        ({"component": {"kind": "process"}, "flow": {"encrypted": True}}, "both"),
+        ({}, "none"),
+        ({"component": {"kind": "process"}, "flow": {"encrypted": True}}, "several"),
+        ({"component": {"kind": "process"}, "asset": {"asset_kind": "data"}}, "several"),
         ({"component": {}}, "empty"),
+        ({"asset": {}}, "empty"),
     ],
 )
 def test_a_rule_has_exactly_one_non_empty_subject(match: dict[str, object], expected: str) -> None:
@@ -147,6 +149,29 @@ def test_crosses_boundary_is_derived_not_read_from_the_document(doc) -> None:  #
     ]
     internal, _ = iter_custom_rule_threats(doc, _ruleset(_rule("i", {"flow": {"crosses_boundary": False}})))
     assert [t.target_data_flow_id for t in internal] == ["api_to_worker"]
+
+
+def test_asset_rule_targets_the_asset_not_a_component(doc) -> None:  # noqa: ANN001
+    """Assets were the documented gap in the first release of custom rules.
+
+    Regulated data is where a lot of organisation policy actually lives ("anything classified
+    confidential needs a named owner"), and it hangs off the asset, not off the component.
+    """
+    assert doc.assets, "fixture must have assets for this to mean anything"
+    kinds = {a.asset_kind.value for a in doc.assets}
+    chosen = sorted(kinds)[0]
+
+    threats, fired = iter_custom_rule_threats(doc, _ruleset(_rule("a", {"asset": {"asset_kind": chosen}})))
+    assert threats, f"no asset matched asset_kind={chosen}"
+    assert fired == {"a"}
+    for t in threats:
+        assert t.target_asset_id is not None
+        assert t.target_component_id is None and t.target_data_flow_id is None
+
+
+def test_asset_rule_rejects_an_unknown_field() -> None:
+    with pytest.raises(ValueError, match="unknown asset field"):
+        _ruleset(_rule("a", {"asset": {"data_classifcation": "confidential"}}))
 
 
 def test_the_same_rule_never_fires_twice_on_one_target(doc) -> None:  # noqa: ANN001

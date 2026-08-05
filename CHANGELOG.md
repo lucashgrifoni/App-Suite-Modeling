@@ -6,6 +6,22 @@ This project follows **Keep a Changelog** and **Semantic Versioning**.
 
 ---
 
+## [Unreleased]
+
+### Added
+- **Custom rules can match assets.** `match: { asset: { data_classification: [confidential, restricted], owner: null } }` — a rule now targets a component, a flow **or an asset**, and emits a threat carrying `target_asset_id`. This was shipped as a documented gap and it was the wrong one to leave open: a great deal of organisation policy is about the data rather than the component that happens to hold it. "Anything classified confidential has a named accountable owner" is a statement about the asset. Matchable: `asset_kind`, `sensitivity`, `data_classification`, `data_nature`, `business_criticality`, `regulatory_relevance`, `owner`, `location`, and the component/flow link fields. Same semantics as the other subjects — scalar is equality, list is any-of, unknown field names are an error.
+- **Route table coverage in the web app.** The suite had 68 tests and none touched the router; the `react-router` v8 migration rewrote imports in 15 files and stayed green throughout, proving nothing. The contents of `BrowserRouter` moved into an exported `AppRoutes` (behaviour identical) so tests can mount the app at a chosen URL, and 15 tests now assert that every declared path resolves to itself and that four kinds of unknown URL redirect home rather than leaving a blank screen. Web suite: 68 → 83.
+
+### Security
+- **Three CI gates were green without covering anything.** `.semgrepignore` excluded `.github/`, so `--config p/github-actions` — a ruleset whose entire purpose is analysing workflows — ran over 65 files containing not one workflow. `publish-pypi` checked the built version against the tag only on the `release` event, leaving `workflow_dispatch` able to build any branch and publish it unverified; harmless while no publisher existed, but the fastest way to permanently burn a version number now that one does. And the Snyk jobs finished green having scanned nothing on pull requests from forks, since secrets are not exposed there — irrelevant on a private repository, but this one is public and takes external contributions. All three closed; the workflow scan reports 0 findings with `.github/` finally in scope.
+
+### Fixed
+- **`docs/internal/` read as current documentation while describing a product from several releases ago** — an unauthenticated API, a pipeline with no SAST, scanners "not configured", all long since false. Rewriting the records would destroy what makes them worth keeping, so all 34 carry a dated banner pointing at a new `docs/internal/README.md` that names the stale claims and says which sources win. Nine of them linked to `.github/workflows/ci.yml`, gone since the CI reorg.
+- **`NOTICE` was missing** while the project references MITRE, OWASP, NIST, ISO and PLOT4ai material. It now attributes each source and draws the line that matters: this project ships identifiers and short official names, never the normative text of any standard, and every descriptive string in the framework maps was written here. Includes the trademark notice and states that the `open-threat-model` name follows IriusRisk's OTM format without affiliation.
+- **The documented CLI exit-code contract was incomplete.** It said "1 = usage error"; Click raises **2** for an invalid enum value, an unknown flag or a missing argument, and this CLI does not override that. A CI script branching on `1` alone missed half the cases. Documented and pinned by a test.
+
+---
+
 ## [7.9.0] — 2026-08-05
 
 ### Security

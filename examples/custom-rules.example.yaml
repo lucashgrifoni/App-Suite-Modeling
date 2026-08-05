@@ -6,7 +6,7 @@
 # executed: a rule describes what to look for and what threat to raise when it finds it.
 #
 # Semantics, in full:
-#   - A rule matches exactly one subject: `component:` or `flow:`.
+#   - A rule matches exactly one subject: `component:`, `flow:` or `asset:`.
 #   - Inside a match block every key must hold (AND).
 #   - A scalar is equality; a list is "any of these" (OR).
 #   - An unknown field name is an ERROR, not a rule that quietly never fires.
@@ -82,3 +82,16 @@ rules:
     likelihood_delta: 2
     impact_delta: 1
     refs: ["ORG-SEC-033", "CWE-434"]
+
+  # Asset rule. A lot of organisation policy is about the data rather than the box that
+  # holds it — "anything confidential has a named owner" is a statement about the asset.
+  - id: confidential_asset_needs_owner
+    title: "Confidential asset without a named owner"
+    stride: information_disclosure
+    match:
+      asset:
+        data_classification: [confidential, restricted]
+        owner: null
+    impact_delta: 1
+    refs: ["ORG-SEC-002"]
+    control_hint: "Every confidential asset carries an accountable owner in the model"

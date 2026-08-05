@@ -56,7 +56,7 @@ def _build_threat(
     rule: CustomRule,
     ruleset: CustomRuleSet,
     target_id: str,
-    is_flow: bool,
+    subject: str,
     skipped_as_duplicate: bool,
 ) -> HeuristicThreat:
     likelihood = _clamp_li(3 + rule.likelihood_delta)
@@ -70,8 +70,9 @@ def _build_threat(
         title=f"[rules:{ruleset.id}] {rule.title}",
         description=description,
         stride=rule.stride,
-        target_component_id=None if is_flow else target_id,
-        target_data_flow_id=target_id if is_flow else None,
+        target_component_id=target_id if subject == "component" else None,
+        target_data_flow_id=target_id if subject == "flow" else None,
+        target_asset_id=target_id if subject == "asset" else None,
         risk=build_risk_assessment(likelihood, impact),
         skipped_as_duplicate=skipped_as_duplicate,
         # `framework="custom"` mantém honesto o agregado por catálogo: estas referências
@@ -109,25 +110,33 @@ def iter_custom_rule_threats(
     cross_flows = cross_boundary_flow_ids(doc)
 
     for rule in ruleset.rules:
-        is_flow = rule.match.subject == "flow"
-        block = rule.match.flow if is_flow else rule.match.component
-        criteria = block.criteria() if block else {}
-        subjects: list[Any] = list(doc.data_flows if is_flow else doc.components)
+        kind = rule.match.subject
+        population: list[Any]
+        criteria: dict[str, Any]
+        if kind == "component":
+            population = list(doc.components)
+            criteria = rule.match.component.criteria() if rule.match.component else {}
+        elif kind == "flow":
+            population = list(doc.data_flows)
+            criteria = rule.match.flow.criteria() if rule.match.flow else {}
+        else:
+            population = list(doc.assets)
+            criteria = rule.match.asset.criteria() if rule.match.asset else {}
 
-        for subject in subjects:
-            derived = {"crosses_boundary": subject.id in cross_flows} if is_flow else {}
-            if not _subject_matches(subject, criteria, derived):
+        for target in population:
+            derived = {"crosses_boundary": target.id in cross_flows} if kind == "flow" else {}
+            if not _subject_matches(target, criteria, derived):
                 continue
-            if (rule.id, subject.id) in emitted:
+            if (rule.id, target.id) in emitted:
                 continue
-            emitted.add((rule.id, subject.id))
+            emitted.add((rule.id, target.id))
             fired.add(rule.id)
             out.append(
                 _build_threat(
                     rule=rule,
                     ruleset=ruleset,
-                    target_id=subject.id,
-                    is_flow=is_flow,
+                    target_id=target.id,
+                    subject=kind,
                     skipped_as_duplicate=False,
                 )
             )

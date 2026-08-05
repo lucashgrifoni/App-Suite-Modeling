@@ -47,7 +47,7 @@ rules:
 
 ### Matching, in full
 
-* A rule matches **exactly one subject**: `component:` or `flow:`. Not both, not neither.
+* A rule matches **exactly one subject**: `component:`, `flow:` or `asset:`. Not several, not none.
 * Inside a match block, **every key must hold** — it is AND.
 * A **scalar is equality**; a **list is "any of these"** — it is OR.
 * An **unknown field name is an error**, not a criterion that is quietly ignored.
@@ -89,6 +89,12 @@ a finding, not an all-clear.
 `public_exposure`, `input_from_untrusted_source`, `stores_sensitive_data`,
 `affects_privileged_state`, `supports_file_upload`, `supports_redirect`,
 `supports_external_fetch`, plus the derived **`crosses_boundary`**.
+
+**Assets** — `asset_kind`, `sensitivity`, `data_classification`, `data_nature`,
+`business_criticality`, `regulatory_relevance`, `owner`, `location`, and the
+`related_component_ids` / `related_data_flow_ids` links. This is where a lot of organisation
+policy actually lives: "anything classified confidential needs a named owner" is a statement
+about the data, not about the box that happens to hold it.
 
 `crosses_boundary` is computed by the engine from your trust boundaries; it is not a field you
 write in the model. Ids, names, descriptions and free-form metadata are deliberately not
@@ -147,8 +153,6 @@ step, or pin the CLI and call it. See [CI_AND_SECURITY_EVIDENCE.md](../CI_AND_SE
 
 * **One subject per rule.** A rule cannot say "a component that executes commands *and* has an
   untrusted inbound flow". Cross-entity matching is not in this version.
-* **No asset matching yet.** `data_classification`, `business_criticality` and
-  `regulatory_relevance` are modelled but not yet matchable. Planned, additively.
 * **Equality only.** No ranges, no negation, no substring matching. If you need "any privilege
   level except `low`", enumerate the ones you mean.
 * **Rules do not change existing scores.** They add threats; they cannot re-score or suppress
