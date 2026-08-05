@@ -27,6 +27,10 @@ It is aimed at **AppSec**, **DevSecOps**, and **software architects** who want m
 
 ---
 
+> **Choosing between tools?** [docs/POSITIONING.md](docs/POSITIONING.md) compares this against
+> pytm, Threagile, Threat Dragon, IriusRisk and Microsoft TMT — including when to use one of
+> them instead.
+
 ## Why this exists
 
 Traditional threat modeling often **does not scale** with delivery:
