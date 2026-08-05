@@ -30,12 +30,13 @@ def register(app: typer.Typer) -> None:
         fail_on: str = typer.Option(
             "none",
             "--fail-on",
-            help=("CI gate: exit 3 if a NEW or WORSENED threat reaches this band [none|low|medium|high|critical]."),
+            # `\[` escaped so Rich does not swallow the allowed-value list as a style tag.
+            help=("CI gate: exit 3 if a NEW or WORSENED threat reaches this band \\[none|low|medium|high|critical]."),
         ),
         fail_on_risk_increase: bool = typer.Option(
             False,
             "--fail-on-risk-increase",
-            help="CI gate: exit 3 if the maximum risk score rises at all.",
+            help="CI gate: exit 3 if any threat's risk score rises, even without changing band.",
         ),
     ) -> None:
         """Compare two analyze.json files without re-running the engine.

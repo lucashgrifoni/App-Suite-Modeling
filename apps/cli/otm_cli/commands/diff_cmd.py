@@ -69,15 +69,19 @@ def register(app: typer.Typer) -> None:
         fail_on: str = typer.Option(
             "none",
             "--fail-on",
+            # The `\[` escape is required: Rich renders Typer help and would otherwise parse
+            # `[none|low|...]` as a style tag and silently drop the list of allowed values.
             help=(
                 "CI gate: exit 3 if a NEW or WORSENED threat reaches this band "
-                "[none|low|medium|high|critical]. Implies --with-analysis."
+                "\\[none|low|medium|high|critical]. Implies --with-analysis."
             ),
         ),
         fail_on_risk_increase: bool = typer.Option(
             False,
             "--fail-on-risk-increase",
-            help="CI gate: exit 3 if the maximum risk score rises at all. Implies --with-analysis.",
+            help=(
+                "CI gate: exit 3 if any threat's risk score rises, even without changing band. Implies --with-analysis."
+            ),
         ),
     ) -> None:
         """Compare two threat model versions.

@@ -31,6 +31,7 @@ from otm_threat_engine.comparison_models import AnalysisDiff, HeuristicThreatDel
 from otm_threat_engine.severity import Severity, severity_at_least, severity_for_score, severity_rank
 
 TripKind = Literal["new_threat", "worsened_threat", "risk_increase"]
+NotEvaluatedReason = Literal["methodology_changed"]
 
 
 class GatePolicy(BaseModel):
@@ -71,6 +72,13 @@ class GateResult(BaseModel):
     unranked_threat_ids: list[str] = Field(
         default_factory=list,
         description="Ameaças novas sem score: não avaliáveis por banda, reportadas em vez de ignoradas.",
+    )
+    not_evaluated_reason: NotEvaluatedReason | None = Field(
+        default=None,
+        description=(
+            "Preenchido quando a política estava activa mas o diff não é atribuível à mudança do "
+            "modelo. Não é um PASSED: é um 'não avaliado', e tem de ser dito em voz alta."
+        ),
     )
 
     @property
@@ -119,8 +127,9 @@ def _worsened_trips(diff: AnalysisDiff, threshold: Severity) -> list[GateTrip]:
             continue
         before = severity_for_score(h.score_before)
         after = severity_for_score(h.score_after)
-        # Only a band CROSSING trips: a within-band bump (21 -> 22) is not actionable as a
-        # severity regression; `fail_on_risk_increase` covers that case explicitly.
+        # Only a band CROSSING trips here: a within-band bump (21 -> 22) is not a *severity*
+        # regression. `--fail-on-risk-increase` is what covers within-band worsening — and it
+        # does so per threat, not only on the summary maximum (see `_risk_increase_trips`).
         if severity_at_least(after, threshold) and severity_rank(after) > severity_rank(before):
             trips.append(
                 GateTrip(
@@ -136,10 +145,60 @@ def _worsened_trips(diff: AnalysisDiff, threshold: Severity) -> list[GateTrip]:
     return trips
 
 
+def _risk_increase_trips(diff: AnalysisDiff, *, exclude_ids: set[str]) -> list[GateTrip]:
+    """Subidas de score que a banda não apanha.
+
+    O critério de banda só dispara ao *atravessar* uma banda. Sem isto, uma ameaça que sobe
+    `12 -> 15` (ambos `high`) não é apanhada por política nenhuma, porque `max_risk_delta` é o
+    máximo do *resumo*: se a ameaça agravada não for a de score máximo, o delta global é `0`.
+    Era um fail-open silencioso na política mais estrita que o CLI oferece.
+
+    Reporta o máximo do resumo **e** cada ameaça cujo score subiu, excluindo as que já foram
+    reportadas como `worsened_threat` para não duplicar a mesma ameaça no relatório.
+    """
+    trips: list[GateTrip] = []
+
+    if diff.max_risk_delta is not None and diff.max_risk_delta > 0:
+        trips.append(
+            GateTrip(
+                kind="risk_increase",
+                score_before=diff.max_risk_before,
+                score_after=diff.max_risk_after,
+            )
+        )
+
+    candidates = [*diff.heuristic_threats.modified, *(h for h in diff.heuristic_threats.added if _is_remap(h))]
+    for h in candidates:
+        if h.threat_id in exclude_ids:
+            continue
+        if h.score_before is None or h.score_after is None or h.score_after <= h.score_before:
+            continue
+        trips.append(
+            GateTrip(
+                kind="risk_increase",
+                threat_id=h.threat_id,
+                paired_id=h.paired_id,
+                score_before=h.score_before,
+                score_after=h.score_after,
+                severity_before=severity_for_score(h.score_before),
+                severity_after=severity_for_score(h.score_after),
+            )
+        )
+    return trips
+
+
 def evaluate_gate(diff: AnalysisDiff, policy: GatePolicy) -> GateResult:
     """Aplica a política ao diff. Sem política activa, nunca reprova."""
     if not policy.active:
         return GateResult(tripped=False, policy=policy)
+
+    # Princípio 1: nunca reprovar por algo que o programador não causou. Trocar de metodologia
+    # troca a própria régua — as heurísticas de uma lente não existem na outra, por isso as
+    # ameaças "novas" não são atribuíveis à mudança do modelo. O comando irmão já recusa
+    # comparar entre versões do motor pela mesma razão; aqui o diff continua a ser produzido,
+    # mas o gate não emite veredito. Não é PASSED, é `not_evaluated` — e é dito em voz alta.
+    if diff.methodology_changed:
+        return GateResult(tripped=False, policy=policy, not_evaluated_reason="methodology_changed")
 
     trips: list[GateTrip] = []
     unranked: list[str] = []
@@ -149,13 +208,8 @@ def evaluate_gate(diff: AnalysisDiff, policy: GatePolicy) -> GateResult:
         trips.extend(new_trips)
         trips.extend(_worsened_trips(diff, policy.fail_on))
 
-    if policy.fail_on_risk_increase and diff.max_risk_delta is not None and diff.max_risk_delta > 0:
-        trips.append(
-            GateTrip(
-                kind="risk_increase",
-                score_before=diff.max_risk_before,
-                score_after=diff.max_risk_after,
-            )
-        )
+    if policy.fail_on_risk_increase:
+        already = {t.threat_id for t in trips if t.threat_id is not None}
+        trips.extend(_risk_increase_trips(diff, exclude_ids=already))
 
     return GateResult(tripped=bool(trips), policy=policy, trips=trips, unranked_threat_ids=unranked)

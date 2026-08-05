@@ -62,10 +62,23 @@ def render_gate_result(result: GateResult) -> str:
     header_policy = " ".join(criteria)
 
     bar = "=" * 60
-    status = "FAILED" if result.tripped else "PASSED"
+    if result.not_evaluated_reason:
+        status = "NOT EVALUATED"
+    elif result.tripped:
+        status = "FAILED"
+    else:
+        status = "PASSED"
     lines = [bar, f"THREAT MODEL GATE: {status}   policy: {header_policy}", bar]
 
-    if not result.tripped:
+    if result.not_evaluated_reason == "methodology_changed":
+        # Deliberately not "PASSED": nothing was judged. Saying "passed" here would be the
+        # gate claiming a clean bill of health it never checked.
+        lines.append(
+            "The methodology changed between the two models, so the heuristics differ and new or "
+            "worsened threats cannot be attributed to the model change. No verdict was issued; "
+            "exit code 0. Re-run the gate with both sides on the same methodology to get one."
+        )
+    elif not result.tripped:
         lines.append("No new or worsened threats at or above the threshold.")
     else:
         new = result.new_threats
@@ -94,7 +107,14 @@ def render_gate_result(result: GateResult) -> str:
         if risk:
             lines.append("")
             for t in risk:
-                lines.append(f"MAX RISK increased: {_fmt(t.score_before)} -> {_fmt(t.score_after)}")
+                if t.threat_id is None:
+                    lines.append(f"MAX RISK increased: {_fmt(t.score_before)} -> {_fmt(t.score_after)}")
+                else:
+                    renamed = f"  (was `{t.paired_id}`)" if t.paired_id else ""
+                    lines.append(
+                        f"RISK increased (within band): {_fmt(t.score_before)} -> "
+                        f"{_fmt(t.score_after)}  {t.threat_id}{renamed}"
+                    )
 
     if result.unranked_threat_ids:
         lines.append("")

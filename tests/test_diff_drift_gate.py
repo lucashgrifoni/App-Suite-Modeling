@@ -265,3 +265,101 @@ def test_cli_diff_analysis_refuses_to_gate_across_engine_versions(tmp_path: Path
 
     # Without a gate the mismatch is not an error — the diff is still informative.
     assert runner.invoke(app, ["diff-analysis", str(bf), str(rf)]).exit_code == 0
+
+
+# ------------------------------------------------- regressions from the pre-v7.8.0 deep review
+#
+# Two holes the original suite did not discriminate. Both are in the gate itself, which is the
+# one place where being wrong is expensive in both directions.
+
+
+def _meth_switch_diff() -> AnalysisDiff:
+    """A pure methodology switch: every threat of the new lens looks brand new."""
+    return AnalysisDiff(
+        methodology_before="stride",
+        methodology_after="nist_data_centric",
+        methodology_changed=True,
+        heuristic_threats=HeuristicThreatDeltaSection(added=[_added("nist_dc_new", 25)]),
+        max_risk_before=10.0,
+        max_risk_after=25.0,
+        max_risk_delta=15.0,
+    )
+
+
+def test_methodology_switch_is_never_a_red_build() -> None:
+    """Principle 1: *troca de metodologia nunca dispara*.
+
+    Switching lens swaps the ruler itself — the other lens's heuristics do not exist on this
+    side, so `added` fills with threats the developer did not introduce. Gating on that failed
+    the build for something nobody caused, under the strictest policy the CLI offers.
+    """
+    result = evaluate_gate(_meth_switch_diff(), GatePolicy(fail_on="low", fail_on_risk_increase=True))
+    assert result.tripped is False
+    assert result.not_evaluated_reason == "methodology_changed"
+    assert result.trips == []
+
+
+def test_methodology_switch_is_reported_as_not_evaluated_never_as_passed() -> None:
+    """`PASSED` on a diff nobody judged is the gate claiming a clean bill of health it never took."""
+    from otm_cli.shared.gate import render_gate_result
+
+    text = render_gate_result(evaluate_gate(_meth_switch_diff(), GatePolicy(fail_on="low")))
+    assert "NOT EVALUATED" in text
+    assert "PASSED" not in text
+    assert "methodology" in text.lower()
+
+
+def test_cli_methodology_switch_exits_zero(tmp_path: Path) -> None:
+    raw = yaml.safe_load(_MINIMAL.read_text(encoding="utf-8"))
+    raw["model"]["methodology"] = "nist_data_centric"
+    revised = tmp_path / "meth.otm.yaml"
+    revised.write_text(yaml.safe_dump(raw, sort_keys=False), encoding="utf-8")
+
+    r = CliRunner().invoke(app, ["diff", str(_MINIMAL), str(revised), "--fail-on", "high"])
+    assert r.exit_code == 0
+
+
+def test_within_band_worsening_of_a_non_maximum_threat_is_caught() -> None:
+    """The fail-open.
+
+    `12 -> 15` stays inside `high`, so the band criterion cannot see it by design. And when the
+    worsened threat is not the global maximum, `max_risk_delta` is `0`, so the summary criterion
+    could not see it either — leaving a real +3.0 regression that *no* policy could catch.
+    """
+    diff = _diff(modified=[HeuristicThreatDelta(threat_id="m", change="modified", score_before=12, score_after=15)])
+    assert diff.max_risk_delta == 0.0, "fixture must model a NON-maximum threat worsening"
+
+    assert evaluate_gate(diff, GatePolicy(fail_on="low")).tripped is False  # band gate blind, by design
+
+    result = evaluate_gate(diff, GatePolicy(fail_on_risk_increase=True))
+    assert result.tripped is True
+    trip = next(t for t in result.trips if t.kind == "risk_increase")
+    assert (trip.threat_id, trip.score_before, trip.score_after) == ("m", 12.0, 15.0)
+
+
+def test_within_band_worsening_via_id_churn_is_caught() -> None:
+    """Same hole reached through the remap path rather than `modified`."""
+    diff = _diff(added=[_added("new", 15, match_kind="signature_remap", paired_id="old", score_before=12)])
+    result = evaluate_gate(diff, GatePolicy(fail_on_risk_increase=True))
+    assert result.tripped is True
+    trip = next(t for t in result.trips if t.kind == "risk_increase")
+    assert trip.paired_id == "old"
+
+
+def test_a_band_crossing_is_not_reported_twice() -> None:
+    """Under both criteria at once, one threat must produce one entry, not two."""
+    diff = _diff(modified=[HeuristicThreatDelta(threat_id="m", change="modified", score_before=8, score_after=20)])
+    result = evaluate_gate(diff, GatePolicy(fail_on="high", fail_on_risk_increase=True))
+    assert [t.threat_id for t in result.trips].count("m") == 1
+
+
+def test_fail_on_help_lists_its_allowed_values(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Rich parses `[...]` as a style tag: unescaped, the allowed-value list vanished from --help.
+
+    The width is pinned because Rich wraps help text to the terminal, and a wrapped line would
+    split the token and fail the assertion for a reason that has nothing to do with the escape.
+    """
+    monkeypatch.setenv("COLUMNS", "200")
+    for command in ("diff", "diff-analysis"):
+        out = CliRunner().invoke(app, [command, "--help"]).output
+        assert "none|low|medium|high|critical" in out, f"`{command} --help` lost the value list"

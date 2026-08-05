@@ -19,7 +19,7 @@ from otm_threat_engine.analysis_diff import diff_analysis_results
 from otm_threat_engine.methodologies import recommend_methodology
 from otm_threat_engine.result import AnalysisResult, HeuristicThreat
 from otm_threat_engine.semantic_comparison import semantic_diff_from_analyses_only
-from otm_threat_engine.severity import severity_for_score
+from otm_threat_engine.severity import severity_at_least, severity_for_score
 
 from .dedupe import build_dedupe_groups
 from .enums import ReportLevel
@@ -86,13 +86,21 @@ def _overall_status(
 
 
 def _risk_label(max_score: float | None, b: PremiumBuilderCopy) -> str:
+    """Narrative adjective for the cover and executive conclusion.
+
+    Keeps its own vocabulary (*elevated* / *high* / *medium* / *low to moderate*) but must use
+    the SAME cut points as `severity_for_score`. A second set of thresholds here is precisely
+    what made one document call the same score "medium" on the cover and "High" in its own
+    severity table.
+    """
     if max_score is None:
         return b.risk_not_calculated
-    if max_score >= 20:
+    band = severity_for_score(max_score)
+    if band == "critical":
         return b.risk_elevated
-    if max_score >= 15:
+    if band == "high":
         return b.risk_high
-    if max_score >= 9:
+    if band == "medium":
         return b.risk_medium
     return b.risk_low_moderate
 
@@ -163,9 +171,11 @@ def _build_distribution_counters(
 
 
 def _urgency_level(score: float) -> Literal["high", "medium", "low"]:
-    if score >= 15:
+    """Three-level urgency, collapsed from the canonical band (critical and high both urgent)."""
+    band = severity_for_score(score)
+    if severity_at_least(band, "high"):
         return "high"
-    if score >= 9:
+    if band == "medium":
         return "medium"
     return "low"
 
@@ -603,7 +613,7 @@ def build_premium_report_payload(
     urgency = _urgency_level(max_score or 0)
 
     readiness = [
-        b.readiness_high if (max_score or 0) >= 15 else b.readiness_moderate,
+        b.readiness_high if severity_at_least(severity_for_score(max_score or 0), "high") else b.readiness_moderate,
         b.readiness_release,
         b.readiness_compensating,
     ]

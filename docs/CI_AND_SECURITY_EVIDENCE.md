@@ -179,7 +179,7 @@ aparece dos dois lados do diff e nunca conta como novo.
 | Flag | Efeito |
 | --- | --- |
 | `--fail-on <none\|low\|medium\|high\|critical>` | Reprova se uma ameaça **nova** ou **agravada** atinge a banda (inclusive). Implica `--with-analysis`. |
-| `--fail-on-risk-increase` | Reprova se o score máximo sobe, mesmo sem mudar de banda. |
+| `--fail-on-risk-increase` | Reprova se **qualquer** ameaça sobe de score, mesmo sem mudar de banda — e também se o score máximo do resumo sobe. |
 
 Disponíveis em `otm diff` (corre o motor nos dois `.otm.yaml`) e em `otm diff-analysis`
 (compara dois `analyze.json` já produzidos).
@@ -188,7 +188,7 @@ Disponíveis em `otm diff` (corre o motor nos dois `.otm.yaml`) e em `otm diff-a
 
 | Código | Significado |
 | --- | --- |
-| `0` | Sem reprovação (e sempre, quando nenhuma flag de gate é usada). |
+| `0` | Sem reprovação (e sempre, quando nenhuma flag de gate é usada, ou quando o gate não é avaliável). |
 | `1` | Erro de utilização: ficheiro inexistente, YAML inválido, `--fail-on` inválido. |
 | `3` | **Gate reprovou.** |
 
@@ -201,8 +201,16 @@ Dispara: ameaça **nova** na banda ou acima; ameaça **agravada** que *cruza* pa
 Uma ameaça cujo id mudou (o motor emite `signature_remap_hints`) é comparada com o gémeo removido, por
 score: um rename inerte não reprova, mas um rename que também sobe de banda **reprova**.
 
-Nunca dispara: remoções, melhorias, descidas de score, renames inertes, mudança de metodologia, nem
-subidas *dentro* da mesma banda (ex.: `21 → 22`) — para essas existe `--fail-on-risk-increase`.
+Nunca dispara: remoções, melhorias, descidas de score, renames inertes, nem subidas *dentro* da mesma
+banda (ex.: `21 → 22`) — para essas existe `--fail-on-risk-increase`, que avalia **cada ameaça**, não
+apenas o máximo do resumo. Sem isso, uma ameaça que subisse `12 → 15` sem ser a de score máximo não
+era apanhada por política nenhuma.
+
+**Troca de metodologia: `NOT EVALUATED`, não `PASSED`.** Trocar de lente troca a própria régua — as
+heurísticas de uma metodologia não existem na outra, por isso *todas* as ameaças aparecem como novas
+sem que ninguém as tenha causado. Nesse caso o gate não emite veredito: imprime `THREAT MODEL GATE:
+NOT EVALUATED`, explica porquê e sai com `0`. Não diz `PASSED`, porque não avaliou nada — o mesmo
+princípio que faz `otm diff-analysis` recusar comparar entre versões do motor.
 
 Ameaças novas sem score são reportadas como `unranked` no relatório do gate, nunca ignoradas em silêncio.
 
