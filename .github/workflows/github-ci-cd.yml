@@ -310,3 +310,62 @@ jobs:
         env:
           CI: "true"
         run: npm run e2e:hybrid
+
+  composite-action:
+    name: Composite action (self-test)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      # Exercise the published action the way a downstream repository would, against the
+      # local checkout. An action nobody runs is an action nobody knows is broken; this is
+      # the only place its inputs, outputs and exit-code handling are actually executed.
+      - name: Run the action (no baseline -> gate skipped)
+        id: plain
+        uses: ./
+        with:
+          model: examples/minimal.otm.yaml
+          sarif-out: otm.sarif
+          analysis-out: otm.json
+
+      - name: Assert artifacts and skipped gate
+        run: |
+          set -euo pipefail
+          test -s otm.sarif || { echo "::error::no SARIF produced"; exit 1; }
+          test -s otm.json  || { echo "::error::no analysis JSON produced"; exit 1; }
+          python -c "import json,sys; d=json.load(open('otm.sarif')); assert d['version']=='2.1.0', d.get('version'); assert d['runs'][0]['results'], 'SARIF has no results'"
+          [ "${OUTCOME}" = "skipped" ] || { echo "::error::expected gate-outcome=skipped, got '${OUTCOME}'"; exit 1; }
+        env:
+          OUTCOME: ${{ steps.plain.outputs.gate-outcome }}
+
+      - name: Run the action against an identical baseline (gate must pass)
+        id: gated
+        uses: ./
+        with:
+          model: examples/minimal.otm.yaml
+          baseline: examples/minimal.otm.yaml
+          fail-on: low
+          fail-on-risk-increase: "true"
+          sarif-out: ""
+          analysis-out: ""
+
+      - name: Assert the gate passed
+        # `--fail-on low` is the strictest band available, so a model compared against itself
+        # passing is the check that the gate does not fail a build for nothing.
+        run: |
+          set -euo pipefail
+          [ "${OUTCOME}" = "passed" ] || { echo "::error::expected gate-outcome=passed, got '${OUTCOME}'"; exit 1; }
+        env:
+          OUTCOME: ${{ steps.gated.outputs.gate-outcome }}

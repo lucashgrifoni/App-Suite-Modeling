@@ -1,0 +1,24 @@
+# Hooks published for downstream `pre-commit` users.
+#
+#   repos:
+#     - repo: https://github.com/lucashgrifoni/App-Suite-Modeling
+#       rev: v7.8.0
+#       hooks:
+#         - id: otm-validate
+#
+# `language: python` makes pre-commit install this project from `pyproject.toml` into its own
+# isolated environment. That works without `additional_dependencies` because the CLI runtime
+# (Typer, Rich, Click) is a base dependency, not an extra.
+
+- id: otm-validate
+  name: otm validate (threat model schema)
+  description: >-
+    Validate every changed .otm.yaml against the canonical schema, so a malformed threat model
+    is caught at commit time instead of in CI.
+  entry: otm validate
+  language: python
+  # pre-commit hands the hook every matching path at once, which is why `otm validate` takes
+  # several files. Anchored on the `.otm.yaml` / `.otm.yml` suffix so ordinary YAML is untouched.
+  files: \.otm\.ya?ml$
+  pass_filenames: true
+  minimum_pre_commit_version: "2.9.0"

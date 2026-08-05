@@ -1,0 +1,159 @@
+# Publish to PyPI
+#
+# Builds the `open-threat-model` sdist + wheel and publishes them to PyPI using
+# **OIDC trusted publishing** — no API token is stored in this repository, and there is
+# nothing to rotate or leak. The exchange is short-lived and scoped to this workflow file.
+#
+# Repository prerequisites (one-time, owner action, on pypi.org):
+#   Publishing > Add a new pending publisher
+#     PyPI Project Name : open-threat-model
+#     Owner             : lucashgrifoni
+#     Repository name   : App-Suite-Modeling
+#     Workflow name     : publish-pypi.yml
+#     Environment name  : pypi
+#   Then: Settings > Environments > `pypi` in this repository (protection rules optional
+#   but recommended: required reviewer, and restrict to tags matching v*).
+#
+# Until that publisher exists, the `publish` job fails at the upload step with an OIDC
+# error. Nothing else in this workflow depends on it.
+#
+# Trigger: publishing a GitHub Release. Deliberately not `push: tags` — the release is the
+# human checkpoint, so a tag pushed by mistake does not reach PyPI. `workflow_dispatch`
+# offers a dry run that builds and verifies without uploading.
+#
+# Supply-chain hardening:
+#   - Every action is pinned to an immutable commit SHA, with the resolved tag in a comment.
+#   - The build job has no `id-token`, so only `publish` can mint an OIDC token.
+#   - Artifacts carry a build provenance attestation.
+
+name: Publish to PyPI
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: "Build and verify only; do not upload to PyPI."
+        type: boolean
+        required: false
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  # Never let two publish runs race for the same version.
+  group: publish-pypi-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  build:
+    name: Build sdist and wheel
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      # Attest the artifacts to the workflow run that produced them.
+      id-token: write
+      attestations: write
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Build
+        run: |
+          set -euo pipefail
+          python -m pip install --quiet build twine
+          python -m build
+          ls -la dist/
+
+      - name: Verify metadata renders on PyPI
+        run: python -m twine check dist/*
+
+      - name: Verify the built version matches the release tag
+        # A wheel whose version does not match the tag is the one mistake that cannot be
+        # undone: PyPI refuses to reuse a version number, so publishing the wrong one burns
+        # it permanently. Check before upload, not after.
+        if: ${{ github.event_name == 'release' }}
+        run: |
+          set -euo pipefail
+          built="$(python -c 'import pathlib,re; p=next(pathlib.Path("dist").glob("*.whl")); print(p.name.split("-")[1])')"
+          tag="${GITHUB_REF_NAME#v}"
+          echo "built=${built} tag=${tag}"
+          if [ "${built}" != "${tag}" ]; then
+            echo "::error::Built version ${built} does not match release tag ${tag}. Bump pyproject.toml or retag."
+            exit 1
+          fi
+
+      - name: Smoke-test the wheel in a clean environment
+        # Proves the published artifact is actually usable: the console script runs and the
+        # embedded data files (industry packs, framework mappings) shipped with it. A wheel
+        # that imports but cannot run is worse than no wheel.
+        run: |
+          set -euo pipefail
+          python -m venv /tmp/smoke
+          /tmp/smoke/bin/python -m pip install --quiet dist/*.whl
+          /tmp/smoke/bin/otm --help > /dev/null
+          /tmp/smoke/bin/otm validate examples/minimal.otm.yaml
+          /tmp/smoke/bin/otm packs
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
+        with:
+          subject-path: "dist/*"
+
+      - name: Upload distributions
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: python-distributions
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    name: Publish to PyPI
+    needs: build
+    # A manual dry run stops here by design.
+    if: ${{ github.event_name == 'release' || inputs.dry-run == false }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: pypi
+      url: https://pypi.org/p/open-threat-model
+    permissions:
+      # The only permission the upload needs. No `contents`, no secrets.
+      id-token: write
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2
+        with:
+          egress-policy: audit
+
+      - name: Download distributions
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: python-distributions
+          path: dist/
+
+      - name: Publish via OIDC trusted publishing
+        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
+        with:
+          attestations: true
+          print-hash: true

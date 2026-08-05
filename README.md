@@ -86,7 +86,7 @@ Deeper maps: [MONOREPO.md](docs/MONOREPO.md) · [REPOSITORY_LAYOUT.md](docs/REPO
 **Prerequisites**
 
 - **Python 3.11+**
-- **Node 20+** if you work on the web UI (matches CI)
+- **Node 22+** if you work on the web UI (matches CI; Node 20 reached end-of-life on 2026-04-30)
 - On Linux, full **dev** installs that pull PDF stacks may need **Cairo** dev packages (see [CONTRIBUTING.md](CONTRIBUTING.md))
 
 **Install (CLI + API + dev tools, recommended for contributors)**
@@ -123,6 +123,40 @@ otm validate examples/minimal.otm.yaml
 otm analyze examples/minimal.otm.yaml --methodology stride
 otm report examples/minimal.otm.yaml -o REPORT.md
 ```
+
+---
+
+## Use it in your pipeline
+
+**GitHub Actions — composite action.** Validates the model, runs the engine, writes SARIF, and optionally fails the build when a pull request adds risk:
+
+```yaml
+- uses: lucashgrifoni/App-Suite-Modeling@v7.8.0
+  with:
+    model: threat-model.otm.yaml
+    # Drift gate: compare against the model as it exists on the base branch.
+    baseline: baseline/threat-model.otm.yaml
+    fail-on: high
+    upload-sarif: "true"   # needs `security-events: write` on the job
+```
+
+By default the action installs the engine from its own checkout, so the CLI is exactly the version you pinned in `uses:` — there is no skew between the action and the tool. Pass `version: 7.8.0` to install that release from PyPI instead. Outputs: `sarif-file`, `analysis-file`, and `gate-outcome` (`passed`, `tripped`, `not-evaluated`, or `skipped`). See [`action.yml`](action.yml) for every input.
+
+**pre-commit — catch a malformed model before it is committed:**
+
+```yaml
+repos:
+  - repo: https://github.com/lucashgrifoni/App-Suite-Modeling
+    rev: v7.8.0
+    hooks:
+      - id: otm-validate
+```
+
+The hook validates every changed `.otm.yaml` against the canonical schema. `otm validate` accepts several files, so pre-commit needs no shell loop.
+
+**Exit codes, for scripting:** `0` no gate trip · `1` usage error · `3` gate tripped. The gate report goes to stderr, so `--format json` keeps stdout parseable. Full recipes in [`docs/CI_AND_SECURITY_EVIDENCE.md`](docs/CI_AND_SECURITY_EVIDENCE.md) §8.
+
+> **PyPI:** the release workflow ([`.github/workflows/publish-pypi.yml`](.github/workflows/publish-pypi.yml)) publishes `open-threat-model` via OIDC trusted publishing, with no stored token. It is wired and verified up to the upload step, but the package is **not on PyPI yet** — that needs a one-time pending publisher created on pypi.org by the repository owner. Until then, install from a clone as above, and let the action install the engine from its own checkout (the default).
 
 ---
 

@@ -6,6 +6,23 @@ This project follows **Keep a Changelog** and **Semantic Versioning**.
 
 ---
 
+## [Unreleased]
+
+### Added
+- **Composite GitHub Action ([`action.yml`](action.yml)).** Drop the whole flow into any repository's CI: validate the model, run the engine, write SARIF 2.1.0, optionally upload it to code scanning, and optionally fail the build on threat-model drift. By default it installs the engine **from its own checkout**, so the CLI is exactly the version pinned in `uses:` — the action and the tool cannot drift apart, and no PyPI round-trip is involved. Outputs `sarif-file`, `analysis-file`, and `gate-outcome` (`passed` / `tripped` / `not-evaluated` / `skipped`).
+  - The gate step distinguishes the CLI's exit codes rather than treating any non-zero as failure: `3` is a policy trip (fails the job with a clear annotation), while `1` is a usage or input error and is reported as such — a mistyped path must never masquerade as "your threat model got worse". `not-evaluated` is surfaced as its own outcome so a methodology switch is not silently read as a pass.
+  - A `composite-action` job in `github-ci-cd.yml` runs the action against this repository on every push. An action nobody executes is an action nobody knows is broken.
+- **pre-commit hook ([`.pre-commit-hooks.yaml`](.pre-commit-hooks.yaml)).** `otm-validate` checks every changed `.otm.yaml` against the canonical schema at commit time.
+- **PyPI release workflow ([`.github/workflows/publish-pypi.yml`](.github/workflows/publish-pypi.yml)).** Publishes `open-threat-model` on GitHub Release via **OIDC trusted publishing** — no API token stored, nothing to rotate or leak. The build job holds no publish permission; only the `publish` job, bound to a `pypi` environment, can mint an OIDC token. Before upload it verifies that the built version matches the release tag (PyPI never lets a version number be reused, so publishing the wrong one burns it permanently) and smoke-tests the wheel in a clean virtualenv, proving the console script runs and the embedded data files shipped. Artifacts carry a build provenance attestation. **Not yet active:** the one-time pending publisher must be created on pypi.org by the repository owner.
+
+### Changed
+- **`otm validate` accepts several files.** `otm validate a.otm.yaml b.otm.yaml` validates each and exits `1` if any failed, reporting *every* bad file instead of dying on the first — a contributor fixing a batch wants the whole list. Required by pre-commit, which hands a hook every matching path at once. A single-file invocation is unchanged: same panel, same rich diagnostic, same exit code.
+
+### Fixed
+- **`pip install open-threat-model` produced an `otm` command that could not run.** The console script is declared unconditionally in `[project.scripts]`, but Typer, Rich and Click lived in the `[cli]` extra — so the advertised install produced an entry point that died on `ModuleNotFoundError: No module named 'typer'`. The CLI runtime is now a base dependency; `[cli]` remains as a no-op alias so `pip install -e ".[dev,cli,api]"` and any existing instructions keep working. Caught by installing the built wheel into a clean virtualenv, which the release workflow now does on every publish.
+
+---
+
 ## [7.8.0] — 2026-08-05
 
 ### Added

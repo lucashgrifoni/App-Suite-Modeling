@@ -10,9 +10,17 @@ readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
 authors = [{ name = "Open Threat Model contributors" }]
+# `otm` is declared unconditionally in [project.scripts], so a bare
+# `pip install open-threat-model` must produce a console script that runs. Keeping Typer in an
+# extra shipped an entry point that died on `ModuleNotFoundError: typer` for anyone who followed
+# the advertised install line.
+# click>=8.2: Typer subclasses click.Choice as generic; older Click raises "Choice is not subscriptable".
 dependencies = [
   "pydantic>=2.5",
   "pyyaml>=6.0",
+  "typer>=0.12.3",
+  "rich>=13.7",
+  "click>=8.2",
 ]
 
 [project.optional-dependencies]
@@ -24,8 +32,9 @@ api = [
   # Reservado para persistência pós-MVP (multi-utilizador / histórico); a API atual não importa SQLAlchemy.
   "sqlalchemy>=2.0",
 ]
-# click>=8.2: Typer subclasses click.Choice as generic; older Click raises "Choice is not subscriptable".
-cli = ["typer>=0.12.3", "rich>=13.7", "click>=8.2"]
+# Kept as a no-op alias: the CLI dependencies moved to the base install (see above), but
+# `pip install "open-threat-model[cli]"` and `pip install -e ".[dev,cli,api]"` stay valid.
+cli = []
 # PDF premium (xhtml2pdf); instalar com: pip install -e ".[report]"
 report = ["xhtml2pdf>=0.2.15"]
 dev = [

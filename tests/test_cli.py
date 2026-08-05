@@ -62,6 +62,41 @@ def test_validate_missing_file(runner: CliRunner) -> None:
     assert r.exit_code != 0
 
 
+# `validate` takes several files so pre-commit, which hands a hook every matching path at
+# once, works without a shell loop. See `.pre-commit-hooks.yaml`.
+
+
+def test_validate_accepts_several_files(runner: CliRunner) -> None:
+    r = runner.invoke(app, ["validate", str(_MINIMAL), str(_MINIMAL)])
+    assert r.exit_code == 0
+    out = r.stdout + (r.stderr or "")
+    assert out.count("Valid") >= 2, "each file must be reported, not just the last"
+
+
+def test_validate_reports_every_bad_file_then_exits_one(runner: CliRunner, tmp_path: Path) -> None:
+    """A contributor fixing a batch wants the whole list, not one error per commit attempt."""
+    bad_a = tmp_path / "a.otm.yaml"
+    bad_b = tmp_path / "b.otm.yaml"
+    bad_a.write_text("model:\n  methodology: nope\n", encoding="utf-8")
+    bad_b.write_text("model:\n  methodology: also_nope\n", encoding="utf-8")
+
+    r = runner.invoke(app, ["validate", str(_MINIMAL), str(bad_a), str(bad_b)])
+    assert r.exit_code == 1
+    out = r.stdout + (r.stderr or "")
+    assert "a.otm.yaml" in out and "b.otm.yaml" in out, "stopped at the first failure"
+
+
+def test_validate_single_file_keeps_its_rich_error(runner: CliRunner, tmp_path: Path) -> None:
+    """The one-file path is unchanged: full diagnostic, not the terse batch line."""
+    bad = tmp_path / "bad.otm.yaml"
+    bad.write_text("model:\n  methodology: nope\n", encoding="utf-8")
+
+    r = runner.invoke(app, ["validate", str(bad)])
+    assert r.exit_code == 1
+    out = r.stdout + (r.stderr or "")
+    assert "canonical schema" in out or "Likely cause" in out
+
+
 def test_analyze_ok(runner: CliRunner) -> None:
     r = runner.invoke(app, ["analyze", str(_MINIMAL)])
     assert r.exit_code == 0

@@ -1,0 +1,211 @@
+name: "App Suite Modeling — threat model as code"
+description: >-
+  Validate a canonical .otm.yaml, run the threat engine, emit SARIF for code scanning,
+  and optionally fail the build when a pull request adds risk.
+author: "Open Threat Model contributors"
+
+branding:
+  icon: shield
+  color: purple
+
+inputs:
+  model:
+    description: "Path to the canonical `.otm.yaml` model."
+    required: true
+
+  version:
+    description: >-
+      Which `open-threat-model` to install. Empty (the default) installs the engine from the
+      action's own checkout, so the CLI always matches the ref you pinned in `uses:` — no
+      version skew between the action and the tool, and no PyPI round-trip. Set an explicit
+      version (for example `7.8.0`) to install that release from PyPI instead.
+    required: false
+    default: ""
+
+  python-version:
+    description: "Python used to run the CLI."
+    required: false
+    default: "3.12"
+
+  methodology:
+    description: "Engine lens: stride, linddun, nist_data_centric, octave_allegro, cia_die, pasta, plot4ai. Empty uses the model's own."
+    required: false
+    default: ""
+
+  pack:
+    description: "Industry pack (see `otm packs`)."
+    required: false
+    default: ""
+
+  sarif-out:
+    description: "Where to write SARIF 2.1.0. Empty disables SARIF output."
+    required: false
+    default: "otm-analysis.sarif"
+
+  analysis-out:
+    description: "Where to write the full analysis JSON. Empty disables it."
+    required: false
+    default: "otm-analysis.json"
+
+  baseline:
+    description: >-
+      Baseline `.otm.yaml` to diff against. Required for the drift gate — without it,
+      `fail-on` has nothing to compare and is ignored.
+    required: false
+    default: ""
+
+  fail-on:
+    description: >-
+      Drift gate: fail when a NEW or WORSENED threat reaches this band.
+      One of none, low, medium, high, critical. Needs `baseline`.
+    required: false
+    default: "none"
+
+  fail-on-risk-increase:
+    description: "Drift gate: also fail when any threat's score rises without changing band. Needs `baseline`."
+    required: false
+    default: "false"
+
+  upload-sarif:
+    description: >-
+      Upload the SARIF to GitHub code scanning. The calling job must grant
+      `security-events: write`, and the repository needs code scanning enabled
+      (public, or private with GitHub Advanced Security).
+    required: false
+    default: "false"
+
+  working-directory:
+    description: "Directory to run in."
+    required: false
+    default: "."
+
+outputs:
+  sarif-file:
+    description: "Path to the SARIF file, empty when SARIF output was disabled."
+    value: ${{ steps.analyze.outputs.sarif-file }}
+  analysis-file:
+    description: "Path to the analysis JSON, empty when it was disabled."
+    value: ${{ steps.analyze.outputs.analysis-file }}
+  gate-outcome:
+    description: "One of `passed`, `tripped`, `not-evaluated`, or `skipped` (no baseline given)."
+    value: ${{ steps.gate.outputs.outcome }}
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Install open-threat-model
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        set -euo pipefail
+        if [ -n "${VERSION}" ]; then
+          python -m pip install --quiet "open-threat-model==${VERSION}"
+        else
+          # GITHUB_ACTION_PATH is this action's own checkout at the ref the caller pinned,
+          # so installing from it makes the engine and the action one artifact by construction.
+          python -m pip install --quiet "${GITHUB_ACTION_PATH}"
+        fi
+        echo "otm $(python -c 'import importlib.metadata as m; print(m.version("open-threat-model"))')"
+      env:
+        VERSION: ${{ inputs.version }}
+
+    - name: Validate model
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: otm validate "${MODEL}"
+      env:
+        MODEL: ${{ inputs.model }}
+
+    - name: Analyze
+      id: analyze
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        set -euo pipefail
+        args=("${MODEL}")
+        [ -n "${SARIF_OUT}" ] && args+=(--sarif-out "${SARIF_OUT}")
+        [ -n "${ANALYSIS_OUT}" ] && args+=(--json-out "${ANALYSIS_OUT}")
+        [ -n "${METHODOLOGY}" ] && args+=(--methodology "${METHODOLOGY}")
+        [ -n "${PACK}" ] && args+=(--pack "${PACK}")
+        otm analyze "${args[@]}"
+        echo "sarif-file=${SARIF_OUT}" >> "$GITHUB_OUTPUT"
+        echo "analysis-file=${ANALYSIS_OUT}" >> "$GITHUB_OUTPUT"
+      env:
+        MODEL: ${{ inputs.model }}
+        SARIF_OUT: ${{ inputs.sarif-out }}
+        ANALYSIS_OUT: ${{ inputs.analysis-out }}
+        METHODOLOGY: ${{ inputs.methodology }}
+        PACK: ${{ inputs.pack }}
+
+    # The gate runs after the artifacts exist, so a failing run still leaves the evidence
+    # behind — that is the run where you most want the SARIF and the diff.
+    - name: Threat-model drift gate
+      id: gate
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        set -uo pipefail
+        if [ -z "${BASELINE}" ]; then
+          echo "outcome=skipped" >> "$GITHUB_OUTPUT"
+          echo "No baseline given, so there is nothing to compare — gate skipped." >> "$GITHUB_STEP_SUMMARY"
+          exit 0
+        fi
+
+        args=("${BASELINE}" "${MODEL}" --fail-on "${FAIL_ON}")
+        [ "${RISK_INCREASE}" = "true" ] && args+=(--fail-on-risk-increase)
+
+        set +e
+        report="$(otm diff "${args[@]}" 2>&1 1>/dev/null)"
+        rc=$?
+        set -e
+
+        printf '%s\n' "${report}"
+        {
+          echo "### Threat-model drift gate"
+          echo ""
+          echo '```'
+          printf '%s\n' "${report}"
+          echo '```'
+        } >> "$GITHUB_STEP_SUMMARY"
+
+        case "${rc}" in
+          0)
+            # Exit 0 covers both a real pass and a diff the gate declined to judge (for
+            # example a methodology switch). Distinguish them, because "not evaluated" is
+            # not a clean bill of health and a reader should not mistake it for one.
+            if printf '%s' "${report}" | grep -q "NOT EVALUATED"; then
+              echo "outcome=not-evaluated" >> "$GITHUB_OUTPUT"
+            else
+              echo "outcome=passed" >> "$GITHUB_OUTPUT"
+            fi
+            ;;
+          3)
+            echo "outcome=tripped" >> "$GITHUB_OUTPUT"
+            echo "::error::Threat-model drift gate tripped: new or worsened risk at or above '${FAIL_ON}'."
+            exit 1
+            ;;
+          *)
+            # Exit 1 from the CLI is a usage error, not a policy failure. Do not let a bad
+            # path masquerade as "your model got worse".
+            echo "::error::otm diff failed with exit ${rc} (usage or input error, not a gate verdict)."
+            exit "${rc}"
+            ;;
+        esac
+      env:
+        MODEL: ${{ inputs.model }}
+        BASELINE: ${{ inputs.baseline }}
+        FAIL_ON: ${{ inputs.fail-on }}
+        RISK_INCREASE: ${{ inputs.fail-on-risk-increase }}
+
+    # `always()` so the findings still reach code scanning on the run where the gate tripped.
+    - name: Upload SARIF
+      if: ${{ always() && inputs.upload-sarif == 'true' && inputs.sarif-out != '' }}
+      uses: github/codeql-action/upload-sarif@8aad20d150bbac5944a9f9d289da16a4b0d87c1e # v4.36.2
+      with:
+        sarif_file: ${{ inputs.working-directory }}/${{ inputs.sarif-out }}
+        category: otm-threat-model
