@@ -3,15 +3,19 @@ import {
   useCallback,
   useContext,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
 import type { AnalysisResult } from "../types/api";
 import type { OtmDocument } from "../types/document";
+import { hashDocument } from "../utils/documentIdentity";
 import { applyKnownComponentIdTypoFixes } from "../utils/documentNormalize";
 
 const DOC_KEY = "otm.web.document";
 const ANALYSIS_KEY = "otm.web.analysis";
+/** Fingerprint of the document the cached analysis was computed from. */
+const ANALYSIS_DOC_KEY = "otm.web.analysis.doc";
 
 /** Garante campos obrigatórios do contrato API para análises antigas em sessionStorage. */
 function normalizeAnalysis(raw: unknown): AnalysisResult | null {
@@ -66,6 +70,15 @@ function persistAnalysis(a: AnalysisResult | null) {
   }
 }
 
+function persistAnalysisDocKey(key: string | null) {
+  try {
+    if (key) sessionStorage.setItem(ANALYSIS_DOC_KEY, key);
+    else sessionStorage.removeItem(ANALYSIS_DOC_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
 interface SessionState {
   document: OtmDocument | null;
   analysis: AnalysisResult | null;
@@ -94,13 +107,30 @@ export function SessionProvider({ children }: Readonly<{ children: ReactNode }>)
     }
   });
 
+  const [analysisDocKey, setAnalysisDocKey] = useState<string | null>(() => {
+    try {
+      return sessionStorage.getItem(ANALYSIS_DOC_KEY);
+    } catch {
+      return null;
+    }
+  });
+
+  // `setAnalysis` must stamp the analysis with the document it was computed from, but
+  // React state is not readable synchronously right after `setDocument`. A ref updated
+  // inside `setDocumentValue` is, which is what lets history restore call
+  // `setDocument(doc)` then `setAnalysis(analysis)` and still produce a matching pair.
+  const documentRef = useRef<OtmDocument | null>(document);
+
   const setDocumentValue = useCallback((d: OtmDocument | null) => {
     const normalized = d ? normalizeDoc(d) : null;
+    documentRef.current = normalized;
     setDocument(normalized);
     persistDocument(normalized);
     if (!d) {
       setAnalysis(null);
       persistAnalysis(null);
+      setAnalysisDocKey(null);
+      persistAnalysisDocKey(null);
     }
   }, []);
 
@@ -108,24 +138,36 @@ export function SessionProvider({ children }: Readonly<{ children: ReactNode }>)
     const n = a ? normalizeAnalysis(a) : null;
     setAnalysis(n);
     persistAnalysis(n);
+    const key = n ? hashDocument(documentRef.current) : null;
+    setAnalysisDocKey(key);
+    persistAnalysisDocKey(key);
   }, []);
 
   const reset = useCallback(() => {
+    documentRef.current = null;
     setDocument(null);
     setAnalysis(null);
+    setAnalysisDocKey(null);
     persistDocument(null);
     persistAnalysis(null);
+    persistAnalysisDocKey(null);
   }, []);
+
+  // An analysis computed from a different document is not this model's analysis. Hiding
+  // it here — rather than at each consumer — means the analysis screen, the exports, the
+  // premium report and the history snapshot cannot disagree about which model they describe.
+  const currentDocKey = useMemo(() => hashDocument(document), [document]);
+  const analysisForCurrentDocument = analysisDocKey === currentDocKey ? analysis : null;
 
   const value = useMemo(
     () => ({
       document,
-      analysis,
+      analysis: analysisForCurrentDocument,
       setDocument: setDocumentValue,
       setAnalysis: setAnalysisValue,
       reset,
     }),
-    [document, analysis, setDocumentValue, setAnalysisValue, reset],
+    [document, analysisForCurrentDocument, setDocumentValue, setAnalysisValue, reset],
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

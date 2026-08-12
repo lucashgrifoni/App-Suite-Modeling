@@ -16,10 +16,12 @@ import { Stepper } from "../components/patterns/Stepper";
 import { Panel } from "../components/patterns/Panel";
 import { useSession } from "../context/SessionContext";
 import { useToast } from "../context/ToastContext";
-import { removeArrayItem, updateArrayItem } from "../utils/collections";
+import { updateArrayItem } from "../utils/collections";
 import {
   applyDataFlowIdRename,
   OTM_ENTITY_ID_REGEX,
+  removeComponents,
+  removeDataFlows,
   sanitizeEntityIdInput,
 } from "../utils/documentNormalize";
 import {
@@ -316,7 +318,12 @@ export function WizardPage() {
           <div className="space-y-3">
             {doc.components.map((c, idx) => (
               <div
-                key={`comp-${c.id}-${c.name}`}
+                // Keyed by index, NOT by the edited values: a key derived from `c.id`/`c.name`
+                // changes on every keystroke, which unmounts the row mid-edit and drops focus
+                // to <body>, so the field accepts one character per click. Every mutation here
+                // already addresses rows by index (`updateArrayItem(doc.components, idx, …)`),
+                // so the index is the row's real identity.
+                key={idx}
                 className="grid gap-2 rounded-otm-md border border-otm-border bg-otm-surface-1/80 p-3 sm:grid-cols-12 sm:items-end"
               >
                 <div className="sm:col-span-3">
@@ -377,7 +384,10 @@ export function WizardPage() {
                   <Button
                     variant="ghost"
                     className="w-full text-red-300"
-                    onClick={() => setComponents(removeArrayItem(doc.components, idx))}
+                    // Cascades to flows, assets and trust boundaries. A plain splice here
+                    // left orphan references that the canonical schema rejects, bricking
+                    // validate/analyze/export for the rest of the session.
+                    onClick={() => setDocument(removeComponents(doc, [c.id]))}
                   >
                     {t("wizard.remove")}
                   </Button>
@@ -408,7 +418,10 @@ export function WizardPage() {
           <div className="space-y-3">
             {doc.data_flows.map((f, idx) => (
               <div
-                key={`flow-${f.id}-${f.from_component}-${f.to_component}`}
+                // Index key — see the components list above. A content-derived key also broke
+                // the flow-ID rename propagation below, whose onFocus/onBlur pair cannot
+                // survive an element destroyed mid-edit.
+                key={idx}
                 className="grid gap-2 rounded-otm-md border border-otm-border bg-otm-surface-1/80 p-3 sm:grid-cols-12 sm:items-end"
               >
                 <div className="sm:col-span-2">
@@ -521,7 +534,7 @@ export function WizardPage() {
                   <Button
                     variant="ghost"
                     className="w-full text-red-700 dark:text-red-300"
-                    onClick={() => setFlows(removeArrayItem(doc.data_flows, idx))}
+                    onClick={() => setDocument(removeDataFlows(doc, [f.id]))}
                   >
                     {t("wizard.remove")}
                   </Button>

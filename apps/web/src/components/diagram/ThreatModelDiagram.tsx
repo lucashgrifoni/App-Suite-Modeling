@@ -16,6 +16,7 @@ import {
 import "reactflow/dist/style.css";
 import { ComponentNode, type OtmNodeData } from "./ComponentNode";
 import { sanitizeDiagramLabel } from "../../utils/diagramSanitize";
+import { removeComponents } from "../../utils/documentNormalize";
 import {
   clearDiagramLayout,
   loadDiagramLayout,
@@ -132,13 +133,9 @@ function ThreatModelDiagramInner({
     (toRemove: Node[]) => {
       if (!editMode) return;
       const rm = new Set(toRemove.map((n) => n.id));
-      setDocument({
-        ...document,
-        components: document.components.filter((c) => !rm.has(c.id)),
-        data_flows: document.data_flows.filter(
-          (f) => !rm.has(f.from_component) && !rm.has(f.to_component),
-        ),
-      });
+      // Cascades to assets and trust boundaries too — pruning only components and flows
+      // leaves references the canonical schema rejects.
+      setDocument(removeComponents(document, [...rm]));
       try {
         const cur = loadDiagramLayout();
         for (const id of rm) delete cur[id];
@@ -208,13 +205,7 @@ function ThreatModelDiagramInner({
   const removeSelected = useCallback(() => {
     if (!selectedId || !editMode) return;
     const rm = selectedId;
-    setDocument({
-      ...document,
-      components: document.components.filter((c) => c.id !== rm),
-      data_flows: document.data_flows.filter(
-        (f) => f.from_component !== rm && f.to_component !== rm,
-      ),
-    });
+    setDocument(removeComponents(document, [rm]));
     try {
       const cur = loadDiagramLayout();
       delete cur[rm];
