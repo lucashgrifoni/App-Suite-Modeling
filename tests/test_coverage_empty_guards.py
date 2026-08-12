@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import pytest
-from otm_core_schema import create_blank_document
+from otm_core_schema import create_blank_document, load_document_from_dict
 from otm_exporters.analysis_markdown import (
     _append_model_gaps_block,
     _append_quality_block,
@@ -155,12 +155,25 @@ def _payload_with_top_tier(tier: str, *, severity: float | None, composite: floa
     from otm_report_premium.builder import build_premium_report_payload
     from otm_report_premium.enums import ReportLevel
 
-    doc = create_blank_document()
+    # Deliberately not `create_blank_document()`: a blank model yields no
+    # threats, so `top_risks` is empty and these tests used to skip themselves
+    # into uselessness. (They only ever ran because an ungated business-abuse
+    # rule emitted a phantom threat for every document, including empty ones —
+    # see tests/test_business_abuse_authz_guard.py.) One admin-capable process
+    # is the smallest model that produces real top risks to craft from.
+    doc = load_document_from_dict(
+        {
+            "metadata": {"title": "tier rendering fixture"},
+            "components": [
+                {"id": "admin_api", "name": "Admin API", "kind": "process", "supports_admin_operations": True}
+            ],
+        }
+    )
     payload = build_premium_report_payload(doc, analyze_document(doc), level=ReportLevel.STANDARD)
-    base = payload.top_risks[0] if payload.top_risks else None
-    if base is None:
-        pytest.skip("no top risks to craft from")
-    crafted = base.model_copy(update={"priority_tier": tier, "severity_score": severity, "composite_score": composite})
+    assert payload.top_risks, "fixture model must produce at least one top risk"
+    crafted = payload.top_risks[0].model_copy(
+        update={"priority_tier": tier, "severity_score": severity, "composite_score": composite}
+    )
     return payload.model_copy(update={"top_risks": [crafted]})
 
 

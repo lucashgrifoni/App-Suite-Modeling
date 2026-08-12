@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from collections.abc import Set as AbstractSet
 
 from otm_core_schema import ThreatModelDocument, ThreatModelMethodology
 from otm_core_schema.model_quality_precheck import assess_model_precheck
@@ -56,7 +57,37 @@ def _token_hit(h: HeuristicThreat, *, tokens: tuple[str, ...]) -> bool:
     return any(tok in t for tok in tokens)
 
 
-def _should_suppress_stride_noise(*, h: HeuristicThreat, flags: dict[str, bool]) -> bool:
+def _biz_authorization_targets(heuristics: list[HeuristicThreat]) -> set[str]:
+    """Targets actually covered by a `biz_authorization_*` finding.
+
+    The authorization branch below matches on very generic tokens
+    ("authorization", "ownership", ...). Requiring a shared target keeps it from
+    suppressing a component that merely happens to carry one of those words in
+    its name while the business finding points somewhere else entirely.
+    """
+    targets: set[str] = set()
+    for h in heuristics:
+        if not h.id.startswith("biz_authorization_"):
+            continue
+        if h.target_component_id:
+            targets.add(h.target_component_id)
+        if h.target_data_flow_id:
+            targets.add(h.target_data_flow_id)
+    return targets
+
+
+def _shares_target(h: HeuristicThreat, targets: AbstractSet[str]) -> bool:
+    return h.target_component_id in targets or h.target_data_flow_id in targets
+
+
+def _should_suppress_stride_noise(
+    *,
+    h: HeuristicThreat,
+    flags: dict[str, bool],
+    # Defaults to "nothing is covered", so a caller that omits it keeps findings
+    # rather than silently dropping them.
+    authorization_targets: AbstractSet[str] = frozenset(),
+) -> bool:
     # Somente reduzir ruído STRIDE base (não mexer em `biz_*` ou pack).
     if not h.id.startswith("eng_"):
         return False
@@ -98,9 +129,11 @@ def _should_suppress_stride_noise(*, h: HeuristicThreat, flags: dict[str, bool])
     ):
         return True
 
-    # Authorization contextual
-    if flags.get("authorization") and _token_hit(
-        h, tokens=("authorization", "autoriz", "ownership", "vinculo", "vínculo")
+    # Authorization contextual — target-scoped, see `_biz_authorization_targets`.
+    if (
+        flags.get("authorization")
+        and _shares_target(h, authorization_targets)
+        and _token_hit(h, tokens=("authorization", "autoriz", "ownership", "vinculo", "vínculo"))
     ):
         return True
 
@@ -132,9 +165,10 @@ def suppress_stride_genericity_noise(heuristics: list[HeuristicThreat]) -> int:
     flags = _biz_family_flags_from_heuristics(heuristics)
     if not any(flags.values()):
         return 0
+    authorization_targets = _biz_authorization_targets(heuristics)
     suppressed = 0
     for h in heuristics:
-        if _should_suppress_stride_noise(h=h, flags=flags):
+        if _should_suppress_stride_noise(h=h, flags=flags, authorization_targets=authorization_targets):
             h.skipped_as_duplicate = True
             suppressed += 1
     return suppressed
