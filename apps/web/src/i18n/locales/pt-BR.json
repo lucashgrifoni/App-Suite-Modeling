@@ -8,7 +8,8 @@
     "export": "Exportar",
     "history": "Histórico",
     "diff": "Diff",
-    "newModel": "Novo modelo"
+    "newModel": "Novo modelo",
+    "confirmNewModel": "Começar um novo modelo descarta o modelo desta sessão, e esta é a única cópia. Continuar?"
   },
   "layout": {
     "brandSubtitle": "Threat modeling profissional",
@@ -41,7 +42,11 @@
   },
   "apiErrors": {
     "timeout": "A API não respondeu a tempo. Verifique se está em execução e acessível e tente novamente.",
-    "unreachable": "Não foi possível alcançar a API. Verifique se está em execução e acessível e tente novamente."
+    "unreachable": "Não foi possível alcançar a API. Verifique se está em execução e acessível e tente novamente.",
+    "entityIdPattern": "Use apenas letras, dígitos, `_`, `.` ou `-`, começando por letra, dígito ou `_`.",
+    "codes": {
+      "IMPORT_ARTIFACT_INVALID": "Não foi possível ler o artefacto como YAML ou JSON. Verifique que o ficheiro abre num editor sem erros de sintaxe e volte a carregá-lo."
+    }
   },
   "home": {
     "eyebrow": "Threat modeling orientado a engenharia",
@@ -232,7 +237,7 @@
     "flowsTitle": "Fluxos",
     "items": "{{count}} itens",
     "links": "{{count}} ligações",
-    "trustTitle": "Trust boundaries",
+    "trustTitle": "Fronteiras de confiança",
     "trustSubtitle": "Notas de inferência, fluxos que cruzam e validação manual (sem editar JSON).",
     "whyPrefix": "Porquê:",
     "crossingFlows": "Fluxos cruzando:",
@@ -285,13 +290,48 @@
     "toastRecommendFail": "Falha ao recomendar metodologia."
   },
   "methodologyMeta": {
-    "stride": { "hint": "Default técnico e mais maduro para web/API/cloud.", "bestFor": "Web, API, cloud-native", "maturity": "Mature", "category": "General security" },
-    "linddun": { "hint": "Privacidade: PII, consentimento, minimização e conformidade.", "bestFor": "LGPD/GDPR e dados pessoais", "maturity": "Evolving", "category": "Privacy" },
-    "nist_data_centric": { "hint": "Protecção de dados críticos e caminhos sensíveis.", "bestFor": "Dados críticos/classificados", "maturity": "Evolving", "category": "Data-centric" },
-    "octave_allegro": { "hint": "Risco de negócio orientado a ativos.", "bestFor": "Ativos e risco organizacional", "maturity": "Evolving", "category": "Business risk" },
-    "cia_die": { "hint": "Análise rápida e comunicação executiva.", "bestFor": "Workshops rápidos", "maturity": "Evolving", "category": "Executive" },
-    "pasta": { "hint": "Análise avançada risk-centric (ataque, vulnerabilidade, impacto).", "bestFor": "Contextos enterprise avançados", "maturity": "Specialized", "category": "Advanced risk" },
-    "plot4ai": { "hint": "Ameaças de IA/LLM (prompt, RAG, agentes, inferência).", "bestFor": "Sistemas AI/LLM", "maturity": "Specialized", "category": "AI/LLM" }
+    "stride": {
+      "hint": "Default técnico e mais maduro para web/API/cloud.",
+      "bestFor": "Web, API, cloud-native",
+      "maturity": "Madura",
+      "category": "Segurança geral"
+    },
+    "linddun": {
+      "hint": "Privacidade: PII, consentimento, minimização e conformidade.",
+      "bestFor": "LGPD/GDPR e dados pessoais",
+      "maturity": "Em evolução",
+      "category": "Privacidade"
+    },
+    "nist_data_centric": {
+      "hint": "Protecção de dados críticos e caminhos sensíveis.",
+      "bestFor": "Dados críticos/classificados",
+      "maturity": "Em evolução",
+      "category": "Centrada em dados"
+    },
+    "octave_allegro": {
+      "hint": "Risco de negócio orientado a ativos.",
+      "bestFor": "Ativos e risco organizacional",
+      "maturity": "Em evolução",
+      "category": "Risco de negócio"
+    },
+    "cia_die": {
+      "hint": "Análise rápida e comunicação executiva.",
+      "bestFor": "Workshops rápidos",
+      "maturity": "Em evolução",
+      "category": "Executiva"
+    },
+    "pasta": {
+      "hint": "Análise avançada risk-centric (ataque, vulnerabilidade, impacto).",
+      "bestFor": "Contextos enterprise avançados",
+      "maturity": "Especializada",
+      "category": "Risco avançado"
+    },
+    "plot4ai": {
+      "hint": "Ameaças de IA/LLM (prompt, RAG, agentes, inferência).",
+      "bestFor": "Sistemas de IA/LLM",
+      "maturity": "Especializada",
+      "category": "IA/LLM"
+    }
   },
   "runEngine": {
     "title": "Executar motor",
@@ -397,7 +437,7 @@
     "synergyTitle": "Agrupamentos / sinergia",
     "topActions": "Top acções",
     "itemMeta": " · {{priority}} · esforço {{effort}}",
-    "quickWins": "Quick wins"
+    "quickWins": "Ganhos rápidos"
   },
   "methodologyInsights": {
     "title": "Insights da metodologia",
@@ -448,9 +488,9 @@
     "download": "Descarregar",
     "copyPreview": "Também pode copiar do preview técnico abaixo.",
     "exportResults": "Exportar resultados",
-    "optExecutive": "Executive",
-    "optStandard": "Standard",
-    "optDeep": "Deep technical",
+    "optExecutive": "Executivo",
+    "optStandard": "Padrão",
+    "optDeep": "Técnico aprofundado",
     "artifactLanguage": "Idioma das exportações Markdown / PDF",
     "artifactLangUi": "Igual à interface",
     "artifactLangPtBR": "Português (Brasil)",
@@ -485,7 +525,8 @@
     "toastFail": "Falha ao pedir comparação à API.",
     "invalidJson": "JSON inválido.",
     "expectedDoc": "Esperado objecto com `model` e `metadata` (documento canónico).",
-    "changes": "alterações",
+    "changesCount_one": "{{count}} alteração",
+    "changesCount_other": "{{count}} alterações",
     "added": "+{{count}} adicionados",
     "removed": "−{{count}} removidos",
     "changed": "~{{count}} alterados",
@@ -517,7 +558,7 @@
     "aggComponents": "Componentes",
     "aggAssets": "Ativos",
     "aggFlows": "Fluxos de dados",
-    "aggTrust": "Trust boundaries",
+    "aggTrust": "Fronteiras de confiança",
     "aggThreats": "Ameaças (canónicas)",
     "aggMitigations": "Mitigações",
     "fullJson": "JSON completo",
@@ -548,7 +589,8 @@
     "toastSession": "Sessão actualizada. Escolha os formatos em Exportar.",
     "toastPdfOk": "PDF gerado a partir do snapshot.",
     "toastPdfFail": "Falha ao gerar PDF.",
-    "toastRemoved": "Entrada removida."
+    "toastRemoved": "Entrada removida.",
+    "toastStorageFull": "O armazenamento do browser está cheio: este snapshot não foi adicionado ao Histórico. Remova entradas aí, ou exporte os resultados."
   },
   "templates": {
     "eyebrow": "Catálogo técnico",
@@ -565,13 +607,13 @@
     "cxLow": "Baixa",
     "cxMedium": "Média",
     "cxHigh": "Alta",
-    "catApplications": "Applications",
-    "catCloud": "Cloud & Infra",
-    "catIdentity": "Identity & Access",
-    "catIntegrations": "Integrations",
+    "catApplications": "Aplicações",
+    "catCloud": "Cloud e infraestrutura",
+    "catIdentity": "Identidade e acessos",
+    "catIntegrations": "Integrações",
     "catAi": "AI & LLM",
-    "catIndustry": "Industry",
-    "catObjective": "Objective-based",
+    "catIndustry": "Sector",
+    "catObjective": "Por objectivo",
     "idealFor": "Ideal para:",
     "complexityBadge": "Complexidade: {{value}}",
     "packBadge": "Pack:",
@@ -585,24 +627,49 @@
   },
   "adaptive": {
     "internal_admin_portal": {
-      "approval": { "label": "Existem acções privilegiadas que exigem aprovação explícita?", "hint": "Segregação de funções e fluxos de aprovação." },
-      "segregation": { "label": "Há segregação clara de funções entre admin e utilizadores finais?" },
-      "jit": { "label": "Existem privilégios just-in-time ou elevação temporária?" }
+      "approval": {
+        "label": "Existem acções privilegiadas que exigem aprovação explícita?",
+        "hint": "Segregação de funções e fluxos de aprovação."
+      },
+      "segregation": {
+        "label": "Há segregação clara de funções entre admin e utilizadores finais?"
+      },
+      "jit": {
+        "label": "Existem privilégios just-in-time ou elevação temporária?"
+      }
     },
     "file_handling_application": {
-      "quarantine": { "label": "Há quarentena ou zona isolada antes do processamento?" },
-      "scan": { "label": "Antivírus, sandbox ou revalidação de conteúdo após upload?" },
-      "public_objects": { "label": "Objectos armazenados ficam expostos publicamente (URLs públicas)?" }
+      "quarantine": {
+        "label": "Há quarentena ou zona isolada antes do processamento?"
+      },
+      "scan": {
+        "label": "Antivírus, sandbox ou revalidação de conteúdo após upload?"
+      },
+      "public_objects": {
+        "label": "Objectos armazenados ficam expostos publicamente (URLs públicas)?"
+      }
     },
     "api_backend_rest": {
-      "auth": { "label": "Autenticação e autorização estão explicitamente modeladas para clientes?" },
-      "rate_limit": { "label": "Há rate limiting / throttling aplicado?" },
-      "edge_controls": { "label": "Cache, WAF ou políticas fortes no perímetro (gateway) estão representados?" }
+      "auth": {
+        "label": "Autenticação e autorização estão explicitamente modeladas para clientes?"
+      },
+      "rate_limit": {
+        "label": "Há rate limiting / throttling aplicado?"
+      },
+      "edge_controls": {
+        "label": "Cache, WAF ou políticas fortes no perímetro (gateway) estão representados?"
+      }
     },
     "industry_ecommerce": {
-      "checkout": { "label": "O fluxo de checkout e pagamento tem controlos contextuais claros?" },
-      "psp_boundary": { "label": "O processador de pagamentos (PSP) está como terceiro com boundary adequada?" },
-      "sensitive_data": { "label": "Dados sensíveis (conta, encomenda, pagamento) estão cobertos por ativos e classificação?" }
+      "checkout": {
+        "label": "O fluxo de checkout e pagamento tem controlos contextuais claros?"
+      },
+      "psp_boundary": {
+        "label": "O processador de pagamentos (PSP) está como terceiro com boundary adequada?"
+      },
+      "sensitive_data": {
+        "label": "Dados sensíveis (conta, encomenda, pagamento) estão cobertos por ativos e classificação?"
+      }
     }
   }
 }

@@ -8,7 +8,8 @@
     "export": "Export",
     "history": "History",
     "diff": "Diff",
-    "newModel": "New model"
+    "newModel": "New model",
+    "confirmNewModel": "Starting a new model discards the model in this session, and this is its only copy. Continue?"
   },
   "layout": {
     "brandSubtitle": "Professional threat modeling",
@@ -41,7 +42,11 @@
   },
   "apiErrors": {
     "timeout": "The API did not respond in time. Check that it is running and reachable, then try again.",
-    "unreachable": "Could not reach the API. Check that it is running and reachable, then try again."
+    "unreachable": "Could not reach the API. Check that it is running and reachable, then try again.",
+    "entityIdPattern": "Use only letters, digits, `_`, `.` or `-`, starting with a letter, digit or `_`.",
+    "codes": {
+      "IMPORT_ARTIFACT_INVALID": "The artifact could not be read as YAML or JSON. Check the file opens in an editor without syntax errors, then upload it again."
+    }
   },
   "home": {
     "eyebrow": "Engineering-driven threat modeling",
@@ -285,13 +290,48 @@
     "toastRecommendFail": "Failed to recommend methodology."
   },
   "methodologyMeta": {
-    "stride": { "hint": "Default technical choice, most mature for web/API/cloud.", "bestFor": "Web, API, cloud-native", "maturity": "Mature", "category": "General security" },
-    "linddun": { "hint": "Privacy: PII, consent, minimization, and compliance.", "bestFor": "LGPD/GDPR and personal data", "maturity": "Evolving", "category": "Privacy" },
-    "nist_data_centric": { "hint": "Protection of critical data and sensitive paths.", "bestFor": "Critical/classified data", "maturity": "Evolving", "category": "Data-centric" },
-    "octave_allegro": { "hint": "Business risk oriented to assets.", "bestFor": "Assets and organizational risk", "maturity": "Evolving", "category": "Business risk" },
-    "cia_die": { "hint": "Quick analysis and executive communication.", "bestFor": "Fast workshops", "maturity": "Evolving", "category": "Executive" },
-    "pasta": { "hint": "Advanced risk-centric analysis (attack, vulnerability, impact).", "bestFor": "Advanced enterprise contexts", "maturity": "Specialized", "category": "Advanced risk" },
-    "plot4ai": { "hint": "AI/LLM threats (prompt, RAG, agents, inference).", "bestFor": "AI/LLM systems", "maturity": "Specialized", "category": "AI/LLM" }
+    "stride": {
+      "hint": "Default technical choice, most mature for web/API/cloud.",
+      "bestFor": "Web, API, cloud-native",
+      "maturity": "Mature",
+      "category": "General security"
+    },
+    "linddun": {
+      "hint": "Privacy: PII, consent, minimization, and compliance.",
+      "bestFor": "LGPD/GDPR and personal data",
+      "maturity": "Evolving",
+      "category": "Privacy"
+    },
+    "nist_data_centric": {
+      "hint": "Protection of critical data and sensitive paths.",
+      "bestFor": "Critical/classified data",
+      "maturity": "Evolving",
+      "category": "Data-centric"
+    },
+    "octave_allegro": {
+      "hint": "Business risk oriented to assets.",
+      "bestFor": "Assets and organizational risk",
+      "maturity": "Evolving",
+      "category": "Business risk"
+    },
+    "cia_die": {
+      "hint": "Quick analysis and executive communication.",
+      "bestFor": "Fast workshops",
+      "maturity": "Evolving",
+      "category": "Executive"
+    },
+    "pasta": {
+      "hint": "Advanced risk-centric analysis (attack, vulnerability, impact).",
+      "bestFor": "Advanced enterprise contexts",
+      "maturity": "Specialized",
+      "category": "Advanced risk"
+    },
+    "plot4ai": {
+      "hint": "AI/LLM threats (prompt, RAG, agents, inference).",
+      "bestFor": "AI/LLM systems",
+      "maturity": "Specialized",
+      "category": "AI/LLM"
+    }
   },
   "runEngine": {
     "title": "Run engine",
@@ -485,7 +525,8 @@
     "toastFail": "Failed to request comparison from the API.",
     "invalidJson": "Invalid JSON.",
     "expectedDoc": "Expected object with `model` and `metadata` (canonical document).",
-    "changes": "changes",
+    "changesCount_one": "{{count}} change",
+    "changesCount_other": "{{count}} changes",
     "added": "+{{count}} added",
     "removed": "−{{count}} removed",
     "changed": "~{{count}} changed",
@@ -548,7 +589,8 @@
     "toastSession": "Session updated. Choose formats in Export.",
     "toastPdfOk": "PDF generated from snapshot.",
     "toastPdfFail": "Failed to generate PDF.",
-    "toastRemoved": "Entry removed."
+    "toastRemoved": "Entry removed.",
+    "toastStorageFull": "Browser storage is full: this snapshot was not added to History. Remove entries there, or export the results."
   },
   "templates": {
     "eyebrow": "Technical catalog",
@@ -585,24 +627,49 @@
   },
   "adaptive": {
     "internal_admin_portal": {
-      "approval": { "label": "Are there privileged actions that require explicit approval?", "hint": "Segregation of duties and approval flows." },
-      "segregation": { "label": "Is there clear segregation between admins and end users?" },
-      "jit": { "label": "Are there just-in-time privileges or temporary elevation?" }
+      "approval": {
+        "label": "Are there privileged actions that require explicit approval?",
+        "hint": "Segregation of duties and approval flows."
+      },
+      "segregation": {
+        "label": "Is there clear segregation between admins and end users?"
+      },
+      "jit": {
+        "label": "Are there just-in-time privileges or temporary elevation?"
+      }
     },
     "file_handling_application": {
-      "quarantine": { "label": "Is there a quarantine or isolated zone before processing?" },
-      "scan": { "label": "Antivirus, sandbox, or content revalidation after upload?" },
-      "public_objects": { "label": "Are stored objects exposed publicly (public URLs)?" }
+      "quarantine": {
+        "label": "Is there a quarantine or isolated zone before processing?"
+      },
+      "scan": {
+        "label": "Antivirus, sandbox, or content revalidation after upload?"
+      },
+      "public_objects": {
+        "label": "Are stored objects exposed publicly (public URLs)?"
+      }
     },
     "api_backend_rest": {
-      "auth": { "label": "Are authentication and authorization explicitly modeled for clients?" },
-      "rate_limit": { "label": "Is rate limiting / throttling applied?" },
-      "edge_controls": { "label": "Are cache, WAF, or strong perimeter policies represented at the gateway?" }
+      "auth": {
+        "label": "Are authentication and authorization explicitly modeled for clients?"
+      },
+      "rate_limit": {
+        "label": "Is rate limiting / throttling applied?"
+      },
+      "edge_controls": {
+        "label": "Are cache, WAF, or strong perimeter policies represented at the gateway?"
+      }
     },
     "industry_ecommerce": {
-      "checkout": { "label": "Does the checkout and payment flow have clear contextual controls?" },
-      "psp_boundary": { "label": "Is the payment processor (PSP) modeled as a third party with an adequate boundary?" },
-      "sensitive_data": { "label": "Are sensitive data (account, order, payment) covered by assets and classification?" }
+      "checkout": {
+        "label": "Does the checkout and payment flow have clear contextual controls?"
+      },
+      "psp_boundary": {
+        "label": "Is the payment processor (PSP) modeled as a third party with an adequate boundary?"
+      },
+      "sensitive_data": {
+        "label": "Are sensitive data (account, order, payment) covered by assets and classification?"
+      }
     }
   }
 }

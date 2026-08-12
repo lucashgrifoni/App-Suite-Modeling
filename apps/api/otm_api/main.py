@@ -25,6 +25,7 @@ from otm_api.perimeter_settings import (
     describe_effective_perimeter,
     resolve_api_key_perimeter,
     resolve_rate_limit_default,
+    resolve_trusted_proxy,
 )
 from otm_api.routers import analyses, exports, imports, models, remediation, reports_premium, system, templates
 
@@ -66,11 +67,17 @@ _rate_limit_spec = resolve_rate_limit_default()
 
 _cors = resolve_cors_profile()
 _api_key = resolve_api_key_perimeter()
+_trusted_proxy = resolve_trusted_proxy()
 
 # Uma linha, no arranque, a declarar o perímetro efetivo. Sem ela, o log de um servidor
-# aberto por engano (chave em branco, ambiente que caiu em `development`) é idêntico ao de
-# um servidor protegido — ver `describe_effective_perimeter`.
-_perimeter_line = describe_effective_perimeter(profile=_cors, api_key=_api_key, rate_limit=_rate_limit_spec)
+# aberto por engano (chave em branco, ambiente que caiu em `development`, um proxy tratado
+# como de confiança) é idêntico ao de um servidor protegido — ver `describe_effective_perimeter`.
+_perimeter_line = describe_effective_perimeter(
+    profile=_cors,
+    api_key=_api_key,
+    rate_limit=_rate_limit_spec,
+    trusted_proxy=_trusted_proxy,
+)
 _perimeter_level = logging.WARNING if _api_key.misconfigured else logging.INFO
 LOG.log(_perimeter_level, _perimeter_line, extra={"event_name": "api_perimeter"})
 
@@ -83,7 +90,11 @@ LOG.log(_perimeter_level, _perimeter_line, extra={"event_name": "api_perimeter"}
 # no log estruturado e a resposta saía sem `X-Request-ID`, ao contrário de todos os outros
 # códigos de estado. O mesmo se aplicava ao 429 do rate limit.
 if _rate_limit_spec:
-    app.add_middleware(RateLimitMiddleware, limit=parse_rate_limit(_rate_limit_spec))
+    app.add_middleware(
+        RateLimitMiddleware,
+        limit=parse_rate_limit(_rate_limit_spec),
+        trust_forwarded=_trusted_proxy,
+    )
 app.add_middleware(OptionalApiKeyMiddleware)
 app.add_middleware(ObservabilityMiddleware)
 app.add_middleware(

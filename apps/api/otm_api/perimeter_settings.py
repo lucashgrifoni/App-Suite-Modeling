@@ -74,11 +74,28 @@ def resolve_rate_limit_default() -> str | None:
     return "120/minute"
 
 
+def resolve_trusted_proxy() -> bool:
+    """
+    ``OTM_TRUSTED_PROXY``: o operador declara que a API está atrás de um proxy que ele
+    controla, e que o endereço de cliente resolvido a partir de ``X-Forwarded-For`` pode
+    ser usado para identificar quem chama (rate limit).
+
+    Por omissão é ``False`` — desconfiar. A decisão tem de ser explícita porque a app não
+    consegue verificá-la: o uvicorn reescreve ``request.client`` a partir de um cabeçalho
+    controlado pelo cliente **antes** de o nosso código correr (`proxy_headers=True` e
+    `forwarded_allow_ips='127.0.0.1'` são os defaults), pelo que confiar em silêncio é
+    exatamente o que torna o limite contornável com um cabeçalho. Ver
+    `middleware_rate_limit.client_key` e `docs/architecture/DEPLOYMENT_INVARIANTS.md`.
+    """
+    return _truthy("OTM_TRUSTED_PROXY")
+
+
 def describe_effective_perimeter(
     *,
     profile: CorsProfile,
     api_key: ApiKeyPerimeter,
     rate_limit: str | None,
+    trusted_proxy: bool = False,
 ) -> str:
     """
     Uma linha que declara o perímetro com que o processo arrancou.
@@ -87,6 +104,10 @@ def describe_effective_perimeter(
     servidor protegido: a única diferença observável era o 401 que o operador nunca vê.
     Vai na mensagem (e não em ``extra``) porque o formatador JSON só promove um conjunto
     fixo de campos — ver `observability._JsonFormatter`.
+
+    ``trusted_proxy`` só aparece quando está ligado: é o estado que alarga a superfície
+    (passa a aceitar-se um endereço vindo de um cabeçalho) e é por isso o que tem de ser
+    legível no arranque. O default seguro é a ausência do marcador.
     """
     if api_key.misconfigured:
         key_state = "misconfigured"
@@ -94,10 +115,13 @@ def describe_effective_perimeter(
         key_state = "enforced"
     else:
         key_state = "off"
-    return (
+    line = (
         "api_perimeter "
         f"environment={profile.environment} "
         f"api_key={key_state} "
         f"rate_limit={rate_limit or 'off'} "
         f"cors_origins={len(profile.origins)}"
     )
+    if trusted_proxy:
+        line += " trusted_proxy=on"
+    return line

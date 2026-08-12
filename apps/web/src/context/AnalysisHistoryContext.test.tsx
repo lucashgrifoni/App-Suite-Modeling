@@ -15,10 +15,11 @@
 
 import { act, renderHook } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AnalysisHistoryProvider, useAnalysisHistory } from "./AnalysisHistoryContext";
 import { SessionProvider, useSession } from "./SessionContext";
 import { loadHistory } from "../utils/analysisHistoryStorage";
+import type { AnalysisHistoryEntry } from "../types/analysisHistory";
 import type { AnalysisResult } from "../types/api";
 import type { OtmDocument } from "../types/document";
 
@@ -59,6 +60,8 @@ function makeAnalysis(title: string, maxRiskScore: number): AnalysisResult {
     heuristic_threats: [],
   } as unknown as AnalysisResult;
 }
+
+const HISTORY_KEY = "otm.analysis.history";
 
 /** Mirrors the two consumers so a test can drive both contexts at once. */
 function useBoth() {
@@ -225,5 +228,153 @@ describe("AnalysisHistoryProvider appendSnapshot", () => {
     expect(() => renderHook(() => useAnalysisHistory())).toThrow(
       /outside AnalysisHistoryProvider/,
     );
+  });
+});
+
+/**
+ * History is localStorage, which every tab on the origin shares, but the provider read it
+ * once at mount and never again. A second tab left open on /history therefore kept rendering
+ * the list as it stood when that tab was opened — with no hint it was stale — and its Remove
+ * button acted on a list nobody was looking at, so unrelated entries appeared on screen as
+ * the visible result of a delete.
+ */
+describe("AnalysisHistoryProvider cross-tab synchronisation", () => {
+  function entryFromAnotherTab(id: string): AnalysisHistoryEntry {
+    return {
+      id,
+      createdAt: 1_770_000_000_000,
+      trigger: "analysis",
+      title: "Written elsewhere",
+      systemType: "api_backend",
+      maxScore: 9,
+      document: makeDoc("Written elsewhere"),
+      analysis: null,
+    };
+  }
+
+  /** What a write in another tab looks like to this one. */
+  function simulateOtherTabWrite(entries: AnalysisHistoryEntry[]) {
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(entries));
+    globalThis.dispatchEvent(new StorageEvent("storage", { key: HISTORY_KEY }));
+  }
+
+  it("shows the snapshots another tab added", () => {
+    const { result } = renderHook(() => useBoth(), { wrapper });
+    act(() => result.current.session.setDocument(makeDoc("Payments Gateway")));
+    act(() => result.current.history.appendSnapshot("export"));
+
+    act(() => simulateOtherTabWrite([entryFromAnotherTab("t2-a"), entryFromAnotherTab("t2-b")]));
+
+    expect(result.current.history.entries.map((e) => e.id)).toEqual(["t2-a", "t2-b"]);
+  });
+
+  it("reacts to another tab clearing the whole store", () => {
+    const { result } = renderHook(() => useBoth(), { wrapper });
+    act(() => result.current.session.setDocument(makeDoc("Payments Gateway")));
+    act(() => result.current.history.appendSnapshot("export"));
+
+    act(() => {
+      localStorage.clear();
+      globalThis.dispatchEvent(new StorageEvent("storage", { key: null }));
+    });
+
+    expect(result.current.history.entries).toEqual([]);
+  });
+
+  it("ignores writes to keys that are not the history list", () => {
+    const { result } = renderHook(() => useBoth(), { wrapper });
+    act(() => result.current.session.setDocument(makeDoc("Payments Gateway")));
+    act(() => result.current.history.appendSnapshot("export"));
+    const before = result.current.history.entries;
+
+    act(() => {
+      globalThis.dispatchEvent(new StorageEvent("storage", { key: "otm.web.locale" }));
+    });
+
+    expect(result.current.history.entries).toBe(before);
+  });
+
+  it("catches up when the tab comes back to the foreground", () => {
+    // A browser may freeze a background document, which then receives no `storage` event
+    // for the whole time it was away — the tab in the report had been open for minutes.
+    const { result } = renderHook(() => useBoth(), { wrapper });
+    act(() => result.current.session.setDocument(makeDoc("Payments Gateway")));
+    act(() => result.current.history.appendSnapshot("export"));
+    localStorage.setItem(HISTORY_KEY, JSON.stringify([entryFromAnotherTab("while-hidden")]));
+
+    act(() => {
+      globalThis.document.dispatchEvent(new Event("visibilitychange"));
+    });
+
+    expect(result.current.history.entries.map((e) => e.id)).toEqual(["while-hidden"]);
+  });
+
+  it("does not re-read while the tab is still hidden", () => {
+    const { result } = renderHook(() => useBoth(), { wrapper });
+    act(() => result.current.session.setDocument(makeDoc("Payments Gateway")));
+    act(() => result.current.history.appendSnapshot("export"));
+    const before = result.current.history.entries;
+    vi.spyOn(globalThis.document, "visibilityState", "get").mockReturnValue("hidden");
+
+    act(() => {
+      globalThis.document.dispatchEvent(new Event("visibilitychange"));
+    });
+
+    expect(result.current.history.entries).toBe(before);
+  });
+
+  it("stops listening once unmounted", () => {
+    const { result, unmount } = renderHook(() => useBoth(), { wrapper });
+    act(() => result.current.session.setDocument(makeDoc("Payments Gateway")));
+    act(() => result.current.history.appendSnapshot("export"));
+    unmount();
+
+    expect(() => simulateOtherTabWrite([entryFromAnotherTab("after-unmount")])).not.toThrow();
+  });
+});
+
+/**
+ * When the origin quota is exhausted the snapshot cannot be stored at all, and the caller
+ * has to know: it is about to announce success for work that will not appear in History.
+ */
+describe("AnalysisHistoryProvider quota reporting", () => {
+  it("reports the storage failure to the caller", () => {
+    const { result } = renderHook(() => useBoth(), { wrapper });
+    act(() => result.current.session.setDocument(makeDoc("Payments Gateway")));
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      const err = new Error("The quota has been exceeded.");
+      err.name = "QuotaExceededError";
+      throw err;
+    });
+
+    let outcome: string | undefined;
+    act(() => {
+      outcome = result.current.history.appendSnapshot("export");
+    });
+
+    expect(outcome).toBe("failed");
+  });
+
+  it("reports success on an ordinary write", () => {
+    const { result } = renderHook(() => useBoth(), { wrapper });
+    act(() => result.current.session.setDocument(makeDoc("Payments Gateway")));
+
+    let outcome: string | undefined;
+    act(() => {
+      outcome = result.current.history.appendSnapshot("export");
+    });
+
+    expect(outcome).toBe("ok");
+  });
+
+  it("does not claim a storage failure when there was nothing to snapshot", () => {
+    const { result } = renderHook(() => useBoth(), { wrapper });
+
+    let outcome: string | undefined;
+    act(() => {
+      outcome = result.current.history.appendSnapshot("analysis", makeAnalysis("Ghost", 1));
+    });
+
+    expect(outcome).toBe("ok");
   });
 });

@@ -101,11 +101,23 @@ def _untargeted_result() -> AnalysisResult:
     )
 
 
-def test_a_threat_with_no_target_still_omits_locations_entirely() -> None:
-    """An empty `locations` array is invalid SARIF, so the key stays absent — unchanged behaviour."""
+def test_a_threat_with_no_target_is_still_anchored_to_the_model_file() -> None:
+    """A model-level threat has no component to name, but it still belongs to the model file.
+
+    Superseded the earlier contract, which dropped `locations` entirely whenever the threat
+    declared no target: PASTA emits five such threats and none of them could produce a located
+    code-scanning alert. Only the `logicalLocations` half depends on a target.
+    """
     res = _results(export_analysis_sarif_obj(_untargeted_result()))[0]
 
-    assert "locations" not in res
+    assert res["locations"][0]["physicalLocation"]["artifactLocation"]["uri"] == "threat-model.otm.yaml"
+
+
+def test_a_threat_with_no_target_carries_no_logical_location() -> None:
+    """An empty `logicalLocations` array would be invalid SARIF, so the key stays absent."""
+    res = _results(export_analysis_sarif_obj(_untargeted_result()))[0]
+
+    assert "logicalLocations" not in res["locations"][0]
 
 
 def test_the_driver_version_is_the_product_version(stock_sarif: dict[str, Any]) -> None:

@@ -21,19 +21,19 @@ from otm_cli.shared.errors import CliUserError
 from otm_cli.shared.render import safe
 
 
-def _emit_json_output(result: AnalysisResult, json_out: Path, *, quiet: bool) -> None:
+def _emit_json_output(result: AnalysisResult, json_out: Path, *, quiet: bool, model: Path) -> None:
     payload = result.model_dump(mode="json")
     try:
-        write_json_file(payload=payload, output=json_out)
+        write_json_file(payload=payload, output=json_out, sources=(model,))
     except CliUserError as e:
         exit_on_cli_error(console, e)
     if not quiet:
         console.print(f"[green]Analysis written to[/green] {safe(json_out.resolve())}")
 
 
-def _emit_sarif_output(result: AnalysisResult, sarif_out: Path, *, quiet: bool) -> None:
+def _emit_sarif_output(result: AnalysisResult, sarif_out: Path, *, quiet: bool, model: Path) -> None:
     try:
-        write_text_file(content=export_analysis_sarif(result), output=sarif_out)
+        write_text_file(content=export_analysis_sarif(result), output=sarif_out, sources=(model,))
     except CliUserError as e:
         exit_on_cli_error(console, e)
     if not quiet:
@@ -160,9 +160,9 @@ def register(app: typer.Typer) -> None:
             exit_on_cli_error(console, e)
 
         if json_out:
-            _emit_json_output(result, json_out, quiet=quiet)
+            _emit_json_output(result, json_out, quiet=quiet, model=path)
         if sarif_out:
-            _emit_sarif_output(result, sarif_out, quiet=quiet)
+            _emit_sarif_output(result, sarif_out, quiet=quiet, model=path)
         if quiet:
             raise typer.Exit(0)
 

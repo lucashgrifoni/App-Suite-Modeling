@@ -35,10 +35,10 @@ def _apply_gate(analysis_diff: AnalysisDiff | None, policy: GatePolicy) -> None:
         raise typer.Exit(GATE_TRIP_EXIT_CODE)
 
 
-def _write_diff_json(payload: dict, output: Path) -> None:
+def _write_diff_json(payload: dict, output: Path, sources: tuple[Path, ...]) -> None:
     """Write the `--json-out` artifact, or render the CLI error and exit with its code."""
     try:
-        write_json_file(payload=payload, output=output)
+        write_json_file(payload=payload, output=output, sources=sources)
     except CliUserError as e:
         exit_on_cli_error(console, e)
     console.print(f"[green]Diff written to[/green] {safe(output.resolve())}")
@@ -97,6 +97,14 @@ def register(app: typer.Typer) -> None:
             "--pack",
             "-p",
             help="Industry pack when --with-analysis is set.",
+        ),
+        rules: Path | None = typer.Option(
+            None,
+            "--rules",
+            help=(
+                "Organisation rule file (YAML) applied to BOTH sides when --with-analysis is set, "
+                "so an org-rule violation introduced by the change trips the gate."
+            ),
         ),
         methodology: MethodologyOption | None = typer.Option(
             None,
@@ -165,12 +173,13 @@ def register(app: typer.Typer) -> None:
                 summary_only=summary_only,
                 methodology=methodology,
                 auto_methodology=auto_methodology,
+                rules=rules,
             )
         except CliUserError as e:
             exit_on_cli_error(console, e)
 
         if json_out:
-            _write_diff_json(out_payload, json_out)
+            _write_diff_json(out_payload, json_out, (baseline, revised))
 
         _emit_diff(
             fmt,

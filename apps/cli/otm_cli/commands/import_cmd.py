@@ -17,25 +17,25 @@ from otm_cli.shared.errors import CliUserError
 from otm_cli.shared.render import safe
 
 
-def _write_text_or_exit(*, content: str, output: Path) -> None:
+def _write_text_or_exit(*, content: str, output: Path, sources: tuple[Path, ...] = ()) -> None:
     """Write the file, or render the `CliUserError` and exit with its code."""
     try:
-        write_text_file(content=content, output=output)
+        write_text_file(content=content, output=output, sources=sources)
     except CliUserError as e:
         exit_on_cli_error(console, e)
 
 
-def _write_json_or_exit(*, payload: dict[str, Any], output: Path) -> None:
+def _write_json_or_exit(*, payload: dict[str, Any], output: Path, sources: tuple[Path, ...] = ()) -> None:
     try:
-        write_json_file(payload=payload, output=output)
+        write_json_file(payload=payload, output=output, sources=sources)
     except CliUserError as e:
         exit_on_cli_error(console, e)
 
 
-def _emit_text(content: str, *, output: Path | None, label: str) -> None:
+def _emit_text(content: str, *, output: Path | None, label: str, sources: tuple[Path, ...] = ()) -> None:
     """Write to `output` and say where, or print to stdout so the caller can pipe it."""
     if output:
-        _write_text_or_exit(content=content, output=output)
+        _write_text_or_exit(content=content, output=output, sources=sources)
         console.print(f"[green]{label}[/green] → {safe(output.resolve())}")
     else:
         print(content, end="")
@@ -47,11 +47,12 @@ def _emit_draft(
     *,
     output: Path | None,
     explain_out: Path | None,
+    source: Path,
 ) -> None:
     """Escreve o draft `.otm.yaml` (ou imprime) e, opcionalmente, as inferências em JSON."""
-    _emit_text(yaml_text, output=output, label="Draft")
+    _emit_text(yaml_text, output=output, label="Draft", sources=(source,))
     if explain_out and explain_payload:
-        _write_json_or_exit(payload=explain_payload, output=explain_out)
+        _write_json_or_exit(payload=explain_payload, output=explain_out, sources=(source,))
         console.print(f"[green]Inferences[/green] → {safe(explain_out.resolve())}")
 
 
@@ -121,7 +122,7 @@ def build_import_app() -> typer.Typer:
         except CliUserError as e:
             exit_on_cli_error(console, e)
 
-        _emit_draft(yaml_text, explain_payload, output=output, explain_out=explain_out)
+        _emit_draft(yaml_text, explain_payload, output=output, explain_out=explain_out, source=spec)
         if inferences and output:
             # Only when the draft went to a file: on stdout the panel would corrupt the YAML.
             _print_inference_summary(inferences)
@@ -140,11 +141,15 @@ def build_import_app() -> typer.Typer:
     ) -> None:
         """Draft from Terraform resources (conservative parser)."""
         try:
-            yaml_text, explain_payload, _inf = import_app.import_terraform(target)
+            yaml_text, explain_payload, inferences = import_app.import_terraform(target)
         except CliUserError as e:
             exit_on_cli_error(console, e)
 
-        _emit_draft(yaml_text, explain_payload, output=output, explain_out=explain_out)
+        _emit_draft(yaml_text, explain_payload, output=output, explain_out=explain_out, source=target)
+        if inferences and output:
+            # Same rule as `import openapi`: the caveats are shown only when the draft went to a
+            # file, because on stdout the panel would corrupt the YAML the caller is piping.
+            _print_inference_summary(inferences)
 
     @import_cmd.command("k8s")
     def cmd_import_k8s(
@@ -163,11 +168,15 @@ def build_import_app() -> typer.Typer:
     ) -> None:
         """Draft from Kubernetes manifests."""
         try:
-            yaml_text, explain_payload, _inf = import_app.import_kubernetes(target)
+            yaml_text, explain_payload, inferences = import_app.import_kubernetes(target)
         except CliUserError as e:
             exit_on_cli_error(console, e)
 
-        _emit_draft(yaml_text, explain_payload, output=output, explain_out=explain_out)
+        _emit_draft(yaml_text, explain_payload, output=output, explain_out=explain_out, source=target)
+        if inferences and output:
+            # Same rule as `import openapi`: the caveats are shown only when the draft went to a
+            # file, because on stdout the panel would corrupt the YAML the caller is piping.
+            _print_inference_summary(inferences)
 
     @import_cmd.command("otm")
     def cmd_import_otm(
@@ -188,7 +197,7 @@ def build_import_app() -> typer.Typer:
         except CliUserError as e:
             exit_on_cli_error(console, e)
 
-        _emit_text(yaml_text, output=output, label="Imported OTM")
+        _emit_text(yaml_text, output=output, label="Imported OTM", sources=(spec,))
         _warn_not_imported(not_imported)
 
     @import_cmd.command("repo")

@@ -63,3 +63,144 @@ describe("apiErrorMessage", () => {
     expect(apiErrorMessage("nope", t, "export.toastFail")).toBe("t:export.toastFail");
   });
 });
+
+/**
+ * Two more error paths reached users as raw machine output.
+ *
+ * A malformed YAML upload came back as the PyYAML parser's own exception — internal wording
+ * (`while parsing a flow sequence in "<unicode string>"`), caret markers flattened onto one
+ * line, and the user's file content echoed back — while the sibling errors from the very
+ * same endpoint (IMPORT_EMPTY_ARTIFACT, IMPORT_NOT_UTF8) are clean, actionable sentences.
+ * And a schema violation printed Pydantic's raw `String should match pattern '<regex>'`
+ * against a 0-based path (`components.0.id`) that matches nothing visible in the UI.
+ */
+describe("apiErrorMessage envelope presentation", () => {
+  function envelope(code: string, message: string, errors?: unknown[]): ApiError {
+    const detail: Record<string, unknown> = { code, message };
+    if (errors) detail.errors = errors;
+    return new ApiError(`${code}: ${message}`, 422, { detail }, true);
+  }
+
+  it("replaces a raw parser exception with the UI's own wording", () => {
+    const err = envelope(
+      "IMPORT_ARTIFACT_INVALID",
+      'Não foi possível interpretar como YAML/JSON: while parsing a flow sequence in "<unicode string>", line 1, column 7',
+    );
+
+    expect(apiErrorMessage(err, t, "import.toastFail")).toBe(
+      "t:apiErrors.codes.IMPORT_ARTIFACT_INVALID",
+    );
+  });
+
+  it("does not echo the library's internal wording back to the user", () => {
+    const err = envelope(
+      "IMPORT_ARTIFACT_INVALID",
+      'Não foi possível interpretar como YAML/JSON: while parsing a flow sequence in "<unicode string>"',
+    );
+
+    expect(apiErrorMessage(err, t, "import.toastFail")).not.toContain("<unicode string>");
+  });
+
+  it("keeps the server's own message for a code the UI has no wording for", () => {
+    const err = envelope("PACK_NOT_FOUND", "industry pack 'nope' not found");
+
+    expect(apiErrorMessage(err, t, "analysis.toastFail")).toBe(
+      "PACK_NOT_FOUND: industry pack 'nope' not found",
+    );
+  });
+
+  it("states the id rule instead of printing the raw regex", () => {
+    const err = envelope("DOCUMENT_VALIDATION_ERROR", "Schema violation.", [
+      {
+        loc: ["body", "components", 0, "id"],
+        msg: "String should match pattern '^[a-zA-Z0-9_][a-zA-Z0-9_.-]*$'",
+      },
+    ]);
+
+    expect(apiErrorMessage(err, t, "wizard.validationFail")).not.toContain("a-zA-Z0-9_");
+  });
+
+  it("names the offending field with a 1-based row, as the UI shows it", () => {
+    const err = envelope("DOCUMENT_VALIDATION_ERROR", "Schema violation.", [
+      {
+        loc: ["body", "components", 0, "id"],
+        msg: "String should match pattern '^[a-zA-Z0-9_][a-zA-Z0-9_.-]*$'",
+      },
+    ]);
+
+    expect(apiErrorMessage(err, t, "wizard.validationFail")).toContain(
+      "components[1].id: t:apiErrors.entityIdPattern",
+    );
+  });
+
+  it("keeps a violation that already reads as a sentence", () => {
+    const err = envelope("DOCUMENT_VALIDATION_ERROR", "Schema violation.", [
+      { loc: ["body", "metadata", "title"], msg: "Field required" },
+    ]);
+
+    expect(apiErrorMessage(err, t, "wizard.validationFail")).toContain(
+      "metadata.title: Field required",
+    );
+  });
+
+  it("still shows the headline above the field list", () => {
+    const err = envelope("DOCUMENT_VALIDATION_ERROR", "Schema violation.", [
+      { loc: ["body", "metadata", "title"], msg: "Field required" },
+    ]);
+
+    expect(apiErrorMessage(err, t, "wizard.validationFail")).toContain(
+      "DOCUMENT_VALIDATION_ERROR: Schema violation.",
+    );
+  });
+
+  it("keeps a violation the server reported without a location", () => {
+    const err = envelope("DOCUMENT_VALIDATION_ERROR", "Schema violation.", [
+      { msg: "Model is empty" },
+    ]);
+
+    expect(apiErrorMessage(err, t, "wizard.validationFail")).toContain("Model is empty");
+  });
+
+  it("ignores entries in `errors` that carry no message", () => {
+    const err = envelope("DOCUMENT_VALIDATION_ERROR", "Schema violation.", [
+      { loc: ["body", "metadata"] },
+      "not an object",
+    ]);
+
+    expect(apiErrorMessage(err, t, "wizard.validationFail")).toBe(
+      "DOCUMENT_VALIDATION_ERROR: Schema violation.",
+    );
+  });
+
+  it("falls back to the transport message when the envelope carries only a code", () => {
+    const err = new ApiError("Unprocessable Content", 422, { detail: { code: "ODD" } }, true);
+
+    expect(apiErrorMessage(err, t, "wizard.validationFail")).toBe("Unprocessable Content");
+  });
+
+  it("uses a bare `message` when the envelope carries no code", () => {
+    const err = new ApiError("x", 422, { detail: { message: "Payload too large." } }, true);
+
+    expect(apiErrorMessage(err, t, "wizard.validationFail")).toBe("Payload too large.");
+  });
+
+  it("leaves a string `detail` alone", () => {
+    const err = new ApiError("Nope.", 413, { detail: "Nope." }, true);
+
+    expect(apiErrorMessage(err, t, "import.toastFail")).toBe("Nope.");
+  });
+
+  it("leaves an array `detail` alone", () => {
+    const err = new ApiError("raw", 422, { detail: [{ msg: "bad" }] }, true);
+
+    expect(apiErrorMessage(err, t, "import.toastFail")).toBe("raw");
+  });
+
+  it("drops a leading numeric segment that names no field", () => {
+    const err = envelope("DOCUMENT_VALIDATION_ERROR", "Schema violation.", [
+      { loc: [0, "id"], msg: "Field required" },
+    ]);
+
+    expect(apiErrorMessage(err, t, "wizard.validationFail")).toContain("id: Field required");
+  });
+});

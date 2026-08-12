@@ -31,7 +31,7 @@ def register(app: typer.Typer) -> None:
             exit_on_cli_error(console, e)
         if output:
             try:
-                write_text_file(content=text, output=output)
+                write_text_file(content=text, output=output, sources=(path,))
             except CliUserError as e:
                 exit_on_cli_error(console, e)
             console.print(f"[green]Diagram[/green] → {safe(output.resolve())}")

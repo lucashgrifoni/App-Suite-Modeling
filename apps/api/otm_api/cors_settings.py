@@ -74,7 +74,13 @@ def resolve_cors_profile() -> CorsProfile:
         headers = ["*"]
     else:
         methods = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"]
-        headers = ["Content-Type", "Authorization", "X-Request-ID", "Accept"]
+        # `X-OTM-API-Key` faz parte desta lista porque é o mecanismo de autenticação que a
+        # própria API documenta e que o corpo do 401 manda usar. Sem ele, o preflight de
+        # qualquer cliente de browser era rejeitado com 400 "Disallowed CORS headers" —
+        # exatamente nos ambientes onde `OTM_API_KEY` está realmente definida, e sem aparecer
+        # no log (o CORSMiddleware responde antes da observabilidade). Em `development`,
+        # `allow_headers=["*"]` escondia o problema.
+        headers = ["Content-Type", "Authorization", "X-OTM-API-Key", "X-Request-ID", "Accept"]
 
     return CorsProfile(
         origins=origins,

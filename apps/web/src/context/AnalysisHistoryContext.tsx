@@ -2,6 +2,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -9,7 +10,13 @@ import {
 import type { AnalysisResult } from "../types/api";
 import type { AnalysisHistoryEntry } from "../types/analysisHistory";
 import type { OtmDocument } from "../types/document";
-import { loadHistory, pushHistoryEntry, saveHistory } from "../utils/analysisHistoryStorage";
+import {
+  loadHistory,
+  pushHistoryEntry,
+  saveHistory,
+  STORAGE_NAMESPACE,
+  type HistoryWriteOutcome,
+} from "../utils/analysisHistoryStorage";
 import { useSession } from "./SessionContext";
 
 interface AnalysisHistoryState {
@@ -24,8 +31,14 @@ interface AnalysisHistoryState {
    * to be read from the session would store the previous run's result — or `null` on the
    * first run of a session. Callers that are only snapshotting what is already on screen
    * (the export page) can omit it and get the session analysis.
+   *
+   * Returns what became of the write so a caller announcing success can tell the truth:
+   * `"failed"` means the browser's storage quota left no room and the snapshot is gone.
    */
-  appendSnapshot: (trigger: "analysis" | "export", analysis?: AnalysisResult | null) => void;
+  appendSnapshot: (
+    trigger: "analysis" | "export",
+    analysis?: AnalysisResult | null,
+  ) => HistoryWriteOutcome;
   restore: (id: string) => void;
   remove: (id: string) => void;
 }
@@ -57,16 +70,45 @@ export function AnalysisHistoryProvider({ children }: Readonly<{ children: React
 
   const refresh = useCallback(() => setEntries(loadHistory()), []);
 
+  // History lives in localStorage, which is shared by every tab on this origin. Reading it
+  // once at mount meant a second tab kept rendering the list as it stood when that tab was
+  // opened, with no hint it was stale — and a Remove click there acted on a list nobody was
+  // looking at, making unrelated entries appear as the visible result of a delete.
+  //
+  // Two triggers, because neither covers the other: `storage` fires live while the tab is
+  // running, and the visibility check catches up after a spell in the background, where a
+  // browser is free to freeze the document and deliver it no events at all.
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      // `key === null` is a whole-store clear, which also concerns us.
+      if (e.key === null || e.key === STORAGE_NAMESPACE) refresh();
+    };
+    const onVisibility = () => {
+      if (globalThis.document.visibilityState === "visible") refresh();
+    };
+    globalThis.addEventListener("storage", onStorage);
+    globalThis.document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      globalThis.removeEventListener("storage", onStorage);
+      globalThis.document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [refresh]);
+
   const appendSnapshot = useCallback(
-    (trigger: "analysis" | "export", snapshotAnalysis?: AnalysisResult | null) => {
-      if (!document) return;
+    (
+      trigger: "analysis" | "export",
+      snapshotAnalysis?: AnalysisResult | null,
+    ): HistoryWriteOutcome => {
+      // Nothing to snapshot. Not a storage failure, so callers must not warn about one.
+      if (!document) return "ok";
       const entry = buildEntry(
         trigger,
         document,
         snapshotAnalysis === undefined ? analysis : snapshotAnalysis,
       );
-      pushHistoryEntry(entry);
+      const outcome = pushHistoryEntry(entry);
       refresh();
+      return outcome;
     },
     [document, analysis, refresh],
   );

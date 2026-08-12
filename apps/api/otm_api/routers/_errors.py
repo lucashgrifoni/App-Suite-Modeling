@@ -72,21 +72,35 @@ def raise_analysis_validation_error(exc: PydanticValidationError) -> HTTPExcepti
     )
 
 
-def ensure_analysis_matches_document(document: ThreatModelDocument, analysis: AnalysisResult) -> None:
+def ensure_analysis_matches_document(
+    document: ThreatModelDocument,
+    analysis: AnalysisResult,
+    *,
+    analysis_field: str = "analysis",
+    document_field: str = "document",
+) -> None:
     """
     422 quando o `analysis` recebido não foi produzido para o `document` recebido.
 
     Guarda, não conversor: as rotas que emparelham os dois artefactos chamam-na depois de
     validar cada um. Ver `services/analysis_pairing.py` para o critério e o âmbito.
+
+    Os nomes dos campos são parâmetros porque `/v1/models/compare` recebe **dois** pares e
+    tem de dizer qual deles está trocado.
     """
-    mismatches = analysis_document_mismatches(document, analysis)
+    mismatches = analysis_document_mismatches(
+        document,
+        analysis,
+        analysis_field=analysis_field,
+        document_field=document_field,
+    )
     if not mismatches:
         return
     raise HTTPException(
         status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
         detail=error_detail(
             code="ANALYSIS_DOCUMENT_MISMATCH",
-            message=msg_analysis_document_mismatch(),
+            message=msg_analysis_document_mismatch(analysis_field=analysis_field, document_field=document_field),
             errors=mismatches,
         ),
     )
@@ -125,3 +139,13 @@ def document_from_payload_or_422(data: dict[str, Any]) -> ThreatModelDocument:
         return document_from_payload(data)
     except PydanticValidationError as e:
         raise raise_document_validation_error(e) from e
+
+
+def analysis_from_payload_or_422(data: dict[str, Any] | None) -> AnalysisResult | None:
+    """`AnalysisResult` validado, ou `None` quando o campo foi omitido."""
+    if data is None:
+        return None
+    try:
+        return AnalysisResult.model_validate(data)
+    except PydanticValidationError as e:
+        raise raise_analysis_validation_error(e) from e

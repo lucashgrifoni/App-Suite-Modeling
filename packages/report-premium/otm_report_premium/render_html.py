@@ -11,6 +11,7 @@ from otm_threat_engine.severity import severity_for_score
 from .branding import report_logo_data_uri
 from .enums import ReportLevel
 from .models import PremiumReportPayload, TopRiskItem
+from .pdf_text import to_pdf_font_text
 
 # Tier / severity palette (aligned with product brief)
 _COLOR_P1 = "#dc2626"
@@ -20,6 +21,9 @@ _COLOR_P4 = "#2563eb"
 
 _S = (
     """
+/* `letter-spacing` is written in points, not `em`: xhtml2pdf's getSize() cannot parse `em`, so
+   every single PDF export used to leak a raw `getSize: Not a float '0.04em'` line onto stderr
+   and the tracking was dropped on the floor. Points parse, so the typography now applies. */
 @page { size: A4; margin: 16mm 14mm 18mm 14mm; }
 * { box-sizing: border-box; }
 body {
@@ -38,7 +42,7 @@ h1 {
   color: #020617;
   margin: 0 0 4px 0;
   line-height: 1.2;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.44pt;
 }
 h2 {
   font-size: 13pt;
@@ -73,7 +77,7 @@ header.report-header {
   font-size: 11pt;
   font-weight: 600;
   color: #1e40af;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.44pt;
   text-transform: uppercase;
   margin-bottom: 10px;
 }
@@ -256,6 +260,26 @@ _UL_CLOSE = "</ul>"
 _HR_DIVIDER = "<hr class='section-divider'/>"
 _TABLE_SECTION_CLOSE = "</table></section>"
 
+#: `●` (U+25CF). The coloured-circle emoji this replaces (`🔴🟠🟡🔵`) have no glyph in the PDF
+#: fonts and printed as black boxes in the product's own chrome; this one draws.
+_DOT = "&#9679;"
+
+#: Shown in the footer when `to_pdf_font_text` had to change something, so a reader who sees a
+#: transliterated name knows why and where the untouched text is.
+_DEGRADED_TEXT_NOTICE = (
+    "Some characters in this model are outside the PDF font's range and were transliterated or "
+    "replaced with '?'. The Markdown export carries the original text."
+)
+
+#: `TechnicalAppendix.full_threat_listing` is one Markdown block per threat:
+#: a `### id — title` heading followed by the description.
+_APPENDIX_HEADING_PREFIX = "### "
+#: The appendix of a large model can list hundreds of threats. The Markdown renderer caps the
+#: listing at 20 000 characters; the PDF caps by entry so the table stays a readable document
+#: instead of a hundred pages of rows, and says how many entries it left out.
+_APPENDIX_MAX_ENTRIES = 60
+_APPENDIX_MAX_BODY_CHARS = 700
+
 
 def _esc(s: str) -> str:
     return html.escape(s, quote=True)
@@ -282,11 +306,17 @@ def _root_cause_row_class(index: int) -> str:
 
 
 def _status_emoji(status: str) -> str:
+    """Status mark, restricted to glyphs the built-in PDF fonts actually have.
+
+    This used to emit `⚠️`/`⚠`, which the PDF fonts do not cover: the product's own status line
+    read `Overall status: ■■ Requires immediate attention`. `●` (ZapfDingbats) and `✓` (Symbol)
+    both draw, and the tier colour carries the same signal the emoji did.
+    """
     if status == "requires_immediate_attention":
-        return "&#9888;&#65039;"  # warning
+        return f"<span class='tier-p1'>{_DOT}</span>&nbsp;"
     if status == "action_recommended":
-        return "&#9888;"  # ⚠ simple
-    return "&#10003;"  # check
+        return f"<span class='tier-p2'>{_DOT}</span>&nbsp;"
+    return "&#10003;&nbsp;"  # check
 
 
 def _roadmap_heading(phase: Literal["immediate", "short", "medium"]) -> str:
@@ -395,11 +425,11 @@ def _html_executive_summary(parts: list[str], payload: PremiumReportPayload) -> 
     parts.append("<ul>")
     parts.append(f"<li><span class='hl'>Total threats:</span> {es.threat_count}</li>")
     parts.append(
-        f"<li><span class='hl'>Highest priority:</span> "
-        f"<span class='tier-p1'>&#128308;</span> {_esc(tier_line)} "
+        f"<li><span class='hl'>Highest priority:</span>&nbsp;"
+        f"<span class='tier-p1'>{_DOT}</span>&nbsp;{_esc(tier_line)} "
         f"&nbsp; <span class='hl'>Score:</span> {_esc(score_line)}</li>"
     )
-    parts.append(f"<li><span class='hl'>Overall status:</span> {status_icon} {_esc(c.overall_status_display)}</li>")
+    parts.append(f"<li><span class='hl'>Overall status:</span>&nbsp;{status_icon}{_esc(c.overall_status_display)}</li>")
     parts.append(f"<li><span class='hl'>Urgency:</span> {_esc(es.urgency_level)}</li>")
     parts.append(_UL_CLOSE)
     if es.top5_risk_titles:
@@ -471,10 +501,10 @@ def _html_root_cause_and_roadmap(parts: list[str], payload: PremiumReportPayload
         parts.append("<div class='root-grid'>")
         for i, g in enumerate(payload.root_cause_groups[:12]):
             rc = _root_cause_row_class(i)
-            icons = ("&#128308;", "&#128992;", "&#128993;", "&#128309;")
-            ic = icons[i % 4]
+            tier = ("tier-p1", "tier-p2", "tier-p3", "tier-p4")[i % 4]
+            ic = f"<span class='{tier}'>{_DOT}</span>"
             parts.append(
-                f"<div class='root-row {rc}'>{ic} <strong>{_esc(g.display_name)}</strong> "
+                f"<div class='root-row {rc}'>{ic}&nbsp;<strong>{_esc(g.display_name)}</strong> "
                 f"<span class='tier-p2'>({g.threat_count})</span><br/>"
                 f"<span class='small-muted'>{_esc(g.single_fix_recommendation[:320])}</span></div>"
             )
@@ -551,6 +581,59 @@ def _html_exploit_and_baseline(parts: list[str], payload: PremiumReportPayload) 
         parts.append(f"<p>{_esc(payload.baseline_diff.narrative)}</p></section>")
 
 
+def _appendix_entries(listing: str) -> list[tuple[str, str]]:
+    """Split the appendix listing into (heading, description) pairs.
+
+    The payload carries the listing as Markdown because that is what the Markdown renderer
+    consumes; the PDF needs the same content as structure, so it is read back here rather than
+    duplicated in the builder.
+    """
+    entries: list[tuple[str, str]] = []
+    heading = ""
+    body: list[str] = []
+    for line in listing.splitlines():
+        if line.startswith(_APPENDIX_HEADING_PREFIX):
+            if heading:
+                entries.append((heading, " ".join(body)))
+            heading = line[len(_APPENDIX_HEADING_PREFIX) :].strip()
+            body = []
+        elif line.strip():
+            body.append(line.strip())
+    if heading:
+        entries.append((heading, " ".join(body)))
+    return entries
+
+
+def _html_technical_appendix(parts: list[str], payload: PremiumReportPayload) -> None:
+    """Deep-level appendix — the section that used to exist only in the Markdown report.
+
+    Every other level branch in this file tests `!= EXECUTIVE`, so `--level deep --format pdf`
+    rendered exactly the standard PDF and the documented appendix reached no PDF at all.
+    """
+    appendix = payload.technical_appendix
+    if payload.level != ReportLevel.DEEP or not appendix:
+        return
+    parts.append(_HR_DIVIDER)
+    parts.append("<section><h2>Technical appendix</h2>")
+    parts.append(f"<p class='small-muted'>{_esc(appendix.methodology_outputs_note)}</p>")
+    if appendix.import_evidence_note:
+        parts.append(f"<p class='small-muted'>{_esc(appendix.import_evidence_note)}</p>")
+    entries = _appendix_entries(appendix.full_threat_listing)
+    parts.append("<table class='risk-table'><colgroup>")
+    parts.append("<col style='width:38%'/><col style='width:62%'/></colgroup>")
+    parts.append("<tr><th>Threat</th><th>Description</th></tr>")
+    for heading, body in entries[:_APPENDIX_MAX_ENTRIES]:
+        parts.append(f"<tr><td>{_esc(heading)}</td><td>{_esc(body[:_APPENDIX_MAX_BODY_CHARS])}</td></tr>")
+    parts.append("</table>")
+    omitted = len(entries) - _APPENDIX_MAX_ENTRIES
+    if omitted > 0:
+        parts.append(
+            f"<p class='small-muted'>{omitted} further threat(s) omitted from the PDF appendix - "
+            "export the Markdown report for the complete listing.</p>"
+        )
+    parts.append("</section>")
+
+
 def render_premium_html(payload: PremiumReportPayload) -> str:
     """
     Full HTML for xhtml2pdf. Labels and section chrome are **English** (executive PDF).
@@ -565,9 +648,17 @@ def render_premium_html(payload: PremiumReportPayload) -> str:
     _html_quick_and_strategic(parts, payload)
     _html_detail_tables(parts, payload)
     _html_exploit_and_baseline(parts, payload)
-    parts.append(
+    _html_technical_appendix(parts, payload)
+
+    # The PDF fonts cover WinAnsi plus the Symbol/ZapfDingbats substitutions and nothing else, so
+    # anything beyond that is degraded here rather than drawn as a row of black boxes. Doing it
+    # per part keeps the (pure-ASCII, ~400 KB) logo data URI on the cheap path.
+    safe_parts = [to_pdf_font_text(part) for part in parts]
+    footer = (
         "<footer>App Suite Modeling — Premium security report. "
-        "Full technical detail: export Markdown or JSON analysis bundle.</footer></body></html>"
+        "Full technical detail: export Markdown or JSON analysis bundle."
     )
-    raw = "".join(parts)
-    return re.sub(r">\s+<", "><", raw)
+    if safe_parts != parts:
+        footer += f"<br/>{_DEGRADED_TEXT_NOTICE}"
+    safe_parts.append(f"{footer}</footer></body></html>")
+    return re.sub(r">\s+<", "><", "".join(safe_parts))

@@ -91,8 +91,11 @@ export function AnalysisPage() {
       });
       setAnalysis(r);
       // `r`, not the session analysis: this render still holds the pre-run value.
-      appendSnapshot("analysis", r);
+      const stored = appendSnapshot("analysis", r);
       toast.success(t("analysis.toastOk"));
+      // The analysis itself succeeded; only the History snapshot was lost. Saying so beats
+      // a run that silently stops appearing in History once the browser's quota is full.
+      if (stored === "failed") toast.warning(t("history.toastStorageFull"));
     } catch (e) {
       const msg = apiErrorMessage(e, t, "analysis.toastFail");
       setError(msg);

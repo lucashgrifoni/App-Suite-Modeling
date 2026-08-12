@@ -8,11 +8,11 @@ from otm_threat_engine import recommend_methodology
 from otm_threat_engine.comparison_models import ThreatModelComparisonResult
 from otm_threat_engine.methodology_completeness import assess_methodology_completeness
 from otm_threat_engine.result import AnalysisResult
-from pydantic import ValidationError as PydanticValidationError
 
 from otm_api.routers._errors import (
+    analysis_from_payload_or_422,
     document_from_payload_or_422,
-    raise_analysis_validation_error,
+    ensure_analysis_matches_document,
     raise_pack_not_found,
 )
 from otm_api.schemas.bodies import (
@@ -104,19 +104,28 @@ def diff_model_versions(body: DiffBody) -> ThreatModelDiff:
 def compare_models(body: CompareBody) -> ThreatModelComparisonResult:
     b_doc = document_from_payload_or_422(body.baseline)
     r_doc = document_from_payload_or_422(body.revised)
+    b_analysis = analysis_from_payload_or_422(body.baseline_analysis)
+    r_analysis = analysis_from_payload_or_422(body.revised_analysis)
+    # Cada análise tem de descrever o documento que vem ao lado dela. Sem isto, trocar as duas
+    # (um copy/paste num passo de CI) devolvia 200 com o delta ao contrário: as ameaças que a
+    # revisão *removeu* apareciam como "added", com a metade estrutural do resultado — essa
+    # calculada a partir dos documentos certos — a dar-lhe ar de resposta legítima.
+    if b_analysis is not None and r_analysis is not None:
+        ensure_analysis_matches_document(
+            b_doc, b_analysis, analysis_field="baseline_analysis", document_field="baseline"
+        )
+        ensure_analysis_matches_document(r_doc, r_analysis, analysis_field="revised_analysis", document_field="revised")
     try:
         result = comparison_from_validated_documents(
             b_doc,
             r_doc,
-            baseline_analysis=body.baseline_analysis,
-            revised_analysis=body.revised_analysis,
+            baseline_analysis=b_analysis,
+            revised_analysis=r_analysis,
             run_analysis_flag=body.run_analysis,
             pack_id=body.pack_id,
         )
     except FileNotFoundError as e:
         raise raise_pack_not_found(e) from e
-    except PydanticValidationError as e:
-        raise raise_analysis_validation_error(e) from e
     return result
 
 

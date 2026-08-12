@@ -61,7 +61,7 @@ def register(app: typer.Typer) -> None:
 
         if json_out:
             try:
-                write_json_file(payload=payload, output=json_out)
+                write_json_file(payload=payload, output=json_out, sources=(baseline, revised))
             except CliUserError as e:
                 exit_on_cli_error(console, e)
             console.print(f"[green]Analysis diff written to[/green] {safe(json_out.resolve())}")

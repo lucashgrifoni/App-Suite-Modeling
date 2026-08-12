@@ -17,16 +17,16 @@ from otm_cli.application.report_service import (
 )
 from otm_cli.commands.bootstrap import console
 from otm_cli.commands.handle_errors import exit_on_cli_error
-from otm_cli.shared.emit import write_bytes_file, write_text_file
+from otm_cli.shared.emit import input_paths, write_bytes_file, write_text_file
 from otm_cli.shared.errors import CliUserError
 from otm_cli.shared.render import safe
 
 
-def _emit_text_report(text: str, *, output: Path | None, label: str) -> None:
+def _emit_text_report(text: str, *, output: Path | None, label: str, sources: tuple[Path, ...]) -> None:
     """Write the report and say where, or print it to stdout so the caller can pipe it."""
     if output:
         try:
-            write_text_file(content=text, output=output)
+            write_text_file(content=text, output=output, sources=sources)
         except CliUserError as e:
             exit_on_cli_error(console, e)
         console.print(f"[green]{label}[/green] → {safe(output.resolve())}")
@@ -34,10 +34,10 @@ def _emit_text_report(text: str, *, output: Path | None, label: str) -> None:
         print(text, end="")
 
 
-def _emit_pdf_report(pdf_bytes: bytes, *, output: Path, locale_notice: str | None) -> None:
+def _emit_pdf_report(pdf_bytes: bytes, *, output: Path, locale_notice: str | None, sources: tuple[Path, ...]) -> None:
     """A PDF is never printed to stdout; without `--output` it lands on the report's default path."""
     try:
-        write_bytes_file(content=pdf_bytes, output=output)
+        write_bytes_file(content=pdf_bytes, output=output, sources=sources)
     except CliUserError as e:
         exit_on_cli_error(console, e)
     if locale_notice:
@@ -114,12 +114,14 @@ def register(app: typer.Typer) -> None:
         except CliUserError as e:
             exit_on_cli_error(console, e)
 
+        inputs = input_paths(path, analysis_json, baseline_json)
+
         if isinstance(outcome, ReportLegacyResult):
-            _emit_text_report(outcome.text, output=output, label="Report")
+            _emit_text_report(outcome.text, output=output, label="Report", sources=inputs)
             return
 
         if isinstance(outcome, ReportPremiumMarkdownResult):
-            _emit_text_report(outcome.text, output=output, label="Report premium (Markdown)")
+            _emit_text_report(outcome.text, output=output, label="Report premium (Markdown)", sources=inputs)
             return
 
         if isinstance(outcome, ReportPremiumPdfResult):
@@ -127,4 +129,5 @@ def register(app: typer.Typer) -> None:
                 outcome.pdf_bytes,
                 output=output or outcome.default_path,
                 locale_notice=outcome.locale_notice,
+                sources=inputs,
             )

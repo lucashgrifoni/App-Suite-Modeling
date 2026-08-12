@@ -306,7 +306,13 @@ def _build_root_cause_groups(backlog: Any, loc: PremiumReportLocale) -> list[Roo
         comps: set[str] = set()
         for it in items:
             comps.update(it.related_components)
-        controls = list({it.suggested_control_type for it in items})[:6]
+        # `list(set(...))` here made the premium report non-reproducible: two runs of the same
+        # command over the same model emitted `data_protection, hardening_and_integrity` and its
+        # reverse, because set iteration order follows the per-process hash seed. Worse, once a
+        # group holds more than six distinct control types the `[:6]` slice would have dropped a
+        # *different* control each run. `dict.fromkeys` deduplicates in backlog order, which is
+        # the order the six kept controls should be chosen in anyway.
+        controls = list(dict.fromkeys(it.suggested_control_type for it in items))[:6]
         rc_groups.append(
             RootCauseGroup(
                 key=root_key,

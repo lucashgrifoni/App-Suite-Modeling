@@ -19,8 +19,11 @@ import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter } from "react-router";
 import { WizardPage } from "./WizardPage";
+import { ApiError } from "../api/client";
+import { validateDocument } from "../api/otmApi";
 import { SessionProvider } from "../context/SessionContext";
 import { ToastProvider } from "../context/ToastContext";
+import i18n from "../i18n/i18n";
 import type { OtmDocument } from "../types/document";
 
 // "Next" validates against the API before advancing. The subject here is the wizard's
@@ -296,5 +299,121 @@ describe("WizardPage step unlocking", () => {
     render(<WizardPage />, { wrapper: Providers });
 
     expect(screen.getByLabelText("Model title")).toBeInTheDocument();
+  });
+});
+
+/**
+ * The ID field on a component row is trimmed on blur; the Name field beside it was not.
+ * A name of three spaces was therefore stored verbatim and travelled into every deliverable:
+ * the Mermaid export rendered `p2["   "]` as an empty box and the Markdown export emitted
+ * `- **   ** (`p2`) — process`, where the bold markers wrap only spaces and print as literal
+ * asterisks in most renderers. Nothing in the wizard said a word about it.
+ */
+describe("WizardPage component name normalisation", () => {
+  it("does not store a name that is only whitespace", async () => {
+    const user = userEvent.setup();
+    render(<WizardPage />, { wrapper: Providers });
+    const nameInput = await gotoStep(user, 1, "#comp-0-name");
+
+    await user.clear(nameInput);
+    await user.type(nameInput, "   ");
+    await user.tab();
+
+    expect(storedDoc().components[0].name.trim()).not.toBe("");
+  });
+
+  it("falls back to the component id, the one label guaranteed to exist", async () => {
+    const user = userEvent.setup();
+    render(<WizardPage />, { wrapper: Providers });
+    const nameInput = await gotoStep(user, 1, "#comp-0-name");
+
+    await user.clear(nameInput);
+    await user.type(nameInput, "   ");
+    await user.tab();
+
+    expect(storedDoc().components[0].name).toBe("api");
+  });
+
+  it("trims the padding off a real name instead of discarding it", async () => {
+    const user = userEvent.setup();
+    render(<WizardPage />, { wrapper: Providers });
+    const nameInput = await gotoStep(user, 1, "#comp-0-name");
+
+    await user.clear(nameInput);
+    await user.type(nameInput, "  Gateway  ");
+    await user.tab();
+
+    expect(storedDoc().components[0].name).toBe("Gateway");
+  });
+
+  it("leaves a name that needs no normalisation exactly as typed", async () => {
+    const user = userEvent.setup();
+    render(<WizardPage />, { wrapper: Providers });
+    const nameInput = await gotoStep(user, 1, "#comp-0-name");
+
+    await user.clear(nameInput);
+    await user.type(nameInput, "Payments API");
+    await user.tab();
+
+    expect(storedDoc().components[0].name).toBe("Payments API");
+  });
+});
+
+/**
+ * Clearing a component ID produced, on screen, `components.0.id: String should match pattern
+ * '^[a-zA-Z0-9_][a-zA-Z0-9_.-]*$'` — Pydantic's raw regex plus a 0-based path that matches
+ * nothing the user can see. The rule behind that pattern is one sentence long.
+ */
+describe("WizardPage validation errors", () => {
+  function schemaRejection() {
+    return new ApiError(
+      "DOCUMENT_VALIDATION_ERROR: The document does not satisfy the canonical schema.",
+      422,
+      {
+        detail: {
+          code: "DOCUMENT_VALIDATION_ERROR",
+          message: "The document does not satisfy the canonical schema.",
+          errors: [
+            {
+              loc: ["body", "components", 0, "id"],
+              msg: "String should match pattern '^[a-zA-Z0-9_][a-zA-Z0-9_.-]*$'",
+            },
+          ],
+        },
+      },
+      true,
+    );
+  }
+
+  it("does not show the raw schema regex to the user", async () => {
+    const user = userEvent.setup();
+    vi.mocked(validateDocument).mockRejectedValueOnce(schemaRejection());
+    render(<WizardPage />, { wrapper: Providers });
+
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    await waitFor(() => expect(screen.getByRole("alert")).not.toHaveTextContent("a-zA-Z0-9_"));
+  });
+
+  it("states the id rule in words instead", async () => {
+    const user = userEvent.setup();
+    vi.mocked(validateDocument).mockRejectedValueOnce(schemaRejection());
+    render(<WizardPage />, { wrapper: Providers });
+
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    await waitFor(() =>
+      expect(screen.getByRole("alert")).toHaveTextContent(i18n.t("apiErrors.entityIdPattern")),
+    );
+  });
+
+  it("points at the component row the way the UI numbers it", async () => {
+    const user = userEvent.setup();
+    vi.mocked(validateDocument).mockRejectedValueOnce(schemaRejection());
+    render(<WizardPage />, { wrapper: Providers });
+
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("components[1].id"));
   });
 });

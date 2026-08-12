@@ -62,8 +62,10 @@ function AggregateBlock({
     <div className="rounded-otm-lg border border-otm-border bg-gradient-to-br from-otm-surface-1/95 to-otm-surface-2/80 p-4 text-xs text-otm-text shadow-otm-sm">
       <div className="flex items-center justify-between gap-2 border-b border-otm-border/80 pb-2 font-display text-sm font-semibold text-otm-text">
         {title}
+        {/* Count-aware, like the `+n added` / `−n removed` pills right below it. The
+            hand-concatenated `{total} {t("diff.changes")}` printed "1 CHANGES". */}
         <span className="text-[10px] font-normal uppercase tracking-wide text-otm-text-subtle">
-          {total} {t("diff.changes")}
+          {t("diff.changesCount", { count: total })}
         </span>
       </div>
       <div className="mt-3 space-y-2.5">

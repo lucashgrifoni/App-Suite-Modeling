@@ -10,7 +10,7 @@ import typer
 from otm_cli.application.backlog_service import run_backlog
 from otm_cli.commands.bootstrap import console
 from otm_cli.commands.handle_errors import exit_on_cli_error
-from otm_cli.shared.emit import write_text_file
+from otm_cli.shared.emit import input_paths, write_text_file
 from otm_cli.shared.enums import BacklogFormat, BacklogGroupBy
 from otm_cli.shared.errors import CliUserError
 from otm_cli.shared.render import safe
@@ -61,7 +61,7 @@ def register(app: typer.Typer) -> None:
 
         if output:
             try:
-                write_text_file(content=text, output=output)
+                write_text_file(content=text, output=output, sources=input_paths(path, document))
             except CliUserError as e:
                 exit_on_cli_error(console, e)
             console.print(f"[green]Backlog[/green] → {safe(output.resolve())}")

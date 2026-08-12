@@ -101,12 +101,16 @@ def test_cwe_wins_over_capec_when_both_are_present() -> None:
     assert rule["helpUri"] == "https://cwe.mitre.org/data/definitions/306.html"
 
 
-def test_a_threat_with_no_target_omits_locations() -> None:
-    """An empty `locations` array is invalid SARIF; the key has to be absent instead."""
+def test_a_threat_with_no_target_omits_only_the_logical_location() -> None:
+    """An empty `logicalLocations` array is invalid SARIF; the key has to be absent instead.
+
+    The `physicalLocation` does not depend on a target and now stays — dropping the whole
+    `locations` array left the model-level threats unable to produce a located alert.
+    """
     obj = _sarif(_threat("untargeted", likelihood=3, impact=3))
     res = obj["runs"][0]["results"][0]
 
-    assert "locations" not in res
+    assert "logicalLocations" not in res["locations"][0]
     assert res["partialFingerprints"]["otmThreatId"] == "untargeted"
 
 

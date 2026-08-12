@@ -58,7 +58,12 @@ def _handle_ingress(
     ingresses: list[IngressRef],
 ) -> None:
     cid = slug_id(f"ing_{name}", prefix="ing")
-    hosts = _extract_hosts_from_rules(doc.get("rules") or [])
+    # `.spec.rules`, not the document root — as `_find_ingress_spec` already notes. Reading the
+    # root meant every valid Ingress recorded `hosts: []` and the importer then wrote the
+    # opposite of the manifest ("sem hosts explícitos") into the draft's assumptions, losing the
+    # public hostnames, which are the exposure surface a threat modeller most needs.
+    spec = _as_dict(doc.get("spec")) or {}
+    hosts = _extract_hosts_from_rules(spec.get("rules") or [])
     ingresses.append((cid, name, hosts))
     components.append(
         Component(

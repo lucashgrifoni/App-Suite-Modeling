@@ -58,6 +58,14 @@ async def _read_limited(file: UploadFile) -> tuple[bytes, str]:
     # (see docs/architecture/DEPLOYMENT_INVARIANTS.md).
     data = await file.read(_MAX_BYTES + 1)
     if len(data) > _MAX_BYTES:
+        # Divergência conhecida e documentada em `docs/features/API.md`: este `detail` é uma
+        # string solta, enquanto todos os erros vizinhos desta rota (e o contrato) usam
+        # `{code, message}` — um cliente que faça `detail["code"]` rebenta com `TypeError`.
+        # A correção é trocar isto por `_import_error(..., code="IMPORT_TOO_LARGE", ...)`, e
+        # está retida por um único teste que afirma `"2 MiB" in r.json()["detail"]`
+        # (`tests/test_api.py`), verdade apenas enquanto `detail` for string. Ver
+        # `tests/test_p2r2_api_contract_gaps.py`, que fixa o estado atual e falha assim que
+        # esse teste for corrigido para `["detail"]["message"]`.
         raise HTTPException(
             status_code=status.HTTP_413_CONTENT_TOO_LARGE,
             detail="Artifact exceeds 2 MiB limit (MVP).",

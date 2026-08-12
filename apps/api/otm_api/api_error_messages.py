@@ -51,6 +51,13 @@ def msg_import_empty_artifact() -> str:
     )
 
 
+def msg_remediation_group_by_invalid(*, value: str, accepted: str) -> str:
+    return _t(
+        f"`group_by={value!r}` is not a known grouping. Accepted values: {accepted}.",
+        f"`group_by={value!r}` não é um agrupamento conhecido. Valores aceites: {accepted}.",
+    )
+
+
 def msg_import_not_utf8() -> str:
     return _t(
         "The artifact is not valid UTF-8 text. Re-save it as UTF-8; this endpoint takes text, not binaries.",
@@ -74,12 +81,19 @@ def msg_api_key_misconfigured() -> str:
     )
 
 
-def msg_analysis_document_mismatch() -> str:
+def msg_analysis_document_mismatch(*, analysis_field: str = "analysis", document_field: str = "document") -> str:
+    """
+    Os nomes dos campos são parâmetros porque o mesmo erro aparece em rotas onde o par não se
+    chama `document`/`analysis`: em `/v1/models/compare` são `baseline`/`baseline_analysis` e
+    `revised`/`revised_analysis`. Dizer "analysis" numa resposta a um pedido que não tem esse
+    campo manda o cliente procurar o problema no sítio errado.
+    """
     return _t(
-        "The supplied `analysis` was not produced for the supplied `document`. "
-        "Re-run the analysis for this document, or omit `analysis` and set `run_analysis: true`.",
-        "O `analysis` enviado não foi produzido para o `document` enviado. "
-        "Volte a correr a análise para este documento, ou omita `analysis` e defina `run_analysis: true`.",
+        f"The supplied `{analysis_field}` was not produced for the supplied `{document_field}`. "
+        f"Re-run the analysis for this document, or omit `{analysis_field}` and set `run_analysis: true`.",
+        f"O `{analysis_field}` enviado não foi produzido para o `{document_field}` enviado. "
+        f"Volte a correr a análise para este documento, ou omita `{analysis_field}` e defina "
+        "`run_analysis: true`.",
     )
 
 

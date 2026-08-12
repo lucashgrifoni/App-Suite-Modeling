@@ -24,7 +24,7 @@ Contagem de referências `framework:control_id` nas heurísticas (por catálogo 
 ### Consolidação de risco e cockpit executivo
 
 - **Ameaças activas:** 20 · **Score total:** 278.0 · **Média / máx:** 13.9 / 20.0
-- **Distribuição por severidade:** `{'high': 13, 'medium': 4, 'critical': 3}`
+- **Distribuição por severidade:** high: 13, medium: 4, critical: 3
 - **Top ameaças (score):**
   - `eng_api_spoofing` — [spoofing] API (public_api) (score 20.0)
   - `eng_api_elevation_of_privilege` — [elevation_of_privilege] API (public_api) (score 20.0)

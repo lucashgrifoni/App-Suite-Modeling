@@ -459,6 +459,20 @@ export function WizardPage() {
                   <Input
                     id={`comp-${idx}-name`}
                     value={c.name}
+                    // Trim on blur, and fall back to the id when nothing is left. A name of
+                    // only spaces was stored verbatim and travelled into every deliverable:
+                    // an empty Mermaid node, and `- **   ** (`id`)` in the Markdown export,
+                    // where the bold markers wrap nothing and render as literal asterisks.
+                    // The id is the one label guaranteed to exist, so it stands in rather
+                    // than shipping a blank. Trimming here and not in onChange keeps the
+                    // space the user just typed from vanishing mid-word.
+                    onBlur={(e) => {
+                      const trimmed = e.target.value.trim();
+                      if (trimmed === c.name) return;
+                      setComponents(
+                        updateArrayItem(doc.components, idx, { ...c, name: trimmed || c.id }),
+                      );
+                    }}
                     onChange={(e) => {
                       setComponents(updateArrayItem(doc.components, idx, { ...c, name: e.target.value }));
                     }}

@@ -97,6 +97,21 @@ def _physical_location(model_uri: str) -> dict[str, Any]:
     return {"artifactLocation": {"uri": model_uri}, "region": {"startLine": 1}}
 
 
+def _location(threat: HeuristicThreat, model_uri: str) -> dict[str, Any]:
+    """The single `location` of a result: always the model file, plus the target when there is one.
+
+    A threat that declares no component, data flow or asset — PASTA emits five of them, one per
+    model-level concern — still belongs to the model file, so it gets the same `physicalLocation`
+    as every other result. Anchoring it is what makes it ingestible; the `logicalLocations` entry
+    is what makes it readable, and only that part depends on a target existing.
+    """
+    location: dict[str, Any] = {"physicalLocation": _physical_location(model_uri)}
+    logical = _logical_location(threat)
+    if logical:
+        location["logicalLocations"] = [logical]
+    return location
+
+
 def export_analysis_sarif_obj(result: AnalysisResult, *, model_uri: str = _DEFAULT_MODEL_URI) -> dict[str, Any]:
     """SARIF 2.1.0 object for the analysis result (one run, one result per active threat).
 
@@ -139,9 +154,7 @@ def export_analysis_sarif_obj(result: AnalysisResult, *, model_uri: str = _DEFAU
                 "references": refs,
             },
         }
-        loc = _logical_location(t)
-        if loc:
-            res["locations"] = [{"physicalLocation": _physical_location(model_uri), "logicalLocations": [loc]}]
+        res["locations"] = [_location(t, model_uri)]
         sarif_results.append(res)
 
     return {

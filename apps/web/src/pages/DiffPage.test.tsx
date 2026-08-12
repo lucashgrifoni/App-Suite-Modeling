@@ -222,3 +222,45 @@ describe("DiffPage changes-by-section card", () => {
     expect(screen.queryByText(i18n.t("diff.noSectionChanges"))).toBeNull();
   });
 });
+
+/**
+ * The per-section counter was a hand-concatenated `{total} {t("diff.changes")}`, so a
+ * single change read "1 CHANGES" — directly above a "−1 removed" line that the sibling
+ * count-aware key got right.
+ */
+describe("DiffPage section change counter", () => {
+  function withComponentChanges(section: {
+    added: string[];
+    removed: string[];
+    changed: string[];
+  }) {
+    return comparisonResult({
+      aggregate: {
+        components: section,
+        assets: EMPTY_SECTION,
+        data_flows: EMPTY_SECTION,
+        trust_boundaries: EMPTY_SECTION,
+        threats: EMPTY_SECTION,
+        mitigations: EMPTY_SECTION,
+      },
+    } as Partial<ThreatModelComparisonResult>);
+  }
+
+  it("uses the singular for exactly one change", async () => {
+    await compareWith(withComponentChanges({ added: [], removed: ["p2_added"], changed: [] }));
+
+    expect(screen.getByText("1 change")).toBeInTheDocument();
+  });
+
+  it("does not print the plural for one change", async () => {
+    await compareWith(withComponentChanges({ added: [], removed: ["p2_added"], changed: [] }));
+
+    expect(screen.queryByText("1 changes")).toBeNull();
+  });
+
+  it("still uses the plural for several changes", async () => {
+    await compareWith(withComponentChanges({ added: ["a"], removed: ["b"], changed: ["c"] }));
+
+    expect(screen.getByText("3 changes")).toBeInTheDocument();
+  });
+});

@@ -19,6 +19,18 @@ export function AppLayout() {
   const { document, reset } = useSession();
   const location = useLocation();
 
+  /**
+   * "New model" discards the session document, which is the only copy of the user's work —
+   * the home page says so. It used to do that on a single click of a control that sits in
+   * the header of every page, with no confirmation, no undo and, for a model that was never
+   * analysed, no History snapshot to fall back on. The equivalent session-replacing action
+   * on the History page already asks first; this one now asks the same way.
+   */
+  function confirmReset() {
+    if (!globalThis.confirm(t("nav.confirmNewModel"))) return;
+    reset();
+  }
+
   return (
     <div className="relative min-h-screen overflow-x-hidden text-otm-text">
       <div
@@ -97,7 +109,7 @@ export function AppLayout() {
             <LanguageSwitcher />
             <ThemeToggle />
             {document && (
-              <Button variant="ghost" className="!py-1.5 !text-xs" onClick={() => reset()}>
+              <Button variant="ghost" className="!py-1.5 !text-xs" onClick={confirmReset}>
                 {t("nav.newModel")}
               </Button>
             )}

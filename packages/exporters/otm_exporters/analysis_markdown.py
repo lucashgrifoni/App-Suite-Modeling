@@ -513,65 +513,72 @@ def _append_guided_context_and_audit(
     _append_anti_patterns_block(lines, result, msgs)
 
 
-def _append_top_groups(lines: list[str], ar: dict[str, Any]) -> None:
+def _append_top_groups(lines: list[str], ar: dict[str, Any], msgs: AnalysisMarkdownMessages) -> None:
     for label, key in (
-        ("Componentes", "top_components"),
-        ("Fluxos", "top_flows"),
-        ("Ativos", "top_assets"),
+        (msgs.agg_top_components, "top_components"),
+        (msgs.agg_top_flows, "top_flows"),
+        (msgs.agg_top_assets, "top_assets"),
     ):
         items = ar.get(key) or []
         if items:
             lines.append(
-                f"- **{label} mais críticos:** "
-                + ", ".join(f"`{x.get('id')}` ({x.get('aggregate_score')})" for x in items[:4])
+                f"- **{label}:** " + ", ".join(f"`{x.get('id')}` ({x.get('aggregate_score')})" for x in items[:4])
             )
 
 
-def _append_aggregate_block(lines: list[str], ar: dict[str, Any]) -> None:
+def _format_severity_distribution(dist: dict[str, Any]) -> str:
+    """`high: 13, medium: 3` — the raw `dict` used to be interpolated, so the delivered report
+    carried a Python repr, quotes and all: ``{'high': 13, 'medium': 3}``."""
+    return ", ".join(f"{band}: {count}" for band, count in dist.items())
+
+
+def _append_aggregate_block(lines: list[str], ar: dict[str, Any], msgs: AnalysisMarkdownMessages) -> None:
     lines.append(
-        f"- **Ameaças activas:** {ar.get('active_threat_count', '—')} · "
-        f"**Score total:** {ar.get('total_risk_score', '—')} · "
-        f"**Média / máx:** {ar.get('mean_risk_score', '—')} / {ar.get('max_risk_score', '—')}"
+        f"- **{msgs.agg_active_threats}:** {ar.get('active_threat_count', '—')} · "
+        f"**{msgs.agg_total_score}:** {ar.get('total_risk_score', '—')} · "
+        f"**{msgs.agg_mean_max}:** {ar.get('mean_risk_score', '—')} / {ar.get('max_risk_score', '—')}"
     )
     dist = ar.get("severity_distribution") or {}
     if dist:
-        lines.append(f"- **Distribuição por severidade:** `{dist}`")
+        lines.append(f"- **{msgs.agg_severity_distribution}:** {_format_severity_distribution(dist)}")
     top_t = ar.get("top_threats") or []
     if top_t:
-        lines.append("- **Top ameaças (score):**")
+        lines.append(f"- **{msgs.agg_top_threats}:**")
         for row in top_t[:5]:
             lines.append(f"  - `{row.get('id')}` — {row.get('title', '')[:80]} (score {row.get('score')})")
-    _append_top_groups(lines, ar)
+    _append_top_groups(lines, ar, msgs)
     themes = ar.get("dominant_themes") or []
     if themes:
-        lines.append("- **Temas dominantes:** " + "; ".join(str(t) for t in themes[:6]))
+        lines.append(f"- **{msgs.agg_dominant_themes}:** " + "; ".join(str(t) for t in themes[:6]))
     starters = ar.get("mitigation_starters") or []
     if starters:
-        lines.append("- **Mitigação inicial:**")
+        lines.append(f"- **{msgs.agg_mitigation_starters}:**")
         for st in starters[:6]:
             lines.append(f"  - {st}")
 
 
-def _append_cockpit_block(lines: list[str], dc: dict[str, Any]) -> None:
-    lines.append(f"- **Postura:** `{dc.get('risk_posture', '—')}` — {dc.get('headline', '')}")
+def _append_cockpit_block(lines: list[str], dc: dict[str, Any], msgs: AnalysisMarkdownMessages) -> None:
+    lines.append(f"- **{msgs.cockpit_posture}:** `{dc.get('risk_posture', '—')}` — {dc.get('headline', '')}")
     for kd in dc.get("key_decisions") or []:
         lines.append(f"  - {kd}")
     for nr in (dc.get("next_reviews") or [])[:4]:
-        lines.append(f"  - *Rever:* {nr}")
+        lines.append(f"  - *{msgs.cockpit_next_review}:* {nr}")
 
 
-def _append_aggregate_risk_and_cockpit(lines: list[str], result: AnalysisResult) -> None:
+def _append_aggregate_risk_and_cockpit(
+    lines: list[str], result: AnalysisResult, msgs: AnalysisMarkdownMessages
+) -> None:
     """Bloco compacto de consolidação agregada e cockpit executivo (JSON em AnalysisResult)."""
     ar = result.aggregate_risk
     dc = result.decision_cockpit
     if not ar and not dc:
         return
-    lines.append("### Consolidação de risco e cockpit executivo")
+    lines.append(msgs.aggregate_cockpit_title)
     lines.append("")
     if ar:
-        _append_aggregate_block(lines, ar)
+        _append_aggregate_block(lines, ar, msgs)
     if dc:
-        _append_cockpit_block(lines, dc)
+        _append_cockpit_block(lines, dc, msgs)
     lines.append("")
 
 
@@ -634,7 +641,7 @@ def export_analysis_markdown(
     if s.max_risk_score is not None:
         lines.append(f"{msgs.bullet_max_score} **{s.max_risk_score}**")
     _append_framework_aggregate(lines, result, msgs)
-    _append_aggregate_risk_and_cockpit(lines, result)
+    _append_aggregate_risk_and_cockpit(lines, result, msgs)
     lines.append("")
     if result.pack_control_hints:
         lines.append(msgs.pack_control_title)

@@ -11,9 +11,15 @@ O `AnalysisResult` descreve-se a si próprio, por isso a incompatibilidade é de
 - `document_title` — a identidade que a análise carrega;
 - `heuristic_threats[].target_component_id` — os componentes que a análise assume existirem.
 
-Só é aplicado onde a análise **descreve o documento submetido**. `baseline_analysis`
-(report premium) e as análises de `/v1/models/compare` são, por definição, de outra
-versão do modelo: aí a divergência é o objetivo do endpoint, não um erro.
+Só é aplicado onde a análise **descreve o documento submetido**. Em `/v1/reports/premium`,
+`baseline_analysis` é a análise de uma versão anterior *do documento que não foi enviado*:
+não há com que a comparar, e a divergência é o objetivo do endpoint.
+
+`/v1/models/compare` **não** é essa exceção, e tratá-lo como tal era um defeito: ali chegam
+dois pares completos (`baseline` + `baseline_analysis`, `revised` + `revised_analysis`), e
+cada análise descreve o documento que vem ao lado dela. Divergir *entre* os pares é o objetivo
+do endpoint; divergir *dentro* de um par significa que o delta foi calculado a partir de
+análises de outros modelos — e trocar as duas devolvia 200 com a transição ao contrário.
 """
 
 from __future__ import annotations
@@ -33,17 +39,25 @@ def _unknown_target_component_ids(document: ThreatModelDocument, analysis: Analy
 def analysis_document_mismatches(
     document: ThreatModelDocument,
     analysis: AnalysisResult,
+    *,
+    analysis_field: str = "analysis",
+    document_field: str = "document",
 ) -> list[dict[str, Any]]:
-    """Divergências entre a análise e o documento, no formato `errors[]` da API."""
+    """
+    Divergências entre a análise e o documento, no formato `errors[]` da API.
+
+    Os nomes dos campos entram no `loc` e na mensagem: quem chama `/v1/models/compare` precisa
+    de saber *qual* dos dois pares está trocado, não só que "analysis" não bate certo.
+    """
     mismatches: list[dict[str, Any]] = []
 
     if analysis.document_title != document.metadata.title:
         mismatches.append(
             {
-                "loc": ["body", "analysis", "document_title"],
+                "loc": ["body", analysis_field, "document_title"],
                 "msg": (
-                    f"analysis.document_title={analysis.document_title!r} does not match "
-                    f"document.metadata.title={document.metadata.title!r}"
+                    f"{analysis_field}.document_title={analysis.document_title!r} does not match "
+                    f"{document_field}.metadata.title={document.metadata.title!r}"
                 ),
                 "type": "analysis_document_mismatch.title",
             }
@@ -53,8 +67,8 @@ def analysis_document_mismatches(
     if unknown:
         mismatches.append(
             {
-                "loc": ["body", "analysis", "heuristic_threats"],
-                "msg": f"analysis targets components absent from the document: {', '.join(unknown)}",
+                "loc": ["body", analysis_field, "heuristic_threats"],
+                "msg": (f"{analysis_field} targets components absent from the {document_field}: {', '.join(unknown)}"),
                 "type": "analysis_document_mismatch.components",
             }
         )

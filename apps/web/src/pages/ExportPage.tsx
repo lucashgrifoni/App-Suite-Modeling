@@ -107,8 +107,9 @@ export function ExportPage() {
         locale: resolvedArtifactLocale(),
       });
       setResult(artifacts);
-      appendSnapshot("export");
+      const stored = appendSnapshot("export");
       toast.success(t("export.toastReady"));
+      if (stored === "failed") toast.warning(t("history.toastStorageFull"));
     } catch (e) {
       const msg = apiErrorMessage(e, t, "export.toastFail");
       setError(msg);
@@ -130,8 +131,9 @@ export function ExportPage() {
       });
       const safe = model.metadata.title.replaceAll(/[^\w-]+/g, "_").slice(0, 40);
       downloadPdfBlob(blob, `otm-report-${safe}.pdf`);
-      appendSnapshot("export");
+      const stored = appendSnapshot("export");
       toast.success(t("export.toastPdf"));
+      if (stored === "failed") toast.warning(t("history.toastStorageFull"));
     } catch {
       const msg = t("export.toastPdfFail");
       setError(msg);
@@ -153,8 +155,9 @@ export function ExportPage() {
         locale: resolvedArtifactLocale(),
       });
       downloadPdfBlob(blob, filename);
-      appendSnapshot("export");
+      const stored = appendSnapshot("export");
       toast.success(kind === "pdf" ? t("export.toastPremiumPdf") : t("export.toastPremiumMd"));
+      if (stored === "failed") toast.warning(t("history.toastStorageFull"));
     } catch (e) {
       const msg = apiErrorMessage(e, t, "export.toastPremiumFail");
       setError(msg);
