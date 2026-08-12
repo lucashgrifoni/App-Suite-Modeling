@@ -25,6 +25,7 @@ import {
   sanitizeEntityIdInput,
 } from "../utils/documentNormalize";
 import { applyComponentIdRename, nextEntityId } from "../utils/wizardEdits";
+import { useStableRowKeys } from "../utils/useStableRowKeys";
 import {
   getAdaptiveAnswer,
   promptsForProfile,
@@ -73,6 +74,10 @@ export function WizardPage() {
     () => document?.components.map((c) => c.id).filter(Boolean) ?? [],
     [document?.components],
   );
+
+  // Row identity for the two editable grids. Not the array index: see useStableRowKeys.
+  const componentRowKeys = useStableRowKeys(document?.components.length ?? 0);
+  const flowRowKeys = useStableRowKeys(document?.data_flows.length ?? 0);
 
   const templateProfile = useMemo(
     () => (document?.model.template_semantic_profile ?? "").trim().toLowerCase(),
@@ -324,9 +329,10 @@ export function WizardPage() {
                 // Keyed by index, NOT by the edited values: a key derived from `c.id`/`c.name`
                 // changes on every keystroke, which unmounts the row mid-edit and drops focus
                 // to <body>, so the field accepts one character per click. Every mutation here
-                // already addresses rows by index (`updateArrayItem(doc.components, idx, …)`),
-                // so the index is the row's real identity.
-                key={idx}
+                // NOT the edited values: a key derived from `c.id`/`c.name` changes on
+                // every keystroke, unmounts the row mid-edit and drops focus to <body>,
+                // so the field accepts one character per click.
+                key={componentRowKeys.keyAt(idx)}
                 className="grid gap-2 rounded-otm-md border border-otm-border bg-otm-surface-1/80 p-3 sm:grid-cols-12 sm:items-end"
               >
                 <div className="sm:col-span-3">
@@ -422,7 +428,10 @@ export function WizardPage() {
                     // Cascades to flows, assets and trust boundaries. A plain splice here
                     // left orphan references that the canonical schema rejects, bricking
                     // validate/analyze/export for the rest of the session.
-                    onClick={() => setDocument(removeComponents(doc, [c.id]))}
+                    onClick={() => {
+                      componentRowKeys.noteRemoval(idx);
+                      setDocument(removeComponents(doc, [c.id]));
+                    }}
                   >
                     {t("wizard.remove")}
                   </Button>
@@ -431,7 +440,8 @@ export function WizardPage() {
             ))}
             <Button
               variant="secondary"
-              onClick={() =>
+              onClick={() => {
+                componentRowKeys.noteInsert();
                 setComponents([
                   ...doc.components,
                   {
@@ -441,8 +451,8 @@ export function WizardPage() {
                     name: t("wizard.newComponentShort"),
                     kind: "process",
                   },
-                ])
-              }
+                ]);
+              }}
             >
               {t("wizard.addComponent")}
             </Button>
@@ -458,7 +468,7 @@ export function WizardPage() {
                 // Index key — see the components list above. A content-derived key also broke
                 // the flow-ID rename propagation below, whose onFocus/onBlur pair cannot
                 // survive an element destroyed mid-edit.
-                key={idx}
+                key={flowRowKeys.keyAt(idx)}
                 className="grid gap-2 rounded-otm-md border border-otm-border bg-otm-surface-1/80 p-3 sm:grid-cols-12 sm:items-end"
               >
                 <div className="sm:col-span-2">
@@ -571,7 +581,10 @@ export function WizardPage() {
                   <Button
                     variant="ghost"
                     className="w-full text-red-700 dark:text-red-300"
-                    onClick={() => setDocument(removeDataFlows(doc, [f.id]))}
+                    onClick={() => {
+                      flowRowKeys.noteRemoval(idx);
+                      setDocument(removeDataFlows(doc, [f.id]));
+                    }}
                   >
                     {t("wizard.remove")}
                   </Button>
@@ -580,7 +593,8 @@ export function WizardPage() {
             ))}
             <Button
               variant="secondary"
-              onClick={() =>
+              onClick={() => {
+                flowRowKeys.noteInsert();
                 setFlows([
                   ...doc.data_flows,
                   {
@@ -592,8 +606,8 @@ export function WizardPage() {
                     to_component: componentIds[1] ?? componentIds[0] ?? "",
                     name: null,
                   },
-                ])
-              }
+                ]);
+              }}
             >
               {t("wizard.addFlow")}
             </Button>
