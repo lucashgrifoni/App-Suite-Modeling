@@ -34,6 +34,7 @@ Ponto de entrada único para navegar o `/docs`. O mapa editorial (público vs in
 | [`REPOSITORY_LAYOUT.md`](REPOSITORY_LAYOUT.md) | Camadas e pacotes `otm_*` |
 | [`MONOREPO.md`](MONOREPO.md) | Árvore do repo, convenções, packaging |
 | [`KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md) | O que o produto **não** promete |
+| [`DESIGN_SYSTEM.md`](DESIGN_SYSTEM.md) | Tokens, primitivos, temas, contrastes verificados (WCAG 2.2 AA) |
 | [`VERSIONING_AND_TAGS.md`](VERSIONING_AND_TAGS.md) | Versão `7.x`, tags Git, marco `v0.1.0` |
 | [`CI_AND_SECURITY_EVIDENCE.md`](CI_AND_SECURITY_EVIDENCE.md) | Gates CI, SAST, SCA, evidência DevSecOps |
 
