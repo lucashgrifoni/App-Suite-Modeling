@@ -48,7 +48,7 @@ Se no futuro o cenário passar a **B (exposto publicamente)**, é obrigatório a
 | `OTM_CORS_ORIGINS` | Lista separada por vírgulas de origens permitidas (ex.: `https://app.example.com`). |
 | `OTM_LOG_LEVEL` | Nível de log da API (`INFO` por defeito). |
 | `OTM_API_KEY` | Opcional. Quando definida, exige `X-OTM-API-Key` ou `Authorization: Bearer` em **`/v1/*`**. Ver `docs/features/API.md`. |
-| `OTM_RATE_LIMIT` | Opcional. Limite SlowAPI (ex.: `60/minute`). Em staging/prod, sem esta variável aplica-se `120/minute` por defeito. |
+| `OTM_RATE_LIMIT` | Opcional. Limite no formato `limits` (ex.: `60/minute`), aplicado por IP a todas as rotas. Em staging/prod, sem esta variável aplica-se `120/minute` por defeito. Expressão inválida = falha no arranque. |
 | `OTM_RATE_LIMIT_DISABLED` | `1` / `true` desativa o rate limit (útil em testes locais ou atrás de gateway próprio). |
 
 ## Invariantes que o código reforça

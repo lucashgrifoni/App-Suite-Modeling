@@ -28,7 +28,12 @@ api = [
   "fastapi>=0.115",
   "python-multipart>=0.0.18",
   "uvicorn[standard]>=0.27",
-  "slowapi>=0.1.9",
+  # Rate limiting is implemented directly on `limits` (see
+  # apps/api/otm_api/middleware_rate_limit.py). slowapi used to provide this, but its
+  # middleware resolves routes by scanning `app.routes` for an `endpoint` attribute, which
+  # FastAPI 0.141 no longer exposes for `include_router` routes — so it silently enforced
+  # nothing. `limits` was already the transitive engine underneath it; it is now direct.
+  "limits>=4.0",
   # Reservado para persistência pós-MVP (multi-utilizador / histórico); a API atual não importa SQLAlchemy.
   "sqlalchemy>=2.0",
 ]

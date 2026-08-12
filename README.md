@@ -113,7 +113,7 @@ python -m venv .venv
 pip install -e ".[dev,cli,api]"
 ```
 
-Use **`[dev,cli,api]`** so local runs match CI (API tests need `slowapi`, etc.). Minimal CLI-only: `pip install -e ".[cli]"`.
+Use **`[dev,cli,api]`** so local runs match CI (API tests need `fastapi`, `limits`, etc.). Minimal CLI-only: `pip install -e ".[cli]"`.
 
 **Automated bootstrap** (venv + editable install + `npm install` in `apps/web`):
 

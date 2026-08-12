@@ -26,7 +26,7 @@ Contrato exportado, gate anti-stale, goldens HTTP e E2E híbrido: ver **`docs/ar
 | Variável | Efeito |
 |----------|--------|
 | `OTM_API_KEY` | Se definida (não vazia), todos os pedidos a **`/v1/*`** exigem **`X-OTM-API-Key: <valor>`** ou **`Authorization: Bearer <valor>`**. Rotas como `/health`, `/docs`, `/openapi.json` permanecem sem chave. |
-| `OTM_RATE_LIMIT` | Expressão [SlowAPI](https://github.com/laurents/slowapi) (ex.: `120/minute`). Se definida, aplica-se como limite global por IP (em conjunto com o middleware SlowAPI). |
+| `OTM_RATE_LIMIT` | Expressão no formato [`limits`](https://limits.readthedocs.io/) (ex.: `120/minute`). Se definida, aplica-se como limite global por IP a **todas** as rotas, incluindo `/health` e `/v1/*`. Uma expressão malformada faz a app falhar no arranque, em vez de desactivar o controlo em silêncio. O contador é em memória do processo: com vários workers o limite é por worker. |
 | `OTM_RATE_LIMIT_DISABLED` | `1` / `true` — desativa o rate limit mesmo em staging/produção. |
 | (sem `OTM_RATE_LIMIT` e sem `OTM_RATE_LIMIT_DISABLED`) | Em **`development`** (defeito de `OTM_ENV`): sem limite. Em **staging** / **production**: limite por defeito **`120/minute`**. |
 

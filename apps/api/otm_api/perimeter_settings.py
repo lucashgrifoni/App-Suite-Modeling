@@ -26,7 +26,8 @@ def resolve_optional_api_secret() -> str | None:
 
 def resolve_rate_limit_default() -> str | None:
     """
-    Expressão SlowAPI (ex.: ``120/minute``). Omissão = sem limite global.
+    Expressão de limite (ex.: ``120/minute``), no formato da biblioteca ``limits``.
+    Omissão = sem limite global.
 
     - ``OTM_RATE_LIMIT_DISABLED=1``: desativa sempre.
     - ``OTM_RATE_LIMIT``: força o limite (útil em dev para testar).
