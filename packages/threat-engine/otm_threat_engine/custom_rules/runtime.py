@@ -94,6 +94,20 @@ def _build_threat(
     )
 
 
+def _rule_population(doc: ThreatModelDocument, rule: CustomRule) -> tuple[list[Any], dict[str, Any]]:
+    """A população que a regra declara como sujeito, e os critérios a casar contra ela.
+
+    Sem bloco de critérios, o dicionário vazio casa toda a população — é o que `subject`
+    sozinho significa ("todo o datastore", "todo o fluxo").
+    """
+    match = rule.match
+    if match.subject == "component":
+        return list(doc.components), match.component.criteria() if match.component else {}
+    if match.subject == "flow":
+        return list(doc.data_flows), match.flow.criteria() if match.flow else {}
+    return list(doc.assets), match.asset.criteria() if match.asset else {}
+
+
 def iter_custom_rule_threats(
     doc: ThreatModelDocument,
     ruleset: CustomRuleSet,
@@ -114,31 +128,22 @@ def iter_custom_rule_threats(
     dessas apareçam no relatório.
     """
     out: list[HeuristicThreat] = []
-    emitted: set[tuple[str, str]] = set()
     fired: set[str] = set()
     cross_flows = cross_boundary_flow_ids(doc)
 
     for rule in ruleset.rules:
         kind = rule.match.subject
-        population: list[Any]
-        criteria: dict[str, Any]
-        if kind == "component":
-            population = list(doc.components)
-            criteria = rule.match.component.criteria() if rule.match.component else {}
-        elif kind == "flow":
-            population = list(doc.data_flows)
-            criteria = rule.match.flow.criteria() if rule.match.flow else {}
-        else:
-            population = list(doc.assets)
-            criteria = rule.match.asset.criteria() if rule.match.asset else {}
+        population, criteria = _rule_population(doc, rule)
 
         for target in population:
             derived = {"crosses_boundary": target.id in cross_flows} if kind == "flow" else {}
             if not _subject_matches(target, criteria, derived):
                 continue
-            if (rule.id, target.id) in emitted:
-                continue
-            emitted.add((rule.id, target.id))
+            # No (rule, target) de-duplication here on purpose: a rule appears once
+            # (`CustomRuleSet._unique_rule_ids`) and each entity appears once in its
+            # population (`ThreatModelDocument.unique_component_ids` /
+            # `unique_data_flow_ids` / `unique_asset_ids`), so a pair could never repeat.
+            # The guard that used to sit here was unreachable dead code.
             fired.add(rule.id)
             out.append(
                 _build_threat(

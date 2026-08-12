@@ -51,7 +51,6 @@ def _validate_one_or_exit(path: Path) -> None:
         doc = run_validate(path)
     except CliUserError as e:
         exit_on_cli_error(console, e)
-        raise  # unreachable: exit_on_cli_error always raises; narrows `doc` for the type checker
     _print_valid(doc)
 
 

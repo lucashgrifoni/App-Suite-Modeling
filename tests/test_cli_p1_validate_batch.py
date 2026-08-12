@@ -31,7 +31,7 @@ _BAD_KIND = (
 )
 
 
-@pytest.fixture()
+@pytest.fixture
 def runner() -> CliRunner:
     return CliRunner()
 
@@ -68,5 +68,6 @@ def test_batch_validate_still_reports_every_bad_file(runner: CliRunner, tmp_path
     r = runner.invoke(app, ["validate", str(_MINIMAL), str(bad_a), str(bad_b)])
     out = _out(r)
     assert r.exit_code == 1
-    assert "a.otm.yaml" in out and "b.otm.yaml" in out
+    assert "a.otm.yaml" in out
+    assert "b.otm.yaml" in out
     assert out.count("Invalid") == 2

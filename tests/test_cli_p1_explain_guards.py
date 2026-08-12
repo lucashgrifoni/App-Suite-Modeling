@@ -21,7 +21,7 @@ _ROOT = Path(__file__).resolve().parents[1]
 _MINIMAL = _ROOT / "examples" / "minimal.otm.yaml"
 
 
-@pytest.fixture()
+@pytest.fixture
 def runner() -> CliRunner:
     return CliRunner()
 
@@ -97,6 +97,7 @@ def test_explain_zero_limit_is_a_usage_error_not_an_empty_file_claim(runner: Cli
 
 def test_explain_negative_limit_does_not_silently_drop_rows(tmp_path: Path) -> None:
     """`explanations[:-3]` used to hide the LAST three rows — the opposite of a maximum."""
+    analysis = _analysis_json(tmp_path)
     with pytest.raises(CliUserError) as excinfo:
-        run_explain(_analysis_json(tmp_path), kind="analysis", category=None, limit=-3)
+        run_explain(analysis, kind="analysis", category=None, limit=-3)
     assert excinfo.value.exit_code == 2

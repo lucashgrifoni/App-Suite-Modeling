@@ -30,7 +30,7 @@ try {
   });
 } catch (err) {
   console.error(`contracts:check — failed to regenerate types from ${contract}`);
-  console.error(String(err && err.message ? err.message : err));
+  console.error(String(err?.message ? err.message : err));
   process.exit(2);
 }
 

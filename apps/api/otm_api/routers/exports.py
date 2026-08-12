@@ -23,7 +23,6 @@ router = APIRouter(prefix="/exports", tags=["Export"])
         "Produces one or more artifacts (JSON, Markdown, Mermaid, bundle). "
         "If a format requires analysis and `analysis` is omitted, the engine runs automatically."
     ),
-    response_model=ExportResponse,
 )
 def export_artifacts(body: ExportBody) -> ExportResponse:
     doc = document_from_payload_or_422(body.document)

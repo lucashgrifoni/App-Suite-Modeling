@@ -21,12 +21,12 @@ _MINIMAL = _ROOT / "examples" / "minimal.otm.yaml"
 _EXPECT = _ROOT / "tests" / "fixtures" / "golden" / "http_api_semantic_expectations.json"
 
 
-@pytest.fixture()
+@pytest.fixture
 def client() -> TestClient:
     return TestClient(app)
 
 
-@pytest.fixture()
+@pytest.fixture
 def expectations() -> dict:
     return json.loads(_EXPECT.read_text(encoding="utf-8"))
 
@@ -82,7 +82,8 @@ def test_http_precheck_typed_response(client: TestClient) -> None:
     )
     assert r.status_code == 200
     data = r.json()
-    assert "precheck" in data and "methodology_completeness" in data
+    assert "precheck" in data
+    assert "methodology_completeness" in data
     assert "score_0_100" in data["precheck"]
     assert "state" in data["methodology_completeness"]
 
@@ -97,5 +98,6 @@ def test_http_analyses_diff_typed_response(client: TestClient) -> None:
     )
     assert r.status_code == 200
     data = r.json()
-    assert "methodology_before" in data and "methodology_after" in data
+    assert "methodology_before" in data
+    assert "methodology_after" in data
     assert data["methodology_changed"] is False

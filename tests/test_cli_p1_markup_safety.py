@@ -30,7 +30,7 @@ _MINIMAL = _ROOT / "examples" / "minimal.otm.yaml"
 _ID_PATTERN = "^[a-zA-Z0-9_][a-zA-Z0-9_.-]*$"
 
 
-@pytest.fixture()
+@pytest.fixture
 def runner() -> CliRunner:
     return CliRunner()
 
@@ -113,7 +113,8 @@ def test_schema_error_keeps_the_field_path_for_a_bad_enum(runner: CliRunner, tmp
     r = runner.invoke(app, ["validate", str(bad)])
     out = _out(r)
     assert r.exit_code == 1
-    assert "components" in out and "kind" in out
+    assert "components" in out
+    assert "kind" in out
     assert "datastore" in out, "the expected-values list must survive"
 
 

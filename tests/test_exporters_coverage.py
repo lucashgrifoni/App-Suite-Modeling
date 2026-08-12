@@ -23,7 +23,8 @@ def test_analysis_markdown_view_modes(model: Path, view_mode: str, monkeypatch: 
     monkeypatch.setenv("OTM_MARKDOWN_VIEW_MODE", view_mode)
     res = analyze_document(load_document_from_yaml_path(model))
     md = export_analysis_markdown(res)
-    assert md and "##" in md
+    assert md
+    assert "##" in md
 
 
 def test_analysis_markdown_invalid_view_mode_defaults(monkeypatch: pytest.MonkeyPatch) -> None:

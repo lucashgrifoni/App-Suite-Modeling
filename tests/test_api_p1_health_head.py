@@ -16,7 +16,7 @@ from fastapi.testclient import TestClient  # noqa: E402
 from otm_api.main import app  # noqa: E402
 
 
-@pytest.fixture()
+@pytest.fixture
 def client() -> TestClient:
     return TestClient(app)
 

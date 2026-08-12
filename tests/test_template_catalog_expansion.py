@@ -51,7 +51,7 @@ EXPECTED_EXPANSION_IDS: tuple[str, ...] = (
 )
 
 
-@pytest.fixture()
+@pytest.fixture
 def client() -> TestClient:
     return TestClient(app)
 

@@ -15,7 +15,6 @@ router = APIRouter(prefix="/analyses", tags=["Analyses"])
     "/diff",
     summary="Diff two analysis results",
     description="Compares two `AnalysisResult` JSON payloads. Useful in CI without re-running the engine.",
-    response_model=AnalysisDiff,
     response_description="Serialized `AnalysisDiff` object.",
 )
 def diff_analysis_results_route(body: AnalysisDiffBody) -> AnalysisDiff:

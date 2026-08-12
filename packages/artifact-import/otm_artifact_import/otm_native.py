@@ -107,19 +107,19 @@ def _otm_parent_trust_zone(parent: Any) -> str | None:
     return None
 
 
-def otm_to_document(otm: dict[str, Any]) -> ThreatModelDocument:
-    """Convert a parsed OTM object into a validated canonical `ThreatModelDocument`."""
-    remap = _IdRemap()
-    project_raw = otm.get("project")
-    project: dict[str, Any] = project_raw if isinstance(project_raw, dict) else {}
-    title = str(project.get("name") or "Imported OTM model")
-    summary = project.get("description")
+def _identified_entries(otm: dict[str, Any], key: str) -> list[dict[str, Any]]:
+    """Entries of an OTM collection that are mappings carrying an `id`.
 
+    Anything else cannot be remapped onto a canonical entity, so it is skipped here once
+    instead of being re-checked by every caller.
+    """
+    return [e for e in _entries(otm, key) if isinstance(e, dict) and e.get("id") is not None]
+
+
+def _trust_boundaries_from_otm(otm: dict[str, Any], remap: _IdRemap) -> tuple[list[TrustBoundary], set[str]]:
     boundaries: list[TrustBoundary] = []
     boundary_ids: set[str] = set()
-    for tz in _entries(otm, "trustZones"):
-        if not isinstance(tz, dict) or tz.get("id") is None:
-            continue
+    for tz in _identified_entries(otm, "trustZones"):
         bid = remap(tz["id"], prefix="tz")
         if bid in boundary_ids:
             continue
@@ -127,12 +127,15 @@ def otm_to_document(otm: dict[str, Any]) -> ThreatModelDocument:
         boundaries.append(
             TrustBoundary(id=bid, name=str(tz.get("name") or tz["id"]), description=tz.get("description"))
         )
+    return boundaries, boundary_ids
 
+
+def _components_from_otm(
+    otm: dict[str, Any], remap: _IdRemap, boundary_ids: set[str]
+) -> tuple[list[Component], set[str]]:
     components: list[Component] = []
     comp_ids: set[str] = set()
-    for c in _entries(otm, "components"):
-        if not isinstance(c, dict) or c.get("id") is None:
-            continue
+    for c in _identified_entries(otm, "components"):
         cid = remap(c["id"], prefix="comp")
         if cid in comp_ids:
             continue
@@ -150,12 +153,13 @@ def otm_to_document(otm: dict[str, Any]) -> ThreatModelDocument:
                 in_trust_boundary=in_tb,
             )
         )
+    return components, comp_ids
 
+
+def _data_flows_from_otm(otm: dict[str, Any], remap: _IdRemap, comp_ids: set[str]) -> list[DataFlow]:
     flows: list[DataFlow] = []
     flow_ids: set[str] = set()
-    for df in _entries(otm, "dataflows"):
-        if not isinstance(df, dict) or df.get("id") is None:
-            continue
+    for df in _identified_entries(otm, "dataflows"):
         src = remap(df["source"], prefix="comp") if df.get("source") is not None else None
         dst = remap(df["destination"], prefix="comp") if df.get("destination") is not None else None
         if src not in comp_ids or dst not in comp_ids:
@@ -173,21 +177,42 @@ def otm_to_document(otm: dict[str, Any]) -> ThreatModelDocument:
                 description=df.get("description"),
             )
         )
+    return flows
 
+
+def _assets_from_otm(otm: dict[str, Any], remap: _IdRemap) -> list[Asset]:
     assets: list[Asset] = []
     asset_ids: set[str] = set()
-    for a in _entries(otm, "assets"):
-        if not isinstance(a, dict) or a.get("id") is None:
-            continue
+    for a in _identified_entries(otm, "assets"):
         aid = remap(a["id"], prefix="asset")
         if aid in asset_ids:
             continue
         asset_ids.add(aid)
         assets.append(Asset(id=aid, name=str(a.get("name") or a["id"]), description=a.get("description")))
+    return assets
+
+
+def otm_to_document(otm: dict[str, Any]) -> ThreatModelDocument:
+    """Convert a parsed OTM object into a validated canonical `ThreatModelDocument`."""
+    remap = _IdRemap()
+    project_raw = otm.get("project")
+    project: dict[str, Any] = project_raw if isinstance(project_raw, dict) else {}
+
+    # Call order is load-bearing, not cosmetic: `remap` is stateful, and two OTM ids that slug
+    # to the same base are disambiguated with a counter awarded on a first-come basis. Reordering
+    # these four lines would silently rename entities across the whole import.
+    boundaries, boundary_ids = _trust_boundaries_from_otm(otm, remap)
+    components, comp_ids = _components_from_otm(otm, remap, boundary_ids)
+    flows = _data_flows_from_otm(otm, remap, comp_ids)
+    assets = _assets_from_otm(otm, remap)
 
     return ThreatModelDocument(
         model_info=ModelInfo(),
-        metadata=Metadata(title=title, summary=summary, tags=["imported", "otm"]),
+        metadata=Metadata(
+            title=str(project.get("name") or "Imported OTM model"),
+            summary=project.get("description"),
+            tags=["imported", "otm"],
+        ),
         components=components,
         data_flows=flows,
         trust_boundaries=boundaries,
@@ -196,67 +221,89 @@ def otm_to_document(otm: dict[str, Any]) -> ThreatModelDocument:
 
 
 def import_otm_text(text: str) -> ThreatModelDocument:
-    """Parse OTM YAML/JSON text and convert to a canonical document."""
-    obj = load_object_from_text(text)
-    if not isinstance(obj, dict):
-        raise ValueError("OTM root must be a mapping (object).")
-    return otm_to_document(obj)
+    """Parse OTM YAML/JSON text and convert to a canonical document.
+
+    The root-is-a-mapping check lives in `load_object_from_text`, which is typed
+    `-> dict[str, Any]` and raises for a list, scalar or null root. Repeating it
+    here produced an unreachable branch — and a second, differently worded error
+    message for a condition a caller could never actually reach.
+    """
+    return otm_to_document(load_object_from_text(text))
 
 
-def document_to_otm(doc: ThreatModelDocument) -> dict[str, Any]:
-    """Convert a canonical document into an OTM (0.2.0) object."""
-    project: dict[str, Any] = {"id": slug_id(doc.metadata.title, prefix="proj"), "name": doc.metadata.title}
-    if doc.metadata.summary:
-        project["description"] = doc.metadata.summary
+def _project_to_otm(metadata: Metadata) -> dict[str, Any]:
+    project: dict[str, Any] = {"id": slug_id(metadata.title, prefix="proj"), "name": metadata.title}
+    if metadata.summary:
+        project["description"] = metadata.summary
+    return project
 
-    otm: dict[str, Any] = {"otmVersion": OTM_VERSION, "project": project}
 
-    if doc.trust_boundaries:
-        zones: list[dict[str, Any]] = []
-        for tb in doc.trust_boundaries:
-            zone: dict[str, Any] = {"id": tb.id, "name": tb.name, "risk": {"trustRating": _DEFAULT_TRUST_RATING}}
-            if tb.description:
-                zone["description"] = tb.description
-            zones.append(zone)
-        otm["trustZones"] = zones
+def _trust_zones_to_otm(boundaries: list[TrustBoundary]) -> list[dict[str, Any]]:
+    zones: list[dict[str, Any]] = []
+    for tb in boundaries:
+        zone: dict[str, Any] = {"id": tb.id, "name": tb.name, "risk": {"trustRating": _DEFAULT_TRUST_RATING}}
+        if tb.description:
+            zone["description"] = tb.description
+        zones.append(zone)
+    return zones
 
-    components: list[dict[str, Any]] = []
-    for c in doc.components:
+
+def _components_to_otm(components: list[Component]) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    for c in components:
         comp: dict[str, Any] = {"id": c.id, "name": c.name, "type": c.kind.value}
         if c.in_trust_boundary:
             comp["parent"] = {"trustZone": c.in_trust_boundary}
         if c.description:
             comp["description"] = c.description
-        components.append(comp)
-    otm["components"] = components
+        out.append(comp)
+    return out
 
+
+def _dataflows_to_otm(flows: list[DataFlow]) -> list[dict[str, Any]]:
+    return [
+        {
+            "id": df.id,
+            "name": df.name or df.id,
+            "source": df.from_component,
+            "destination": df.to_component,
+            "bidirectional": False,
+        }
+        for df in flows
+    ]
+
+
+def _assets_to_otm(assets: list[Asset]) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    for a in assets:
+        asset: dict[str, Any] = {
+            "id": a.id,
+            "name": a.name,
+            "risk": {
+                "confidentiality": _DEFAULT_ASSET_RISK,
+                "integrity": _DEFAULT_ASSET_RISK,
+                "availability": _DEFAULT_ASSET_RISK,
+            },
+        }
+        if a.description:
+            asset["description"] = a.description
+        out.append(asset)
+    return out
+
+
+def document_to_otm(doc: ThreatModelDocument) -> dict[str, Any]:
+    """Convert a canonical document into an OTM (0.2.0) object."""
+    otm: dict[str, Any] = {"otmVersion": OTM_VERSION, "project": _project_to_otm(doc.metadata)}
+
+    # An empty collection is omitted rather than emitted as `[]` — except `components`, which
+    # OTM consumers expect to be present even when the model has none. Key insertion order is
+    # the emitted document order, so it follows the OTM 0.2.0 reading order.
+    if doc.trust_boundaries:
+        otm["trustZones"] = _trust_zones_to_otm(doc.trust_boundaries)
+    otm["components"] = _components_to_otm(doc.components)
     if doc.data_flows:
-        otm["dataflows"] = [
-            {
-                "id": df.id,
-                "name": df.name or df.id,
-                "source": df.from_component,
-                "destination": df.to_component,
-                "bidirectional": False,
-            }
-            for df in doc.data_flows
-        ]
-
+        otm["dataflows"] = _dataflows_to_otm(doc.data_flows)
     if doc.assets:
-        assets: list[dict[str, Any]] = []
-        for a in doc.assets:
-            asset: dict[str, Any] = {
-                "id": a.id,
-                "name": a.name,
-                "risk": {
-                    "confidentiality": _DEFAULT_ASSET_RISK,
-                    "integrity": _DEFAULT_ASSET_RISK,
-                    "availability": _DEFAULT_ASSET_RISK,
-                },
-            }
-            if a.description:
-                asset["description"] = a.description
-            assets.append(asset)
-        otm["assets"] = assets
+        otm["assets"] = _assets_to_otm(doc.assets)
 
     return otm

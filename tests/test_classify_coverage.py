@@ -32,7 +32,9 @@ def test_classify_all_stride_roots() -> None:
     doc = create_blank_document()
     for st in StrideCategory:
         root, ctrl, cat, _layer = classify_threat(_threat(st), doc, ThreatModelMethodology.STRIDE)
-        assert root and ctrl and cat
+        assert root
+        assert ctrl
+        assert cat
 
 
 def test_classify_third_party_trust() -> None:

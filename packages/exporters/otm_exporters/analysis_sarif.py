@@ -47,11 +47,19 @@ def _rule_id(result: AnalysisResult, threat: HeuristicThreat) -> str:
 
 
 def _logical_location(threat: HeuristicThreat) -> dict[str, Any] | None:
-    target = threat.target_component_id or threat.target_data_flow_id or threat.target_asset_id
-    if not target:
-        return None
-    kind = "component" if threat.target_component_id else "dataflow" if threat.target_data_flow_id else "asset"
-    return {"fullyQualifiedName": target, "kind": kind}
+    """First target the threat declares, in precedence order, with its SARIF kind.
+
+    Pairing each id with its kind in one table keeps the two from drifting apart: picking the
+    target and naming it were previously two independent expressions over the same fields.
+    """
+    for target, kind in (
+        (threat.target_component_id, "component"),
+        (threat.target_data_flow_id, "dataflow"),
+        (threat.target_asset_id, "asset"),
+    ):
+        if target:
+            return {"fullyQualifiedName": target, "kind": kind}
+    return None
 
 
 def export_analysis_sarif_obj(result: AnalysisResult) -> dict[str, Any]:

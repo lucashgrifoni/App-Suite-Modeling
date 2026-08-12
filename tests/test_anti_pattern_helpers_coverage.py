@@ -73,4 +73,5 @@ def test_catalog_path_for_docs() -> None:
 
 def test_load_definitions_nonempty() -> None:
     defs = ap._load_definitions()
-    assert defs and all(hasattr(x, "id") for x in defs)
+    assert defs
+    assert all(hasattr(x, "id") for x in defs)

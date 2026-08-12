@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Query
 from fastapi.responses import PlainTextResponse
@@ -43,15 +43,17 @@ router = APIRouter(prefix="/remediation", tags=["Remediation"])
 )
 def post_remediation_backlog(
     body: RemediationBacklogRequest,
-    export_format: Literal["json", "markdown"] = Query(
-        default="json",
-        alias="format",
-        description="json = full object; markdown = human-readable report.",
-    ),
-    group_by: str | None = Query(
-        default=None,
-        description="For Markdown: root-cause | control | category.",
-    ),
+    export_format: Annotated[
+        Literal["json", "markdown"],
+        Query(
+            alias="format",
+            description="json = full object; markdown = human-readable report.",
+        ),
+    ] = "json",
+    group_by: Annotated[
+        str | None,
+        Query(description="For Markdown: root-cause | control | category."),
+    ] = None,
 ) -> RemediationBacklog | PlainTextResponse:
     doc = document_from_payload_or_422(body.document)
     analysis_obj: AnalysisResult | None = None

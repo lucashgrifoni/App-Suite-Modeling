@@ -78,12 +78,9 @@ def test_domain_422_truncates_echoed_input() -> None:
     class _M(BaseModel):
         x: int
 
-    try:
+    with pytest.raises(ValidationError) as excinfo:
         _M.model_validate({"x": "Z" * 5000})
-    except ValidationError as exc:
-        items = _pydantic_error_items(exc)
-    else:  # pragma: no cover - the model_validate above always raises
-        pytest.fail("expected ValidationError")
+    items = _pydantic_error_items(excinfo.value)
 
     echoed = str(items[0].get("input", ""))
     assert "chars suppressed" in echoed

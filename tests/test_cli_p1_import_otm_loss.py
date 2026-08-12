@@ -42,7 +42,7 @@ _OTM_WITH_ANALYST_CONTENT = {
 }
 
 
-@pytest.fixture()
+@pytest.fixture
 def runner() -> CliRunner:
     return CliRunner()
 
@@ -74,7 +74,8 @@ def test_import_otm_reports_what_it_dropped(runner: CliRunner, tmp_path: Path) -
     out = _out(r).lower()
     assert r.exit_code == 0
     assert "not imported" in out, "the conversion loss was silent"
-    assert "1 threat" in out and "1 mitigation" in out
+    assert "1 threat" in out
+    assert "1 mitigation" in out
 
 
 def test_import_otm_notes_name_every_dropped_category(tmp_path: Path) -> None:

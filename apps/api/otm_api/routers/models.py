@@ -66,7 +66,6 @@ def validate_model(body: DocumentBody) -> ValidateResponse:
         "Avalia completude do modelo (score, banda, matriz de adequação metodológica) e, "
         "opcionalmente, estado de completude da metodologia escolhida — sem correr heurísticas STRIDE."
     ),
-    response_model=ModelPrecheckResponse,
     response_description="`precheck` + `methodology_completeness` serializados.",
 )
 def model_precheck(body: PrecheckBody) -> ModelPrecheckResponse:
@@ -85,7 +84,6 @@ def model_precheck(body: PrecheckBody) -> ModelPrecheckResponse:
         "Compares two canonical versions (baseline vs revised) and returns structured diff. "
         "Implemented in `otm_core_schema.diff_documents` — same semantics as `otm diff` in the CLI."
     ),
-    response_model=ThreatModelDiff,
     response_description="Serialized `ThreatModelDiff` JSON object.",
 )
 def diff_model_versions(body: DiffBody) -> ThreatModelDiff:
@@ -101,7 +99,6 @@ def diff_model_versions(body: DiffBody) -> ThreatModelDiff:
         "Returns `ThreatModelComparisonResult`: canonical diff, aggregates, insights and, when "
         "`baseline_analysis`/`revised_analysis` or `run_analysis=true` is provided, risk/heuristic delta."
     ),
-    response_model=ThreatModelComparisonResult,
     response_description="JSON of the unified comparison result.",
 )
 def compare_models(body: CompareBody) -> ThreatModelComparisonResult:
@@ -149,7 +146,6 @@ def recommend_methodology_for_model(body: DocumentBody) -> RecommendMethodologyR
     "/analyze",
     summary="Analyze model",
     description="Runs the STRIDE engine, trust boundaries, and risk; optional industry pack.",
-    response_model=AnalysisResult,
     response_description="Serialized `AnalysisResult` JSON.",
 )
 def analyze_model(body: AnalyzeBody) -> AnalysisResult:

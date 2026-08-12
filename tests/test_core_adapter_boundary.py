@@ -11,7 +11,8 @@ _SCRIPT = _ROOT / "scripts" / "check_core_adapter_boundary.py"
 
 def test_core_adapter_boundary_script_passes() -> None:
     spec = importlib.util.spec_from_file_location("check_core_adapter_boundary", _SCRIPT)
-    assert spec and spec.loader
+    assert spec
+    assert spec.loader
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     assert mod.main() == 0

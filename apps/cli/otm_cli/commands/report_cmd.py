@@ -23,6 +23,27 @@ from otm_cli.shared.errors import CliUserError
 from otm_cli.shared.render import safe
 
 
+def _emit_text_report(text: str, *, output: Path | None, label: str) -> None:
+    """Write the report and say where, or print it to stdout so the caller can pipe it."""
+    if output:
+        try:
+            write_text_file(content=text, output=output)
+        except CliUserError as e:
+            exit_on_cli_error(console, e)
+        console.print(f"[green]{label}[/green] → {safe(output.resolve())}")
+    else:
+        print(text, end="")
+
+
+def _emit_pdf_report(pdf_bytes: bytes, *, output: Path) -> None:
+    """A PDF is never printed to stdout; without `--output` it lands on the report's default path."""
+    try:
+        write_bytes_file(content=pdf_bytes, output=output)
+    except CliUserError as e:
+        exit_on_cli_error(console, e)
+    console.print(f"[green]Report premium (PDF)[/green] → {safe(output.resolve())}")
+
+
 def register(app: typer.Typer) -> None:
     @app.command("report")
     def cmd_report(
@@ -96,31 +117,12 @@ def register(app: typer.Typer) -> None:
             raise typer.Exit(1) from e
 
         if isinstance(outcome, ReportLegacyResult):
-            if output:
-                try:
-                    write_text_file(content=outcome.text, output=output)
-                except CliUserError as e:
-                    exit_on_cli_error(console, e)
-                console.print(f"[green]Report[/green] → {safe(output.resolve())}")
-            else:
-                print(outcome.text, end="")
+            _emit_text_report(outcome.text, output=output, label="Report")
             return
 
         if isinstance(outcome, ReportPremiumMarkdownResult):
-            if output:
-                try:
-                    write_text_file(content=outcome.text, output=output)
-                except CliUserError as e:
-                    exit_on_cli_error(console, e)
-                console.print(f"[green]Report premium (Markdown)[/green] → {safe(output.resolve())}")
-            else:
-                print(outcome.text, end="")
+            _emit_text_report(outcome.text, output=output, label="Report premium (Markdown)")
             return
 
         if isinstance(outcome, ReportPremiumPdfResult):
-            default_out = output or outcome.default_path
-            try:
-                write_bytes_file(content=outcome.pdf_bytes, output=default_out)
-            except CliUserError as e:
-                exit_on_cli_error(console, e)
-            console.print(f"[green]Report premium (PDF)[/green] → {safe(default_out.resolve())}")
+            _emit_pdf_report(outcome.pdf_bytes, output=output or outcome.default_path)

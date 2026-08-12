@@ -35,6 +35,42 @@ def _apply_gate(analysis_diff: AnalysisDiff | None, policy: GatePolicy) -> None:
         raise typer.Exit(GATE_TRIP_EXIT_CODE)
 
 
+def _write_diff_json(payload: dict, output: Path) -> None:
+    """Write the `--json-out` artifact, or render the CLI error and exit with its code."""
+    try:
+        write_json_file(payload=payload, output=output)
+    except CliUserError as e:
+        exit_on_cli_error(console, e)
+    console.print(f"[green]Diff written to[/green] {safe(output.resolve())}")
+
+
+def _emit_diff(
+    fmt: DiffFormat,
+    *,
+    json_print: str | None,
+    md_text: str | None,
+    panel_text: str | None,
+    summary_only: bool,
+) -> None:
+    """`json` and `markdown` go to stdout verbatim so they stay pipeable; text gets a panel."""
+    if fmt == DiffFormat.json:
+        body = json_print or ""
+        print(body, end="" if body.endswith("\n") else "\n")
+        return
+    if fmt == DiffFormat.markdown:
+        print(md_text or "", end="")
+        return
+    # The panel body carries document titles AND its own `[metadata]`/`[components]`
+    # section headers; unescaped, Rich reads both as style tags and deletes them.
+    console.print(
+        Panel(
+            safe(panel_text or ""),
+            title="diff (summary)" if summary_only else "diff",
+            border_style="blue",
+        )
+    )
+
+
 def register(app: typer.Typer) -> None:
     @app.command("diff")
     def cmd_diff(
@@ -134,22 +170,14 @@ def register(app: typer.Typer) -> None:
             exit_on_cli_error(console, e)
 
         if json_out:
-            try:
-                write_json_file(payload=out_payload, output=json_out)
-            except CliUserError as e:
-                exit_on_cli_error(console, e)
-            console.print(f"[green]Diff written to[/green] {safe(json_out.resolve())}")
+            _write_diff_json(out_payload, json_out)
 
-        if fmt == DiffFormat.json:
-            body = json_print or ""
-            print(body, end="" if body.endswith("\n") else "\n")
-        elif fmt == DiffFormat.markdown:
-            print(md_text or "", end="")
-        elif summary_only:
-            console.print(Panel(safe(panel_text or ""), title="diff (summary)", border_style="blue"))
-        else:
-            # The panel body carries document titles AND its own `[metadata]`/`[components]`
-            # section headers; unescaped, Rich reads both as style tags and deletes them.
-            console.print(Panel(safe(panel_text or ""), title="diff", border_style="blue"))
+        _emit_diff(
+            fmt,
+            json_print=json_print,
+            md_text=md_text,
+            panel_text=panel_text,
+            summary_only=summary_only,
+        )
 
         _apply_gate(analysis_diff, policy)

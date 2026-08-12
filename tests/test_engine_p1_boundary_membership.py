@@ -108,7 +108,8 @@ def test_disagreement_between_the_two_sides_is_surfaced_not_silently_picked() ->
     )
     assert boundary_membership_conflicts(doc) == {"a": ["tb2", "tb1"]}
     finding = next(f for f in collect_structural_findings(doc) if f.code == "TRUST_BOUNDARY_MEMBERSHIP_CONFLICT")
-    assert "tb1" in finding.message and "tb2" in finding.message
+    assert "tb1" in finding.message
+    assert "tb2" in finding.message
     assert finding.severity == "info"
     # O lado do componente ganha, e ganha de forma determinística.
     assert resolve_component_boundaries(doc) == {"a": "tb2"}

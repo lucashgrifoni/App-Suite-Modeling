@@ -25,7 +25,7 @@ e a pipes; o stdout mantém-se byte-a-byte igual ao de hoje.
 from __future__ import annotations
 
 from otm_threat_engine import SEVERITY_ORDER, Severity
-from otm_threat_engine.gate import GateResult
+from otm_threat_engine.gate import GatePolicy, GateResult, GateTrip
 
 from otm_cli.shared.errors import CliUserError
 
@@ -57,77 +57,120 @@ def _fmt(score: float | None) -> str:
     return "—" if score is None else f"{score:g}"
 
 
-def render_gate_result(result: GateResult) -> str:
-    """Bloco legível em log de CI. Só chamado quando a política está activa."""
-    policy = result.policy
+_BAR = "=" * 60
+
+#: Deliberately not "PASSED": nothing was judged. Saying "passed" here would be the gate
+#: claiming a clean bill of health it never checked.
+_NOT_EVALUATED_NOTE = (
+    "The methodology changed between the two models, so the heuristics differ and new or "
+    "worsened threats cannot be attributed to the model change. No verdict was issued; "
+    "exit code 0. Re-run the gate with both sides on the same methodology to get one."
+)
+
+
+def _status_label(result: GateResult) -> str:
+    """`NOT EVALUATED` tem precedência: um não-veredito nunca se lê como aprovação."""
+    if result.not_evaluated_reason:
+        return "NOT EVALUATED"
+    return "FAILED" if result.tripped else "PASSED"
+
+
+def _policy_summary(policy: GatePolicy) -> str:
+    """As flags que armaram o gate, tal como foram escritas na linha de comandos."""
     criteria: list[str] = []
     if policy.fail_on:
         criteria.append(f"--fail-on={policy.fail_on}")
     if policy.fail_on_risk_increase:
         criteria.append("--fail-on-risk-increase")
-    header_policy = " ".join(criteria)
+    return " ".join(criteria)
 
-    bar = "=" * 60
-    if result.not_evaluated_reason:
-        status = "NOT EVALUATED"
-    elif result.tripped:
-        status = "FAILED"
-    else:
-        status = "PASSED"
-    lines = [bar, f"THREAT MODEL GATE: {status}   policy: {header_policy}", bar]
 
+def _renamed_suffix(trip: GateTrip) -> str:
+    """`(was ...)` só quando a ameaça mudou de id — senão o leitor procura um id que não existe."""
+    return f"  (was `{trip.paired_id}`)" if trip.paired_id else ""
+
+
+def _new_threat_lines(trips: list[GateTrip], threshold: Severity | None) -> list[str]:
+    """Empty in, empty out: each section owns the rule that it disappears when it has nothing
+    to say, so no caller can leave a bare `NEW threats` header over an empty list."""
+    if not trips:
+        return []
+    lines = ["", f"NEW threats at/above {threshold} ({len(trips)}):"]
+    for t in trips:
+        sev = (t.severity_after or "").upper()
+        lines.append(f"  [{sev:<8} {_fmt(t.score_after):>5}]  {t.threat_id}")
+    return lines
+
+
+def _worsened_threat_lines(trips: list[GateTrip], threshold: Severity | None) -> list[str]:
+    if not trips:
+        return []
+    lines = ["", f"WORSENED threats crossing into {threshold}+ ({len(trips)}):"]
+    for t in trips:
+        before = (t.severity_before or "").upper()
+        after = (t.severity_after or "").upper()
+        lines.append(
+            f"  [{before} {_fmt(t.score_before)} -> {after} {_fmt(t.score_after)}]  {t.threat_id}{_renamed_suffix(t)}"
+        )
+    return lines
+
+
+def _risk_increase_lines(trips: list[GateTrip]) -> list[str]:
+    """Subidas de score. Sem `threat_id` é o máximo do resumo, não uma ameaça concreta."""
+    if not trips:
+        return []
+    lines = [""]
+    for t in trips:
+        if t.threat_id is None:
+            lines.append(f"MAX RISK increased: {_fmt(t.score_before)} -> {_fmt(t.score_after)}")
+        else:
+            lines.append(
+                f"RISK increased (within band): {_fmt(t.score_before)} -> "
+                f"{_fmt(t.score_after)}  {t.threat_id}{_renamed_suffix(t)}"
+            )
+    return lines
+
+
+def _verdict_lines(result: GateResult) -> list[str]:
+    """O corpo do relatório: não-avaliado, aprovado, ou a lista do que reprovou.
+
+    Cada secção só aparece quando tem conteúdo — o cabeçalho de uma secção vazia diria ao
+    leitor que houve ameaças novas onde não houve.
+    """
     if result.not_evaluated_reason == "methodology_changed":
-        # Deliberately not "PASSED": nothing was judged. Saying "passed" here would be the
-        # gate claiming a clean bill of health it never checked.
-        lines.append(
-            "The methodology changed between the two models, so the heuristics differ and new or "
-            "worsened threats cannot be attributed to the model change. No verdict was issued; "
-            "exit code 0. Re-run the gate with both sides on the same methodology to get one."
-        )
-    elif not result.tripped:
-        lines.append("No new or worsened threats at or above the threshold.")
-    else:
-        new = result.new_threats
-        worsened = result.worsened_threats
-        risk = [t for t in result.trips if t.kind == "risk_increase"]
-        lines.append(f"{len(result.trips)} condition(s) hit. Exit code {GATE_TRIP_EXIT_CODE}.")
+        return [_NOT_EVALUATED_NOTE]
+    if not result.tripped:
+        return ["No new or worsened threats at or above the threshold."]
 
-        if new:
-            lines.append("")
-            lines.append(f"NEW threats at/above {policy.fail_on} ({len(new)}):")
-            for t in new:
-                sev = (t.severity_after or "").upper()
-                lines.append(f"  [{sev:<8} {_fmt(t.score_after):>5}]  {t.threat_id}")
+    threshold = result.policy.fail_on
+    return [
+        f"{len(result.trips)} condition(s) hit. Exit code {GATE_TRIP_EXIT_CODE}.",
+        *_new_threat_lines(result.new_threats, threshold),
+        *_worsened_threat_lines(result.worsened_threats, threshold),
+        *_risk_increase_lines([t for t in result.trips if t.kind == "risk_increase"]),
+    ]
 
-        if worsened:
-            lines.append("")
-            lines.append(f"WORSENED threats crossing into {policy.fail_on}+ ({len(worsened)}):")
-            for t in worsened:
-                before = (t.severity_before or "").upper()
-                after = (t.severity_after or "").upper()
-                renamed = f"  (was `{t.paired_id}`)" if t.paired_id else ""
-                lines.append(
-                    f"  [{before} {_fmt(t.score_before)} -> {after} {_fmt(t.score_after)}]  {t.threat_id}{renamed}"
-                )
 
-        if risk:
-            lines.append("")
-            for t in risk:
-                if t.threat_id is None:
-                    lines.append(f"MAX RISK increased: {_fmt(t.score_before)} -> {_fmt(t.score_after)}")
-                else:
-                    renamed = f"  (was `{t.paired_id}`)" if t.paired_id else ""
-                    lines.append(
-                        f"RISK increased (within band): {_fmt(t.score_before)} -> "
-                        f"{_fmt(t.score_after)}  {t.threat_id}{renamed}"
-                    )
+def _unranked_note_lines(unranked_threat_ids: list[str]) -> list[str]:
+    """Princípio 3: nada é descartado sem registo."""
+    if not unranked_threat_ids:
+        return []
+    return [
+        "",
+        f"Note: {len(unranked_threat_ids)} new threat(s) carry no score and were not "
+        f"evaluated against the band: {', '.join(unranked_threat_ids)}",
+    ]
 
-    if result.unranked_threat_ids:
-        lines.append("")
-        lines.append(
-            f"Note: {len(result.unranked_threat_ids)} new threat(s) carry no score and were not "
-            f"evaluated against the band: {', '.join(result.unranked_threat_ids)}"
-        )
 
-    lines.append(bar)
-    return "\n".join(lines)
+def render_gate_result(result: GateResult) -> str:
+    """Bloco legível em log de CI. Só chamado quando a política está activa."""
+    return "\n".join(
+        [
+            _BAR,
+            f"THREAT MODEL GATE: {_status_label(result)}   policy: {_policy_summary(result.policy)}",
+            _BAR,
+            *_verdict_lines(result),
+            *_unranked_note_lines(result.unranked_threat_ids),
+            _BAR,
+        ]
+    )

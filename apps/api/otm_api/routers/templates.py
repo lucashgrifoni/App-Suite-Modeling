@@ -18,7 +18,6 @@ router = APIRouter(prefix="/templates", tags=["Templates"])
 
 @router.get(
     "",
-    response_model=list[TemplateListItem],
     summary="List templates",
     description=(
         "Built-in templates from `otm_industry_packs` (IDs used with `otm init -t`). "
@@ -52,7 +51,6 @@ def get_templates(
 
 @router.get(
     "/{template_id}",
-    response_model=TemplateListItem,
     summary="Get template metadata",
     description="Detalhe de um template embutido (metadados do manifest).",
 )
@@ -67,7 +65,6 @@ def get_template_detail(
 
 @router.post(
     "/{template_id}/instantiate",
-    response_model=CreateModelResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Instantiate model from template",
     description="Loads template YAML and returns the validated canonical document.",

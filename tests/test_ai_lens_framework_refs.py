@@ -88,7 +88,8 @@ def test_plot4ai_threats_carry_owasp_llm_refs_additively() -> None:
         got_llm = {r.control_id for r in h.framework_refs if r.framework == "owasp_llm"}
         assert expected <= got_llm, f"{h.id}: expected OWASP LLM {expected}, got {got_llm}"
         # Additivity: STRIDE-category CAPEC/CWE refs are preserved, not replaced.
-        assert "capec" in catalogs and "cwe" in catalogs, f"{h.id}: lost STRIDE CAPEC/CWE refs"
+        assert "capec" in catalogs, f"{h.id}: lost STRIDE CAPEC refs"
+        assert "cwe" in catalogs, f"{h.id}: lost STRIDE CWE refs"
     assert checked >= 3, "expected several mapped PLOT4ai heuristics on the LLM example"
 
 
@@ -99,4 +100,5 @@ def test_summary_counts_include_ai_catalogs() -> None:
     assert counts.get("owasp_llm", 0) > 0
     assert counts.get("mitre_atlas", 0) > 0
     # AI refs did not displace the STRIDE catalogs.
-    assert counts.get("capec", 0) > 0 and counts.get("cwe", 0) > 0
+    assert counts.get("capec", 0) > 0
+    assert counts.get("cwe", 0) > 0

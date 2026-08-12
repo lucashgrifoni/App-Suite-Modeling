@@ -14,7 +14,7 @@ from otm_cli.shared.errors import CliUserError
 from typer.testing import CliRunner
 
 
-@pytest.fixture()
+@pytest.fixture
 def runner() -> CliRunner:
     return CliRunner()
 

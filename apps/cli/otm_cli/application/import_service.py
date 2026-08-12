@@ -206,40 +206,51 @@ def _short_file_id(file_path: str) -> str:
     return _slug(name)[:24]
 
 
-def scan_payload_to_draft_yaml(payload: dict[str, Any]) -> str:
-    """Build a minimal ``.otm.yaml`` draft from an ``import repo`` payload.
+#: The scanner reports the file it found a signal in as the first backtick-quoted span of the
+#: inference message; there is no dedicated field to read.
+_INFERENCE_FILE_RE = re.compile(r"`([^`]+)`")
 
-    The output is intentionally conservative: one external user, one service
-    component per file that exposes routes or sessions, one perimeter trust
-    boundary, and one cross-boundary data flow per detected route (capped).
-    It is editable seed material — a human still has to flesh it out.
-    """
-    inferences = payload.get("inferences") or []
-    root = payload.get("root") or ""
-    repo_name = Path(root).name or "imported_service"
 
-    files_with_routes: dict[str, list[str]] = {}
-    files_with_sessions: set[str] = set()
-    admin_files: set[str] = set()
+class _RepoSignals:
+    """What the repo scan found, grouped by the file that produced it."""
+
+    def __init__(self) -> None:
+        self.routes_by_file: dict[str, list[str]] = {}
+        self.session_files: set[str] = set()
+        self.admin_files: set[str] = set()
+
+
+def _repo_signals(inferences: list[Any]) -> _RepoSignals:
+    signals = _RepoSignals()
     for inf in inferences:
-        kind = inf.get("kind")
-        evidence = inf.get("evidence") or ""
         msg = inf.get("message") or ""
-        file_match = re.search(r"`([^`]+)`", msg)
+        file_match = _INFERENCE_FILE_RE.search(msg)
+        # No file means the inference cannot be attached to a component, so every branch
+        # below re-tests it rather than acting on an empty path.
         file_path = file_match.group(1) if file_match else ""
+        kind = inf.get("kind")
         if kind == "route" and file_path:
-            files_with_routes.setdefault(file_path, []).append(evidence)
+            signals.routes_by_file.setdefault(file_path, []).append(inf.get("evidence") or "")
         elif kind == "session" and file_path:
-            files_with_sessions.add(file_path)
+            signals.session_files.add(file_path)
         elif kind == "admin_route" and file_path:
-            admin_files.add(file_path)
+            signals.admin_files.add(file_path)
+    return signals
 
+
+def _draft_components(signals: _RepoSignals) -> tuple[list[dict[str, Any]], list[str], dict[str, str]]:
+    """One external user, plus one service component per file exposing routes or sessions.
+
+    Returns the components, the ids eligible for perimeter membership, and the file→component
+    lookup the data flows need.
+    """
     components: list[dict[str, Any]] = [
         {"id": "ext_user", "name": "Cliente externo", "kind": "external_entity"},
     ]
     member_ids: list[str] = []
     file_to_component_id: dict[str, str] = {}
-    interesting_files = list(files_with_routes.keys()) + [f for f in files_with_sessions if f not in files_with_routes]
+    session_only = [f for f in signals.session_files if f not in signals.routes_by_file]
+    interesting_files = list(signals.routes_by_file.keys()) + session_only
     for file_path in interesting_files[:_DRAFT_MAX_COMPONENTS]:
         comp_id = f"svc_{_short_file_id(file_path)}"
         file_to_component_id[file_path] = comp_id
@@ -251,12 +262,16 @@ def scan_payload_to_draft_yaml(payload: dict[str, Any]) -> str:
             }
         )
         member_ids.append(comp_id)
+    return components, member_ids, file_to_component_id
 
+
+def _draft_data_flows(signals: _RepoSignals, file_to_component_id: dict[str, str]) -> list[dict[str, Any]]:
+    """One external→service flow per detected route, capped at `_DRAFT_MAX_FLOWS`."""
     data_flows: list[dict[str, Any]] = []
-    for file_path, routes in files_with_routes.items():
+    for file_path, routes in signals.routes_by_file.items():
         target_comp_id = file_to_component_id.get(file_path)
         if not target_comp_id:
-            continue
+            continue  # the file did not survive the component cap
         for route in routes:
             if len(data_flows) >= _DRAFT_MAX_FLOWS:
                 break
@@ -270,8 +285,11 @@ def scan_payload_to_draft_yaml(payload: dict[str, Any]) -> str:
             )
         if len(data_flows) >= _DRAFT_MAX_FLOWS:
             break
+    return data_flows
 
-    assets = [
+
+def _draft_assets(signals: _RepoSignals) -> list[dict[str, Any]]:
+    assets: list[dict[str, Any]] = [
         {
             "id": "svc_primary_data",
             "name": "Dados operacionais inferidos do repositório",
@@ -280,7 +298,7 @@ def scan_payload_to_draft_yaml(payload: dict[str, Any]) -> str:
             "business_criticality": "medium",
         }
     ]
-    if files_with_sessions:
+    if signals.session_files:
         assets.append(
             {
                 "id": "svc_session_context",
@@ -290,15 +308,34 @@ def scan_payload_to_draft_yaml(payload: dict[str, Any]) -> str:
                 "business_criticality": "high",
             }
         )
+    return assets
 
-    summary_bits = [f"Draft gerado por `otm import repo` a partir de {len(inferences)} inferência(s)."]
-    if admin_files:
-        summary_bits.append("Rotas /admin detectadas — revisar fronteira e autorização.")
-    if files_with_sessions:
-        summary_bits.append("Sessão Express detectada — confirmar atributos de cookie (HttpOnly/Secure/SameSite).")
-    if not files_with_routes:
-        summary_bits.append("Nenhuma rota detectada — completar componentes manualmente.")
-    summary = " ".join(summary_bits)
+
+def _draft_summary(signals: _RepoSignals, inference_count: int) -> str:
+    """Says out loud what the draft is guessing, so nobody mistakes it for a finished model."""
+    bits = [f"Draft gerado por `otm import repo` a partir de {inference_count} inferência(s)."]
+    if signals.admin_files:
+        bits.append("Rotas /admin detectadas — revisar fronteira e autorização.")
+    if signals.session_files:
+        bits.append("Sessão Express detectada — confirmar atributos de cookie (HttpOnly/Secure/SameSite).")
+    if not signals.routes_by_file:
+        bits.append("Nenhuma rota detectada — completar componentes manualmente.")
+    return " ".join(bits)
+
+
+def scan_payload_to_draft_yaml(payload: dict[str, Any]) -> str:
+    """Build a minimal ``.otm.yaml`` draft from an ``import repo`` payload.
+
+    The output is intentionally conservative: one external user, one service
+    component per file that exposes routes or sessions, one perimeter trust
+    boundary, and one cross-boundary data flow per detected route (capped).
+    It is editable seed material — a human still has to flesh it out.
+    """
+    inferences = payload.get("inferences") or []
+    repo_name = Path(payload.get("root") or "").name or "imported_service"
+
+    signals = _repo_signals(inferences)
+    components, member_ids, file_to_component_id = _draft_components(signals)
 
     perimeter = {
         "id": "default_perimeter",
@@ -317,13 +354,13 @@ def scan_payload_to_draft_yaml(payload: dict[str, Any]) -> str:
         },
         "metadata": {
             "title": f"Draft — {repo_name}",
-            "summary": summary,
+            "summary": _draft_summary(signals, len(inferences)),
             "tags": ["draft", "artifact-import", "repo-scan"],
         },
         "trust_boundaries": [perimeter],
         "components": components,
-        "data_flows": data_flows,
-        "assets": assets,
+        "data_flows": _draft_data_flows(signals, file_to_component_id),
+        "assets": _draft_assets(signals),
         "threats": [],
         "mitigations": [],
         "evidence_suggestions": [],

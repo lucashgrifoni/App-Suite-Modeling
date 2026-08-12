@@ -21,7 +21,7 @@ _MINIMAL = _ROOT / "examples" / "minimal.otm.yaml"
 _LATIN1_JSON = '{"nome":"Jos\xe9"}'.encode("latin-1")
 
 
-@pytest.fixture()
+@pytest.fixture
 def runner() -> CliRunner:
     return CliRunner()
 

@@ -19,7 +19,7 @@ _SAAS = str(_ROOT / "examples" / "saas-ordering-v1.otm.yaml")
 _AI = str(_ROOT / "examples" / "plot4ai-calibration" / "otm-ai-003-agent-tools.otm.yaml")
 
 
-@pytest.fixture()
+@pytest.fixture
 def runner() -> CliRunner:
     return CliRunner()
 

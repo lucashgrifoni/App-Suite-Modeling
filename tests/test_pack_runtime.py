@@ -31,8 +31,10 @@ def test_apply_pack_to_li_clamps_bounds() -> None:
     pack = _sample_pack()
     low = apply_pack_to_li(1, 1, pack)
     high = apply_pack_to_li(5, 5, pack)
-    assert 1 <= low[0] <= 5 and 1 <= low[1] <= 5
-    assert 1 <= high[0] <= 5 and 1 <= high[1] <= 5
+    assert 1 <= low[0] <= 5
+    assert 1 <= low[1] <= 5
+    assert 1 <= high[0] <= 5
+    assert 1 <= high[1] <= 5
 
 
 def test_iter_pack_heuristics_marks_duplicate_when_covered() -> None:

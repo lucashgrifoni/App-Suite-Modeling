@@ -17,7 +17,7 @@ _ROOT = Path(__file__).resolve().parents[1]
 _MINIMAL = _ROOT / "examples" / "minimal.otm.yaml"
 
 
-@pytest.fixture()
+@pytest.fixture
 def client() -> TestClient:
     return TestClient(app)
 
@@ -38,7 +38,8 @@ def test_x_request_id_generated(client: TestClient) -> None:
     r = client.get("/health")
     assert r.status_code == 200
     rid = r.headers.get("x-request-id")
-    assert rid and len(rid) >= 8
+    assert rid
+    assert len(rid) >= 8
 
 
 def test_openapi_available(client: TestClient) -> None:
@@ -262,7 +263,8 @@ def test_validate_missing_body_field_uses_request_validation_handler(client: Tes
     assert body["code"] == "REQUEST_VALIDATION_ERROR"
     assert body["message"]
     assert body["status"] == 422
-    assert isinstance(body["errors"], list) and body["errors"]
+    assert isinstance(body["errors"], list)
+    assert body["errors"]
     assert "invalid" in body["message"].lower()
 
 
@@ -444,7 +446,8 @@ def test_export_bundle_runs_analysis(client: TestClient) -> None:
     )
     assert r.status_code == 200
     bundle = json.loads(r.json()["artifacts"]["bundle_json"])
-    assert bundle["document"] and bundle["analysis"]
+    assert bundle["document"]
+    assert bundle["analysis"]
 
 
 def test_analyze_unknown_pack_detail_shape(client: TestClient) -> None:
@@ -459,7 +462,8 @@ def test_analyze_unknown_pack_detail_shape(client: TestClient) -> None:
     assert r.status_code == 404
     detail = r.json()["detail"]
     assert detail["code"] == "PACK_NOT_FOUND"
-    assert isinstance(detail["message"], str) and detail["message"]
+    assert isinstance(detail["message"], str)
+    assert detail["message"]
     assert set(detail.keys()) == {"code", "message"}
 
 
@@ -476,7 +480,8 @@ def test_export_unknown_pack_detail_shape(client: TestClient) -> None:
     assert r.status_code == 404
     detail = r.json()["detail"]
     assert detail["code"] == "PACK_NOT_FOUND"
-    assert isinstance(detail["message"], str) and detail["message"]
+    assert isinstance(detail["message"], str)
+    assert detail["message"]
     assert set(detail.keys()) == {"code", "message"}
 
 
@@ -493,8 +498,10 @@ def test_export_invalid_analysis_detail_shape(client: TestClient) -> None:
     assert r.status_code == 422
     detail = r.json()["detail"]
     assert detail["code"] == "ANALYSIS_VALIDATION_ERROR"
-    assert isinstance(detail["message"], str) and detail["message"]
-    assert isinstance(detail["errors"], list) and detail["errors"]
+    assert isinstance(detail["message"], str)
+    assert detail["message"]
+    assert isinstance(detail["errors"], list)
+    assert detail["errors"]
     assert set(detail.keys()) == {"code", "message", "errors"}
 
 
@@ -558,7 +565,8 @@ def test_analyze_methodology_outputs_keep_contract(client: TestClient) -> None:
         out = r.json()
         assert out["methodology"] == m
         assert isinstance(out["heuristic_threats"], list)
-        assert "summary" in out and "max_risk_score" in out["summary"]
+        assert "summary" in out
+        assert "max_risk_score" in out["summary"]
 
 
 def test_analyze_plot4ai_contains_specialized_insights(client: TestClient) -> None:
@@ -622,7 +630,8 @@ def test_import_openapi_accepts_small_spec(client: TestClient) -> None:
     )
     assert r.status_code == 200
     body = r.json()
-    assert "document" in body and "inferences" in body
+    assert "document" in body
+    assert "inferences" in body
 
 
 def test_import_openapi_rejects_oversized_artifact(client: TestClient) -> None:

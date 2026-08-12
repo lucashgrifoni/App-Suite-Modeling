@@ -15,21 +15,36 @@ import type { OtmDocument } from "../types/document";
  * hash covers the whole serialised document, not a subset of fields.
  */
 
+/**
+ * Ascending key order. `Object.entries` never yields the same key twice, so the
+ * equal case cannot occur and the comparator needs no third outcome.
+ */
+function compareKeys(a: string, b: string): number {
+  return a < b ? -1 : 1;
+}
+
 /** Serialise with deterministic key order so re-normalising a document is not a "change". */
 function stableStringify(value: unknown): string {
   if (value === null || typeof value !== "object") return JSON.stringify(value) ?? "null";
   if (Array.isArray(value)) return `[${value.map(stableStringify).join(",")}]`;
-  const entries = Object.entries(value as Record<string, unknown>)
+  const fields = Object.entries(value as Record<string, unknown>)
     .filter(([, v]) => v !== undefined)
-    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
-  return `{${entries.map(([k, v]) => `${JSON.stringify(k)}:${stableStringify(v)}`).join(",")}}`;
+    .sort(([a], [b]) => compareKeys(a, b))
+    .map(([k, v]) => `${JSON.stringify(k)}:${stableStringify(v)}`)
+    .join(",");
+  return `{${fields}}`;
 }
 
 /** FNV-1a, 32-bit. Sync and cheap enough to run on every document change. */
 function fnv1a(input: string): string {
   let hash = 0x811c9dc5;
-  for (let i = 0; i < input.length; i += 1) {
-    hash ^= input.charCodeAt(i);
+  // `for…of` walks whole code points, so an astral character (emoji in a component
+  // name) is folded in once instead of as two surrogate halves. For BMP-only text
+  // this produces exactly the same digest as the previous code-unit loop.
+  for (const char of input) {
+    // A character produced by the string iterator is never empty; the `?? 0` only
+    // satisfies the `number | undefined` signature of `codePointAt`.
+    hash ^= char.codePointAt(0) ?? 0;
     // `Math.imul` keeps the multiply in 32-bit space; `>>> 0` forces unsigned.
     hash = Math.imul(hash, 0x01000193) >>> 0;
   }

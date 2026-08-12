@@ -17,6 +17,30 @@ from otm_cli.shared.errors import CliUserError
 from otm_cli.shared.render import safe
 
 
+def _write_text_or_exit(*, content: str, output: Path) -> None:
+    """Write the file, or render the `CliUserError` and exit with its code."""
+    try:
+        write_text_file(content=content, output=output)
+    except CliUserError as e:
+        exit_on_cli_error(console, e)
+
+
+def _write_json_or_exit(*, payload: dict[str, Any], output: Path) -> None:
+    try:
+        write_json_file(payload=payload, output=output)
+    except CliUserError as e:
+        exit_on_cli_error(console, e)
+
+
+def _emit_text(content: str, *, output: Path | None, label: str) -> None:
+    """Write to `output` and say where, or print to stdout so the caller can pipe it."""
+    if output:
+        _write_text_or_exit(content=content, output=output)
+        console.print(f"[green]{label}[/green] → {safe(output.resolve())}")
+    else:
+        print(content, end="")
+
+
 def _emit_draft(
     yaml_text: str,
     explain_payload: dict[str, Any] | None,
@@ -25,20 +49,34 @@ def _emit_draft(
     explain_out: Path | None,
 ) -> None:
     """Escreve o draft `.otm.yaml` (ou imprime) e, opcionalmente, as inferências em JSON."""
-    if output:
-        try:
-            write_text_file(content=yaml_text, output=output)
-        except CliUserError as e:
-            exit_on_cli_error(console, e)
-        console.print(f"[green]Draft[/green] → {safe(output.resolve())}")
-    else:
-        print(yaml_text, end="")
+    _emit_text(yaml_text, output=output, label="Draft")
     if explain_out and explain_payload:
-        try:
-            write_json_file(payload=explain_payload, output=explain_out)
-        except CliUserError as e:
-            exit_on_cli_error(console, e)
+        _write_json_or_exit(payload=explain_payload, output=explain_out)
         console.print(f"[green]Inferences[/green] → {safe(explain_out.resolve())}")
+
+
+def _print_inference_summary(inferences: list[Any]) -> None:
+    console.print(
+        Panel.fit(
+            "\n".join(f"• ({safe(i.confidence)}) {safe(i.message)}" for i in inferences[:12]),
+            title="Inferences (summary)",
+            border_style="cyan",
+        )
+    )
+
+
+def _emit_repo_scan(payload: dict[str, Any], *, json_out: Path | None, draft_out: Path | None) -> None:
+    """Write whichever artifacts were asked for; with neither, show the payload on screen."""
+    if json_out:
+        _write_json_or_exit(payload=payload, output=json_out)
+        console.print(f"[green]Scan repo[/green] → {safe(json_out.resolve())}")
+    if draft_out:
+        yaml_text = import_app.scan_payload_to_draft_yaml(payload)
+        _write_text_or_exit(content=yaml_text, output=draft_out)
+        console.print(f"[green]Draft[/green] → {safe(draft_out.resolve())}")
+    if not json_out and not draft_out:
+        txt = json.dumps(payload, indent=2, ensure_ascii=False)
+        console.print(Panel.fit(safe(txt[:14000]), title="repo-scan", border_style="cyan"))
 
 
 def _warn_not_imported(notes: list[str]) -> None:
@@ -85,13 +123,8 @@ def build_import_app() -> typer.Typer:
 
         _emit_draft(yaml_text, explain_payload, output=output, explain_out=explain_out)
         if inferences and output:
-            console.print(
-                Panel.fit(
-                    "\n".join(f"• ({safe(i.confidence)}) {safe(i.message)}" for i in inferences[:12]),
-                    title="Inferences (summary)",
-                    border_style="cyan",
-                )
-            )
+            # Only when the draft went to a file: on stdout the panel would corrupt the YAML.
+            _print_inference_summary(inferences)
 
     @import_cmd.command("terraform")
     def cmd_import_terraform(
@@ -155,14 +188,7 @@ def build_import_app() -> typer.Typer:
         except CliUserError as e:
             exit_on_cli_error(console, e)
 
-        if output:
-            try:
-                write_text_file(content=yaml_text, output=output)
-            except CliUserError as e:
-                exit_on_cli_error(console, e)
-            console.print(f"[green]Imported OTM[/green] → {safe(output.resolve())}")
-        else:
-            print(yaml_text, end="")
+        _emit_text(yaml_text, output=output, label="Imported OTM")
         _warn_not_imported(not_imported)
 
     @import_cmd.command("repo")
@@ -189,21 +215,6 @@ def build_import_app() -> typer.Typer:
         except CliUserError as e:
             exit_on_cli_error(console, e)
 
-        if json_out:
-            try:
-                write_json_file(payload=payload, output=json_out)
-            except CliUserError as e:
-                exit_on_cli_error(console, e)
-            console.print(f"[green]Scan repo[/green] → {safe(json_out.resolve())}")
-        if draft_out:
-            yaml_text = import_app.scan_payload_to_draft_yaml(payload)
-            try:
-                write_text_file(content=yaml_text, output=draft_out)
-            except CliUserError as e:
-                exit_on_cli_error(console, e)
-            console.print(f"[green]Draft[/green] → {safe(draft_out.resolve())}")
-        if not json_out and not draft_out:
-            txt = json.dumps(payload, indent=2, ensure_ascii=False)
-            console.print(Panel.fit(safe(txt[:14000]), title="repo-scan", border_style="cyan"))
+        _emit_repo_scan(payload, json_out=json_out, draft_out=draft_out)
 
     return import_cmd

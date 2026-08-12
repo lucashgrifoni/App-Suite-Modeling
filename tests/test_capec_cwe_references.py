@@ -43,7 +43,8 @@ def test_analysis_threats_carry_capec_and_cwe_refs() -> None:
     assert engine_threats
     sample = engine_threats[0]
     catalogs = {r.framework for r in sample.framework_refs}
-    assert "capec" in catalogs and "cwe" in catalogs
+    assert "capec" in catalogs
+    assert "cwe" in catalogs
 
     counts = result.summary.framework_ref_counts_by_catalog
     assert counts.get("capec", 0) > 0

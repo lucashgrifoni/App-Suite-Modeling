@@ -110,7 +110,8 @@ def test_within_band_worsening_does_not_trip_the_band_gate() -> None:
 def test_modified_threat_crossing_up_trips() -> None:
     diff = _diff(modified=[HeuristicThreatDelta(threat_id="m", change="modified", score_before=8, score_after=20)])
     result = evaluate_gate(diff, GatePolicy(fail_on="high"))
-    assert result.tripped and result.worsened_threats[0].severity_after == "critical"
+    assert result.tripped
+    assert result.worsened_threats[0].severity_after == "critical"
 
 
 def test_removals_and_improvements_never_trip() -> None:
@@ -165,7 +166,8 @@ def test_analysis_diff_marks_remapped_pairs_with_the_baseline_score() -> None:
     (added,) = ad.heuristic_threats.added
     assert added.match_kind == "signature_remap"
     assert added.paired_id == "old_id"
-    assert added.score_before == 9.0 and added.score_after == 25.0
+    assert added.score_before == 9.0
+    assert added.score_after == 25.0
     # ... and therefore the gate sees a medium -> critical crossing, not a "new" threat.
     assert evaluate_gate(ad, GatePolicy(fail_on="high")).worsened_threats
 

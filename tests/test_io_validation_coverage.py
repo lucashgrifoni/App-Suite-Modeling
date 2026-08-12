@@ -8,6 +8,7 @@ import pytest
 from otm_artifact_import._yamljson import load_object_from_text
 from otm_core_schema import create_blank_document
 from otm_core_schema.io import dump_document_to_json, json_schema, load_document_from_yaml
+from pydantic import ValidationError
 
 
 def test_yamljson_empty_raises() -> None:
@@ -38,7 +39,10 @@ def test_core_io_dump_json_and_schema() -> None:
     doc = create_blank_document()
     assert dump_document_to_json(doc).startswith("{")
     schema = json_schema()
-    assert isinstance(schema, dict) and "properties" in schema or "$defs" in schema
+    # Precedence: the original `isinstance(...) and "properties" in schema or "$defs" in schema`
+    # parsed as `(isinstance and properties) or $defs`, so a non-dict would still have passed.
+    assert isinstance(schema, dict)
+    assert "properties" in schema or "$defs" in schema
 
 
 def test_cli_io_util_errors(tmp_path: Path) -> None:
@@ -63,5 +67,6 @@ def test_compare_body_partial_analysis_rejected() -> None:
     from otm_api.schemas.bodies import CompareBody
 
     doc = create_blank_document().model_dump(mode="json", by_alias=True)
-    with pytest.raises(Exception):
-        CompareBody.model_validate({"document": doc, "baseline": doc, "baseline_analysis": {"x": 1}})
+    # Only `baseline_analysis` is supplied; `_pair_analyses` must reject the half-filled pair.
+    with pytest.raises(ValidationError, match="baseline_analysis e revised_analysis"):
+        CompareBody.model_validate({"baseline": doc, "revised": doc, "baseline_analysis": {"x": 1}})

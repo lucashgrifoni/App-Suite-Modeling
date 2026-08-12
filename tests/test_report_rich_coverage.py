@@ -48,7 +48,8 @@ def test_rich_deep_report_markdown_with_pack_and_baseline() -> None:
     md, _ = render_premium(
         doc, analysis, level=ReportLevel.DEEP, output_format=ReportFormat.MARKDOWN, baseline=baseline, locale="en"
     )
-    assert md and "##" in md
+    assert md
+    assert "##" in md
     # analysis markdown should include pack-control / recommendation lines
     am = export_analysis_markdown(analysis, locale="en")
     assert am
@@ -62,11 +63,13 @@ def test_rich_deep_report_pdf_with_baseline() -> None:
     _, pdf = render_premium(
         doc, analysis, level=ReportLevel.DEEP, output_format=ReportFormat.PDF, baseline=baseline, locale="en"
     )
-    assert pdf and len(pdf) > 100
+    assert pdf
+    assert len(pdf) > 100
 
 
 def test_analysis_markdown_with_pack_hints() -> None:
     doc = _rich_doc()
     analysis = analyze_document(doc, pack=load_pack("saas"), auto_recommend=True)
     out = export_analysis_markdown(analysis)
-    assert isinstance(out, str) and out
+    assert isinstance(out, str)
+    assert out
