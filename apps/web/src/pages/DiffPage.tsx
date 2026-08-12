@@ -554,7 +554,7 @@ export function DiffPage() {
           <Label htmlFor="revised-json">{t("diff.revisionJson")}</Label>
           <textarea
             id="revised-json"
-            className="mt-1 min-h-[180px] w-full rounded-otm-md border border-otm-border bg-otm-surface-1 px-3 py-2 font-mono text-xs text-otm-text placeholder:text-otm-text-subtle focus:border-otm-mint-400/50 focus:outline-none focus:ring-2 focus:ring-[color:var(--otm-ring)]"
+            className="mt-1 min-h-[180px] w-full rounded-otm-md border border-otm-border-control bg-otm-surface-1 px-3 py-2 font-mono text-xs text-otm-text placeholder:text-otm-text-subtle focus:border-otm-mint-400/50 focus:outline-none focus:ring-2 focus:ring-[color:var(--otm-ring)]"
             value={revisedText}
             onChange={(ev) => setRevisedText(ev.target.value)}
             placeholder={t("diff.revisionPlaceholder")}
