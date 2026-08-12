@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 import time
 import traceback
 import uuid
@@ -31,6 +32,21 @@ from otm_api.error_locale import (
 
 LOG = logging.getLogger("otm.api")
 _OTM_LOG_LEVEL = os.environ.get("OTM_LOG_LEVEL", "INFO").upper()
+
+# Propagar um trace id do cliente é deliberado, mas adotá-lo *sem validar* não: um id de
+# 4000 carateres inflaciona todas as linhas de log do pedido e um valor arbitrário
+# (chavetas, newlines, texto livre) suja o campo pelo qual a auditoria correlaciona. Formato
+# aceite: até 128 carateres imprimíveis do conjunto usado por UUID, W3C `traceparent` e ids
+# de serviço; qualquer outra coisa é descartada e o servidor gera o seu.
+_ACCEPTABLE_REQUEST_ID = re.compile(r"[A-Za-z0-9._:+/=-]{1,128}")
+
+
+def resolve_request_id(header_value: str | None) -> str:
+    """Trace id do cliente quando é aceitável; caso contrário, um `uuid4` do servidor."""
+    candidate = (header_value or "").strip()
+    if _ACCEPTABLE_REQUEST_ID.fullmatch(candidate):
+        return candidate
+    return str(uuid.uuid4())
 
 
 def setup_api_logging() -> None:
@@ -99,8 +115,7 @@ class ObservabilityMiddleware(BaseHTTPMiddleware):
         super().__init__(app)
 
     async def dispatch(self, request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
-        header_rid = request.headers.get("x-request-id") or request.headers.get("X-Request-ID")
-        request_id = header_rid.strip() if header_rid else str(uuid.uuid4())
+        request_id = resolve_request_id(request.headers.get("x-request-id"))
         request.state.request_id = request_id
 
         method = request.method

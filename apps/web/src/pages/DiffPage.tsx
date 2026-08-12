@@ -2,7 +2,7 @@ import { useCallback, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { Navigate } from "react-router";
 import { compareThreatModels } from "../api/otmApi";
-import { ApiError } from "../api/client";
+import { apiErrorMessage } from "../api/apiErrorMessage";
 import { Alert } from "../components/ui/Alert";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
@@ -54,7 +54,9 @@ function AggregateBlock({
   const added = section?.added ?? [];
   const removed = section?.removed ?? [];
   const changed = section?.changed ?? [];
-  if (added.length === 0 && removed.length === 0 && changed.length === 0) return null;
+  // Same predicate the parent card filters on, so the two can never disagree about
+  // whether a section is empty.
+  if (!sectionHasChanges(section)) return null;
   const total = added.length + removed.length + changed.length;
   return (
     <div className="rounded-otm-lg border border-otm-border bg-gradient-to-br from-otm-surface-1/95 to-otm-surface-2/80 p-4 text-xs text-otm-text shadow-otm-sm">
@@ -94,6 +96,46 @@ function AggregateBlock({
   );
 }
 
+function sectionHasChanges(section: DiffAggregateSection | undefined): boolean {
+  if (!section) return false;
+  return [section.added, section.removed, section.changed].some((ids) => (ids?.length ?? 0) > 0);
+}
+
+/**
+ * "Changes by section (IDs)" delegated to six `AggregateBlock`s, each of which renders
+ * nothing when its section is untouched. Comparing a model against an identical revision
+ * therefore produced a card with a heading and a completely empty body — indistinguishable,
+ * to the reader, from a section that failed to load.
+ */
+function AggregateSectionsCard({
+  aggregate,
+}: Readonly<{ aggregate: ThreatModelComparisonResult["aggregate"] }>) {
+  const { t } = useTranslation();
+  const sections: { key: string; title: string; section: DiffAggregateSection | undefined }[] = [
+    { key: "components", title: t("diff.aggComponents"), section: aggregate.components },
+    { key: "assets", title: t("diff.aggAssets"), section: aggregate.assets },
+    { key: "data_flows", title: t("diff.aggFlows"), section: aggregate.data_flows },
+    { key: "trust_boundaries", title: t("diff.aggTrust"), section: aggregate.trust_boundaries },
+    { key: "threats", title: t("diff.aggThreats"), section: aggregate.threats },
+    { key: "mitigations", title: t("diff.aggMitigations"), section: aggregate.mitigations },
+  ];
+  const changed = sections.filter((s) => sectionHasChanges(s.section));
+  return (
+    <Card className="space-y-3 p-5" variant="glass">
+      <h2 className="font-display text-sm font-semibold text-otm-text">{t("diff.changesBySection")}</h2>
+      {changed.length === 0 ? (
+        <p className="text-sm text-otm-text-muted">{t("diff.noSectionChanges")}</p>
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2">
+          {changed.map((s) => (
+            <AggregateBlock key={s.key} title={s.title} section={s.section} />
+          ))}
+        </div>
+      )}
+    </Card>
+  );
+}
+
 function DiffSummaryCard({
   summary,
   structuralLine,
@@ -112,7 +154,15 @@ function DiffSummaryCard({
     <Card className="space-y-4 p-5" variant="glass">
       <h2 className="font-display text-sm font-semibold text-otm-text">{t("diff.summary")}</h2>
       <p className="text-base font-medium leading-relaxed text-otm-text">{summary.headline}</p>
-      <p className="text-sm text-otm-text-muted">{structuralLine}</p>
+      {/*
+        `summary.headline` and `structural.summary_line` are separate fields that the server
+        very often fills with the same sentence, which printed the identical line twice — once
+        bold, once muted — in both the no-change and the with-change case. Show the second
+        only when it says something the first did not.
+      */}
+      {structuralLine && structuralLine !== summary.headline ? (
+        <p className="text-sm text-otm-text-muted">{structuralLine}</p>
+      ) : null}
       <div className="flex flex-wrap gap-2">
         {summary.has_structural_changes ? <Badge tone="accent">{t("diff.structural")}</Badge> : null}
         {summary.has_analysis_changes ? <Badge tone="accent">{t("diff.analysis")}</Badge> : null}
@@ -387,17 +437,7 @@ function ComparisonResultPanel({
         </details>
       ) : null}
 
-      <Card className="space-y-3 p-5" variant="glass">
-        <h2 className="font-display text-sm font-semibold text-otm-text">{t("diff.changesBySection")}</h2>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <AggregateBlock title={t("diff.aggComponents")} section={result.aggregate.components} />
-          <AggregateBlock title={t("diff.aggAssets")} section={result.aggregate.assets} />
-          <AggregateBlock title={t("diff.aggFlows")} section={result.aggregate.data_flows} />
-          <AggregateBlock title={t("diff.aggTrust")} section={result.aggregate.trust_boundaries} />
-          <AggregateBlock title={t("diff.aggThreats")} section={result.aggregate.threats} />
-          <AggregateBlock title={t("diff.aggMitigations")} section={result.aggregate.mitigations} />
-        </div>
-      </Card>
+      <AggregateSectionsCard aggregate={result.aggregate} />
 
       <DiffRiskDeltaCard rd={rd} runAnalysis={runAnalysis} />
 
@@ -475,7 +515,7 @@ export function DiffPage() {
       setResult(d);
       toast.success(t("diff.toastOk"));
     } catch (e) {
-      const msg = e instanceof ApiError ? e.message : t("diff.toastFail");
+      const msg = apiErrorMessage(e, t, "diff.toastFail");
       setError(msg);
       toast.error(msg);
     } finally {

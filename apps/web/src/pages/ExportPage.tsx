@@ -6,7 +6,7 @@ import {
 } from "../i18n/exportArtifactLocale";
 import { Navigate } from "react-router";
 import { exportArtifacts, fetchPremiumReport, type PremiumReportLevel } from "../api/otmApi";
-import { ApiError } from "../api/client";
+import { apiErrorMessage } from "../api/apiErrorMessage";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { Label } from "../components/ui/Label";
@@ -110,7 +110,7 @@ export function ExportPage() {
       appendSnapshot("export");
       toast.success(t("export.toastReady"));
     } catch (e) {
-      const msg = e instanceof ApiError ? e.message : t("export.toastFail");
+      const msg = apiErrorMessage(e, t, "export.toastFail");
       setError(msg);
       toast.error(msg);
     } finally {
@@ -156,7 +156,7 @@ export function ExportPage() {
       appendSnapshot("export");
       toast.success(kind === "pdf" ? t("export.toastPremiumPdf") : t("export.toastPremiumMd"));
     } catch (e) {
-      const msg = e instanceof Error ? e.message : t("export.toastPremiumFail");
+      const msg = apiErrorMessage(e, t, "export.toastPremiumFail");
       setError(msg);
       toast.error(msg);
     } finally {

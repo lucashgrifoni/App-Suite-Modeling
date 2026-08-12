@@ -39,6 +39,10 @@
     "reload": "Recarregar página",
     "home": "Voltar ao início"
   },
+  "apiErrors": {
+    "timeout": "A API não respondeu a tempo. Verifique se está em execução e acessível e tente novamente.",
+    "unreachable": "Não foi possível alcançar a API. Verifique se está em execução e acessível e tente novamente."
+  },
   "home": {
     "eyebrow": "Threat modeling orientado a engenharia",
     "title": "Threat modeling, passo a passo",
@@ -509,6 +513,7 @@
     "keyInsights": "Insights principais",
     "whyStructured": "Porquê (diff estruturado)",
     "changesBySection": "Mudanças por secção (IDs)",
+    "noSectionChanges": "Nenhuma mudança em nenhuma secção.",
     "aggComponents": "Componentes",
     "aggAssets": "Ativos",
     "aggFlows": "Fluxos de dados",
@@ -528,6 +533,7 @@
     "triggerAnalysis": "Análise",
     "triggerExport": "Exportação",
     "maxLi": "L×I máx.:",
+    "summaryLine": "{{title}} · L×I máx. {{score}}",
     "components": "Componentes:",
     "flows": "Fluxos:",
     "heuristicThreats": "Ameaças heurísticas:",

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router";
 import { createBlankModel } from "../api/otmApi";
-import { ApiError } from "../api/client";
+import { apiErrorMessage } from "../api/apiErrorMessage";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { Alert } from "../components/ui/Alert";
@@ -32,7 +32,7 @@ export function HomePage() {
       toast.success(t("home.toastCreated"));
       navigate("/wizard");
     } catch (e) {
-      const msg = e instanceof ApiError ? e.message : t("home.createError");
+      const msg = apiErrorMessage(e, t, "home.createError");
       setError(msg);
       toast.error(msg);
     } finally {

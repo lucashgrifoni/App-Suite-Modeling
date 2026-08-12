@@ -2342,6 +2342,7 @@
             "title": "Notes"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "framework",
@@ -3513,6 +3514,7 @@
             "description": "Ex.: L×I ou normalizado; pode ser preenchido pelo motor."
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "likelihood",

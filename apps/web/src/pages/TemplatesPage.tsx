@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 import { instantiateTemplate, listTemplates } from "../api/otmApi";
 import type { TemplateListQuery } from "../api/otmApi";
-import { ApiError } from "../api/client";
+import { apiErrorMessage } from "../api/apiErrorMessage";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { Alert } from "../components/ui/Alert";
@@ -85,7 +85,7 @@ export function TemplatesPage() {
         }
       } catch (e) {
         if (!cancelled) {
-          setError(e instanceof ApiError ? e.message : t("templates.listFail"));
+          setError(apiErrorMessage(e, t, "templates.listFail"));
           // As linhas que ficavam no ecrã respondiam à consulta ANTERIOR, mas apareciam por
           // baixo do texto de pesquisa novo, sem indicação de que estavam desactualizadas —
           // o utilizador podia escolher um template julgando que correspondia ao filtro.
@@ -109,7 +109,7 @@ export function TemplatesPage() {
       toast.success(t("templates.toastOk"));
       navigate("/wizard");
     } catch (e) {
-      const msg = e instanceof ApiError ? e.message : t("templates.toastFail");
+      const msg = apiErrorMessage(e, t, "templates.toastFail");
       setError(msg);
       toast.error(msg);
     } finally {

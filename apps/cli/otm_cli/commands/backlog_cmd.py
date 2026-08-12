@@ -11,7 +11,7 @@ from otm_cli.application.backlog_service import run_backlog
 from otm_cli.commands.bootstrap import console
 from otm_cli.commands.handle_errors import exit_on_cli_error
 from otm_cli.shared.emit import write_text_file
-from otm_cli.shared.enums import BacklogFormat
+from otm_cli.shared.enums import BacklogFormat, BacklogGroupBy
 from otm_cli.shared.errors import CliUserError
 from otm_cli.shared.render import safe
 
@@ -37,7 +37,7 @@ def register(app: typer.Typer) -> None:
             "-f",
             help="markdown | json",
         ),
-        group_by: str | None = typer.Option(
+        group_by: BacklogGroupBy | None = typer.Option(
             None,
             "--group-by",
             help="Markdown grouping: root-cause | control | category.",

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -22,6 +23,21 @@ from otm_core_schema.enums import (
     TreatmentStatus,
 )
 from otm_core_schema.version import CANONICAL_SCHEMA_VERSION
+
+#: Semver aceite em `model.schema_version`. Deliberadamente o núcleo MAJOR.MINOR.PATCH com
+#: pre-release/build opcionais: chega para recusar `abc`, `""` e `1.1`, que é o que interessa.
+_SEMVER_RE = re.compile(r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$")
+
+
+class StrictEntity(BaseModel):
+    """Base de toda a entidade canônica: uma chave desconhecida é erro, não perda silenciosa.
+
+    Sem isto, `in_trust_boundry: internet` (um carácter a menos) carregava limpo, o campo real
+    ficava a `None` e a análise perdia uma ameaça sem qualquer diagnóstico. A extensibilidade
+    documentada (docs/features/SCHEMA_V1.md §1) é o `metadata: dict` aninhado, não chaves soltas.
+    """
+
+    model_config = ConfigDict(extra="forbid")
 
 
 def _unique_ids(name: str, ids: list[str]) -> None:
@@ -122,7 +138,7 @@ def _validate_evidence_refs(
                 raise ValueError(f"evidence_suggestion '{ev.id}' references unknown threat '{tid}'")
 
 
-class Metadata(BaseModel):
+class Metadata(StrictEntity):
     """Metadados do artefato de threat model."""
 
     title: str = Field(..., min_length=1, description="Título humano do modelo.")
@@ -135,7 +151,7 @@ class Metadata(BaseModel):
     )
 
 
-class BusinessContext(BaseModel):
+class BusinessContext(StrictEntity):
     """Contexto de negócio — opcional mas recomendado para relatórios e compliance."""
 
     description: str | None = Field(default=None, description="Narrativa do sistema e escopo.")
@@ -172,7 +188,7 @@ class BusinessContext(BaseModel):
     )
 
 
-class ModelInfo(BaseModel):
+class ModelInfo(StrictEntity):
     """Cabeçalho: versão do schema + classificação do sistema."""
 
     schema_version: str = Field(
@@ -196,8 +212,31 @@ class ModelInfo(BaseModel):
         description=("Perfil semântico do template/pack (ex.: api_backend_rest) — alinha heurísticas e benchmark."),
     )
 
+    @field_validator("schema_version")
+    @classmethod
+    def supported_schema_version(cls, v: str) -> str:
+        """Recusa versões que o motor instalado não sabe interpretar.
 
-class Asset(BaseModel):
+        `validate` existe para certificar o documento; ecoar `Schema: abc` dentro de um painel
+        verde certifica uma string que ninguém verificou. E como um documento de MAJOR diferente
+        seria validado contra as regras deste MAJOR (campos novos agora recusados por
+        `StrictEntity`), aceitá-lo em silêncio é pior do que recusá-lo.
+        """
+        if not _SEMVER_RE.match(v):
+            raise ValueError(
+                f"schema_version must be semver MAJOR.MINOR.PATCH (e.g. {CANONICAL_SCHEMA_VERSION}), got {v!r}"
+            )
+        major = v.split(".", 1)[0]
+        supported = CANONICAL_SCHEMA_VERSION.split(".", 1)[0]
+        if major != supported:
+            raise ValueError(
+                f"schema_version {v!r} declares major {major}; this engine implements schema "
+                f"{CANONICAL_SCHEMA_VERSION}. Upgrade the tool or migrate the document."
+            )
+        return v
+
+
+class Asset(StrictEntity):
     """Ativo a proteger (dados, credenciais, serviço crítico, etc.)."""
 
     id: str = Field(..., pattern=ENTITY_ID_PATTERN)
@@ -237,7 +276,7 @@ class Asset(BaseModel):
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
-class Component(BaseModel):
+class Component(StrictEntity):
     id: str = Field(..., pattern=ENTITY_ID_PATTERN)
     name: str = Field(..., min_length=1)
     kind: ComponentKind
@@ -280,7 +319,7 @@ class Component(BaseModel):
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
-class DataFlow(BaseModel):
+class DataFlow(StrictEntity):
     id: str = Field(..., pattern=ENTITY_ID_PATTERN)
     name: str | None = Field(
         default=None,
@@ -332,7 +371,7 @@ class DataFlow(BaseModel):
         return v
 
 
-class TrustBoundary(BaseModel):
+class TrustBoundary(StrictEntity):
     id: str = Field(..., pattern=ENTITY_ID_PATTERN)
     name: str = Field(..., min_length=1)
     description: str | None = None
@@ -366,7 +405,7 @@ class TrustBoundary(BaseModel):
     )
 
 
-class RiskAssessment(BaseModel):
+class RiskAssessment(StrictEntity):
     """Avaliação de risco por ameaça (escala 1–5, score derivado opcional)."""
 
     likelihood: int = Field(..., ge=1, le=5)
@@ -377,7 +416,7 @@ class RiskAssessment(BaseModel):
     )
 
 
-class ResidualRiskSummary(BaseModel):
+class ResidualRiskSummary(StrictEntity):
     """Agregado opcional ao nível do documento (relatório / dashboard)."""
 
     aggregate_score: float | None = Field(
@@ -388,7 +427,7 @@ class ResidualRiskSummary(BaseModel):
     notes: str | None = None
 
 
-class FrameworkRef(BaseModel):
+class FrameworkRef(StrictEntity):
     """Referência a um controlo em norma/framework (uso funcional, não decorativo)."""
 
     framework: str = Field(..., description="Ex.: owasp_asvs, nist_800_53, iso_27001.")
@@ -396,7 +435,7 @@ class FrameworkRef(BaseModel):
     notes: str | None = None
 
 
-class EvidenceSuggestion(BaseModel):
+class EvidenceSuggestion(StrictEntity):
     """Evidência sugerida para validar ou reduzir incerteza sobre ameaças."""
 
     id: str = Field(..., pattern=ENTITY_ID_PATTERN)
@@ -410,7 +449,7 @@ class EvidenceSuggestion(BaseModel):
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
-class Mitigation(BaseModel):
+class Mitigation(StrictEntity):
     id: str = Field(..., pattern=ENTITY_ID_PATTERN)
     title: str = Field(..., min_length=1)
     description: str | None = None
@@ -421,7 +460,7 @@ class Mitigation(BaseModel):
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
-class Threat(BaseModel):
+class Threat(StrictEntity):
     id: str = Field(..., pattern=ENTITY_ID_PATTERN)
     title: str = Field(..., min_length=1)
     description: str | None = None

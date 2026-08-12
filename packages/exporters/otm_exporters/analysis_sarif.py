@@ -11,6 +11,7 @@ SARIF spec: https://docs.oasis-open.org/sarif/sarif/v2.1.0/sarif-v2.1.0.html
 
 from __future__ import annotations
 
+import importlib.metadata
 import json
 from typing import Any
 
@@ -19,6 +20,28 @@ from otm_threat_engine.result import AnalysisResult, HeuristicThreat
 _SARIF_SCHEMA = "https://json.schemastore.org/sarif-2.1.0.json"
 _TOOL_NAME = "App Suite Modeling"
 _TOOL_URI = "https://github.com/lucashgrifoni/App-Suite-Modeling"
+_DISTRIBUTION = "open-threat-model"
+
+#: Artefacto a que os resultados são ancorados quando quem chama não diz qual é o ficheiro.
+#: Uma ameaça STRIDE não tem ficheiro-fonte nem linha: o sujeito do achado é o próprio modelo de
+#: ameaças, por isso é o `.otm.yaml` que vai em `artifactLocation.uri`. A API (documento vindo
+#: num POST) e qualquer chamador em memória não têm caminho nenhum, e o GitHub exige
+#: `physicalLocation` com `uri` e `region.startLine` para ingerir o resultado — daí o nome
+#: canónico por omissão em vez de campo nenhum.
+_DEFAULT_MODEL_URI = "threat-model.otm.yaml"
+
+
+def product_version() -> str:
+    """Versão do produto instalado, para `tool.driver.version`.
+
+    `result.engine_version` identifica o motor de heurísticas (`0.1.0`, nunca incrementado) e é
+    isso que estava a ser publicado como versão da ferramenta chamada "App Suite Modeling" —
+    dois scans de releases diferentes ficavam indistinguíveis. O motor continua no property bag.
+    """
+    try:
+        return importlib.metadata.version(_DISTRIBUTION)
+    except importlib.metadata.PackageNotFoundError:
+        return "dev"
 
 
 def _level_for_score(score: float | None) -> str:
@@ -62,8 +85,24 @@ def _logical_location(threat: HeuristicThreat) -> dict[str, Any] | None:
     return None
 
 
-def export_analysis_sarif_obj(result: AnalysisResult) -> dict[str, Any]:
-    """SARIF 2.1.0 object for the analysis result (one run, one result per active threat)."""
+def _physical_location(model_uri: str) -> dict[str, Any]:
+    """`physicalLocation` do modelo, obrigatório para o GitHub code scanning.
+
+    O GitHub documenta `result.locations[]`, `location.physicalLocation`,
+    `artifactLocation.uri` e `region.startLine` como necessários para ingerir um resultado; sem
+    eles o upload que o `--sarif-out` e o `upload-sarif` da Action anunciam não produz alertas
+    localizados. A ameaça não tem linha própria — é o documento inteiro que a origina — por isso
+    todas ancoram na linha 1 do modelo, que é a convenção para achados ao nível do ficheiro.
+    """
+    return {"artifactLocation": {"uri": model_uri}, "region": {"startLine": 1}}
+
+
+def export_analysis_sarif_obj(result: AnalysisResult, *, model_uri: str = _DEFAULT_MODEL_URI) -> dict[str, Any]:
+    """SARIF 2.1.0 object for the analysis result (one run, one result per active threat).
+
+    `model_uri` is the artifact every result points at — the threat-model file the analysis came
+    from, relative to the repository root so GitHub can resolve it.
+    """
     threats = [t for t in result.heuristic_threats if not t.skipped_as_duplicate]
 
     rules: list[dict[str, Any]] = []
@@ -102,7 +141,7 @@ def export_analysis_sarif_obj(result: AnalysisResult) -> dict[str, Any]:
         }
         loc = _logical_location(t)
         if loc:
-            res["locations"] = [{"logicalLocations": [loc]}]
+            res["locations"] = [{"physicalLocation": _physical_location(model_uri), "logicalLocations": [loc]}]
         sarif_results.append(res)
 
     return {
@@ -114,7 +153,8 @@ def export_analysis_sarif_obj(result: AnalysisResult) -> dict[str, Any]:
                     "driver": {
                         "name": _TOOL_NAME,
                         "informationUri": _TOOL_URI,
-                        "version": result.engine_version,
+                        "version": product_version(),
+                        "properties": {"engineVersion": result.engine_version},
                         "rules": rules,
                     }
                 },
@@ -124,6 +164,6 @@ def export_analysis_sarif_obj(result: AnalysisResult) -> dict[str, Any]:
     }
 
 
-def export_analysis_sarif(result: AnalysisResult) -> str:
+def export_analysis_sarif(result: AnalysisResult, *, model_uri: str = _DEFAULT_MODEL_URI) -> str:
     """SARIF 2.1.0 JSON text for the analysis result."""
-    return json.dumps(export_analysis_sarif_obj(result), indent=2, ensure_ascii=False)
+    return json.dumps(export_analysis_sarif_obj(result, model_uri=model_uri), indent=2, ensure_ascii=False)

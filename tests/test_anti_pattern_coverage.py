@@ -71,13 +71,14 @@ def test_file_handling_profile_with_upload_flow_fires() -> None:
 
 def test_file_handling_with_cross_boundary_and_assets() -> None:
     # Exercise require_min_cross_boundary_flows + require_asset_name_id_contains_any paths.
+    # Cross-boundary is derived from component placement (the minimal model already puts `user`
+    # in `internet` and `api` in `vpc`), not from a per-flow flag — there is no such field.
     d = _base()
     d["model"]["template_semantic_profile"] = "file_handling_application"
     d["components"].append({"id": "upload_svc", "name": "Upload", "kind": "process", "in_trust_boundary": _tb(d)})
-    d["assets"].append({"id": "user_upload", "name": "User uploaded file", "classification": "confidential"})
+    d["assets"].append({"id": "user_upload", "name": "User uploaded file", "data_classification": "confidential"})
     for fl in d.get("data_flows") or []:
         fl["supports_file_upload"] = True
-        fl["crosses_trust_boundary"] = True
     hits = detect_anti_patterns(_doc(d))
     assert isinstance(hits, list)
 
@@ -86,8 +87,6 @@ def test_api_profile_cross_boundary() -> None:
     d = _base()
     d["model"]["template_semantic_profile"] = "api_backend_rest"
     d["components"].append({"id": "edge_gw", "name": "Edge", "kind": "gateway", "in_trust_boundary": _tb(d)})
-    for fl in d.get("data_flows") or []:
-        fl["crosses_trust_boundary"] = True
     hits = detect_anti_patterns(_doc(d))
     assert isinstance(hits, list)
 

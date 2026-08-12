@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, Navigate } from "react-router";
 import { validateDocument } from "../api/otmApi";
-import { ApiError } from "../api/client";
+import { apiErrorMessage } from "../api/apiErrorMessage";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { Badge } from "../components/ui/Badge";
@@ -60,7 +60,7 @@ export function ReviewPage() {
       toast.success(t("review.validOk"));
     } catch (e) {
       setMeta(null);
-      const msg = e instanceof ApiError ? e.message : t("review.validationError");
+      const msg = apiErrorMessage(e, t, "review.validationError");
       setErr(msg);
       toast.error(msg);
     }

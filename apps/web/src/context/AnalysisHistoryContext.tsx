@@ -15,7 +15,17 @@ import { useSession } from "./SessionContext";
 interface AnalysisHistoryState {
   entries: AnalysisHistoryEntry[];
   refresh: () => void;
-  appendSnapshot: (trigger: "analysis" | "export") => void;
+  /**
+   * Append a snapshot of the current document.
+   *
+   * `analysis` is the analysis the snapshot is *of*. Callers that have just produced one
+   * must pass it: a caller that does `setAnalysis(r)` and then `appendSnapshot(...)` in the
+   * same event handler is still rendering with the pre-run session analysis, so leaving it
+   * to be read from the session would store the previous run's result — or `null` on the
+   * first run of a session. Callers that are only snapshotting what is already on screen
+   * (the export page) can omit it and get the session analysis.
+   */
+  appendSnapshot: (trigger: "analysis" | "export", analysis?: AnalysisResult | null) => void;
   restore: (id: string) => void;
   remove: (id: string) => void;
 }
@@ -36,7 +46,6 @@ function buildEntry(
     title: document.metadata.title,
     systemType: document.model.system_type,
     maxScore,
-    summaryLine: `${document.metadata.title} · L×I máx. ${maxScore ?? "—"}`,
     document: structuredClone(document),
     analysis: analysis ? structuredClone(analysis) : null,
   };
@@ -49,9 +58,13 @@ export function AnalysisHistoryProvider({ children }: Readonly<{ children: React
   const refresh = useCallback(() => setEntries(loadHistory()), []);
 
   const appendSnapshot = useCallback(
-    (trigger: "analysis" | "export") => {
+    (trigger: "analysis" | "export", snapshotAnalysis?: AnalysisResult | null) => {
       if (!document) return;
-      const entry = buildEntry(trigger, document, analysis);
+      const entry = buildEntry(
+        trigger,
+        document,
+        snapshotAnalysis === undefined ? analysis : snapshotAnalysis,
+      );
       pushHistoryEntry(entry);
       refresh();
     },

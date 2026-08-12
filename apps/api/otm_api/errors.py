@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from typing import Any, cast
 
 from fastapi import Request, status
@@ -34,6 +35,15 @@ def problem_detail(
     return body
 
 
+def _non_finite_text(value: float) -> str:
+    """Nome JSON-ish do float não finito, para o cliente reconhecer o que enviou."""
+    if math.isnan(value):
+        return "NaN"
+    if value > 0:
+        return "Infinity"
+    return "-Infinity"
+
+
 def _truncate(value: Any, *, depth: int = 0) -> Any:
     if depth > 4:
         return "…[deep value suppressed]"
@@ -62,6 +72,12 @@ def _truncate(value: Any, *, depth: int = 0) -> Any:
             out["__suppressed__"] = f"{len(value) - 50} keys suppressed"
             return out
         return {str(k): _truncate(v, depth=depth + 1) for k, v in value.items()}
+    # `NaN`/`Infinity` não são JSON (RFC 8259) e o `JSONResponse` serializa com
+    # `allow_nan=False`. O `json.dumps` da stdlib emite estes literais por omissão, por isso
+    # um cliente Python com um float NaN nos dados envia-os sem fazer nada de exótico: deixá-los
+    # passar rebentava *dentro* deste handler de 422 e o cliente recebia um 500 opaco.
+    if isinstance(value, float) and not math.isfinite(value):
+        return _non_finite_text(value)
     # JSON scalars pass through untouched (`bool` is a subclass of `int`).
     if isinstance(value, (int, float, type(None))):
         return value

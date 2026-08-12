@@ -1,8 +1,8 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { Link, Navigate } from "react-router";
 import { validateDocument } from "../api/otmApi";
-import { ApiError } from "../api/client";
+import { apiErrorMessage } from "../api/apiErrorMessage";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { Input } from "../components/ui/Input";
@@ -48,16 +48,54 @@ const STEP_DEFS = [
   { id: 3, labelKey: "wizard.stepDone" as const },
 ];
 
+const LAST_STEP = STEP_DEFS.length - 1;
+
+/** Which step the wizard was left on, so a refresh does not throw the user back to step 1. */
+const STEP_KEY = "otm.web.wizard.step";
+
 /** Espaço/tab/etc. no fim do ID quebra correspondência com fluxos e validação no servidor. */
 function idHasTrailingWhitespace(value: string): boolean {
   return /\s$/.test(value);
+}
+
+/**
+ * The furthest step a document has already earned.
+ *
+ * Step gating was component-local state initialised to 0, so every arrival at /wizard — and
+ * every refresh — re-locked Components, Flows and Finish even for a finished model whose
+ * data was right there in the session. Editing an existing model's components meant walking
+ * the whole wizard again past steps that had nothing left to ask. Deriving the unlock from
+ * the document instead means the tabs describe the model, not this mount's click history.
+ */
+export function furthestStepForDocument(
+  doc: { components?: unknown[]; data_flows?: unknown[] } | null,
+): number {
+  if (!doc) return 0;
+  if (doc.data_flows?.length) return LAST_STEP;
+  if (doc.components?.length) return 2;
+  return 0;
+}
+
+function readStoredStep(): number {
+  try {
+    const raw = sessionStorage.getItem(STEP_KEY);
+    const n = raw === null ? Number.NaN : Number(raw);
+    if (!Number.isInteger(n) || n < 0) return 0;
+    return Math.min(n, LAST_STEP);
+  } catch {
+    return 0;
+  }
 }
 
 export function WizardPage() {
   const { t, i18n } = useTranslation();
   const { document, setDocument } = useSession();
   const toast = useToast();
-  const [step, setStep] = useState(0);
+  const [step, setStep] = useState(() =>
+    Math.min(readStoredStep(), furthestStepForDocument(document)),
+  );
+  /** Highest step reached this mount; a step does not re-lock because the user went back. */
+  const [maxVisited, setMaxVisited] = useState(step);
   const [error, setError] = useState<string | null>(null);
   const [validating, setValidating] = useState(false);
   /** ID do fluxo no início da edição (focus), para propagar rename em ativos/fronteiras no blur. */
@@ -85,8 +123,24 @@ export function WizardPage() {
   );
   const adaptivePrompts = useMemo(() => promptsForProfile(templateProfile), [templateProfile]);
 
+  /** Unlocked by what the model already contains, or by how far this visit has walked. */
+  const reachableStep = Math.max(furthestStepForDocument(document), maxVisited);
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(STEP_KEY, String(step));
+    } catch {
+      /* quota / private mode */
+    }
+  }, [step]);
+
   if (!document) return <Navigate to="/" replace />;
   const doc = document;
+
+  function goToStep(next: number) {
+    setStep(next);
+    setMaxVisited((m) => Math.max(m, next));
+  }
 
   const methodology: MethodologyId = doc.model.methodology ?? "stride";
 
@@ -150,9 +204,9 @@ export function WizardPage() {
     setValidating(true);
     try {
       await validateDocument(doc);
-      setStep((s) => Math.min(s + 1, STEP_DEFS.length - 1));
+      goToStep(Math.min(step + 1, LAST_STEP));
     } catch (e) {
-      const msg = e instanceof ApiError ? e.message : t("wizard.validationFail");
+      const msg = apiErrorMessage(e, t, "wizard.validationFail");
       setError(msg);
       toast.error(msg);
     } finally {
@@ -195,8 +249,9 @@ export function WizardPage() {
         <Stepper
           steps={stepsForStepper}
           currentIndex={step}
+          maxReachableIndex={reachableStep}
           onStepClick={(i) => {
-            if (i <= step) setStep(STEP_DEFS[i].id);
+            if (i <= reachableStep) goToStep(STEP_DEFS[i].id);
           }}
         />
       </Panel>
@@ -273,10 +328,14 @@ export function WizardPage() {
                   id="tprofile"
                   className="mt-1 font-mono text-sm"
                   value={doc.model.template_semantic_profile ?? ""}
-                  onChange={(e) =>
-                    updateModel({
-                      template_semantic_profile: e.target.value.trim() || null,
-                    })
+                  // Trim on blur, not on change. Trimming inside onChange fed the
+                  // controlled input back its own trimmed value, so the space the user had
+                  // just typed was gone before the next character arrived: "api backend
+                  // rest" became "apibackendrest", silently and with no hint that spaces
+                  // were unwelcome.
+                  onChange={(e) => updateModel({ template_semantic_profile: e.target.value })}
+                  onBlur={(e) =>
+                    updateModel({ template_semantic_profile: e.target.value.trim() || null })
                   }
                   placeholder={t("wizard.templateSemanticProfilePlaceholder")}
                 />
@@ -646,16 +705,16 @@ export function WizardPage() {
 
       <div className="flex flex-wrap gap-2">
         {step > 0 && (
-          <Button variant="secondary" onClick={() => setStep((s) => s - 1)}>
+          <Button variant="secondary" onClick={() => goToStep(step - 1)}>
             {t("wizard.prev")}
           </Button>
         )}
-        {step < STEP_DEFS.length - 1 && (
+        {step < LAST_STEP && (
           <Button onClick={() => void validateAndNext()} disabled={validating}>
             {validating ? t("wizard.validating") : t("wizard.next")}
           </Button>
         )}
-        {step === STEP_DEFS.length - 1 && (
+        {step === LAST_STEP && (
           <Link to="/review">
             <Button>{t("wizard.viewDiagram")}</Button>
           </Link>

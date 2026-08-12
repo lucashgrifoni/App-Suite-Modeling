@@ -12,7 +12,6 @@ function entry(id: string, over: Partial<AnalysisHistoryEntry> = {}): AnalysisHi
     title: "T",
     systemType: "web_application",
     maxScore: null,
-    summaryLine: "s",
     document: { model: { schema_version: "1.0.0" }, metadata: { title: "T" } },
     analysis: null,
     ...over,

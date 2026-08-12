@@ -4,14 +4,17 @@ from typing import Any, cast
 
 from fastapi import HTTPException, status
 from otm_core_schema import ThreatModelDocument
+from otm_threat_engine import AnalysisResult
 from pydantic import ValidationError as PydanticValidationError
 
 from otm_api.api_error_messages import (
+    msg_analysis_document_mismatch,
     msg_analysis_validation_error,
     msg_document_validation_error,
     msg_template_invalid,
 )
 from otm_api.errors import _truncated_errors
+from otm_api.services.analysis_pairing import analysis_document_mismatches
 from otm_api.services.documents import document_from_payload
 
 
@@ -65,6 +68,26 @@ def raise_analysis_validation_error(exc: PydanticValidationError) -> HTTPExcepti
             code="ANALYSIS_VALIDATION_ERROR",
             message=msg_analysis_validation_error(),
             errors=_pydantic_error_items(exc),
+        ),
+    )
+
+
+def ensure_analysis_matches_document(document: ThreatModelDocument, analysis: AnalysisResult) -> None:
+    """
+    422 quando o `analysis` recebido não foi produzido para o `document` recebido.
+
+    Guarda, não conversor: as rotas que emparelham os dois artefactos chamam-na depois de
+    validar cada um. Ver `services/analysis_pairing.py` para o critério e o âmbito.
+    """
+    mismatches = analysis_document_mismatches(document, analysis)
+    if not mismatches:
+        return
+    raise HTTPException(
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+        detail=error_detail(
+            code="ANALYSIS_DOCUMENT_MISMATCH",
+            message=msg_analysis_document_mismatch(),
+            errors=mismatches,
         ),
     )
 

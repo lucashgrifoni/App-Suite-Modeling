@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { Navigate } from "react-router";
 import { analyzeDocument, fetchRemediationBacklog, recommendMethodology } from "../api/otmApi";
-import { ApiError } from "../api/client";
+import { apiErrorMessage } from "../api/apiErrorMessage";
 import { Alert } from "../components/ui/Alert";
 import { PageHeader } from "../components/patterns/PageHeader";
 import { EmptyState } from "../components/patterns/EmptyState";
@@ -90,10 +90,11 @@ export function AnalysisPage() {
         methodology,
       });
       setAnalysis(r);
-      appendSnapshot("analysis");
+      // `r`, not the session analysis: this render still holds the pre-run value.
+      appendSnapshot("analysis", r);
       toast.success(t("analysis.toastOk"));
     } catch (e) {
-      const msg = e instanceof ApiError ? e.message : t("analysis.toastFail");
+      const msg = apiErrorMessage(e, t, "analysis.toastFail");
       setError(msg);
       toast.error(msg);
     } finally {
@@ -110,7 +111,7 @@ export function AnalysisPage() {
       setBacklog(b);
       toast.success(t("analysis.toastBacklog"));
     } catch (e) {
-      const msg = e instanceof ApiError ? e.message : t("analysis.toastBacklogFail");
+      const msg = apiErrorMessage(e, t, "analysis.toastBacklogFail");
       setError(msg);
       toast.error(msg);
     } finally {
@@ -128,7 +129,7 @@ export function AnalysisPage() {
       setMethodology(rec.methodology);
       toast.info(t("analysis.toastRecommend", { methodology: rec.methodology }));
     } catch (e) {
-      const msg = e instanceof ApiError ? e.message : t("analysis.toastRecommendFail");
+      const msg = apiErrorMessage(e, t, "analysis.toastRecommendFail");
       setError(msg);
       toast.error(msg);
     } finally {

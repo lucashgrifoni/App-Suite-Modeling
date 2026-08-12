@@ -44,6 +44,45 @@ def msg_internal_error() -> str:
     )
 
 
+def msg_import_empty_artifact() -> str:
+    return _t(
+        "The uploaded artifact is empty. Send the file contents, not a zero-byte file.",
+        "O artefacto enviado está vazio. Envie o conteúdo do ficheiro, não um ficheiro de zero bytes.",
+    )
+
+
+def msg_import_not_utf8() -> str:
+    return _t(
+        "The artifact is not valid UTF-8 text. Re-save it as UTF-8; this endpoint takes text, not binaries.",
+        "O artefacto não é texto UTF-8 válido. Grave-o como UTF-8; este endpoint recebe texto, não binários.",
+    )
+
+
+def msg_api_key_required() -> str:
+    return _t(
+        "Invalid or missing API key. Send X-OTM-API-Key or Authorization: Bearer.",
+        "Chave de API ausente ou inválida. Envie X-OTM-API-Key ou Authorization: Bearer.",
+    )
+
+
+def msg_api_key_misconfigured() -> str:
+    return _t(
+        "OTM_API_KEY is set but blank, so no credential can be accepted. "
+        "Set a non-empty value on the server, or unset it to serve /v1 without a key.",
+        "OTM_API_KEY está definida mas em branco, por isso nenhuma credencial pode ser aceite. "
+        "Defina um valor não vazio no servidor, ou remova a variável para servir /v1 sem chave.",
+    )
+
+
+def msg_analysis_document_mismatch() -> str:
+    return _t(
+        "The supplied `analysis` was not produced for the supplied `document`. "
+        "Re-run the analysis for this document, or omit `analysis` and set `run_analysis: true`.",
+        "O `analysis` enviado não foi produzido para o `document` enviado. "
+        "Volte a correr a análise para este documento, ou omita `analysis` e defina `run_analysis: true`.",
+    )
+
+
 def msg_remediation_input() -> str:
     return _t(
         "Provide `analysis` or set `run_analysis: true`.",

@@ -39,6 +39,10 @@
     "reload": "Reload page",
     "home": "Back to home"
   },
+  "apiErrors": {
+    "timeout": "The API did not respond in time. Check that it is running and reachable, then try again.",
+    "unreachable": "Could not reach the API. Check that it is running and reachable, then try again."
+  },
   "home": {
     "eyebrow": "Engineering-driven threat modeling",
     "title": "Threat modeling, step by step",
@@ -509,6 +513,7 @@
     "keyInsights": "Key insights",
     "whyStructured": "Why (structured diff)",
     "changesBySection": "Changes by section (IDs)",
+    "noSectionChanges": "No changes in any section.",
     "aggComponents": "Components",
     "aggAssets": "Assets",
     "aggFlows": "Data flows",
@@ -528,6 +533,7 @@
     "triggerAnalysis": "Analysis",
     "triggerExport": "Export",
     "maxLi": "Max L×I:",
+    "summaryLine": "{{title}} · max L×I {{score}}",
     "components": "Components:",
     "flows": "Flows:",
     "heuristicThreats": "Heuristic threats:",

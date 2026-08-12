@@ -6,6 +6,8 @@ Regras de negócio permanecem em `otm_core_schema`, `otm_threat_engine`, etc.
 
 from __future__ import annotations
 
+import logging
+
 from fastapi import APIRouter, FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -19,10 +21,15 @@ from otm_api.observability import (
     register_unhandled_exception_handler,
     setup_api_logging,
 )
-from otm_api.perimeter_settings import resolve_rate_limit_default
+from otm_api.perimeter_settings import (
+    describe_effective_perimeter,
+    resolve_api_key_perimeter,
+    resolve_rate_limit_default,
+)
 from otm_api.routers import analyses, exports, imports, models, remediation, reports_premium, system, templates
 
 setup_api_logging()
+LOG = logging.getLogger("otm.api")
 
 app = FastAPI(
     title="App Suite Modeling API",
@@ -58,10 +65,27 @@ register_unhandled_exception_handler(app)
 _rate_limit_spec = resolve_rate_limit_default()
 
 _cors = resolve_cors_profile()
-app.add_middleware(ObservabilityMiddleware)
+_api_key = resolve_api_key_perimeter()
+
+# Uma linha, no arranque, a declarar o perímetro efetivo. Sem ela, o log de um servidor
+# aberto por engano (chave em branco, ambiente que caiu em `development`) é idêntico ao de
+# um servidor protegido — ver `describe_effective_perimeter`.
+_perimeter_line = describe_effective_perimeter(profile=_cors, api_key=_api_key, rate_limit=_rate_limit_spec)
+_perimeter_level = logging.WARNING if _api_key.misconfigured else logging.INFO
+LOG.log(_perimeter_level, _perimeter_line, extra={"event_name": "api_perimeter"})
+
+# Ordem de registo: o Starlette empilha ao contrário, por isso o **último** registado fica
+# por fora. Efetivo (fora -> dentro): CORS -> Observability -> ApiKey -> RateLimit -> rotas.
+#
+# `ObservabilityMiddleware` tem de ficar por fora do perímetro: quando corria por dentro,
+# um 401 do middleware de chave de API não passava por ele, ou seja, a rejeição de
+# autenticação — o evento mais relevante para segurança que esta API emite — não aparecia
+# no log estruturado e a resposta saía sem `X-Request-ID`, ao contrário de todos os outros
+# códigos de estado. O mesmo se aplicava ao 429 do rate limit.
 if _rate_limit_spec:
     app.add_middleware(RateLimitMiddleware, limit=parse_rate_limit(_rate_limit_spec))
 app.add_middleware(OptionalApiKeyMiddleware)
+app.add_middleware(ObservabilityMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_cors.origins,

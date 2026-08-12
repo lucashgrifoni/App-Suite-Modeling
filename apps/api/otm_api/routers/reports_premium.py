@@ -12,6 +12,7 @@ from pydantic import ValidationError as PydanticValidationError
 
 from otm_api.routers._errors import (
     document_from_payload_or_422,
+    ensure_analysis_matches_document,
     error_detail,
     raise_analysis_validation_error,
     raise_pack_not_found,
@@ -50,7 +51,10 @@ def post_premium_report(body: PremiumReportBody) -> PlainTextResponse | Response
             analysis_obj = AnalysisResult.model_validate(body.analysis)
         except PydanticValidationError as e:
             raise raise_analysis_validation_error(e) from e
+        ensure_analysis_matches_document(doc, analysis_obj)
 
+    # `baseline_analysis` fica de fora da guarda: é, por definição, a análise de uma versão
+    # anterior do modelo — a divergência é o conteúdo da secção baseline/diff, não um erro.
     baseline_obj: AnalysisResult | None = None
     if body.baseline_analysis is not None:
         try:

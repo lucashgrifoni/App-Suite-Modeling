@@ -11,7 +11,6 @@ from otm_report_premium.enums import ReportLevel as PremiumReportLevel
 
 from otm_cli.application.report_service import (
     ReportLegacyResult,
-    ReportPdfDependencyError,
     ReportPremiumMarkdownResult,
     ReportPremiumPdfResult,
     run_report,
@@ -35,12 +34,14 @@ def _emit_text_report(text: str, *, output: Path | None, label: str) -> None:
         print(text, end="")
 
 
-def _emit_pdf_report(pdf_bytes: bytes, *, output: Path) -> None:
+def _emit_pdf_report(pdf_bytes: bytes, *, output: Path, locale_notice: str | None) -> None:
     """A PDF is never printed to stdout; without `--output` it lands on the report's default path."""
     try:
         write_bytes_file(content=pdf_bytes, output=output)
     except CliUserError as e:
         exit_on_cli_error(console, e)
+    if locale_notice:
+        console.print(f"[yellow]Note:[/yellow] {safe(locale_notice)}")
     console.print(f"[green]Report premium (PDF)[/green] → {safe(output.resolve())}")
 
 
@@ -112,9 +113,6 @@ def register(app: typer.Typer) -> None:
             )
         except CliUserError as e:
             exit_on_cli_error(console, e)
-        except ReportPdfDependencyError as e:  # pragma: no cover - defensive guard
-            console.print(f"[red]{safe(e)}[/red]")
-            raise typer.Exit(1) from e
 
         if isinstance(outcome, ReportLegacyResult):
             _emit_text_report(outcome.text, output=output, label="Report")
@@ -125,4 +123,8 @@ def register(app: typer.Typer) -> None:
             return
 
         if isinstance(outcome, ReportPremiumPdfResult):
-            _emit_pdf_report(outcome.pdf_bytes, output=output or outcome.default_path)
+            _emit_pdf_report(
+                outcome.pdf_bytes,
+                output=output or outcome.default_path,
+                locale_notice=outcome.locale_notice,
+            )

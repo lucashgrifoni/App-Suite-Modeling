@@ -14,7 +14,9 @@ _MINIMAL = _ROOT / "examples" / "minimal.otm.yaml"
 
 def _doc_with_asset_and_flag() -> ThreatModelDocument:
     d: dict[str, Any] = load_document_from_yaml_path(_MINIMAL).model_dump(mode="python", by_alias=True)
-    d.setdefault("assets", []).append({"id": "pii_store", "name": "Customer PII", "classification": "confidential"})
+    d.setdefault("assets", []).append(
+        {"id": "pii_store", "name": "Customer PII", "data_classification": "confidential"}
+    )
     for fl in d.get("data_flows") or []:
         fl["supports_file_upload"] = True
     return ThreatModelDocument.model_validate(d)

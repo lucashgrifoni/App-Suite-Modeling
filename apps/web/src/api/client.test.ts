@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ApiError, apiFetch } from "./client";
+import { ApiError, ApiTimeoutError, apiFetch, fetchWithTimeout } from "./client";
 
 function mockFetch(status: number, body: string, ok = status < 400) {
   return vi.fn().mockResolvedValue({
@@ -62,5 +62,76 @@ describe("apiFetch", () => {
     expect(err.status).toBe(500);
     expect(err.message).toBe("HTTP 500");
     expect(err.body).toBe("<html>nope</html>");
+  });
+
+  it("marks a message that came from the server's own error envelope", async () => {
+    vi.stubGlobal("fetch", mockFetch(422, JSON.stringify({ detail: { message: "bad" } })));
+    const err = (await apiFetch("/x").catch((e: unknown) => e)) as ApiError;
+    expect(err.fromServerDetail).toBe(true);
+  });
+
+  it("marks a message that is only the HTTP reason phrase", async () => {
+    // The distinction the "Bad Gateway" fix rests on: an empty body means the response
+    // told the user nothing, so the UI must supply the explanation itself.
+    vi.stubGlobal("fetch", mockFetch(502, ""));
+    const err = (await apiFetch("/x").catch((e: unknown) => e)) as ApiError;
+    expect(err.fromServerDetail).toBe(false);
+  });
+
+  it("passes an abort signal to fetch so a hung request can be cut off", async () => {
+    const f = mockFetch(200, "{}");
+    vi.stubGlobal("fetch", f);
+    await apiFetch("/x");
+    const init = f.mock.calls[0][1] as RequestInit;
+    expect(init.signal).toBeInstanceOf(AbortSignal);
+  });
+});
+
+/**
+ * `fetch` has no default timeout. A backend that accepts the connection and never answers
+ * left "Analyzing…" disabled forever, with no error and no cancel — only a page reload got
+ * the user out.
+ */
+describe("fetchWithTimeout", () => {
+  /** A backend that accepts the request and never responds. */
+  function blackHoleFetch() {
+    return vi.fn(
+      (_url: string, init: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+          init.signal?.addEventListener("abort", () =>
+            reject(new DOMException("Aborted", "AbortError")),
+          );
+        }),
+    );
+  }
+
+  it("rejects with ApiTimeoutError once the deadline passes", async () => {
+    vi.stubGlobal("fetch", blackHoleFetch());
+    await expect(fetchWithTimeout("/x", {}, 10)).rejects.toBeInstanceOf(ApiTimeoutError);
+  });
+
+  it("reports the deadline it enforced", async () => {
+    vi.stubGlobal("fetch", blackHoleFetch());
+    const err = (await fetchWithTimeout("/x", {}, 10).catch(
+      (e: unknown) => e,
+    )) as ApiTimeoutError;
+    expect(err.timeoutMs).toBe(10);
+  });
+
+  it("resolves normally when the server answers in time", async () => {
+    vi.stubGlobal("fetch", mockFetch(200, "{}"));
+    await expect(fetchWithTimeout("/x", {}, 5_000)).resolves.toMatchObject({ status: 200 });
+  });
+
+  it("re-throws a network failure unchanged rather than calling it a timeout", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("Failed to fetch")));
+    await expect(fetchWithTimeout("/x", {}, 5_000)).rejects.toBeInstanceOf(TypeError);
+  });
+
+  it("clears its timer so a fast response leaves nothing pending", async () => {
+    const clear = vi.spyOn(globalThis, "clearTimeout");
+    vi.stubGlobal("fetch", mockFetch(200, "{}"));
+    await fetchWithTimeout("/x", {}, 5_000);
+    expect(clear).toHaveBeenCalled();
   });
 });

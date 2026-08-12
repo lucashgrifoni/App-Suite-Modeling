@@ -77,7 +77,9 @@ function HistoryCard({
           {t("history.maxLi")} {entry.maxScore ?? "—"}
         </span>
       </div>
-      <p className="mt-2 text-xs text-otm-text-subtle">{entry.summaryLine}</p>
+      <p className="mt-2 text-xs text-otm-text-subtle">
+        {t("history.summaryLine", { title: entry.title, score: entry.maxScore ?? "—" })}
+      </p>
       <div
         className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-otm-text-muted"
         data-testid="history-snapshot-stats"

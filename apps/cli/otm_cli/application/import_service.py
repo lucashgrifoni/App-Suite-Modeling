@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeVar
 
 import yaml
 from otm_core_schema import ThreatModelDocument, dump_document_to_yaml
+from pydantic import ValidationError
 
 from otm_cli.shared.emit import write_json_file
 from otm_cli.shared.errors import CliUserError
@@ -15,6 +17,27 @@ from otm_cli.shared.errors import CliUserError
 _CONFIRM_PATH = "confirm the path."
 _DRAFT_MAX_COMPONENTS = 24
 _DRAFT_MAX_FLOWS = 48
+
+_T = TypeVar("_T")
+
+
+def _parsed_or_user_error(kind: str, path: Path, parse: Callable[[], _T]) -> _T:
+    """Turn a parser blow-up into the same three-line error `otm import otm` already produces.
+
+    The artifact parsers raise a bare `ValueError` for an empty or non-mapping document and a
+    `yaml.YAMLError` for malformed YAML — neither of which is a `CliUserError`, so both reached
+    the user as a Rich traceback exposing `packages/artifact-import` internals. The OTM importer
+    converted them properly; the OpenAPI, Terraform and Kubernetes ones did not.
+    """
+    try:
+        return parse()
+    except (ValueError, ValidationError, yaml.YAMLError) as e:
+        raise CliUserError(
+            exit_code=1,
+            failed=f"{kind} import of `{path}`.",
+            cause=str(e),
+            next_step=f"confirm the file is a non-empty, parseable {kind} artifact (YAML or JSON).",
+        ) from e
 
 
 def import_openapi(spec: Path) -> tuple[str, dict[str, Any] | None, list[Any]]:
@@ -28,7 +51,7 @@ def import_openapi(spec: Path) -> tuple[str, dict[str, Any] | None, list[Any]]:
             cause=f"not a file: {spec}",
             next_step=_CONFIRM_PATH,
         )
-    result = import_openapi_path(spec)
+    result = _parsed_or_user_error("OpenAPI", spec, lambda: import_openapi_path(spec))
     yaml_text = dump_document_to_yaml(result.document)
     explain_payload = {
         "document": result.document.model_dump(mode="json", by_alias=True),
@@ -49,7 +72,7 @@ def import_terraform(target: Path) -> tuple[str, dict[str, Any] | None, list[Any
             cause=f"path does not exist: {target}",
             next_step=_CONFIRM_PATH,
         )
-    result = import_terraform_path(target)
+    result = _parsed_or_user_error("Terraform", target, lambda: import_terraform_path(target))
     yaml_text = dump_document_to_yaml(result.document)
     explain_payload = {
         "document": result.document.model_dump(mode="json", by_alias=True),
@@ -70,7 +93,7 @@ def import_kubernetes(target: Path) -> tuple[str, dict[str, Any] | None, list[An
             cause=f"path does not exist: {target}",
             next_step=_CONFIRM_PATH,
         )
-    result = import_kubernetes_path(target)
+    result = _parsed_or_user_error("Kubernetes", target, lambda: import_kubernetes_path(target))
     yaml_text = dump_document_to_yaml(result.document)
     explain_payload = {
         "document": result.document.model_dump(mode="json", by_alias=True),
@@ -340,7 +363,11 @@ def scan_payload_to_draft_yaml(payload: dict[str, Any]) -> str:
     perimeter = {
         "id": "default_perimeter",
         "name": "Perímetro inferido",
-        "members": member_ids[:_DRAFT_MAX_COMPONENTS],
+        # `member_component_ids` é o nome canónico do campo. O draft escrevia `members`, que o
+        # schema descartava em silêncio: cada draft de `import repo` saía com uma fronteira sem
+        # membros nenhuns. Agora que as entidades aninhadas recusam chaves desconhecidas, o
+        # erro seria visível — mas a correcção é escrever o campo certo.
+        "member_component_ids": member_ids[:_DRAFT_MAX_COMPONENTS],
         "inference_note": (
             "Fronteira derivada do scan de repositório — revise membros, fluxos cruzados e exposição externa."
         ),

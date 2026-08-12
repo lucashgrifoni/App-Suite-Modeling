@@ -2,7 +2,7 @@ import { useState, type SyntheticEvent } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router";
 import { importArtifact } from "../api/otmApi";
-import { ApiError } from "../api/client";
+import { apiErrorMessage } from "../api/apiErrorMessage";
 import { Alert } from "../components/ui/Alert";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
@@ -64,7 +64,7 @@ export function ImportPage() {
       setStructuredExplanations(res.explanations ?? null);
       toast.success(t("import.toastImported"));
     } catch (err) {
-      const msg = err instanceof ApiError ? err.message : t("import.toastFail");
+      const msg = apiErrorMessage(err, t, "import.toastFail");
       setError(msg);
       toast.error(msg);
     } finally {

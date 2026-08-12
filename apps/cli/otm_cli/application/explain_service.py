@@ -69,12 +69,16 @@ def run_explain(
         )
     try:
         raw = json.loads(path.read_text(encoding="utf-8"))
-    except OSError as e:
+    # UnicodeDecodeError belongs here rather than with the JSON errors: it comes out of
+    # `read_text`, so the file was never decoded at all. It is a ValueError, not an OSError, and
+    # used to escape both handlers and reach the user as a raw traceback on any analysis JSON a
+    # Windows editor had saved as cp1252/latin-1.
+    except (OSError, UnicodeDecodeError) as e:
         raise CliUserError(
             exit_code=1,
             failed=f"reading `{path}`.",
             cause=str(e),
-            next_step="confirm the file path.",
+            next_step="confirm the file path and that the file is UTF-8 encoded.",
         ) from e
     except json.JSONDecodeError as e:
         raise CliUserError(

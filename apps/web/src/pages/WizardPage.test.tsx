@@ -160,3 +160,141 @@ describe("WizardPage document integrity", () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 });
+
+/**
+ * `template_semantic_profile` trimmed inside `onChange`, so the controlled input was fed
+ * back its own trimmed value and the space the user had just typed vanished before the next
+ * character arrived. "api backend rest" came out "apibackendrest", with no hint anywhere on
+ * the page that spaces were unwelcome.
+ */
+describe("WizardPage template_semantic_profile field", () => {
+  async function profileField(user: ReturnType<typeof userEvent.setup>) {
+    render(<WizardPage />, { wrapper: Providers });
+    // The field lives inside a collapsed <details> disclosure on step 1.
+    await user.click(screen.getByText("Template semantic profile (optional)"));
+    return document.querySelector<HTMLInputElement>("#tprofile")!;
+  }
+
+  it("keeps the spaces the user types", async () => {
+    const user = userEvent.setup();
+    const field = await profileField(user);
+
+    await user.click(field);
+    await user.keyboard("api backend rest");
+
+    expect(document.querySelector<HTMLInputElement>("#tprofile")!.value).toBe(
+      "api backend rest",
+    );
+  });
+
+  it("keeps leading spaces while the user is still typing", async () => {
+    const user = userEvent.setup();
+    const field = await profileField(user);
+
+    await user.click(field);
+    await user.keyboard("  leading");
+
+    expect(document.querySelector<HTMLInputElement>("#tprofile")!.value).toBe("  leading");
+  });
+
+  it("trims on blur, which is when the value is committed", async () => {
+    const user = userEvent.setup();
+    const field = await profileField(user);
+
+    await user.click(field);
+    await user.keyboard("  api_backend  ");
+    await user.tab();
+
+    await waitFor(() => expect(storedDoc().model.template_semantic_profile).toBe("api_backend"));
+  });
+
+  it("commits a whitespace-only entry as no profile at all", async () => {
+    const user = userEvent.setup();
+    const field = await profileField(user);
+
+    await user.click(field);
+    await user.keyboard("   ");
+    await user.tab();
+
+    await waitFor(() => expect(storedDoc().model.template_semantic_profile).toBeNull());
+  });
+});
+
+/**
+ * Step gating was component-local state initialised to 0, so arriving at /wizard with a
+ * finished model in session — or simply refreshing — re-locked Components, Flows and Finish.
+ * Editing an existing model's components meant clicking "Next" through steps that had
+ * nothing left to ask, and the step tabs looked like navigation while being dead.
+ */
+describe("WizardPage step unlocking", () => {
+  function stepButton(name: RegExp): HTMLButtonElement {
+    return screen.getByRole("button", { name }) as HTMLButtonElement;
+  }
+
+  it("unlocks the components step for a model that already has components", () => {
+    render(<WizardPage />, { wrapper: Providers });
+    expect(stepButton(/2\. Components/)).toBeEnabled();
+  });
+
+  it("unlocks the flows step for a model that already has flows", () => {
+    render(<WizardPage />, { wrapper: Providers });
+    expect(stepButton(/3\. Flows/)).toBeEnabled();
+  });
+
+  it("unlocks the finish step for a model that already has flows", () => {
+    render(<WizardPage />, { wrapper: Providers });
+    expect(stepButton(/4\. Finish/)).toBeEnabled();
+  });
+
+  it("keeps the components step locked for a model with nothing in it yet", () => {
+    sessionStorage.setItem(
+      DOC_KEY,
+      JSON.stringify({ ...seedDocument(), components: [], data_flows: [] }),
+    );
+    render(<WizardPage />, { wrapper: Providers });
+    expect(stepButton(/2\. Components/)).toBeDisabled();
+  });
+
+  it("does not re-lock the steps ahead when the user steps back", async () => {
+    const user = userEvent.setup();
+    render(<WizardPage />, { wrapper: Providers });
+    await user.click(stepButton(/4\. Finish/));
+
+    await user.click(stepButton(/1\. Context/));
+
+    expect(stepButton(/4\. Finish/)).toBeEnabled();
+  });
+
+  it("returns to the step the user was on after a remount", async () => {
+    const user = userEvent.setup();
+    const first = render(<WizardPage />, { wrapper: Providers });
+    await user.click(stepButton(/3\. Flows/));
+    await waitFor(() => expect(document.querySelector("#flow-0-id")).not.toBeNull());
+    first.unmount();
+
+    render(<WizardPage />, { wrapper: Providers });
+
+    expect(document.querySelector("#flow-0-id")).not.toBeNull();
+  });
+
+  it("ignores a stored step the current model cannot support", () => {
+    // A blank model must not open on "Flows" just because the previous model was finished.
+    sessionStorage.setItem("otm.web.wizard.step", "3");
+    sessionStorage.setItem(
+      DOC_KEY,
+      JSON.stringify({ ...seedDocument(), components: [], data_flows: [] }),
+    );
+
+    render(<WizardPage />, { wrapper: Providers });
+
+    expect(screen.getByLabelText("Model title")).toBeInTheDocument();
+  });
+
+  it("ignores a corrupt stored step", () => {
+    sessionStorage.setItem("otm.web.wizard.step", "not-a-number");
+
+    render(<WizardPage />, { wrapper: Providers });
+
+    expect(screen.getByLabelText("Model title")).toBeInTheDocument();
+  });
+});

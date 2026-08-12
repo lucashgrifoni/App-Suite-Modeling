@@ -63,6 +63,15 @@ def get_template_detail(
     return item
 
 
+# HEAD acompanha GET (RFC 9110 9.3.2): verificadores de links, caches e sondas usam-no, e
+# `/openapi.json` e `/docs` — servidos pelo `Route` do Starlette — já respondiam, enquanto
+# estas rotas davam 405. Mesmo padrão de `/health` em system.py: rota separada e fora do
+# schema, porque uma única rota com GET+HEAD reutilizaria o `operationId` nos dois métodos e
+# produziria um OpenAPI inválido. Reaproveita a função do GET, para não duplicar parâmetros.
+router.add_api_route("", get_templates, methods=["HEAD"], include_in_schema=False)
+router.add_api_route("/{template_id}", get_template_detail, methods=["HEAD"], include_in_schema=False)
+
+
 @router.post(
     "/{template_id}/instantiate",
     status_code=status.HTTP_201_CREATED,

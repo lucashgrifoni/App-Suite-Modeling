@@ -12,6 +12,7 @@ from pydantic import ValidationError as PydanticValidationError
 
 from otm_api.routers._errors import (
     document_from_payload_or_422,
+    ensure_analysis_matches_document,
     raise_analysis_validation_error,
     raise_pack_not_found,
 )
@@ -62,6 +63,7 @@ def post_remediation_backlog(
             analysis_obj = AnalysisResult.model_validate(body.analysis)
         except PydanticValidationError as e:
             raise raise_analysis_validation_error(e) from e
+        ensure_analysis_matches_document(doc, analysis_obj)
 
     # Com `run_analysis`, esta rota corre o motor e o loader de packs pode levantar
     # `FileNotFoundError`. Sem este mapeamento, um `pack_id` errado saía como 500

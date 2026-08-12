@@ -57,6 +57,22 @@ function searchBox(): HTMLInputElement {
   return document.querySelector<HTMLInputElement>("#tpl-search")!;
 }
 
+/**
+ * A 5xx the API itself answered, with its own error envelope — what `apiFetch` builds when
+ * the body carries a `detail`. Its message is worth showing verbatim.
+ */
+function serverSaid503(): ApiError {
+  return new ApiError("transient failure", 503, { detail: "transient failure" }, true);
+}
+
+/**
+ * A 502 from the dev-server proxy or any gateway in front of the API: empty body, so the
+ * only text available is the reason phrase "Bad Gateway".
+ */
+function gatewayReturned502(): ApiError {
+  return new ApiError("Bad Gateway", 502, null, false);
+}
+
 beforeEach(() => {
   listTemplatesMock.mockReset();
 });
@@ -66,7 +82,7 @@ describe("TemplatesPage list error handling", () => {
     const user = userEvent.setup();
     listTemplatesMock
       .mockResolvedValueOnce([template("alpha")])
-      .mockRejectedValueOnce(new ApiError("transient failure", 503, null))
+      .mockRejectedValueOnce(serverSaid503())
       .mockResolvedValueOnce([template("beta")]);
 
     render(<TemplatesPage />, { wrapper: Providers });
@@ -86,7 +102,7 @@ describe("TemplatesPage list error handling", () => {
     const user = userEvent.setup();
     listTemplatesMock
       .mockResolvedValueOnce([template("alpha"), template("gamma")])
-      .mockRejectedValueOnce(new ApiError("transient failure", 503, null));
+      .mockRejectedValueOnce(serverSaid503());
 
     render(<TemplatesPage />, { wrapper: Providers });
     await waitFor(() => expect(rowIds()).toEqual(["alpha", "gamma"]));
@@ -97,5 +113,26 @@ describe("TemplatesPage list error handling", () => {
     // Rows that answered a different query must not sit under the new search text as if
     // they were its result — the user can click one believing it matched.
     expect(rowIds()).toEqual([]);
+  });
+
+  it("explains a dead backend instead of printing the reason phrase 'Bad Gateway'", async () => {
+    // With the API down, the proxy's 502 has an empty body, so the only string the
+    // response offers is its reason phrase. On its own it names neither the cause nor a
+    // next step, and it was rendered raw into the catalogue.
+    listTemplatesMock.mockRejectedValueOnce(gatewayReturned502());
+
+    render(<TemplatesPage />, { wrapper: Providers });
+
+    const alert = await screen.findByRole("alert", {}, { timeout: 3000 });
+    expect(alert).not.toHaveTextContent("Bad Gateway");
+  });
+
+  it("points at the API when the backend is unreachable", async () => {
+    listTemplatesMock.mockRejectedValueOnce(gatewayReturned502());
+
+    render(<TemplatesPage />, { wrapper: Providers });
+
+    const alert = await screen.findByRole("alert", {}, { timeout: 3000 });
+    expect(alert).toHaveTextContent(/Could not reach the API/);
   });
 });
