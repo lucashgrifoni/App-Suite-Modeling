@@ -470,6 +470,8 @@
     "helpTitle": "Baseline vs revisão",
     "helpBody": "A sessão actual é a <strong>baseline</strong>. Cole JSON exportado como revisão para comparar evolução estrutural e, opcionalmente, deltas do motor.",
     "revisionJson": "Revisão (JSON)",
+    "revisionFileLabel": "Ficheiro do modelo revisto (JSON)",
+    "readFail": "Não foi possível ler o ficheiro seleccionado.",
     "includeAnalysis": "Incluir análise (executa o motor nos dois documentos no servidor)",
     "packOptional": "Pack (opcional)",
     "comparing": "A comparar…",

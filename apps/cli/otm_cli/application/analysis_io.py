@@ -17,7 +17,10 @@ _SCHEMA_INVALID = "the document is not valid for the canonical schema."
 def load_analysis_result_from_path(path: Path) -> AnalysisResult:
     try:
         raw = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as e:
+    # ValueError, not JSONDecodeError: `read_text` runs first, and a cp1252/latin-1 file raises
+    # UnicodeDecodeError — a sibling ValueError, not an OSError — which used to escape both
+    # handlers and reach the user as a raw traceback.
+    except (OSError, ValueError) as e:
         raise CliUserError(
             exit_code=1,
             failed=f"reading `{path}`.",
@@ -40,7 +43,9 @@ def load_two_analysis_results(baseline: Path, revised: Path) -> tuple[AnalysisRe
     try:
         b_obj = json.loads(baseline.read_text(encoding="utf-8"))
         r_obj = json.loads(revised.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as e:
+    # See `load_analysis_result_from_path`: ValueError also covers the UnicodeDecodeError that
+    # `read_text` raises on a non-UTF-8 analysis file.
+    except (OSError, ValueError) as e:
         raise CliUserError(
             exit_code=1,
             failed=f"reading JSON at `{baseline}` / `{revised}`.",

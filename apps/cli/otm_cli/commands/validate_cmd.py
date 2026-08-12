@@ -11,8 +11,9 @@ from rich.panel import Panel
 
 from otm_cli.application.validate_service import run_validate
 from otm_cli.commands.bootstrap import console
-from otm_cli.commands.handle_errors import exit_on_cli_error
+from otm_cli.commands.handle_errors import exit_on_cli_error, print_cli_error
 from otm_cli.shared.errors import CliUserError
+from otm_cli.shared.render import safe
 
 
 def register(app: typer.Typer) -> None:
@@ -36,9 +37,11 @@ def register(app: typer.Typer) -> None:
                 _print_valid(run_validate(path))
             except CliUserError as e:
                 # Report every bad file rather than dying on the first: a contributor fixing a
-                # batch wants the whole list, not one error per commit attempt.
+                # batch wants the whole list, not one error per commit attempt. The body is the
+                # same one the single-file path prints — pre-commit always lands here, so this
+                # is the diagnostic most contributors ever see.
                 failures += 1
-                console.print(f"[red]Invalid[/red] {path}: {e.failed}")
+                print_cli_error(console, e, header=f"[red]Invalid[/red] {safe(path)}: {safe(e.failed)}")
         if failures:
             raise typer.Exit(1)
 
@@ -56,8 +59,10 @@ def _print_valid(doc: ThreatModelDocument) -> None:
     console.print(
         Panel.fit(
             f"[green]Valid[/green]\n\n"
-            f"Title: [bold]{doc.metadata.title}[/bold]\n"
-            f"Schema: {doc.model_info.schema_version}\n"
+            f"Title: [bold]{safe(doc.metadata.title)}[/bold]\n"
+            # `schema_version` is an unconstrained str from the document, so it is
+            # user data like the title above and needs the same escaping.
+            f"Schema: {safe(doc.model_info.schema_version)}\n"
             f"Components: {len(doc.components)} · Flows: {len(doc.data_flows)}",
             title="validate",
             border_style="green",

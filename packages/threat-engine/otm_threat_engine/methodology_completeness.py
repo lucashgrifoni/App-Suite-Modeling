@@ -5,6 +5,7 @@ from __future__ import annotations
 from otm_core_schema import ThreatModelDocument, ThreatModelMethodology
 from otm_core_schema.enums import MethodologyCompletenessState
 
+from otm_threat_engine.methodology_lenses.common import looks_like_ai_context
 from otm_threat_engine.methodology_lenses.linddun import _looks_like_pii_context
 from otm_threat_engine.result import MethodologyCompletenessInfo
 
@@ -69,9 +70,12 @@ def _assess_linddun(doc: ThreatModelDocument) -> tuple[list[str], MethodologyCom
 
 
 def _assess_plot4ai(doc: ThreatModelDocument) -> tuple[list[str], MethodologyCompletenessState]:
-    if not doc.import_signals_corpus:
+    # `import_signals_corpus` só existe em modelos vindos do import de artefactos, por isso um
+    # modelo IA escrito à mão ficava eternamente PARTIAL enquanto a lente PLOT4ai gerava
+    # ameaças sobre ele. O gate é o mesmo da lente — tal como `_assess_linddun` usa o de PII.
+    if not looks_like_ai_context(doc):
         return (
-            ["PLOT4AI: sem corpus/import_signals — camadas AI podem ficar sub-evidenciadas."],
+            ["PLOT4AI: sem sinais de sistema de IA no modelo — camadas AI podem ficar sub-evidenciadas."],
             MethodologyCompletenessState.PARTIAL,
         )
     return [], MethodologyCompletenessState.COMPLETE

@@ -470,6 +470,8 @@
     "helpTitle": "Baseline vs revision",
     "helpBody": "The current session is the <strong>baseline</strong>. Paste exported JSON as revision to compare structural evolution and, optionally, engine deltas.",
     "revisionJson": "Revision (JSON)",
+    "revisionFileLabel": "Revised model file (JSON)",
+    "readFail": "Could not read the selected file.",
     "includeAnalysis": "Include analysis (runs engine for both documents on the server)",
     "packOptional": "Pack (optional)",
     "comparing": "Comparing…",

@@ -428,16 +428,27 @@ export function DiffPage() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<ThreatModelComparisonResult | null>(null);
 
-  const onFile = useCallback((file: File | null) => {
-    if (!file) return;
-    const r = new FileReader();
-    r.onload = () => {
-      setRevisedText(typeof r.result === "string" ? r.result : "");
-      setResult(null);
-      setError(null);
-    };
-    r.readAsText(file, "UTF-8");
-  }, []);
+  const onFile = useCallback(
+    (file: File | null) => {
+      if (!file) return;
+      const r = new FileReader();
+      r.onload = () => {
+        setRevisedText(typeof r.result === "string" ? r.result : "");
+        setResult(null);
+        setError(null);
+      };
+      // Sem `onerror` uma leitura falhada (ficheiro removido, permissões, disco) não dizia
+      // nada: a área de texto ficava vazia e o utilizador não sabia se tinha escolhido mal
+      // o ficheiro ou se a página estava avariada.
+      r.onerror = () => {
+        const msg = t("diff.readFail");
+        setError(msg);
+        toast.error(msg);
+      };
+      r.readAsText(file, "UTF-8");
+    },
+    [t, toast],
+  );
 
   if (!baseline) return <Navigate to="/" replace />;
 
@@ -528,7 +539,13 @@ export function DiffPage() {
           </div>
         ) : null}
         <div className="flex flex-wrap items-center gap-2">
+          {/* Rótulo sr-only como em ImportPage: sem ele o leitor de ecrã anuncia um botão
+              sem nome num dos dois caminhos para fornecer o modelo revisto. */}
+          <Label htmlFor="revised-file" className="sr-only">
+            {t("diff.revisionFileLabel")}
+          </Label>
           <input
+            id="revised-file"
             type="file"
             accept=".json,application/json"
             className="text-sm text-otm-text-muted file:mr-2"

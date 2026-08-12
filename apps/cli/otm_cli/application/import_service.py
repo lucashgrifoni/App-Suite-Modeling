@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from otm_core_schema import dump_document_to_yaml
+from otm_core_schema import ThreatModelDocument, dump_document_to_yaml
 
 from otm_cli.shared.emit import write_json_file
 from otm_cli.shared.errors import CliUserError
@@ -81,8 +81,73 @@ def import_kubernetes(target: Path) -> tuple[str, dict[str, Any] | None, list[An
     return yaml_text, explain_payload, list(result.inferences)
 
 
-def import_otm(path: Path) -> str:
-    """Convert an Open Threat Model (OTM 0.2.0) file into a canonical `.otm.yaml`."""
+#: OTM collections whose entries the bridge maps one-for-one when it can, plus the canonical
+#: attribute that receives them. A shortfall means entries were skipped (unusable id, or a
+#: dataflow endpoint that was itself skipped).
+_OTM_MAPPED_COLLECTIONS = (
+    ("trustZones", "trust zone", "trust_boundaries"),
+    ("components", "component", "components"),
+    ("dataflows", "data flow", "data_flows"),
+    ("assets", "asset", "assets"),
+)
+
+#: Per-entity OTM keys with no canonical equivalent. `risk` is an integer 0-100 scale while the
+#: canonical document uses enums, so it is neither translated nor approximated.
+_OTM_UNMAPPED_ENTITY_KEYS = ("risk", "tags", "attributes")
+
+
+def _plural(count: int, noun: str) -> str:
+    return f"{count} {noun}" if count == 1 else f"{count} {noun}s"
+
+
+def _otm_list(raw: dict[str, Any], key: str) -> list[Any]:
+    value = raw.get(key)
+    return value if isinstance(value, list) else []
+
+
+def _otm_not_imported(text: str, doc: ThreatModelDocument) -> list[str]:
+    """Name what the OTM→canonical conversion left behind.
+
+    The bridge covers the architecture only, and the CLI help used to call it "lossless" — an
+    analyst migrating out of IriusRisk shipped a model with zero hand-authored threats and saw
+    exit 0. Counting the source against the produced document keeps this honest without
+    duplicating the bridge's internal id-remapping rules.
+    """
+    try:
+        raw = yaml.safe_load(text)
+    except yaml.YAMLError:  # pragma: no cover - the conversion above already parsed this text
+        return []
+    if not isinstance(raw, dict):  # pragma: no cover - import_otm_text rejects a non-mapping root
+        return []
+
+    notes: list[str] = []
+    for key, noun in (("threats", "threat"), ("mitigations", "mitigation")):
+        count = len(_otm_list(raw, key))
+        if count:
+            notes.append(f"{_plural(count, noun)} — analyst-authored; the engine derives its own")
+
+    for key, noun, attr in _OTM_MAPPED_COLLECTIONS:
+        dropped = len(_otm_list(raw, key)) - len(getattr(doc, attr))
+        if dropped > 0:
+            notes.append(f"{_plural(dropped, noun)} — unusable id, or an endpoint that was not imported")
+
+    unmapped = sum(
+        1
+        for key, _noun, _attr in _OTM_MAPPED_COLLECTIONS
+        for entry in _otm_list(raw, key)
+        if isinstance(entry, dict) and any(k in entry for k in _OTM_UNMAPPED_ENTITY_KEYS)
+    )
+    if unmapped:
+        notes.append(f"{_plural(unmapped, 'risk/tag attribute block')} — OTM's 0-100 scale has no canonical equivalent")
+    return notes
+
+
+def import_otm(path: Path) -> tuple[str, list[str]]:
+    """Convert an Open Threat Model (OTM 0.2.0) file into a canonical `.otm.yaml`.
+
+    Returns the YAML plus notes naming everything the conversion did not carry over, so the
+    command can report the loss instead of exiting 0 on a quietly gutted model.
+    """
     from otm_artifact_import.otm_native import import_otm_text
     from pydantic import ValidationError
 
@@ -94,7 +159,10 @@ def import_otm(path: Path) -> str:
             next_step=_CONFIRM_PATH,
         )
     try:
-        doc = import_otm_text(path.read_text(encoding="utf-8"))
+        # `read_text` stays inside the try: a non-UTF-8 file raises UnicodeDecodeError, a
+        # ValueError, and that must surface as the same friendly error as a malformed document.
+        text = path.read_text(encoding="utf-8")
+        doc = import_otm_text(text)
     except (ValueError, ValidationError) as e:
         raise CliUserError(
             exit_code=1,
@@ -102,7 +170,7 @@ def import_otm(path: Path) -> str:
             cause=str(e),
             next_step="confirm the file is a valid Open Threat Model (otm-0.2.0) document.",
         ) from e
-    return dump_document_to_yaml(doc)
+    return dump_document_to_yaml(doc), _otm_not_imported(text, doc)
 
 
 def scan_repo(root: Path) -> dict[str, Any]:

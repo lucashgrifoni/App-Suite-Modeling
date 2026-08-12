@@ -38,6 +38,15 @@ def _normalize(value: Any) -> Any:
 
 def _criterion_matches(actual: Any, expected: Any) -> bool:
     actual = _normalize(actual)
+    if isinstance(actual, list | tuple):
+        # Campo de lista do modelo (`asset_ids`, `data_types`, `related_component_ids`, ...):
+        # o autor da regra escreve o elemento que procura, não a lista inteira. Comparar a
+        # lista completa por igualdade tornava `asset_ids: orders_data` uma regra que nunca
+        # casa — a mesma falha silenciosa que `_reject_unknown` impede num campo mal escrito,
+        # mas sem sequer o aviso.
+        members = [_normalize(item) for item in actual]
+        wanted = expected if isinstance(expected, list) else [expected]
+        return any(_normalize(item) in members for item in wanted)
     if isinstance(expected, list):
         return any(actual == _normalize(item) for item in expected)
     return bool(actual == _normalize(expected))

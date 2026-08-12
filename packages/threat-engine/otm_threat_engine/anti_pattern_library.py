@@ -14,6 +14,11 @@ from pathlib import Path
 
 import yaml
 from otm_core_schema import ThreatModelDocument
+
+# Vem de core-schema, não de `engine_support` (que importaria em círculo). Antes havia aqui uma
+# terceira cópia da regra de travessia de fronteira, e as três liam só um dos dois lados em que
+# a pertença pode ser declarada.
+from otm_core_schema.trust_membership import cross_boundary_flow_ids as _cross_boundary_flow_ids
 from pydantic import BaseModel, Field
 
 from otm_threat_engine.wizard_signals import signals_for_profile, synthetic_keyword_corpus
@@ -29,20 +34,6 @@ def _bump_confidence(hint: str, reason: str) -> str:
     if reason == "structural_primary" and hint == "medium":
         return "high"
     return hint
-
-
-def _cross_boundary_flow_ids(doc: ThreatModelDocument) -> set[str]:
-    """Cópia local (evita import circular com engine_support)."""
-    ids: set[str] = set()
-    by_comp = {c.id: c for c in doc.components}
-    for flow in doc.data_flows:
-        a = by_comp.get(flow.from_component)
-        b = by_comp.get(flow.to_component)
-        if not a or not b:
-            continue  # pragma: no cover - defensive guard
-        if a.in_trust_boundary and b.in_trust_boundary and a.in_trust_boundary != b.in_trust_boundary:
-            ids.add(flow.id)
-    return ids
 
 
 class AntiPatternDefinition(BaseModel):

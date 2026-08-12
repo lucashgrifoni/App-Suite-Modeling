@@ -42,12 +42,16 @@ function seedDocument(): OtmDocument {
     metadata: { title: "Wizard fixture", tags: [] },
     components: [{ id: "api", name: "Api", kind: "process" }],
     data_flows: [{ id: "f_in", from_component: "api", to_component: "api", name: "In" }],
-    trust_boundaries: [],
-    assets: [],
+    trust_boundaries: [{ id: "tb", name: "TB", member_component_ids: ["api"] }],
+    assets: [{ id: "asset_1", name: "Asset", related_component_ids: ["api"] }],
     threats: [],
     mitigations: [],
     evidence_suggestions: [],
   };
+}
+
+function storedDoc(): OtmDocument {
+  return JSON.parse(sessionStorage.getItem(DOC_KEY)!) as OtmDocument;
 }
 
 function Providers({ children }: Readonly<{ children: ReactNode }>) {
@@ -114,5 +118,45 @@ describe("WizardPage keyboard editing", () => {
     const after = document.querySelector<HTMLInputElement>("#flow-0-id")!;
     expect(after.value).toBe("f_in_edge");
     expect(document.activeElement).toBe(after);
+  });
+});
+
+/**
+ * These assert the WIRING, not the helpers. `nextEntityId` and `applyComponentIdRename`
+ * have their own unit tests in utils/wizardEdits.test.ts, but a tested helper that no
+ * component calls fixes nothing for the user — so these drive the real inputs and buttons.
+ */
+describe("WizardPage document integrity", () => {
+  it("propagates a component id rename to flows, assets and boundaries on blur", async () => {
+    const user = userEvent.setup();
+    render(<WizardPage />, { wrapper: Providers });
+    const idInput = await gotoStep(user, 1, "#comp-0-id");
+
+    await user.click(idInput);
+    await user.keyboard("_gw");
+    await user.tab(); // blur is what commits the rename
+
+    await waitFor(() => expect(storedDoc().components[0].id).toBe("api_gw"));
+    const saved = storedDoc();
+    expect(saved.data_flows[0].from_component).toBe("api_gw");
+    expect(saved.data_flows[0].to_component).toBe("api_gw");
+    expect(saved.assets[0].related_component_ids).toEqual(["api_gw"]);
+    expect(saved.trust_boundaries[0].member_component_ids).toEqual(["api_gw"]);
+  });
+
+  it("never mints a component id that already exists", async () => {
+    const user = userEvent.setup();
+    render(<WizardPage />, { wrapper: Providers });
+    await gotoStep(user, 1, "#comp-0-id");
+
+    // Add two, remove the first, add again. Length-based ids hand back `comp_2` twice.
+    await user.click(screen.getByRole("button", { name: /add component/i }));
+    await user.click(screen.getByRole("button", { name: /add component/i }));
+    const removeButtons = screen.getAllByRole("button", { name: /remove/i });
+    await user.click(removeButtons[1]);
+    await user.click(screen.getByRole("button", { name: /add component/i }));
+
+    const ids = storedDoc().components.map((c) => c.id);
+    expect(new Set(ids).size).toBe(ids.length);
   });
 });

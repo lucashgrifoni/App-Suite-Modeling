@@ -18,6 +18,7 @@ from otm_cli.shared.emit import write_json_file
 from otm_cli.shared.enums import DiffFormat
 from otm_cli.shared.errors import CliUserError
 from otm_cli.shared.gate import GATE_TRIP_EXIT_CODE, parse_fail_on, render_gate_result
+from otm_cli.shared.render import safe
 
 
 def register(app: typer.Typer) -> None:
@@ -63,12 +64,12 @@ def register(app: typer.Typer) -> None:
                 write_json_file(payload=payload, output=json_out)
             except CliUserError as e:
                 exit_on_cli_error(console, e)
-            console.print(f"[green]Analysis diff written to[/green] {json_out.resolve()}")
+            console.print(f"[green]Analysis diff written to[/green] {safe(json_out.resolve())}")
 
         if fmt == DiffFormat.json:
             print(json.dumps(payload, indent=2, ensure_ascii=False))
         else:
-            console.print(Panel("\n".join(lines or []), title="diff-analysis", border_style="magenta"))
+            console.print(Panel(safe("\n".join(lines or [])), title="diff-analysis", border_style="magenta"))
 
         # Gate last: every artifact is on disk and stdout is complete before we can exit non-zero.
         if policy.active:

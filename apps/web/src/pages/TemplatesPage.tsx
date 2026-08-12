@@ -76,10 +76,21 @@ export function TemplatesPage() {
         const list = await listTemplates(
           Object.keys(params).length ? params : undefined,
         );
-        if (!cancelled) setItems(list);
+        if (!cancelled) {
+          setItems(list);
+          // Sem isto o banner de erro era só de escrita: um 5xx transitório enquanto o
+          // utilizador escrevia deixava-o fixo por cima de uma página a funcionar até
+          // recarregar o separador.
+          setError(null);
+        }
       } catch (e) {
-        if (!cancelled)
+        if (!cancelled) {
           setError(e instanceof ApiError ? e.message : t("templates.listFail"));
+          // As linhas que ficavam no ecrã respondiam à consulta ANTERIOR, mas apareciam por
+          // baixo do texto de pesquisa novo, sem indicação de que estavam desactualizadas —
+          // o utilizador podia escolher um template julgando que correspondia ao filtro.
+          setItems([]);
+        }
       } finally {
         if (!cancelled) setLoadingList(false);
       }

@@ -1,10 +1,19 @@
 from __future__ import annotations
 
-import re
+from otm_core_schema import RiskAssessment, StrideCategory, ThreatModelMethodology
 
-from otm_core_schema import RiskAssessment, StrideCategory, ThreatModelDocument, ThreatModelMethodology
+# Os helpers lexicais e o gate de contexto IA vivem em core-schema porque a matriz de
+# adequação metodologia × contexto (lá) precisa da mesma resposta que a lente PLOT4ai (aqui).
+# Reexportados com os nomes históricos: o motor e os testes importam-nos deste módulo.
+from otm_core_schema.ai_context import (
+    build_ai_calibration_corpus,
+    has_any,
+    has_any_token,
+    has_safe_ai_marker,
+    has_token,
+    looks_like_ai_context,
+)
 
-from otm_threat_engine.ai_modeling.corpus import build_ai_calibration_corpus
 from otm_threat_engine.result import (
     AnalysisResult,
     HeuristicThreat,
@@ -12,6 +21,19 @@ from otm_threat_engine.result import (
     MethodologyInsights,
     StructuralFinding,
 )
+
+__all__ = [
+    "append_engine_lens_note",
+    "append_heuristics_from_entries",
+    "append_methodology_insights",
+    "boost_impact",
+    "build_ai_calibration_corpus",
+    "has_any",
+    "has_any_token",
+    "has_safe_ai_marker",
+    "has_token",
+    "looks_like_ai_context",
+]
 
 
 def append_engine_lens_note(
@@ -87,104 +109,3 @@ def append_heuristics_from_entries(
             )
         )
         existing.add(hid)
-
-
-def has_any(text: str, words: tuple[str, ...]) -> bool:
-    return any(k in text for k in words)
-
-
-_TOKEN_RE_CACHE: dict[str, re.Pattern[str]] = {}
-
-
-def has_token(text: str, token: str) -> bool:
-    """
-    Matching pragmático por token (word-boundary simplificado).
-
-    Evita `in` ingênuo para tokens curtos (ex.: `rag`, `llm`, `ai`) que podem aparecer como substring
-    em palavras não relacionadas.
-
-    Delimitadores considerados: qualquer coisa que não seja [a-z0-9].
-    """
-    tok = token.lower().strip()
-    if not tok:
-        return False
-    rx = _TOKEN_RE_CACHE.get(tok)
-    if rx is None:
-        rx = re.compile(rf"(?<![a-z0-9]){re.escape(tok)}(?![a-z0-9])")
-        _TOKEN_RE_CACHE[tok] = rx
-    return rx.search(text) is not None
-
-
-def has_any_token(text: str, tokens: tuple[str, ...]) -> bool:
-    return any(has_token(text, t) for t in tokens)
-
-
-_AI_COMPANION_TERMS = (
-    "model",
-    "agent",
-    "embedding",
-    "inference",
-    "prompt",
-    "copilot",
-    "chatbot",
-    "vector",
-    "retrieval",
-    "provider",
-    "orchestrator",
-    "generative",
-)
-
-
-def has_safe_ai_marker(text: str) -> bool:
-    """
-    Sinal curto `ai` só é aceite quando acompanhado de contexto técnico relacionado.
-
-    Mantém uma heurística simples e legível para evitar colateral de substring.
-    """
-    if not has_any_token(text, ("ai",)):
-        return False
-    return has_any(text, _AI_COMPANION_TERMS)
-
-
-def looks_like_ai_context(doc: ThreatModelDocument) -> bool:
-    """Gate da lente PLOT4ai: evita termos genéricos (`model`, `pipeline`) que poluem não-IA."""
-    tags_l = [t.lower() for t in (doc.metadata.tags or [])]
-    if any(t in tags_l for t in ("ai", "llm", "rag", "genai", "generative-ai", "machine-learning", "mlops")):
-        return True
-    text = build_ai_calibration_corpus(doc)
-    # tokens curtos: evitar substring matching ingênuo (ex.: "outrage" conter "rag")
-    if has_any_token(text, ("llm", "rag")):
-        return True
-    if has_safe_ai_marker(text):
-        return True
-    return any(
-        k in text
-        for k in (
-            "large language",
-            "language model",
-            "prompt",
-            "embedding",
-            "chatbot",
-            "copilot",
-            "vector db",
-            "vector-db",
-            "vector store",
-            "vector_database",
-            "tool-use",
-            "tool use",
-            "function calling",
-            "agent orchestrat",
-            "ai agent",
-            "agent-api",
-            "inference",
-            "inferência",
-            "inferencia pipeline",
-            "inference pipeline",
-            "fine-tune",
-            "fine tune",
-            "knowledge assistant",
-            "retrieval service",
-            "embedding service",
-            "external_ai",
-        )
-    )

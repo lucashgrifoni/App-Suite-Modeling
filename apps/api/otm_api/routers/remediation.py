@@ -13,6 +13,7 @@ from pydantic import ValidationError as PydanticValidationError
 from otm_api.routers._errors import (
     document_from_payload_or_422,
     raise_analysis_validation_error,
+    raise_pack_not_found,
 )
 from otm_api.schemas.bodies import RemediationBacklogRequest
 from otm_api.services.remediation import build_remediation_backlog_response
@@ -60,14 +61,21 @@ def post_remediation_backlog(
         except PydanticValidationError as e:
             raise raise_analysis_validation_error(e) from e
 
-    backlog = build_remediation_backlog_response(
-        doc,
-        analysis_obj,
-        run_analysis=body.run_analysis,
-        pack_id=body.pack_id,
-        methodology=body.methodology,
-        auto_recommend_methodology=body.auto_recommend_methodology,
-    )
+    # Com `run_analysis`, esta rota corre o motor e o loader de packs pode levantar
+    # `FileNotFoundError`. Sem este mapeamento, um `pack_id` errado saía como 500
+    # genérico aqui, enquanto as outras rotas do motor devolvem 404 PACK_NOT_FOUND
+    # (ver exports.py / models.py / reports_premium.py).
+    try:
+        backlog = build_remediation_backlog_response(
+            doc,
+            analysis_obj,
+            run_analysis=body.run_analysis,
+            pack_id=body.pack_id,
+            methodology=body.methodology,
+            auto_recommend_methodology=body.auto_recommend_methodology,
+        )
+    except FileNotFoundError as e:
+        raise raise_pack_not_found(e) from e
     if export_format == "markdown":
         from otm_exporters import export_remediation_backlog_markdown
 

@@ -24,6 +24,7 @@ import {
   removeDataFlows,
   sanitizeEntityIdInput,
 } from "../utils/documentNormalize";
+import { applyComponentIdRename, nextEntityId } from "../utils/wizardEdits";
 import {
   getAdaptiveAnswer,
   promptsForProfile,
@@ -60,6 +61,8 @@ export function WizardPage() {
   const [validating, setValidating] = useState(false);
   /** ID do fluxo no início da edição (focus), para propagar rename em ativos/fronteiras no blur. */
   const flowIdFocusStartRef = useRef<Map<number, string>>(new Map());
+  /** Idem para o ID do componente — sem isto, corrigir um typo desliga os fluxos desse componente. */
+  const componentIdFocusStartRef = useRef<Map<number, string>>(new Map());
 
   const stepsForStepper = useMemo(
     () => STEP_DEFS.map((s) => ({ id: s.id, label: t(s.labelKey) })),
@@ -335,6 +338,38 @@ export function WizardPage() {
                     aria-describedby={
                       idHasTrailingWhitespace(c.id) ? `comp-${idx}-id-trail-hint` : undefined
                     }
+                    onFocus={() => {
+                      componentIdFocusStartRef.current.set(idx, c.id);
+                    }}
+                    onBlur={(e) => {
+                      // Correcting a component id must carry its flows, assets, boundary
+                      // memberships and threat targets with it. Without this, fixing a
+                      // typo in the very field that exists for it silently detaches every
+                      // flow from that component and the server answers
+                      // `data_flow '<id>' from_component '<old>' not found` — which no
+                      // screen in this app can repair.
+                      const from = componentIdFocusStartRef.current.get(idx);
+                      componentIdFocusStartRef.current.delete(idx);
+                      const raw = e.target.value;
+                      const trimmed = raw.trim();
+                      let components = doc.components;
+                      let dirty = trimmed !== raw;
+                      if (dirty) {
+                        components = updateArrayItem(components, idx, { ...c, id: trimmed });
+                      }
+                      let nextDoc = { ...doc, components };
+                      const to = components[idx]?.id ?? "";
+                      if (from && to && from !== to && OTM_ENTITY_ID_REGEX.test(to)) {
+                        // The helper refuses ambiguous renames (duplicate new id, old id
+                        // still in use) by returning the document unchanged.
+                        const renamed = applyComponentIdRename(nextDoc, from, to);
+                        if (renamed !== nextDoc) {
+                          nextDoc = renamed;
+                          dirty = true;
+                        }
+                      }
+                      if (dirty) setDocument(nextDoc);
+                    }}
                     onChange={(e) => {
                       setComponents(
                         updateArrayItem(doc.components, idx, {
@@ -400,7 +435,9 @@ export function WizardPage() {
                 setComponents([
                   ...doc.components,
                   {
-                    id: `comp_${doc.components.length + 1}`,
+                    // Array length is not a monotonic counter: add two, delete the
+                    // first, add again and it hands back the surviving row's id.
+                    id: nextEntityId("comp_", componentIds),
                     name: t("wizard.newComponentShort"),
                     kind: "process",
                   },
@@ -547,7 +584,10 @@ export function WizardPage() {
                 setFlows([
                   ...doc.data_flows,
                   {
-                    id: `flow_${doc.data_flows.length + 1}`,
+                    id: nextEntityId(
+                      "flow_",
+                      doc.data_flows.map((fl) => fl.id),
+                    ),
                     from_component: componentIds[0] ?? "",
                     to_component: componentIds[1] ?? componentIds[0] ?? "",
                     name: null,

@@ -11,6 +11,7 @@ from otm_cli.application.explain_service import run_explain
 from otm_cli.commands.bootstrap import console
 from otm_cli.commands.handle_errors import exit_on_cli_error
 from otm_cli.shared.errors import CliUserError
+from otm_cli.shared.render import safe
 
 
 def register(app: typer.Typer) -> None:
@@ -48,4 +49,4 @@ def register(app: typer.Typer) -> None:
             raise typer.Exit(0)
 
         for cat, subj, msg in rows:
-            console.print(f"[cyan]{cat}[/cyan] · {subj} — {msg}")
+            console.print(f"[cyan]{safe(cat)}[/cyan] · {safe(subj)} — {safe(msg)}")

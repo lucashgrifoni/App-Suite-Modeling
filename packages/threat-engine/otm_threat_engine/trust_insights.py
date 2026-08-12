@@ -2,16 +2,10 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
-
-from otm_core_schema import Component, ThreatModelDocument
+from otm_core_schema import ThreatModelDocument
+from otm_core_schema.trust_membership import resolve_component_boundaries
 
 from otm_threat_engine.result import TrustBoundaryFinding
-
-
-def _boundary_of(component_id: str, by_id: Mapping[str, Component]) -> str | None:
-    comp = by_id.get(component_id)
-    return comp.in_trust_boundary if comp else None
 
 
 def _flow_display_id(flow_id: str | None, flow_name: str | None) -> str:
@@ -20,12 +14,14 @@ def _flow_display_id(flow_id: str | None, flow_name: str | None) -> str:
 
 def analyze_trust_boundary_crossings(doc: ThreatModelDocument) -> list[TrustBoundaryFinding]:
     """Identifica fluxos que atravessam fronteiras distintas (ponto de análise STRIDE)."""
-    by_id = {c.id: c for c in doc.components}
+    # Resolvido das duas direcções: ler só `Component.in_trust_boundary` deixava um modelo
+    # que declara a pertença na fronteira sem travessia nenhuma, sem aviso.
+    boundaries = resolve_component_boundaries(doc)
     out: list[TrustBoundaryFinding] = []
 
     for flow in doc.data_flows:
-        fb = _boundary_of(flow.from_component, by_id)
-        tb = _boundary_of(flow.to_component, by_id)
+        fb = boundaries.get(flow.from_component)
+        tb = boundaries.get(flow.to_component)
         if fb is None or tb is None:
             continue
         if fb != tb:

@@ -48,12 +48,13 @@ def _truncate(value: Any, *, depth: int = 0) -> Any:
         decoded_head = value[:_MAX_INPUT_CHARS].decode("utf-8", "replace")
         suppressed = len(value) - _MAX_INPUT_CHARS
         return f"{decoded_head}…[{suppressed} bytes suppressed]"
-    if isinstance(value, list):
-        if len(value) > 50:
-            list_head: list[Any] = [_truncate(v, depth=depth + 1) for v in value[:50]]
-            list_head.append(f"…[{len(value) - 50} items suppressed]")
+    if isinstance(value, (list, tuple)):
+        seq = list(value)
+        if len(seq) > 50:
+            list_head: list[Any] = [_truncate(v, depth=depth + 1) for v in seq[:50]]
+            list_head.append(f"…[{len(seq) - 50} items suppressed]")
             return list_head
-        return [_truncate(v, depth=depth + 1) for v in value]
+        return [_truncate(v, depth=depth + 1) for v in seq]
     if isinstance(value, dict):
         if len(value) > 50:
             dict_head_items = list(value.items())[:50]
@@ -61,7 +62,15 @@ def _truncate(value: Any, *, depth: int = 0) -> Any:
             out["__suppressed__"] = f"{len(value) - 50} keys suppressed"
             return out
         return {str(k): _truncate(v, depth=depth + 1) for k, v in value.items()}
-    return value
+    # JSON scalars pass through untouched (`bool` is a subclass of `int`).
+    if isinstance(value, (int, float, type(None))):
+        return value
+    # Tudo o resto vira texto. A armadilha: para um validador customizado
+    # (`raise ValueError(...)` num `@model_validator`), o Pydantic guarda o objeto
+    # `Exception` em `ctx['error']`. Se ele chegasse ao `JSONResponse`, o `json.dumps`
+    # rebentaria *dentro* deste handler de 422 e o cliente receberia um 500 genérico,
+    # perdendo a mensagem do validador. Nunca deixar sair daqui um valor não-serializável.
+    return _truncate(str(value), depth=depth)
 
 
 def _truncated_errors(errors: list[dict[str, Any]]) -> list[dict[str, Any]]:

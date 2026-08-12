@@ -18,6 +18,7 @@ from otm_cli.shared.emit import write_json_file
 from otm_cli.shared.enums import DiffFormat, MethodologyOption
 from otm_cli.shared.errors import CliUserError
 from otm_cli.shared.gate import GATE_TRIP_EXIT_CODE, parse_fail_on, render_gate_result
+from otm_cli.shared.render import safe
 
 
 def _apply_gate(analysis_diff: AnalysisDiff | None, policy: GatePolicy) -> None:
@@ -137,7 +138,7 @@ def register(app: typer.Typer) -> None:
                 write_json_file(payload=out_payload, output=json_out)
             except CliUserError as e:
                 exit_on_cli_error(console, e)
-            console.print(f"[green]Diff written to[/green] {json_out.resolve()}")
+            console.print(f"[green]Diff written to[/green] {safe(json_out.resolve())}")
 
         if fmt == DiffFormat.json:
             body = json_print or ""
@@ -145,8 +146,10 @@ def register(app: typer.Typer) -> None:
         elif fmt == DiffFormat.markdown:
             print(md_text or "", end="")
         elif summary_only:
-            console.print(Panel(panel_text or "", title="diff (summary)", border_style="blue"))
+            console.print(Panel(safe(panel_text or ""), title="diff (summary)", border_style="blue"))
         else:
-            console.print(Panel(panel_text or "", title="diff", border_style="blue"))
+            # The panel body carries document titles AND its own `[metadata]`/`[components]`
+            # section headers; unescaped, Rich reads both as style tags and deletes them.
+            console.print(Panel(safe(panel_text or ""), title="diff", border_style="blue"))
 
         _apply_gate(analysis_diff, policy)

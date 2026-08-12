@@ -33,6 +33,25 @@ def write_text_file(*, content: str, output: Path) -> None:
         ) from e
 
 
+def write_bytes_file(*, content: bytes, output: Path) -> None:
+    """Binary sibling of `write_text_file` — same guards, same `CliUserError` contract.
+
+    Exists so the PDF report cannot skip the pre-check the way it used to: calling
+    `Path.write_bytes` directly turned a missing `-o` parent into a raw `FileNotFoundError`
+    traceback while every other output path produced the one-line actionable error.
+    """
+    _require_writable_parent(output)
+    try:
+        output.write_bytes(content)
+    except PermissionError as e:
+        raise CliUserError(
+            exit_code=1,
+            failed=f"cannot write to `{output}`.",
+            cause=f"permission denied: {e}",
+            next_step="check file/directory permissions or close any process holding the file.",
+        ) from e
+
+
 def write_json_file(*, payload: dict[str, Any], output: Path) -> None:
     write_text_file(
         content=json.dumps(payload, indent=2, ensure_ascii=False),

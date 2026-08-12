@@ -18,8 +18,9 @@ from otm_cli.application.report_service import (
 )
 from otm_cli.commands.bootstrap import console
 from otm_cli.commands.handle_errors import exit_on_cli_error
-from otm_cli.shared.emit import write_text_file
+from otm_cli.shared.emit import write_bytes_file, write_text_file
 from otm_cli.shared.errors import CliUserError
+from otm_cli.shared.render import safe
 
 
 def register(app: typer.Typer) -> None:
@@ -91,7 +92,7 @@ def register(app: typer.Typer) -> None:
         except CliUserError as e:
             exit_on_cli_error(console, e)
         except ReportPdfDependencyError as e:  # pragma: no cover - defensive guard
-            console.print(f"[red]{e}[/red]")
+            console.print(f"[red]{safe(e)}[/red]")
             raise typer.Exit(1) from e
 
         if isinstance(outcome, ReportLegacyResult):
@@ -100,7 +101,7 @@ def register(app: typer.Typer) -> None:
                     write_text_file(content=outcome.text, output=output)
                 except CliUserError as e:
                     exit_on_cli_error(console, e)
-                console.print(f"[green]Report[/green] → {output.resolve()}")
+                console.print(f"[green]Report[/green] → {safe(output.resolve())}")
             else:
                 print(outcome.text, end="")
             return
@@ -111,12 +112,15 @@ def register(app: typer.Typer) -> None:
                     write_text_file(content=outcome.text, output=output)
                 except CliUserError as e:
                     exit_on_cli_error(console, e)
-                console.print(f"[green]Report premium (Markdown)[/green] → {output.resolve()}")
+                console.print(f"[green]Report premium (Markdown)[/green] → {safe(output.resolve())}")
             else:
                 print(outcome.text, end="")
             return
 
         if isinstance(outcome, ReportPremiumPdfResult):
             default_out = output or outcome.default_path
-            default_out.write_bytes(outcome.pdf_bytes)
-            console.print(f"[green]Report premium (PDF)[/green] → {default_out.resolve()}")
+            try:
+                write_bytes_file(content=outcome.pdf_bytes, output=default_out)
+            except CliUserError as e:
+                exit_on_cli_error(console, e)
+            console.print(f"[green]Report premium (PDF)[/green] → {safe(default_out.resolve())}")

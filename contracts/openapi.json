@@ -1108,6 +1108,7 @@
             "title": "Revised Analysis"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "baseline_analysis",
@@ -1388,6 +1389,7 @@
             "default": false
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "document"
@@ -1807,6 +1809,7 @@
             "description": "Pack opcional quando `run_analysis` é true."
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "baseline",
@@ -2030,6 +2033,7 @@
             "description": "Versão nova (revisão)."
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "baseline",
@@ -2047,6 +2051,7 @@
             "description": "Raiz compatível com `ThreatModelDocument` (aliases YAML respeitados)."
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "document"
@@ -2219,6 +2224,7 @@
             "description": "Idioma para texto user-facing em Markdown (pt-BR | en). Omitido = pt-BR (retrocompatível)."
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "document"
@@ -3007,6 +3013,7 @@
             "description": "Metodologia para `methodology_completeness`; default = `document.model.methodology`."
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "document"
@@ -3115,6 +3122,7 @@
             "description": "Idioma dos textos estruturais do relatório (pt-BR | en). Omitido = pt-BR."
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "document"
@@ -3470,6 +3478,7 @@
             "default": false
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "document"
