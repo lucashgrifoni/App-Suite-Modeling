@@ -42,6 +42,16 @@ cd apps/web && npm install && npm run dev
 
 Variável opcional: `VITE_API_PREFIX` (default `/api`) se o proxy for diferente.
 
+Se a porta 8000 já estiver ocupada, mova a API e o proxy em conjunto com `OTM_API_PORT`; para um backend remoto ou em container, `OTM_API_URL` substitui a origem inteira:
+
+```bash
+# Terminal 1
+OTM_API_PORT=8123 uvicorn otm_api.main:app --reload --port 8123
+
+# Terminal 2 — proxy `/api` → 8123
+cd apps/web && OTM_API_PORT=8123 npm run dev
+```
+
 ## Troubleshooting de build (Windows)
 
 Em alguns ambientes Windows com projeto em caminho contendo `&`, os wrappers `.cmd` de `npm run` podem resolver paths incorretos para `vite`/`tsc`.

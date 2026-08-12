@@ -49,6 +49,7 @@ Testes: `tests/test_http_response_goldens.py` — validam forma e campos de alto
 ## E2E híbrido (UI + API real)
 
 - Configuração: `apps/web/playwright.hybrid.config.ts` — sobe **uvicorn** (`otm_api`) na porta **8000** e **Vite** na **4173** (proxy `/api` → 8000, igual ao `vite.config` de desenvolvimento).
+- **Porta da API configurável:** a porta 8000 é muito disputada; se já estiver ocupada, o uvicorn falha no bind e todo o E2E sem mocks fica inexecutável. Defina `OTM_API_PORT` para mover **uvicorn e o proxy do Vite em conjunto** (nunca podem divergir). Para apontar para um backend remoto ou em container, use `OTM_API_URL`, que substitui a origem inteira. Resolução em `apps/web/src/config/devApiTarget.ts` (com testes em `devApiTarget.test.ts`); valores malformados voltam ao default 8000.
 - Testes: `apps/web/e2e/hybrid.spec.ts` (sem `page.route` para mocks de API).
 - **Pré-checagem:** `npm run e2e:hybrid` chama primeiro `e2e:hybrid:check` → `python ../../scripts/check_hybrid_prereqs.py`. Se falhar, instale a API em modo editável na raiz: `pip install -e ".[dev,cli,api]"`.
 
@@ -62,6 +63,9 @@ cd apps/web
 npm ci
 npx playwright install chromium
 npm run e2e:hybrid
+
+# 3) Se a porta 8000 já estiver ocupada
+OTM_API_PORT=8123 npm run e2e:hybrid
 ```
 
 O workflow GitHub Actions **hybrid-e2e** corre estes testes em Ubuntu (Python + Node no mesmo job).
