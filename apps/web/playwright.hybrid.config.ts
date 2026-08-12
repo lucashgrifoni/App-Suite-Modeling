@@ -69,5 +69,10 @@ export default defineConfig({
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
     },
+    /* Same rationale as playwright.config.ts: a second engine against the REAL backend. */
+    {
+      name: "firefox",
+      use: { ...devices["Desktop Firefox"] },
+    },
   ],
 });

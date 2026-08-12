@@ -24,6 +24,10 @@
     "e2e:phase4": "node ./node_modules/@playwright/test/cli.js test e2e/diagram.spec.ts e2e/pdf.spec.ts e2e/history.spec.ts --project=chromium",
     "e2e:smoke:portable": "node ./node_modules/@playwright/test/cli.js test e2e/smoke.spec.ts --project=chromium",
     "e2e:smoke:headed": "node ./node_modules/@playwright/test/cli.js test e2e/smoke.spec.ts --project=chromium --headed",
+    "e2e:browsers:install": "node ./node_modules/@playwright/test/cli.js install chromium firefox",
+    "e2e:critical:firefox": "node ./node_modules/@playwright/test/cli.js test e2e/smoke.spec.ts e2e/cockpit.spec.ts e2e/journeys.spec.ts e2e/import.spec.ts --project=firefox",
+    "e2e:rest:firefox": "node ./node_modules/@playwright/test/cli.js test e2e/diagram.spec.ts e2e/pdf.spec.ts e2e/history.spec.ts e2e/i18n.spec.ts e2e/release.spec.ts --project=firefox",
+    "e2e:hybrid:firefox": "npm run e2e:hybrid:check && node ./node_modules/@playwright/test/cli.js test e2e/hybrid.spec.ts --config playwright.hybrid.config.ts --project=firefox",
     "preview": "node ./node_modules/vite/bin/vite.js preview",
     "test": "node ./node_modules/vitest/vitest.mjs run",
     "test:watch": "node ./node_modules/vitest/vitest.mjs"

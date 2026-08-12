@@ -37,5 +37,15 @@ export default defineConfig({
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
     },
+    /*
+     * Firefox uses a different engine (Gecko), so it catches what a Chromium-only suite
+     * cannot: prefixed-CSS and layout differences, stricter parsing, and diverging
+     * File/Blob and download behaviour on the export flow. Install it with
+     * `node ./node_modules/@playwright/test/cli.js install firefox`.
+     */
+    {
+      name: "firefox",
+      use: { ...devices["Desktop Firefox"] },
+    },
   ],
 });
