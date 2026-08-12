@@ -15,7 +15,7 @@ from otm_cli.application.diff_service import run_model_diff
 from otm_cli.commands.bootstrap import console
 from otm_cli.commands.handle_errors import exit_on_cli_error
 from otm_cli.shared.emit import write_json_file
-from otm_cli.shared.enums import DiffFormat
+from otm_cli.shared.enums import DiffFormat, MethodologyOption
 from otm_cli.shared.errors import CliUserError
 from otm_cli.shared.gate import GATE_TRIP_EXIT_CODE, parse_fail_on, render_gate_result
 
@@ -61,6 +61,21 @@ def register(app: typer.Typer) -> None:
             "-p",
             help="Industry pack when --with-analysis is set.",
         ),
+        methodology: MethodologyOption | None = typer.Option(
+            None,
+            "--methodology",
+            "-m",
+            help=(
+                "Methodology/engine used for BOTH sides of the comparison "
+                "(stride, linddun, nist_data_centric, octave_allegro, cia_die, pasta, plot4ai). "
+                "Must match the lens `otm analyze` runs, or the gate judges a different threat set."
+            ),
+        ),
+        auto_methodology: bool = typer.Option(
+            False,
+            "--auto-methodology",
+            help="If no explicit methodology, apply automatic recommendation to both sides.",
+        ),
         summary_only: bool = typer.Option(
             False,
             "--summary-only",
@@ -88,6 +103,12 @@ def register(app: typer.Typer) -> None:
 
         Exit codes: 0 no gate trip · 1 usage error · 3 gate tripped.
         """
+        if methodology is not None and auto_methodology:
+            raise typer.BadParameter(
+                "`--methodology/-m` and `--auto-methodology` are mutually exclusive; pass only one.",
+                param_hint="--methodology / --auto-methodology",
+            )
+
         try:
             policy = GatePolicy(fail_on=parse_fail_on(fail_on), fail_on_risk_increase=fail_on_risk_increase)
         except CliUserError as e:
@@ -105,6 +126,8 @@ def register(app: typer.Typer) -> None:
                 pack=pack,
                 fmt=fmt,
                 summary_only=summary_only,
+                methodology=methodology,
+                auto_methodology=auto_methodology,
             )
         except CliUserError as e:
             exit_on_cli_error(console, e)

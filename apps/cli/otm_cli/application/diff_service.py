@@ -13,7 +13,7 @@ from otm_threat_engine.comparison_models import AnalysisDiff
 from otm_threat_engine.threat_model_comparison import compare_threat_models
 
 from otm_cli.shared.document_loader import load_otm_document, load_pack_or_raise
-from otm_cli.shared.enums import DiffFormat
+from otm_cli.shared.enums import DiffFormat, MethodologyOption
 
 
 def _diff_header_lines(full: Any, with_analysis: bool) -> list[str]:
@@ -145,6 +145,8 @@ def run_model_diff(
     pack: str | None,
     fmt: DiffFormat,
     summary_only: bool,
+    methodology: MethodologyOption | None = None,
+    auto_methodology: bool = False,
 ) -> tuple[dict, str | None, str | None, str | None, AnalysisDiff | None]:
     """
     Return (out_payload, json_body_to_print, markdown_body, text_panel_body, analysis_diff).
@@ -176,8 +178,12 @@ def run_model_diff(
     ba: AnalysisResult | None = None
     ra: AnalysisResult | None = None
     if with_analysis:
-        ba = analyze_document(doc_a, pack=pack_def)
-        ra = analyze_document(doc_b, pack=pack_def)
+        # Both sides must run under the SAME lens, and it must be the lens the caller asked
+        # for: the gate compares these two analyses, so judging them under a different
+        # methodology than the one configured is a silent pass or a spurious failure.
+        lens = methodology.value if methodology else None
+        ba = analyze_document(doc_a, pack=pack_def, methodology=lens, auto_recommend=auto_methodology)
+        ra = analyze_document(doc_b, pack=pack_def, methodology=lens, auto_recommend=auto_methodology)
     full = compare_threat_models(doc_a, doc_b, baseline_analysis=ba, revised_analysis=ra)
 
     if with_analysis:

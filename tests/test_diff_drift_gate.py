@@ -309,6 +309,65 @@ def test_methodology_switch_is_reported_as_not_evaluated_never_as_passed() -> No
     assert "methodology" in text.lower()
 
 
+# ------------------------------------------------------- the gate must judge under the configured lens
+#
+# `otm analyze` accepts `--methodology`, and the shipped composite action forwards its
+# `methodology` input to the Analyze step. The gate step ran `otm diff` with no lens at all, so
+# the analysis the gate judged was not the analysis the user configured. Both directions were
+# reproducible: a green build on a PR that adds a HIGH threat under the configured lens, and a
+# red build for a repo whose lens says the change is harmless.
+
+
+def test_diff_accepts_the_same_methodology_flag_as_analyze() -> None:
+    """A gate that silently ignores the configured lens is a silent-pass hole."""
+    r = CliRunner().invoke(app, ["diff", str(_MINIMAL), str(_MINIMAL), "--methodology", "stride"])
+    assert r.exit_code == 0, r.output
+    assert "No such option" not in r.output
+
+
+def _revised_with_bare_admin_actor(tmp_path: Path) -> Path:
+    """A change whose verdict genuinely depends on the lens.
+
+    Adding an unconnected external actor raises spoofing/repudiation concerns that
+    STRIDE scores at/above `high`, while the CIA-DIE lens — which scores impact on
+    data, not actors — stays below the bar. `_revised_with_new_risk` is unusable
+    here: it also adds an unauthenticated plaintext flow carrying sensitive data,
+    which trips every lens and so could not detect the flag being ignored.
+    """
+    doc = yaml.safe_load(_MINIMAL.read_text(encoding="utf-8"))
+    doc["components"].append({"id": "admin", "name": "Admin", "kind": "external_entity"})
+    out = tmp_path / "revised_actor.otm.yaml"
+    out.write_text(yaml.safe_dump(doc, allow_unicode=True, sort_keys=False), encoding="utf-8")
+    return out
+
+
+def test_gate_verdict_follows_the_requested_methodology(tmp_path: Path) -> None:
+    revised = _revised_with_bare_admin_actor(tmp_path)
+    runner = CliRunner()
+
+    under_stride = runner.invoke(
+        app, ["diff", str(_MINIMAL), str(revised), "--methodology", "stride", "--fail-on", "high"]
+    )
+    under_cia_die = runner.invoke(
+        app, ["diff", str(_MINIMAL), str(revised), "--methodology", "cia_die", "--fail-on", "high"]
+    )
+
+    # If the flag were ignored, both runs would return the same code — which is
+    # exactly the silent-pass/spurious-failure bug this guards.
+    assert under_stride.exit_code == _GATE_TRIP, under_stride.output
+    assert under_cia_die.exit_code == 0, under_cia_die.output
+
+
+def test_diff_rejects_methodology_and_auto_methodology_together() -> None:
+    """Mirrors the mutual exclusion `otm analyze` already enforces."""
+    r = CliRunner().invoke(
+        app,
+        ["diff", str(_MINIMAL), str(_MINIMAL), "--methodology", "stride", "--auto-methodology"],
+    )
+    assert r.exit_code != 0
+    assert r.exit_code != _GATE_TRIP
+
+
 def test_cli_methodology_switch_exits_zero(tmp_path: Path) -> None:
     raw = yaml.safe_load(_MINIMAL.read_text(encoding="utf-8"))
     raw["model"]["methodology"] = "nist_data_centric"

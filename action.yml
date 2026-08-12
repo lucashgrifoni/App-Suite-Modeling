@@ -156,7 +156,12 @@ runs:
           exit 0
         fi
 
+        # The gate MUST judge under the same lens and pack the Analyze step used. Without
+        # these the gate compared a different threat set than the SARIF it uploads, which
+        # could report `passed` on a PR that adds a HIGH threat under the configured lens.
         args=("${BASELINE}" "${MODEL}" --fail-on "${FAIL_ON}")
+        [ -n "${METHODOLOGY}" ] && args+=(--methodology "${METHODOLOGY}")
+        [ -n "${PACK}" ] && args+=(--pack "${PACK}")
         [ "${RISK_INCREASE}" = "true" ] && args+=(--fail-on-risk-increase)
 
         set +e
@@ -201,6 +206,8 @@ runs:
         BASELINE: ${{ inputs.baseline }}
         FAIL_ON: ${{ inputs.fail-on }}
         RISK_INCREASE: ${{ inputs.fail-on-risk-increase }}
+        METHODOLOGY: ${{ inputs.methodology }}
+        PACK: ${{ inputs.pack }}
 
     # `always()` so the findings still reach code scanning on the run where the gate tripped.
     - name: Upload SARIF
