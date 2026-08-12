@@ -58,6 +58,16 @@ def msg_remediation_group_by_invalid(*, value: str, accepted: str) -> str:
     )
 
 
+def msg_import_too_large(*, limit_mib: int) -> str:
+    """O limite vem do chamador para não haver duas fontes de verdade para o mesmo número."""
+    return _t(
+        f"The artifact is larger than the {limit_mib} MiB upload limit. Split it, or import the "
+        "directory with the CLI (`otm import`).",
+        f"O artefacto é maior do que o limite de {limit_mib} MiB por upload. Divida-o, ou importe "
+        "a pasta com o CLI (`otm import`).",
+    )
+
+
 def msg_import_not_utf8() -> str:
     return _t(
         "The artifact is not valid UTF-8 text. Re-save it as UTF-8; this endpoint takes text, not binaries.",

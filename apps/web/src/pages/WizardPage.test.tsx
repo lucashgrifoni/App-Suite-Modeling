@@ -360,6 +360,66 @@ describe("WizardPage component name normalisation", () => {
 });
 
 /**
+ * The flow Name field beside it had the same hole. It is optional, so the empty case already
+ * had an answer — `null`, which the diagram and the review list both read as "no label" — but
+ * `e.target.value || null` only recognises the empty string. Three spaces are truthy, so they
+ * were stored as a name and travelled on: `ThreatModelDiagram` labels the edge with them and
+ * Mermaid draws a caption box holding nothing, and the review list prints `(   )` beside the
+ * flow. Trimming on blur rather than on change keeps the space just typed from vanishing
+ * mid-word, exactly as on the component row.
+ */
+describe("WizardPage flow name normalisation", () => {
+  it("stores no name at all when the field holds only whitespace", async () => {
+    const user = userEvent.setup();
+    render(<WizardPage />, { wrapper: Providers });
+    const nameInput = await gotoStep(user, 2, "#flow-0-name");
+
+    await user.clear(nameInput);
+    await user.type(nameInput, "   ");
+    await user.tab();
+
+    expect(storedDoc().data_flows[0].name).toBeNull();
+  });
+
+  it("trims the padding off a real flow name instead of discarding it", async () => {
+    const user = userEvent.setup();
+    render(<WizardPage />, { wrapper: Providers });
+    const nameInput = await gotoStep(user, 2, "#flow-0-name");
+
+    await user.clear(nameInput);
+    await user.type(nameInput, "  reads orders  ");
+    await user.tab();
+
+    expect(storedDoc().data_flows[0].name).toBe("reads orders");
+  });
+
+  it("leaves a flow name that needs no normalisation exactly as typed", async () => {
+    const user = userEvent.setup();
+    render(<WizardPage />, { wrapper: Providers });
+    const nameInput = await gotoStep(user, 2, "#flow-0-name");
+
+    await user.clear(nameInput);
+    await user.type(nameInput, "reads orders");
+    await user.tab();
+
+    expect(storedDoc().data_flows[0].name).toBe("reads orders");
+  });
+
+  it("accepts a whole string without losing focus mid-word", async () => {
+    const user = userEvent.setup();
+    render(<WizardPage />, { wrapper: Providers });
+    const nameInput = await gotoStep(user, 2, "#flow-0-name");
+
+    await user.click(nameInput);
+    await user.keyboard(" bound");
+
+    const after = document.querySelector<HTMLInputElement>("#flow-0-name")!;
+    expect(after.value).toBe("In bound");
+    expect(document.activeElement).toBe(after);
+  });
+});
+
+/**
  * Clearing a component ID produced, on screen, `components.0.id: String should match pattern
  * '^[a-zA-Z0-9_][a-zA-Z0-9_.-]*$'` — Pydantic's raw regex plus a 0-based path that matches
  * nothing the user can see. The rule behind that pattern is one sentence long.

@@ -51,14 +51,22 @@ para *todos* os pedidos, e o endereço que a app vê passa a vir de um cabeçalh
 A app **não confia** nesse endereço a não ser que o operador o declare. Ver
 `apps/api/otm_api/middleware_rate_limit.py::client_key`.
 
+Em `staging` e `production`, com o rate limit ativo, essa declaração é **obrigatória**: sem ela a
+app **recusa arrancar**. Ver "Porque é que a omissão aborta o arranque", abaixo.
+
 ### Caso 1 — sem reverse proxy (a app recebe ligações diretas)
 
 ```bash
 uvicorn otm_api.main:app --host 0.0.0.0 --port 8000 --no-proxy-headers
+# e, no processo da app (staging/production):
+OTM_TRUSTED_PROXY=0
 ```
 
-`--no-proxy-headers` desliga a reescrita. Sem `OTM_TRUSTED_PROXY`, o rate limit conta por
-endereço de peer, que é o correto aqui.
+`--no-proxy-headers` desliga a reescrita, e o rate limit conta por endereço de peer, que é o
+correto aqui. `OTM_TRUSTED_PROXY=0` declara essa postura: nenhum endereço vindo de
+`X-Forwarded-For` conta como identidade. Um cliente que na mesma envie o cabeçalho com o próprio
+endereço cai no balde partilhado — é uma degradação que ele próprio escolhe, e não afeta os
+restantes chamadores diretos.
 
 ### Caso 2 — atrás de um reverse proxy que o operador controla
 
@@ -85,13 +93,47 @@ pelo atacante. `$proxy_add_x_forwarded_for` acrescenta `$remote_addr` à direita
 uvicorn seleciona (percorre a cadeia da direita para a esquerda e fica no primeiro hop não
 confiável).
 
-### O que acontece se não declarar nada
+### Porque é que a omissão aborta o arranque
 
-`OTM_TRUSTED_PROXY` por omissão é `off`. Pedidos que trazem `X-Forwarded-For` compatível com o
-endereço observado são contados **num balde partilhado** em vez de um balde por endereço: o
-limite continua a existir e não pode ser reiniciado a rodar um cabeçalho. Na primeira vez que
-isso acontece, a app escreve `rate_limit_forwarded_client_untrusted` (WARNING) no log. Se a app
-está de facto atrás de um proxy seu, essa linha é o sinal para ligar `OTM_TRUSTED_PROXY=1`.
+Quando a app não confia no endereço encaminhado, não tem forma nenhuma de distinguir chamadores:
+o uvicorn já reescreveu `scope["client"]` a partir do cabeçalho antes de qualquer código da app
+correr, por isso o peer real (o proxy) já não existe para nós. A única chave segura que resta é
+**uma só, partilhada por todos os pedidos encaminhados**.
+
+Isso é seguro e é honesto, mas tem um preço de disponibilidade que não pode ficar implícito:
+atrás do reverse proxy que este documento torna obrigatório, **todos** os pedidos trazem o
+cabeçalho, logo **todos** caem nesse balde. `120/minute` deixa de querer dizer "120 por chamador"
+e passa a querer dizer "120 para o serviço inteiro" — um cliente ocupado devolve 429 a todos os
+outros, incluindo à sonda `/health`. Medido: um chamador faz 120 pedidos e o **primeiro** pedido
+do chamador seguinte leva 429.
+
+Por isso a omissão deixou de ter default. Em `staging`/`production` com o limite ativo,
+`resolve_trusted_proxy` levanta `TrustedProxyConfigError` e o processo não arranca, com as duas
+opções e as respectivas consequências escritas na mensagem. Um deploy que falha é observável; um
+serviço que serve 429 a toda a gente duas semanas depois do upgrade não é.
+
+O que **não** muda: a propriedade de segurança. Rodar `X-Forwarded-For` continua a não criar um
+balde novo, com `OTM_TRUSTED_PROXY=0` ou sem ele.
+
+| Situação | Comportamento |
+|----------|---------------|
+| `development` (com ou sem limite) | Sem declaração exigida; endereço encaminhado não é de confiança. |
+| Limite desligado (`OTM_RATE_LIMIT_DISABLED=1`) | Sem declaração exigida (não há balde). |
+| `staging`/`production`, limite ativo, variável ausente ou em branco | **Arranque abortado.** |
+| `OTM_TRUSTED_PROXY` com valor não reconhecido (`maybe`, `2`, …) | **Arranque abortado** — uma gralha não pode significar `off`. |
+| `OTM_TRUSTED_PROXY=1` | Balde por chamador. Exige as flags do uvicorn do Caso 2. |
+| `OTM_TRUSTED_PROXY=0` | Balde partilhado por todos os pedidos encaminhados, e o custo é escrito no arranque. |
+
+### Como ver isto no log
+
+- Arranque com `OTM_TRUSTED_PROXY=0` e limite ativo (fora de `development`):
+  `rate_limit_shared_bucket` (WARNING), que nomeia o limite e diz que é o orçamento de todos.
+- Primeira vez que um pedido cai mesmo no balde partilhado:
+  `rate_limit_forwarded_client_untrusted` (WARNING), uma vez por processo — uma linha por pedido
+  seria uma inundação de log controlada por quem envia o cabeçalho.
+- 429 servido a partir do balde partilhado: `rate_limit_exceeded_shared_bucket`, em vez de
+  `rate_limit_exceeded`. Do lado do cliente os dois 429 são idênticos; o nome do evento é o único
+  sítio onde a diferença fica registada, e é o que responde a "está tudo a dar 429".
 
 ## Variáveis de ambiente
 
@@ -103,14 +145,17 @@ está de facto atrás de um proxy seu, essa linha é o sinal para ligar `OTM_TRU
 | `OTM_API_KEY` | Opcional. Quando definida, exige `X-OTM-API-Key` ou `Authorization: Bearer` em **`/v1/*`**. Ver `docs/features/API.md`. |
 | `OTM_RATE_LIMIT` | Opcional. Limite no formato `limits` (ex.: `60/minute`), aplicado por IP a todas as rotas. Em staging/prod, sem esta variável aplica-se `120/minute` por defeito. Expressão inválida = falha no arranque; `0/...` também (não aceita pedido nenhum — use `OTM_RATE_LIMIT_DISABLED`). |
 | `OTM_RATE_LIMIT_DISABLED` | `1` / `true` desativa o rate limit (útil em testes locais ou atrás de gateway próprio). |
-| `OTM_TRUSTED_PROXY` | `1` / `true` declara que a API está atrás de um reverse proxy controlado pelo operador, e que o endereço resolvido de `X-Forwarded-For` identifica o chamador para efeitos de rate limit. Omissão = desconfiar. Ver a secção "Reverse proxy e identidade do chamador". |
+| `OTM_TRUSTED_PROXY` | Declaração de postura, não um interruptor opcional. `1`/`true`/`yes`/`on`: a API está atrás de um reverse proxy do operador e o endereço resolvido de `X-Forwarded-For` identifica o chamador (balde por chamador). `0`/`false`/`no`/`off`: não há tal proxy e os pedidos encaminhados partilham um balde único. Em `staging`/`production` com o limite ativo, **a omissão aborta o arranque**; um valor não reconhecido aborta sempre. Ver a secção "Reverse proxy e identidade do chamador". |
 
 ## Invariantes que o código reforça
 
 - Em `production`, sem `OTM_CORS_ORIGINS`, `allow_origins` fica vazio (CORS restritivo para browser).
 - Em `staging`/`production`, métodos e cabeçalhos CORS são listas explícitas (não `*`).
-- O rate limit nunca usa um endereço vindo de `X-Forwarded-For` sem `OTM_TRUSTED_PROXY`; esses
+- O rate limit nunca usa um endereço vindo de `X-Forwarded-For` sem `OTM_TRUSTED_PROXY=1`; esses
   pedidos partilham um balde único, que não pode ser reiniciado a variar um cabeçalho.
+- Em `staging`/`production` com o limite ativo, o processo não arranca sem `OTM_TRUSTED_PROXY`
+  declarado: o balde partilhado é um orçamento único para o serviço inteiro e tem de ser uma
+  escolha, não um default.
 - O arranque escreve uma linha `api_perimeter` com ambiente, estado da chave de API, limite,
   número de origens CORS e `trusted_proxy=on` quando o proxy é tratado como de confiança.
 

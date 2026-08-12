@@ -7,7 +7,7 @@ from collections.abc import Callable
 from fastapi import APIRouter, File, HTTPException, UploadFile, status
 from otm_artifact_import.types import ArtifactImportResult
 
-from otm_api.api_error_messages import msg_import_empty_artifact, msg_import_not_utf8
+from otm_api.api_error_messages import msg_import_empty_artifact, msg_import_not_utf8, msg_import_too_large
 from otm_api.routers._errors import error_detail
 from otm_api.schemas.bodies import ArtifactImportResponse, InferenceRecordBody
 from otm_api.services.imports import (
@@ -18,7 +18,8 @@ from otm_api.services.imports import (
 
 router = APIRouter(prefix="/imports", tags=["Assisted import"])
 
-_MAX_BYTES = 2 * 1024 * 1024
+_MAX_MIB = 2
+_MAX_BYTES = _MAX_MIB * 1024 * 1024
 
 
 def _serialize(result: ArtifactImportResult) -> ArtifactImportResponse:
@@ -58,17 +59,14 @@ async def _read_limited(file: UploadFile) -> tuple[bytes, str]:
     # (see docs/architecture/DEPLOYMENT_INVARIANTS.md).
     data = await file.read(_MAX_BYTES + 1)
     if len(data) > _MAX_BYTES:
-        # Divergência conhecida e documentada em `docs/features/API.md`: este `detail` é uma
-        # string solta, enquanto todos os erros vizinhos desta rota (e o contrato) usam
-        # `{code, message}` — um cliente que faça `detail["code"]` rebenta com `TypeError`.
-        # A correção é trocar isto por `_import_error(..., code="IMPORT_TOO_LARGE", ...)`, e
-        # está retida por um único teste que afirma `"2 MiB" in r.json()["detail"]`
-        # (`tests/test_api.py`), verdade apenas enquanto `detail` for string. Ver
-        # `tests/test_p2r2_api_contract_gaps.py`, que fixa o estado atual e falha assim que
-        # esse teste for corrigido para `["detail"]["message"]`.
-        raise HTTPException(
+        # Este era o único erro da rota fora do envelope `{code, message}`: `detail` saía como
+        # string solta, e um cliente escrito contra `docs/features/API.md` — incluindo o parser
+        # do frontend, que lê `detail.code` — rebentava com `TypeError` exatamente no erro que
+        # um utilizador provoca por acidente ao arrastar o ficheiro errado.
+        raise _import_error(
             status_code=status.HTTP_413_CONTENT_TOO_LARGE,
-            detail="Artifact exceeds 2 MiB limit (MVP).",
+            code="IMPORT_TOO_LARGE",
+            message=msg_import_too_large(limit_mib=_MAX_MIB),
         )
     # Zero bytes é o único caso inequívoco: `terraform` e `kubernetes` devolviam 200 com um
     # rascunho canónico completo a partir de um ficheiro vazio, que seguia para validate/analyze

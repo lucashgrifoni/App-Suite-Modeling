@@ -135,16 +135,55 @@ describe("analysisHistoryStorage under an exhausted quota", () => {
     expect(pushHistoryEntry(bigEntry("huge", 500))).toBe("failed");
   });
 
-  it("leaves no stale list behind when nothing fits", () => {
-    installQuotaLimitedStorage(10);
-    pushHistoryEntry(bigEntry("huge", 500));
-
-    expect(loadHistory()).toEqual([]);
-  });
-
   it("treats storing an empty list as a successful write", () => {
     installQuotaLimitedStorage(10);
 
     expect(saveHistory([])).toBe("ok");
+  });
+
+  it("clears the stored list when the caller deliberately saves an empty one", () => {
+    installQuotaLimitedStorage(100_000);
+    pushHistoryEntry(entry("a"));
+
+    saveHistory([]);
+
+    expect(loadHistory()).toEqual([]);
+  });
+});
+
+/**
+ * The shrink loop above used to end by REMOVING the key when even the newest entry alone
+ * was over quota, which turned "this one snapshot did not fit" into "your whole history is
+ * gone". A rejected `setItem` leaves the previous value intact in every browser, so the
+ * stored list was still perfectly valid and still fitted; deleting it destroyed entries the
+ * user had already earned in order to report a failure the UI announces anyway via
+ * `history.toastStorageFull`. Losing the new snapshot is the acceptable half of this trade.
+ */
+describe("analysisHistoryStorage when not even the newest entry fits", () => {
+  it("keeps the entries that were already stored", () => {
+    installQuotaLimitedStorage(2000);
+    pushHistoryEntry(entry("a"));
+    pushHistoryEntry(entry("b"));
+    pushHistoryEntry(entry("c"));
+
+    pushHistoryEntry(bigEntry("huge", 5000));
+
+    expect(loadHistory().map((e) => e.id)).toEqual(["c", "b", "a"]);
+  });
+
+  it("still reports the failure so the caller can warn", () => {
+    installQuotaLimitedStorage(2000);
+    pushHistoryEntry(entry("a"));
+
+    expect(pushHistoryEntry(bigEntry("huge", 5000))).toBe("failed");
+  });
+
+  it("does not store the oversized snapshot itself", () => {
+    installQuotaLimitedStorage(2000);
+    pushHistoryEntry(entry("a"));
+
+    pushHistoryEntry(bigEntry("huge", 5000));
+
+    expect(loadHistory().some((e) => e.id === "huge")).toBe(false);
   });
 });

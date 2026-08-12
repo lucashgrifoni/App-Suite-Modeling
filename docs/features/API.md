@@ -28,7 +28,7 @@ Contrato exportado, gate anti-stale, goldens HTTP e E2E híbrido: ver **`docs/ar
 | `OTM_API_KEY` | Se definida (não vazia), todos os pedidos a **`/v1/*`** exigem **`X-OTM-API-Key: <valor>`** ou **`Authorization: Bearer <valor>`**. Rotas como `/health`, `/docs`, `/openapi.json` permanecem sem chave. |
 | `OTM_RATE_LIMIT` | Expressão no formato [`limits`](https://limits.readthedocs.io/) (ex.: `120/minute`). Se definida, aplica-se como limite global a **todas** as rotas, incluindo `/health` e `/v1/*`, contado por chamador (ver `OTM_TRUSTED_PROXY`). Uma expressão malformada — ou `0/...`, que não aceitaria pedido nenhum — faz a app falhar no arranque, em vez de desactivar (ou trancar) o controlo em silêncio. O contador é em memória do processo: com vários workers o limite é por worker. |
 | `OTM_RATE_LIMIT_DISABLED` | `1` / `true` — desativa o rate limit mesmo em staging/produção. |
-| `OTM_TRUSTED_PROXY` | `1` / `true` — declara que a API está atrás de um reverse proxy do operador, e só então o endereço resolvido de `X-Forwarded-For` conta como identidade do chamador. Por omissão, pedidos com esse cabeçalho partilham um único balde de rate limit (o limite continua a valer, mas não pode ser reiniciado a rodar o cabeçalho). **Requer flags específicas do uvicorn** — ver `docs/architecture/DEPLOYMENT_INVARIANTS.md`. |
+| `OTM_TRUSTED_PROXY` | Declaração obrigatória em `staging`/`production` quando o limite está ativo: sem ela a app **não arranca**. `1`/`true` — a API está atrás de um reverse proxy do operador, e o endereço resolvido de `X-Forwarded-For` conta como identidade do chamador (o limite é por chamador; **requer flags específicas do uvicorn**). `0`/`false` — não há tal proxy, e todos os pedidos com esse cabeçalho partilham **um** balde, ou seja o limite passa a ser o orçamento de todos eles juntos e um cliente ocupado devolve 429 aos outros. Em qualquer dos casos, rodar o cabeçalho não cria um balde novo. Ver `docs/architecture/DEPLOYMENT_INVARIANTS.md`. |
 | (sem `OTM_RATE_LIMIT` e sem `OTM_RATE_LIMIT_DISABLED`) | Em **`development`** (defeito de `OTM_ENV`): sem limite. Em **staging** / **production**: limite por defeito **`120/minute`**. |
 
 Sem `OTM_API_KEY`, o comportamento permanece o de API aberta na rede onde estiver exposta — ver **`docs/architecture/DEPLOYMENT_INVARIANTS.md`**.
@@ -161,15 +161,17 @@ Códigos estáveis usados nas rotas (sempre dentro de `detail`):
 | `REMEDIATION_GROUP_BY_INVALID` | 422 | `group_by` fora de `root-cause` \| `control` \| `category`. Antes, um valor desconhecido devolvia 200 com o agrupamento por defeito. |
 | `REMEDIATION_INPUT` | 400 | Nem `analysis` nem `run_analysis: true` em `/v1/remediation/backlog`. |
 | `IMPORT_EMPTY_ARTIFACT` | 400 | Upload de zero bytes em `/v1/imports/*`. |
+| `IMPORT_TOO_LARGE` | 413 | Upload acima do limite de 2 MiB em `/v1/imports/*`. |
 | `IMPORT_NOT_UTF8` | 400 | O artefacto não é texto UTF-8. |
 | `IMPORT_ARTIFACT_INVALID` | 400 | O artefacto é texto mas não tem a forma esperada. |
 | `TEMPLATE_INVALID` | 422 | Template existe mas o YAML não valida como documento canónico. |
 | `PACK_NOT_FOUND` | 404 | `pack_id` desconhecido. |
 | `TEMPLATE_NOT_FOUND` | 404 | `template_id` desconhecido. |
 
-Exceção conhecida ao envelope: o **413** de upload acima do limite em `/v1/imports/*` ainda
-devolve `detail` como string (`"Artifact exceeds 2 MiB limit (MVP)."`), sem código estável. Um
-cliente que leia `detail["code"]` tem de tratar o 413 pelo status até isso ser corrigido.
+Não há exceções ao envelope nestas rotas. O **413** de upload acima do limite em `/v1/imports/*`
+devolvia `detail` como string solta, sem código estável, e passou a usar o envelope como os
+irmãos (`IMPORT_TOO_LARGE`); um cliente que leia `detail["code"]` já não precisa de tratar o 413
+pelo status.
 
 Respostas emitidas por middleware **não** passam por `detail`: trazem `{code, message}` na raiz,
 como a validação de envelope do pedido. São o **401** (`API_KEY_REQUIRED`,

@@ -32,8 +32,17 @@ def _emit_json_output(result: AnalysisResult, json_out: Path, *, quiet: bool, mo
 
 
 def _emit_sarif_output(result: AnalysisResult, sarif_out: Path, *, quiet: bool, model: Path) -> None:
+    """Write the SARIF run, anchored on the model the user actually named.
+
+    Without `model_uri` the exporter falls back to its canonical `threat-model.otm.yaml` — right
+    for the API, which analyses an uploaded document with no path, and wrong here: every alert
+    GitHub ingested pointed at a file that usually does not exist in the repository, and several
+    models scanned in one run collapsed onto that same phantom path. `as_posix()` because
+    `artifactLocation.uri` is a URI: a Windows `threat-models\\orders.otm.yaml` resolves nowhere.
+    """
+    sarif = export_analysis_sarif(result, model_uri=model.as_posix())
     try:
-        write_text_file(content=export_analysis_sarif(result), output=sarif_out, sources=(model,))
+        write_text_file(content=sarif, output=sarif_out, sources=(model,))
     except CliUserError as e:
         exit_on_cli_error(console, e)
     if not quiet:

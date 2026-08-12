@@ -10,7 +10,8 @@ faz outra, sem o dizer.
   agrupamento por defeito — `root_cause`, `severity`, `totally-bogus` devolviam 200 com um corpo
   byte-a-byte igual ao default. O parâmetro vizinho `format` já era estrito.
 - O 413 do upload demasiado grande devolvia `detail` como string solta, fora do envelope
-  `{code, message}` que todos os outros erros da mesma rota seguem.
+  `{code, message}` que todos os outros erros da mesma rota seguem. Corrigido depois, em
+  conjunto com o teste de `tests/test_api.py` que o segurava.
 """
 
 from __future__ import annotations
@@ -185,19 +186,19 @@ def test_an_oversized_upload_is_still_refused(client: TestClient) -> None:
     assert r.status_code == 413
 
 
-def test_the_oversize_error_is_still_outside_the_documented_envelope(client: TestClient) -> None:
-    """Correção ADIADA, e este teste existe para o registar em vez de o deixar por dizer.
+def test_the_oversize_error_is_inside_the_documented_envelope(client: TestClient) -> None:
+    """A correção adiada, agora aplicada.
 
-    `detail` devia ser `{code, message}` (`docs/features/API.md`), como todos os outros erros
-    desta rota; sendo string, `detail["code"]` rebenta com `TypeError` num cliente conforme. A
-    correção está escrita e é de uma linha, mas `tests/test_api.py:645` afirma
-    `"2 MiB" in r.json()["detail"]` — só verdade enquanto `detail` for string — e esse ficheiro
-    pertence a outro âmbito. Quando essa linha passar a `["detail"]["message"]`, este teste
-    passa a ser o que falha, que é exatamente o sinal para aplicar a correção.
+    Este teste fixava o estado errado de propósito (`isinstance(detail, str)`) porque a correção
+    estava retida por `tests/test_api.py`, que afirmava `"2 MiB" in r.json()["detail"]` — só
+    verdade enquanto `detail` fosse string — e pertencia a outro âmbito. Os dois ficheiros
+    mudaram juntos: `detail` é agora o envelope `{code, message}` documentado em
+    `docs/features/API.md`, como todos os outros erros desta rota. Ver
+    `tests/test_p2r3_api_import_413_envelope.py`.
     """
     r = client.post("/v1/imports/openapi", files={"file": ("big.yaml", _oversized(), "application/yaml")})
 
-    assert isinstance(r.json()["detail"], str)
+    assert r.json()["detail"]["code"] == "IMPORT_TOO_LARGE"
 
 
 def test_the_size_boundary_did_not_move(client: TestClient) -> None:

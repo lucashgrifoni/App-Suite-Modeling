@@ -9,7 +9,8 @@ const MAX_ENTRIES = 20;
  * What actually happened to a write.
  *
  * `evicted` — the newest snapshot was stored, but older ones had to go to make room.
- * `failed`  — not even the newest snapshot fits, and nothing of it was stored.
+ * `failed`  — not even the newest snapshot fits. It is gone; whatever was already stored
+ *             is untouched.
  */
 export type HistoryWriteOutcome = "ok" | "evicted" | "failed";
 
@@ -66,15 +67,23 @@ function clearEntries(): void {
  */
 export function saveHistory(entries: AnalysisHistoryEntry[]): HistoryWriteOutcome {
   const capped = entries.slice(0, MAX_ENTRIES);
+  // The caller asked to store nothing — removing the last entry, say. That is a deliberate
+  // clear, and the only reason to touch the key when there is nothing to write.
+  if (capped.length === 0) {
+    clearEntries();
+    return "ok";
+  }
   for (let size = capped.length; size > 0; size -= 1) {
     if (writeEntries(capped.slice(0, size))) {
       return size === capped.length ? "ok" : "evicted";
     }
   }
-  // Either the caller asked to store nothing, or not one entry fits. Both end with an
-  // empty key rather than a stale list that silently stopped at an arbitrary point.
-  clearEntries();
-  return capped.length === 0 ? "ok" : "failed";
+  // Not even the newest entry alone fits. The stored list is left exactly as it was: a
+  // rejected `setItem` leaves the previous value intact in every browser, so what is on
+  // disk is still valid and still fitted. Clearing it here would answer "this snapshot is
+  // too big" by destroying every snapshot the user already had. Losing the new one is the
+  // acceptable half of that trade, and `"failed"` lets the caller say so.
+  return "failed";
 }
 
 export function pushHistoryEntry(entry: AnalysisHistoryEntry): HistoryWriteOutcome {

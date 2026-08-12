@@ -645,6 +645,16 @@ export function WizardPage() {
                   <Input
                     id={`flow-${idx}-name`}
                     value={f.name ?? ""}
+                    // Trim on blur, as on the component name beside it. `|| null` alone only
+                    // catches the empty string, so a name of three spaces was truthy, was
+                    // stored, and became a Mermaid edge caption holding nothing plus `(   )`
+                    // in the review list. This field is optional, so blank means `null` — no
+                    // label — rather than the id fallback a component name needs.
+                    onBlur={(e) => {
+                      const next = e.target.value.trim() || null;
+                      if (next === (f.name ?? null)) return;
+                      setFlows(updateArrayItem(doc.data_flows, idx, { ...f, name: next }));
+                    }}
                     onChange={(e) => {
                       setFlows(updateArrayItem(doc.data_flows, idx, { ...f, name: e.target.value || null }));
                     }}

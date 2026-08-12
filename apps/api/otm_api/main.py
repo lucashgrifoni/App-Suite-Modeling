@@ -23,6 +23,7 @@ from otm_api.observability import (
 )
 from otm_api.perimeter_settings import (
     describe_effective_perimeter,
+    describe_shared_bucket_consequence,
     resolve_api_key_perimeter,
     resolve_rate_limit_default,
     resolve_trusted_proxy,
@@ -67,7 +68,10 @@ _rate_limit_spec = resolve_rate_limit_default()
 
 _cors = resolve_cors_profile()
 _api_key = resolve_api_key_perimeter()
-_trusted_proxy = resolve_trusted_proxy()
+# Aborta o arranque em staging/produção quando o limite está ligado e ninguém declarou se há um
+# proxy à frente — ver `resolve_trusted_proxy`. Sem essa declaração, o limite deixa de ser por
+# chamador e passa a ser um orçamento único para o serviço inteiro.
+_trusted_proxy = resolve_trusted_proxy(environment=_cors.environment, rate_limit=_rate_limit_spec)
 
 # Uma linha, no arranque, a declarar o perímetro efetivo. Sem ela, o log de um servidor
 # aberto por engano (chave em branco, ambiente que caiu em `development`, um proxy tratado
@@ -80,6 +84,17 @@ _perimeter_line = describe_effective_perimeter(
 )
 _perimeter_level = logging.WARNING if _api_key.misconfigured else logging.INFO
 LOG.log(_perimeter_level, _perimeter_line, extra={"event_name": "api_perimeter"})
+
+# `OTM_TRUSTED_PROXY=0` é uma escolha legítima, mas custa disponibilidade: o limite passa a ser
+# um orçamento partilhado por todos os chamadores encaminhados. Do lado do cliente esse 429 é
+# indistinguível de qualquer outro, por isso o custo é declarado aqui, a cada arranque.
+_shared_bucket_line = describe_shared_bucket_consequence(
+    environment=_cors.environment,
+    rate_limit=_rate_limit_spec,
+    trusted_proxy=_trusted_proxy,
+)
+if _shared_bucket_line:
+    LOG.warning(_shared_bucket_line, extra={"event_name": "rate_limit_shared_bucket"})
 
 # Ordem de registo: o Starlette empilha ao contrário, por isso o **último** registado fica
 # por fora. Efetivo (fora -> dentro): CORS -> Observability -> ApiKey -> RateLimit -> rotas.

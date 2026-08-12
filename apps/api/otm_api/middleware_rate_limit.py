@@ -25,6 +25,15 @@ middleware runs, `request.client` may already have been rewritten from a
 client-controlled header by uvicorn, so it is not trusted unless the operator
 says a proxy is in front — `OTM_TRUSTED_PROXY`, documented in
 `docs/architecture/DEPLOYMENT_INVARIANTS.md`.
+
+Availability: distrusting a forwarded address costs the per-caller bucket, and
+behind the proxy that `DEPLOYMENT_INVARIANTS.md` makes mandatory *every* request
+is forwarded — so "120 per caller" silently became "120 for the whole service",
+which one busy client exhausts for everyone. That trade is real and it is not
+this module's to make quietly: `perimeter_settings.resolve_trusted_proxy` now
+refuses to start a staging/production process that has a limit configured and no
+declaration either way, and a 429 served from the shared bucket is logged under
+its own event name so the operator can tell the two cases apart.
 """
 
 from __future__ import annotations
@@ -100,7 +109,13 @@ def client_key(request: Request, *, trust_forwarded: bool = False) -> str:
     - otherwise: a request carrying a forwarding header that could have produced
       the address we see is counted in one shared bucket. It still bounds abuse,
       and unlike a per-caller bucket it cannot be reset by rotating a header — a
-      per-IP limit any caller can reset is worse than an honest global one.
+      per-IP limit any caller can reset is worse than an honest global one. The
+      price is that the limit stops being per caller, which is why reaching this
+      branch in staging/production requires the operator to have declared
+      `OTM_TRUSTED_PROXY=0` (see `perimeter_settings.resolve_trusted_proxy`).
+      Falling back to the peer address instead is not available here: uvicorn
+      overwrote `scope["client"]` before any app code ran, so "the peer" is the
+      forwarded address — reading it back would be the bypass, not a fallback.
     - a request with no forwarding header keeps its own per-peer bucket, which
       is the common direct-exposure case.
 
@@ -146,15 +161,21 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next) -> Response:
         key = client_key(request, trust_forwarded=self._trust_forwarded)
-        if key == _UNTRUSTED_FORWARDED_CLIENT:
+        shared_bucket = key == _UNTRUSTED_FORWARDED_CLIENT
+        if shared_bucket:
             self._report_untrusted_forwarding_once()
         allowed = self._limiter.hit(self._limit, key)
         stats = self._limiter.get_window_stats(self._limit, key)
 
         if not allowed:
+            # Two very different operational stories, identical from the client's side: one
+            # caller spent its own budget, or the whole service spent a single shared one. The
+            # event name is the only place the difference is recorded, and without it "everyone
+            # is getting 429" has no answer in the logs.
+            event_name = "rate_limit_exceeded_shared_bucket" if shared_bucket else "rate_limit_exceeded"
             logger.warning(
-                "rate_limit_exceeded",
-                extra={"event_name": "rate_limit_exceeded", "path": request.url.path},
+                event_name,
+                extra={"event_name": event_name, "path": request.url.path},
             )
             response: Response = JSONResponse(
                 status_code=429,

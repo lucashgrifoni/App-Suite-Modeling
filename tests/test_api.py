@@ -642,7 +642,9 @@ def test_import_openapi_rejects_oversized_artifact(client: TestClient) -> None:
         files={"file": ("big.json", oversized, "application/json")},
     )
     assert r.status_code == 413
-    assert "2 MiB" in r.json()["detail"]
+    # `detail` is the documented `{code, message}` envelope, like every sibling error on this
+    # route; reading it as a bare string was what held the envelope fix back.
+    assert "2 MiB" in r.json()["detail"]["message"]
 
 
 def test_import_openapi_accepts_artifact_at_limit(client: TestClient) -> None:

@@ -64,7 +64,6 @@ const INTENTIONALLY_IDENTICAL: ReadonlySet<string> = new Set([
   "runEngine.optOctave",
   "runEngine.optPlot4ai",
   "runEngine.optStride",
-  "templates.catAi",
   "templates.packBadge",
   "templates.title",
   "threatsCard.framework",
