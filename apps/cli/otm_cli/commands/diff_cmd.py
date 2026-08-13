@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 from typing import Annotated
 
@@ -17,7 +16,7 @@ from otm_cli.commands.handle_errors import exit_on_cli_error
 from otm_cli.shared.emit import write_json_file
 from otm_cli.shared.enums import DiffFormat, MethodologyOption
 from otm_cli.shared.errors import CliUserError
-from otm_cli.shared.gate import gate_exit_code, parse_fail_on, render_gate_result
+from otm_cli.shared.gate import parse_fail_on, report_gate_verdict
 from otm_cli.shared.render import safe
 
 
@@ -29,10 +28,10 @@ def _apply_gate(analysis_diff: AnalysisDiff | None, policy: GatePolicy) -> None:
     """
     if not policy.active or analysis_diff is None:
         return
-    result = evaluate_gate(analysis_diff, policy)
-    print(render_gate_result(result), file=sys.stderr)
-    # `gate_exit_code` owns the mapping: a gate that could not judge exits non-zero too.
-    code = gate_exit_code(result)
+    # `report_gate_verdict` owns the mapping (a gate that could not judge exits non-zero too) and
+    # the ordering: the code is decided before the report is written, so a closed pipe cannot turn
+    # a tripped gate into a green build.
+    code = report_gate_verdict(evaluate_gate(analysis_diff, policy))
     if code:
         raise typer.Exit(code)
 
@@ -148,8 +147,10 @@ def register(app: typer.Typer) -> None:
     ) -> None:
         """Compare two threat model versions.
 
-        Exit codes: 0 no gate trip · 1 usage error, or an armed gate with no verdict
-        (methodology changed between the two models) · 2 bad flag value · 3 gate tripped.
+        Exit codes: 0 no gate trip · 1 usage error, including an out-of-range `--fail-on` value,
+        or an armed gate with no verdict (methodology changed between the two models) · 2 parsing
+        error raised by Typer/Click: unknown flag, missing argument, invalid enum value on
+        `--methodology`/`--format` · 3 gate tripped.
         """
         if methodology is not None and auto_methodology:
             raise typer.BadParameter(

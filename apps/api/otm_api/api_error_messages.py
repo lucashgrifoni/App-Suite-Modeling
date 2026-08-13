@@ -45,9 +45,16 @@ def msg_internal_error() -> str:
 
 
 def msg_import_empty_artifact() -> str:
+    """O texto dizia "zero bytes", e o erro deixou de ser só isso.
+
+    A guarda passou a cobrir o ficheiro em branco — uma newline, um espaço, um BOM sozinho —
+    porque é o mesmo engano com a mesma consequência (um rascunho canónico completo que segue
+    para validate/analyze como se fosse um modelo). Uma mensagem que só nomeia os zero bytes
+    manda o utilizador procurar um problema que o seu ficheiro não tem.
+    """
     return _t(
-        "The uploaded artifact is empty. Send the file contents, not a zero-byte file.",
-        "O artefacto enviado está vazio. Envie o conteúdo do ficheiro, não um ficheiro de zero bytes.",
+        "The uploaded artifact has no content (it is empty, or holds only blank space). Send the file contents.",
+        "O artefacto enviado não tem conteúdo (está vazio, ou só tem espaço em branco). Envie o conteúdo do ficheiro.",
     )
 
 
@@ -104,6 +111,23 @@ def msg_analysis_document_mismatch(*, analysis_field: str = "analysis", document
         f"O `{analysis_field}` enviado não foi produzido para o `{document_field}` enviado. "
         f"Volte a correr a análise para este documento, ou omita `{analysis_field}` e defina "
         "`run_analysis: true`.",
+    )
+
+
+def msg_baseline_system_mismatch(*, baseline_field: str = "baseline_analysis") -> str:
+    """
+    A recusa de um baseline que não descreve este sistema.
+
+    Distinta de `msg_analysis_document_mismatch` de propósito: aquela diz "não foi produzida
+    para este documento", que é falso e enganador aqui — um baseline é, por definição, de outra
+    revisão, e a divergência é o produto. O que se recusa é outra coisa: as duas análises não
+    descrevem o mesmo sistema, por isso o diff seria inventado.
+    """
+    return _t(
+        f"The supplied `{baseline_field}` does not describe this system, so the baseline/diff "
+        f"section would be invented. Pass an earlier analysis of this model, or omit `{baseline_field}`.",
+        f"O `{baseline_field}` enviado não descreve este sistema, por isso a secção baseline/diff "
+        f"seria inventada. Envie uma análise anterior deste modelo, ou omita `{baseline_field}`.",
     )
 
 

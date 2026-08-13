@@ -3,6 +3,7 @@ import {
   ApiError,
   ApiMalformedResponseError,
   ApiTimeoutError,
+  apiErrorFromResponseText,
   apiFetch,
   fetchWithTimeout,
 } from "./client";
@@ -119,6 +120,88 @@ describe("apiFetch", () => {
     await apiFetch("/x");
     const init = f.mock.calls[0][1] as RequestInit;
     expect(init.signal).toBeInstanceOf(AbortSignal);
+  });
+});
+
+/**
+ * The API's unhandled-exception handler answers `{code, message, request_id}` at the top
+ * level; every other handler nests that envelope under `detail`. Reading only `detail` left
+ * a 500 with no server message at all, so the UI showed `res.statusText` — a bare "Internal
+ * Server Error" — and discarded the `request_id` that correlates the failure with the log.
+ */
+describe("apiFetch top-level error envelope", () => {
+  const INTERNAL_500 = JSON.stringify({
+    code: "INTERNAL_ERROR",
+    message: "An unexpected error occurred.",
+    request_id: "adadde6c-5ec1-4285-8cf5-3b84b3f54fe2",
+  });
+
+  it("reads the server's sentence out of a 500 instead of the reason phrase", async () => {
+    vi.stubGlobal("fetch", mockFetch(500, INTERNAL_500));
+    const err = (await apiFetch("/x").catch((e: unknown) => e)) as ApiError;
+    expect(err.message).toBe("INTERNAL_ERROR: An unexpected error occurred.");
+  });
+
+  it("marks that message as the server's own, not a reason-phrase fallback", async () => {
+    vi.stubGlobal("fetch", mockFetch(500, INTERNAL_500));
+    const err = (await apiFetch("/x").catch((e: unknown) => e)) as ApiError;
+    expect(err.fromServerDetail).toBe(true);
+  });
+
+  it("keeps the request id on the error for the presentation layer", async () => {
+    vi.stubGlobal("fetch", mockFetch(500, INTERNAL_500));
+    const err = (await apiFetch("/x").catch((e: unknown) => e)) as ApiError;
+    expect(err.body).toMatchObject({ request_id: "adadde6c-5ec1-4285-8cf5-3b84b3f54fe2" });
+  });
+
+  it("leaves a body that is not the envelope shape to the reason phrase", async () => {
+    // `code` without `message` is not an error envelope, so nothing is invented from it.
+    vi.stubGlobal("fetch", mockFetch(503, JSON.stringify({ code: "upstream" })));
+    const err = (await apiFetch("/x").catch((e: unknown) => e)) as ApiError;
+    expect(err.message).toBe("HTTP 503");
+  });
+
+  it("still prefers a nested `detail` envelope when the body has both", async () => {
+    const body = JSON.stringify({ code: "OUTER", message: "outer", detail: { message: "inner" } });
+    vi.stubGlobal("fetch", mockFetch(400, body));
+    const err = (await apiFetch("/x").catch((e: unknown) => e)) as ApiError;
+    expect(err.message).toBe("inner");
+  });
+});
+
+/**
+ * `fetchPremiumReport` cannot use `apiFetch` — it reads a PDF or Markdown body, not JSON —
+ * so it had its own hand-rolled error path that handed `ApiError` the raw response TEXT as
+ * `body`. Everything that presents an error reads the envelope off `body`, so a string
+ * meant none of it applied: the route that answers 501 `PDF_DEPENDENCY` was the one route
+ * whose coded envelope could never reach the screen.
+ */
+describe("apiErrorFromResponseText", () => {
+  it("parses the body so the envelope reaches the presentation layer", () => {
+    const body = JSON.stringify({ detail: { code: "PDF_DEPENDENCY", message: "install it" } });
+    const err = apiErrorFromResponseText(501, "Not Implemented", body);
+    expect(err.body).toEqual({ detail: { code: "PDF_DEPENDENCY", message: "install it" } });
+  });
+
+  it("composes the message the same way every other route does", () => {
+    const body = JSON.stringify({ detail: { code: "PDF_DEPENDENCY", message: "install it" } });
+    expect(apiErrorFromResponseText(501, "Not Implemented", body).message).toBe(
+      "PDF_DEPENDENCY: install it",
+    );
+  });
+
+  it("keeps the status so a 501 is not confused with a gateway failure", () => {
+    const err = apiErrorFromResponseText(501, "Not Implemented", "{}");
+    expect(err.status).toBe(501);
+  });
+
+  it("falls back to the reason phrase when the body is not JSON", () => {
+    const err = apiErrorFromResponseText(502, "Bad Gateway", "");
+    expect(err.message).toBe("Bad Gateway");
+  });
+
+  it("marks a reason-phrase fallback as not coming from the server", () => {
+    expect(apiErrorFromResponseText(502, "Bad Gateway", "").fromServerDetail).toBe(false);
   });
 });
 

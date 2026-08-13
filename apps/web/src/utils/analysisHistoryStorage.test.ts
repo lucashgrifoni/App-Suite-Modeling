@@ -1,6 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 import type { AnalysisHistoryEntry } from "../types/analysisHistory";
-import { loadHistory, pushHistoryEntry, saveHistory } from "./analysisHistoryStorage";
+import {
+  loadHistory,
+  pushHistoryEntry,
+  restoreMissingEntries,
+  saveHistory,
+} from "./analysisHistoryStorage";
 
 const KEY = "otm.analysis.history";
 
@@ -185,5 +190,82 @@ describe("analysisHistoryStorage when not even the newest entry fits", () => {
     pushHistoryEntry(bigEntry("huge", 5000));
 
     expect(loadHistory().some((e) => e.id === "huge")).toBe(false);
+  });
+});
+
+/**
+ * localStorage offers no atomic read-modify-write, so two tabs that snapshot at the same
+ * instant both read the list, both add their own entry to the copy they read, and the second
+ * write erases the first tab's snapshot with no error anywhere. This is the repair the losing
+ * tab performs once the `storage` event tells it what happened.
+ */
+describe("restoreMissingEntries", () => {
+  it("puts back an entry the stored list no longer has", () => {
+    saveHistory([entry("theirs", { createdAt: 2 })]);
+
+    restoreMissingEntries([entry("mine", { createdAt: 3 })]);
+
+    expect(loadHistory().map((e) => e.id)).toEqual(["mine", "theirs"]);
+  });
+
+  it("reports that it had to repair the list", () => {
+    saveHistory([entry("theirs", { createdAt: 2 })]);
+
+    expect(restoreMissingEntries([entry("mine", { createdAt: 3 })])).toBe(true);
+  });
+
+  it("orders the repaired list newest-first, where the user expects to find it", () => {
+    saveHistory([entry("newest", { createdAt: 9 }), entry("oldest", { createdAt: 1 })]);
+
+    restoreMissingEntries([entry("middle", { createdAt: 5 })]);
+
+    expect(loadHistory().map((e) => e.id)).toEqual(["newest", "middle", "oldest"]);
+  });
+
+  it("leaves the list untouched when nothing of ours was dropped", () => {
+    saveHistory([entry("mine", { createdAt: 3 }), entry("theirs", { createdAt: 2 })]);
+
+    expect(restoreMissingEntries([entry("mine", { createdAt: 3 })])).toBe(false);
+  });
+
+  it("does not duplicate an entry that is already stored", () => {
+    saveHistory([entry("mine", { createdAt: 3 })]);
+
+    restoreMissingEntries([entry("mine", { createdAt: 3 })]);
+
+    expect(loadHistory().map((e) => e.id)).toEqual(["mine"]);
+  });
+
+  it("does nothing when there is nothing to defend", () => {
+    saveHistory([entry("theirs", { createdAt: 2 })]);
+
+    expect(restoreMissingEntries([])).toBe(false);
+  });
+
+  it("writes nothing at all when there is nothing to defend", () => {
+    saveHistory([entry("theirs", { createdAt: 2 })]);
+    const setItem = vi.spyOn(Storage.prototype, "setItem");
+
+    restoreMissingEntries([]);
+
+    expect(setItem).not.toHaveBeenCalled();
+  });
+
+  it("restores into an empty store when the other tab wrote a list without us", () => {
+    saveHistory([]);
+
+    restoreMissingEntries([entry("mine", { createdAt: 3 })]);
+
+    expect(loadHistory().map((e) => e.id)).toEqual(["mine"]);
+  });
+
+  it("still respects the twenty-entry cap after a repair", () => {
+    saveHistory(Array.from({ length: 20 }, (_, i) => entry(`e${i}`, { createdAt: 100 - i })));
+
+    restoreMissingEntries([entry("mine", { createdAt: 999 })]);
+
+    const ids = loadHistory().map((e) => e.id);
+    expect(ids).toHaveLength(20);
+    expect(ids[0]).toBe("mine");
   });
 });

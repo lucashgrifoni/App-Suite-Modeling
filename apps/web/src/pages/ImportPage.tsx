@@ -12,10 +12,12 @@ import { PageHeader } from "../components/patterns/PageHeader";
 import { FileDropZone } from "../components/patterns/FileDropZone";
 import { WorkflowGuide } from "../components/onboarding/WorkflowGuide";
 import { ContextHint } from "../components/onboarding/ContextHint";
-import { useSession } from "../context/SessionContext";
+import { normalizeSessionDocument, useSession } from "../context/SessionContext";
 import { useToast } from "../context/ToastContext";
 import { useConfirmReplaceModel } from "../hooks/useConfirmReplaceModel";
 import { fileMatchesAccept } from "../utils/fileAccept";
+import { hashDocument } from "../utils/documentIdentity";
+import { readImportReview, saveImportReview } from "../utils/importReviewStorage";
 import { clearWizardStep } from "../utils/wizardStepStorage";
 import type { ArtifactImportKind, ArtifactInference, ExplanationRecord } from "../types/api";
 import type { OtmDocument } from "../types/document";
@@ -23,7 +25,7 @@ import type { OtmDocument } from "../types/document";
 export function ImportPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { setDocument } = useSession();
+  const { document: sessionDocument, setDocument } = useSession();
   const toast = useToast();
   const confirmReplaceModel = useConfirmReplaceModel();
 
@@ -38,9 +40,21 @@ export function ImportPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [inferences, setInferences] = useState<ArtifactInference[] | null>(null);
-  const [unknowns, setUnknowns] = useState<string[] | null>(null);
-  const [structuredExplanations, setStructuredExplanations] = useState<ExplanationRecord[] | null>(null);
+
+  /**
+   * Seeded from sessionStorage, because this panel is the review step the product tells the
+   * user to perform and it used to be erased by a refresh — or by simply visiting another
+   * page — while the draft it describes survived. Only a review whose fingerprint still
+   * matches the document in session is restored. See utils/importReviewStorage.
+   */
+  const [restored] = useState(() => readImportReview(hashDocument(sessionDocument)));
+  const [inferences, setInferences] = useState<ArtifactInference[] | null>(
+    restored?.inferences ?? null,
+  );
+  const [unknowns, setUnknowns] = useState<string[] | null>(restored?.unknowns ?? null);
+  const [structuredExplanations, setStructuredExplanations] = useState<ExplanationRecord[] | null>(
+    restored?.explanations ?? null,
+  );
 
   function confidenceLabel(c: ArtifactInference["confidence"]): string {
     if (c === "high") return t("import.confidenceHigh");
@@ -87,13 +101,27 @@ export function ImportPage() {
     setStructuredExplanations(null);
     try {
       const res = await importArtifact(kind, file);
-      setDocument(res.document as unknown as OtmDocument);
+      const draft = res.document as unknown as OtmDocument;
+      setDocument(draft);
       // The draft has never been reviewed, so the wizard opens at step 1 instead of at
       // whatever step the replaced model had reached. See utils/wizardStepStorage.
       clearWizardStep();
       setInferences(res.inferences);
       setUnknowns(res.unknowns);
       setStructuredExplanations(res.explanations ?? null);
+      // Stored against the draft's own fingerprint, so the review outlives a refresh but
+      // can never be shown next to a different model. Hashed through the session's own
+      // normaliser: the session stores the normalised document, and a key taken from the
+      // raw response would miss it on every reload.
+      const draftKey = hashDocument(normalizeSessionDocument(draft));
+      if (draftKey !== null) {
+        saveImportReview({
+          documentKey: draftKey,
+          inferences: res.inferences,
+          unknowns: res.unknowns,
+          explanations: res.explanations ?? null,
+        });
+      }
       toast.success(t("import.toastImported"));
     } catch (err) {
       const msg = apiErrorMessage(err, t, "import.toastFail");

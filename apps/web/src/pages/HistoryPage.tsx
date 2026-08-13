@@ -1,3 +1,4 @@
+import { useRef, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { resolveExportArtifactLocale } from "../i18n/exportArtifactLocale";
 import { useNavigate } from "react-router";
@@ -38,6 +39,7 @@ function compactSnapshotPreview(entry: AnalysisHistoryEntry): string {
 function HistoryCard({
   entry,
   activeId,
+  pdfPendingId,
   onRestore,
   onExport,
   onPdf,
@@ -45,6 +47,8 @@ function HistoryCard({
 }: Readonly<{
   entry: AnalysisHistoryEntry;
   activeId: string | null;
+  /** The snapshot currently being rendered to PDF, if any. */
+  pdfPendingId: string | null;
   onRestore: (id: string) => void;
   onExport: (id: string) => void;
   onPdf: (id: string) => void;
@@ -109,15 +113,23 @@ function HistoryCard({
         <Button type="button" variant="secondary" className="!py-1.5 !text-xs" onClick={() => onExport(entry.id)}>
           {t("history.goExport")}
         </Button>
+        {/*
+          Client-side jsPDF rendering takes seconds on a real model, and this button used to
+          give no sign it had started: no disabled state, no label change. Three clicks —
+          the natural response to a control that appears to do nothing — started three full
+          renders and dropped three identical files into the Downloads folder. Every PDF
+          button on the export page already guards this way.
+        */}
         <Button
           type="button"
           variant="ghost"
           className="!py-1.5 !text-xs"
+          disabled={pdfPendingId !== null}
           onClick={() => {
             onPdf(entry.id);
           }}
         >
-          {t("history.pdfSnapshot")}
+          {pdfPendingId === entry.id ? t("history.pdfSnapshotLoading") : t("history.pdfSnapshot")}
         </Button>
         <Button type="button" variant="ghost" className="!py-1.5 !text-xs" onClick={() => onRemove(entry.id)}>
           {t("history.remove")}
@@ -132,6 +144,8 @@ export function HistoryPage() {
   const { entries, restore, remove } = useAnalysisHistory();
   const toast = useToast();
   const navigate = useNavigate();
+  const [pdfPendingId, setPdfPendingId] = useState<string | null>(null);
+  const pdfRunning = useRef(false);
 
   /** Destaque do snapshot mais recente (primeiro da lista). */
   const newestId = entries[0]?.id ?? null;
@@ -157,6 +171,11 @@ export function HistoryPage() {
   async function handlePdf(id: string) {
     const e = entries.find((x) => x.id === id);
     if (!e) return;
+    // The rendered buttons are disabled while one render is in flight; this closes the gap
+    // for a double-click delivered before that state reaches the DOM.
+    if (pdfRunning.current) return;
+    pdfRunning.current = true;
+    setPdfPendingId(id);
     try {
       const blob = await generateReportPdfBlob(e.document, e.analysis, {
         locale: resolveExportArtifactLocale(undefined, i18n.language),
@@ -166,6 +185,9 @@ export function HistoryPage() {
       toast.success(t("history.toastPdfOk"));
     } catch {
       toast.error(t("history.toastPdfFail"));
+    } finally {
+      pdfRunning.current = false;
+      setPdfPendingId(null);
     }
   }
 
@@ -190,6 +212,7 @@ export function HistoryPage() {
               <HistoryCard
                 entry={e}
                 activeId={newestId}
+                pdfPendingId={pdfPendingId}
                 onRestore={confirmRestore}
                 onExport={handleExport}
                 onPdf={handlePdf}

@@ -92,8 +92,7 @@ export async function fetchWithTimeout(
   }
 }
 
-async function parseJson(res: Response): Promise<unknown> {
-  const text = await res.text();
+function parseJsonText(text: string): unknown {
   if (!text) return null;
   try {
     return JSON.parse(text);
@@ -140,10 +139,28 @@ function formatPydanticErrors(errors: unknown): string | undefined {
   return lines.length ? lines.join("\n") : undefined;
 }
 
+/**
+ * The API's unhandled-exception handler answers `{code, message, request_id}` at the TOP
+ * level, while every other handler nests the same envelope under `detail`. Reading only
+ * `detail` meant a 500 carried no server message at all and fell back to `res.statusText`,
+ * so the screen read "Internal Server Error" while the body held the server's own sentence
+ * and the `request_id` that is the only handle on the matching server log line.
+ *
+ * Recognised narrowly: only an object carrying BOTH a string `code` and a string `message`,
+ * and only after the caller has established there is no `detail` to prefer, so an unrelated
+ * body cannot be mistaken for an error envelope.
+ */
+function topLevelEnvelope(data: unknown): string | undefined {
+  const code = getStringField(data, "code");
+  const message = getStringField(data, "message");
+  if (code === undefined || message === undefined) return undefined;
+  return `${code}: ${message}`;
+}
+
 /** The server's own description of the failure, or `undefined` if it sent none. */
 function extractApiErrorMessage(data: unknown): string | undefined {
   const detail = getObjectField(data, "detail");
-  if (detail === undefined) return undefined;
+  if (detail === undefined) return topLevelEnvelope(data);
   if (typeof detail === "string") return detail;
 
   const message = getStringField(detail, "message");
@@ -158,6 +175,27 @@ function extractApiErrorMessage(data: unknown): string | undefined {
   if (head === undefined) return undefined;
   if (pydantic) return `${head}\n\n${pydantic}`;
   return head;
+}
+
+/**
+ * The `ApiError` for a non-2xx response, built from its raw body text.
+ *
+ * Shared by every caller so no route can grow its own error path. `fetchPremiumReport` had
+ * one: it re-read `detail.message` by hand and then handed the ApiError the raw *text* as
+ * `body`, so the presentation layer — which reads the envelope off `body` to reword a code
+ * or list field violations — saw a string and fell through to the bare message. The premium
+ * report route is exactly where a coded, actionable envelope matters most (`PDF_DEPENDENCY`
+ * tells the user the server cannot render PDFs and that two working alternatives sit on the
+ * same page), and it was the one route that could not present one.
+ */
+export function apiErrorFromResponseText(
+  status: number,
+  statusText: string,
+  text: string,
+): ApiError {
+  const data = parseJsonText(text);
+  const detailMessage = extractApiErrorMessage(data);
+  return new ApiError(detailMessage ?? statusText, status, data, detailMessage !== undefined);
 }
 
 export async function apiFetch<T>(
@@ -178,19 +216,14 @@ export async function apiFetch<T>(
     },
     timeoutMs,
   );
-  const data = await parseJson(res);
+  const text = await res.text();
   // Every route reachable through `apiFetch` answers with a JSON object or array, so
   // anything else on a 2xx is not an answer from this API. See ApiMalformedResponseError.
   if (res.ok) {
+    const data = parseJsonText(text);
     if (typeof data !== "object" || data === null) throw new ApiMalformedResponseError(res.status);
     return data as T;
   }
 
-  const detailMessage = extractApiErrorMessage(data);
-  throw new ApiError(
-    detailMessage ?? res.statusText,
-    res.status,
-    data,
-    detailMessage !== undefined,
-  );
+  throw apiErrorFromResponseText(res.status, res.statusText, text);
 }

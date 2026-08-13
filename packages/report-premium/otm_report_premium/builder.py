@@ -14,6 +14,7 @@ from typing import Any, Literal
 from otm_core_schema import ComponentKind
 from otm_core_schema.document import ThreatModelDocument
 from otm_diagram_engine import export_flowchart_mermaid
+from otm_exporters.markdown_text import md_block, md_inline
 from otm_threat_engine import build_remediation_backlog
 from otm_threat_engine.analysis_diff import diff_analysis_results
 from otm_threat_engine.methodologies import recommend_methodology
@@ -454,20 +455,49 @@ def _build_explain_snippets(result: AnalysisResult) -> list[ExplainabilitySnippe
     ]
 
 
+#: Orçamento de caracteres da listagem do apêndice no payload. Existe para o relatório de um
+#: modelo com milhares de ameaças não crescer sem limite; não é um contrato de conteúdo.
+_APPENDIX_LISTING_BUDGET = 120_000
+
+
+def _appendix_entries_within_budget(entries: list[str], budget: int) -> list[str]:
+    """As primeiras entradas **inteiras** que cabem no orçamento.
+
+    Cortar por caracteres partia a última entrada a meio da palavra e entregava-a assim ao leitor,
+    indistinguível de um ficheiro corrompido. O corte passa a ser por entrada. Se nem a primeira
+    couber, é mantida na mesma: um apêndice vazio esconderia tudo, e o tamanho da entrada já está
+    limitado a montante pelos limites de tamanho do documento.
+    """
+    kept: list[str] = []
+    used = 0
+    for entry in entries:
+        cost = len(entry) + (1 if kept else 0)  # o "\n" que junta esta entrada à anterior
+        if kept and used + cost > budget:
+            break
+        kept.append(entry)
+        used += cost
+    return kept
+
+
 def _build_tech_appendix(
     doc: ThreatModelDocument, active: list[HeuristicThreat], b: PremiumBuilderCopy, level: ReportLevel
 ) -> TechnicalAppendix | None:
     if level != ReportLevel.DEEP:
         return None
-    lines = []
-    for t in active:
-        lines.append(f"### {t.id} — {t.title}\n{t.description}\n")
-    for c_threat in doc.threats:
-        lines.append(
-            f"### {b.threat_canonical_prefix} {c_threat.id} — {c_threat.title}\n{c_threat.description or ''}\n"
-        )
+    # `md_inline`/`md_block` no texto do modelo: cada entrada é escrita como um `### …` seguido da
+    # descrição no princípio da linha seguinte, portanto um título ou uma descrição com quebras de
+    # linha (ou que já comece por `###`) forjava entradas de apêndice que ninguém escreveu — e o
+    # renderizador HTML volta a ler esta listagem como estrutura para montar a tabela do PDF.
+    entries = [f"### {md_inline(t.id)} — {md_inline(t.title)}\n{md_block(t.description)}\n" for t in active]
+    entries += [
+        f"### {b.threat_canonical_prefix} {md_inline(c_threat.id)} — {md_inline(c_threat.title)}\n"
+        f"{md_block(c_threat.description or '')}\n"
+        for c_threat in doc.threats
+    ]
+    listed = _appendix_entries_within_budget(entries, _APPENDIX_LISTING_BUDGET)
     return TechnicalAppendix(
-        full_threat_listing="\n".join(lines)[:120000],
+        full_threat_listing="\n".join(listed),
+        total_threat_count=len(entries),
         methodology_outputs_note=b.tech_methodology_outputs,
         import_evidence_note=(b.tech_import_evidence if doc.import_signals_corpus else None),
     )

@@ -101,21 +101,36 @@ if _shared_bucket_line:
     LOG.warning(_shared_bucket_line, extra={"event_name": "rate_limit_shared_bucket"})
 
 # Ordem de registo: o Starlette empilha ao contrário, por isso o **último** registado fica
-# por fora. Efetivo (fora -> dentro): CORS -> Observability -> ApiKey -> RateLimit -> rotas.
+# por fora. Efetivo (fora -> dentro): Observability -> CORS -> RateLimit -> ApiKey -> rotas.
 #
-# `ObservabilityMiddleware` tem de ficar por fora do perímetro: quando corria por dentro,
-# um 401 do middleware de chave de API não passava por ele, ou seja, a rejeição de
-# autenticação — o evento mais relevante para segurança que esta API emite — não aparecia
-# no log estruturado e a resposta saía sem `X-Request-ID`, ao contrário de todos os outros
-# códigos de estado. O mesmo se aplicava ao 429 do rate limit.
+# Três restrições, todas fixadas por testes; qualquer permuta que as satisfaça serve, e esta
+# é a única que satisfaz as três:
+#
+# 1. `RateLimitMiddleware` por **fora** do `OptionalApiKeyMiddleware`. Ao contrário — a ordem
+#    original — o 401 da chave de API era devolvido sem chamar `call_next`, por isso o
+#    limitador nunca corria e um chamador anónimo tinha um canal **não medido** para `/v1/*`
+#    (força bruta da chave, inundação do log de erros, pressão de CPU e de sockets) enquanto
+#    só o cliente autenticado era travado. `docs/features/API.md` promete o contrário: o
+#    limite aplica-se a *todas* as rotas, contado por chamador. Ver
+#    `test_p2r5_api_rate_limit_unauthenticated.py`.
+# 2. `ObservabilityMiddleware` por **fora** de tudo. Quando corria por dentro do perímetro, um
+#    401 do middleware de chave de API não passava por ele: a rejeição de autenticação — o
+#    evento mais relevante para segurança que esta API emite — não aparecia no log estruturado
+#    e a resposta saía sem `X-Request-ID`, ao contrário de todos os outros códigos de estado.
+#    O mesmo se aplicava ao 429. Ficar por fora **do CORS** (e não logo a seguir) acrescenta o
+#    caso que faltava: o 400 "Disallowed CORS origin" de um preflight recusado é respondido
+#    pelo `CORSMiddleware` sem chamar `call_next`, por isso era o único estado desta API que
+#    não existia no log estruturado — só na linha de acesso do uvicorn, que deixou de ser
+#    emitida (ver `observability.setup_api_logging`).
+# 3. O `CORSMiddleware` continua por **fora** do perímetro, para que a resposta 401/429 que o
+#    browser recebe continue a trazer os cabeçalhos CORS e o cliente consiga lê-la.
+app.add_middleware(OptionalApiKeyMiddleware)
 if _rate_limit_spec:
     app.add_middleware(
         RateLimitMiddleware,
         limit=parse_rate_limit(_rate_limit_spec),
         trust_forwarded=_trusted_proxy,
     )
-app.add_middleware(OptionalApiKeyMiddleware)
-app.add_middleware(ObservabilityMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_cors.origins,
@@ -124,6 +139,7 @@ app.add_middleware(
     allow_methods=_cors.allow_methods,
     allow_headers=_cors.allow_headers,
 )
+app.add_middleware(ObservabilityMiddleware)
 
 
 @app.get(

@@ -35,11 +35,31 @@ function stringField(value: unknown, field: string): string | undefined {
   return typeof v === "string" ? v : undefined;
 }
 
-/** The `{code, message, errors?}` envelope, or `undefined` when the body is not one. */
+/**
+ * The `{code, message, errors?}` envelope, or `undefined` when the body is not one.
+ *
+ * Two shapes, because the API emits two: every deliberate error nests the envelope under
+ * `detail`, while the unhandled-exception handler puts `{code, message, request_id}` at the
+ * top level. Only reading `detail` left a 500 with no envelope at all, so the screen showed
+ * the bare HTTP reason phrase and dropped the `request_id` — the one value that ties what
+ * the user saw to the server's log line.
+ */
 function errorEnvelope(error: ApiError): Record<string, unknown> | undefined {
   const detail = objectField(error.body, "detail");
+  if (detail === undefined) return topLevelEnvelope(error.body);
   if (typeof detail !== "object" || detail === null || Array.isArray(detail)) return undefined;
   return detail as Record<string, unknown>;
+}
+
+/**
+ * An envelope that was not nested under `detail`. Recognised only by carrying BOTH a string
+ * `code` and a string `message`, and only once the caller has ruled out a `detail`.
+ */
+function topLevelEnvelope(body: unknown): Record<string, unknown> | undefined {
+  if (typeof body !== "object" || body === null || Array.isArray(body)) return undefined;
+  if (stringField(body, "code") === undefined) return undefined;
+  if (stringField(body, "message") === undefined) return undefined;
+  return body as Record<string, unknown>;
 }
 
 /**
@@ -52,10 +72,19 @@ function errorEnvelope(error: ApiError): Record<string, unknown> | undefined {
  * user's own file echoed back — sitting next to sibling errors from the same endpoint
  * (IMPORT_EMPTY_ARTIFACT, IMPORT_NOT_UTF8) that are clean, actionable sentences.
  *
+ * `PDF_DEPENDENCY` is the 501 the premium-report route answers when the server has no PDF
+ * rendering backend. Its own message is an install line (`pip install ...`) aimed at whoever
+ * runs the server, which the person clicking "Premium PDF" in a browser cannot act on — and
+ * two working alternatives sit on that very page. The UI therefore states what happened and
+ * what to do instead.
+ *
  * Deliberately an allowlist: every other code keeps the server's message, because the API
  * owns the explanation and second-guessing it here would hide real detail.
  */
-const REWORDED_CODES: ReadonlySet<string> = new Set(["IMPORT_ARTIFACT_INVALID"]);
+const REWORDED_CODES: ReadonlySet<string> = new Set([
+  "IMPORT_ARTIFACT_INVALID",
+  "PDF_DEPENDENCY",
+]);
 
 function localizedCodeMessage(code: string | undefined, t: TFunction): string | undefined {
   if (!code || !REWORDED_CODES.has(code)) return undefined;
@@ -110,8 +139,12 @@ function describeEnvelope(
   else if (message !== undefined && code !== undefined) head = `${code}: ${message}`;
   else head = message ?? error.message;
 
-  const fields = fieldViolations(detail, t);
-  return fields.length === 0 ? head : `${head}\n\n${fields.join("\n")}`;
+  const blocks = [head, ...fieldViolations(detail, t)];
+  // The server correlation id, when it sent one. Without it a user reporting "it failed"
+  // and an operator reading the log have no shared handle on the same request.
+  const requestId = stringField(detail, "request_id");
+  if (requestId !== undefined) blocks.push(t("apiErrors.reference", { id: requestId }));
+  return blocks.join("\n\n");
 }
 
 /**
@@ -123,6 +156,8 @@ function describeEnvelope(
  * is reworded (and its field violations humanised); anything else the server actually
  * explained is shown as the server explained it; and anything else falls back to the
  * caller's own key, which is the operation that failed ("Could not run the analysis").
+ *
+ * Whichever branch produced the text, a `request_id` in the envelope is appended to it.
  */
 export function apiErrorMessage(error: unknown, t: TFunction, fallbackKey: string): string {
   if (error instanceof ApiTimeoutError) return t("apiErrors.timeout");

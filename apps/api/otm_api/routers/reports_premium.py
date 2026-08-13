@@ -13,6 +13,7 @@ from pydantic import ValidationError as PydanticValidationError
 from otm_api.routers._errors import (
     document_from_payload_or_422,
     ensure_analysis_matches_document,
+    ensure_baseline_describes_same_system,
     error_detail,
     raise_analysis_validation_error,
     raise_pack_not_found,
@@ -53,8 +54,11 @@ def post_premium_report(body: PremiumReportBody) -> PlainTextResponse | Response
             raise raise_analysis_validation_error(e) from e
         ensure_analysis_matches_document(doc, analysis_obj)
 
-    # `baseline_analysis` fica de fora da guarda: é, por definição, a análise de uma versão
-    # anterior do modelo — a divergência é o conteúdo da secção baseline/diff, não um erro.
+    # `baseline_analysis` fica de fora da guarda de *mesma revisão*: é, por definição, a análise
+    # de uma versão anterior do modelo — a divergência é o conteúdo da secção baseline/diff, não
+    # um erro. Fora dessa guarda não é fora de guarda nenhuma, e a distinção faltava aqui: a
+    # pergunta certa para um baseline é "mesmo sistema?", verificada mais abaixo, assim que a
+    # análise actual existir para comparar. Ver `ensure_baseline_describes_same_system`.
     baseline_obj: AnalysisResult | None = None
     if body.baseline_analysis is not None:
         try:
@@ -80,6 +84,12 @@ def post_premium_report(body: PremiumReportBody) -> PlainTextResponse | Response
             )
         except FileNotFoundError as e:
             raise raise_pack_not_found(body.pack_id) from e
+
+    # Depois de `analysis_obj` existir, seja qual for a origem: a relação é entre as duas
+    # análises, por isso a guarda tem de correr tanto para `analysis` enviado como para
+    # `run_analysis: true`, e não pode correr antes.
+    if baseline_obj is not None:
+        ensure_baseline_describes_same_system(analysis_obj, baseline_obj)
 
     level = ReportLevel(body.level)
     fmt = ReportFormat(body.output_format)

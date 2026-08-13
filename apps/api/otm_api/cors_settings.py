@@ -7,6 +7,7 @@ Em `production` sem `OTM_CORS_ORIGINS`, as origens ficam vazias (CORS desativado
 from __future__ import annotations
 
 import os
+import re
 from dataclasses import dataclass
 
 # Valores aceites, tal como documentados em `docs/architecture/DEPLOYMENT_INVARIANTS.md`.
@@ -30,6 +31,22 @@ class InvalidCorsOriginsError(ValueError):
 
 # Uma origem `*` não é uma origem: é "qualquer página web da internet".
 _WILDCARD_ORIGIN = "*"
+
+# A origem opaca que um browser envia de uma sandbox ou de `file://` (RFC 6454 6.2). Não tem a
+# forma `esquema://host`, e listá-la é uma decisão legítima do operador, por isso é aceite por
+# nome em vez de cair na recusa por formato.
+_OPAQUE_ORIGIN = "null"
+
+# Serialização de origem, tal como o browser a envia no cabeçalho `Origin` e tal como o
+# `CORSMiddleware` a compara: `esquema://host[:porta]` e mais nada. Sem caminho, sem barra
+# final, sem query, sem fragmento, sem credenciais, sem espaços.
+#
+# O esquema fica genérico de propósito. Um whitelist de `http`/`https` recusaria origens
+# perfeitamente reais que chegam a APIs como esta — `chrome-extension://…`,
+# `moz-extension://…`, `capacitor://localhost`, `tauri://localhost` — e trocar um defeito que
+# aceita lixo por um que recusa configuração válida não é uma correção. O host aceita a forma
+# literal IPv6 (`https://[::1]:8080`) pela mesma razão.
+_ORIGIN_PATTERN = re.compile(r"[A-Za-z][A-Za-z0-9+.\-]*://(\[[0-9A-Fa-f:.]+\]|[^/?#\s:@\[\]]+)(:[0-9]{1,5})?")
 
 
 @dataclass(frozen=True)
@@ -81,6 +98,41 @@ def _refuse_wildcard_origins(environment: str) -> InvalidCorsOriginsError:
     )
 
 
+def _is_serialized_origin(value: str) -> bool:
+    """A entrada tem a forma que o `CORSMiddleware` compara contra o cabeçalho `Origin`."""
+    if value in (_WILDCARD_ORIGIN, _OPAQUE_ORIGIN):
+        return True
+    return bool(_ORIGIN_PATTERN.fullmatch(value))
+
+
+def _refuse_malformed_origins(malformed: list[str]) -> InvalidCorsOriginsError:
+    """A recusa de arranque para uma origem que nenhum browser pode alguma vez igualar.
+
+    Qualquer texto separado por vírgulas era aceite sem verificação de formato, e o custo não
+    era teórico: com `OTM_CORS_ORIGINS=https://app.example.com/` — uma barra a mais — o servidor
+    responde 200 **sem** `Access-Control-Allow-Origin` (o browser deita a resposta fora) e
+    recusa o preflight com 400, enquanto a linha de arranque diz `cors_origins=1`, byte a byte
+    igual à de um servidor correto. O preflight recusado nem chega ao log estruturado, porque o
+    `CORSMiddleware` responde antes da observabilidade. Uma gralha de um carater punha todos os
+    clientes de browser offline e não deixava um único sinal que a distinguisse.
+
+    Recusar no arranque é o tratamento que `OTM_ENV`, `OTM_TRUSTED_PROXY`, `OTM_RATE_LIMIT` e
+    `OTM_CORS_ORIGINS=*` já têm. Uma lista com uma entrada boa e uma má é recusada inteira de
+    propósito: a alternativa — descartar a má e arrancar — repõe exatamente o servidor
+    silenciosamente meio-partido que este erro existe para tornar visível.
+    """
+    listed = ", ".join(repr(value) for value in malformed)
+    return InvalidCorsOriginsError(
+        f"OTM_CORS_ORIGINS contains {len(malformed)} entry/entries that no browser can ever match: "
+        f"{listed}. An origin is `scheme://host[:port]` and nothing else — no trailing slash, no path, "
+        "no query, no spaces (write https://app.example.com, not https://app.example.com/). A value "
+        "the browser cannot match is served as a 200 with no Access-Control-Allow-Origin header and a "
+        "400 on preflight, which takes every browser client offline while the startup perimeter line "
+        "counts it as a working origin. Fix the entry, or unset the variable to serve no browser "
+        "origin at all."
+    )
+
+
 def _credentials_allowed(origins: list[str]) -> bool:
     """
     `Access-Control-Allow-Credentials: true` só com uma lista concreta de origens.
@@ -110,6 +162,10 @@ def resolve_cors_profile() -> CorsProfile:
 
     if _WILDCARD_ORIGIN in origins and environment != "development":
         raise _refuse_wildcard_origins(environment)
+
+    malformed = [value for value in origins if not _is_serialized_origin(value)]
+    if malformed:
+        raise _refuse_malformed_origins(malformed)
 
     if environment == "development":
         methods = ["*"]

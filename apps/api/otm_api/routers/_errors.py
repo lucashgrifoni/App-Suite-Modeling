@@ -11,13 +11,14 @@ from pydantic import ValidationError as PydanticValidationError
 from otm_api.api_error_messages import (
     msg_analysis_document_mismatch,
     msg_analysis_validation_error,
+    msg_baseline_system_mismatch,
     msg_document_validation_error,
     msg_pack_not_found,
     msg_template_invalid,
     msg_template_not_found,
 )
 from otm_api.errors import _truncated_errors
-from otm_api.services.analysis_pairing import analysis_document_mismatches
+from otm_api.services.analysis_pairing import analysis_document_mismatches, baseline_system_mismatches
 from otm_api.services.documents import document_from_payload
 
 
@@ -104,6 +105,36 @@ def ensure_analysis_matches_document(
         detail=error_detail(
             code="ANALYSIS_DOCUMENT_MISMATCH",
             message=msg_analysis_document_mismatch(analysis_field=analysis_field, document_field=document_field),
+            errors=mismatches,
+        ),
+    )
+
+
+def ensure_baseline_describes_same_system(
+    current: AnalysisResult,
+    baseline: AnalysisResult,
+    *,
+    baseline_field: str = "baseline_analysis",
+) -> None:
+    """
+    422 quando o baseline recebido não é uma revisão anterior *deste* sistema.
+
+    A guarda irmã de `ensure_analysis_matches_document`, e deliberadamente mais fraca: um
+    baseline é de outra revisão por construção, por isso divergir é o produto do endpoint —
+    o que não pode acontecer é o par descrever dois sistemas diferentes, porque então o
+    `## Baseline / diff` do relatório é inventado. A CLI já recusava esse par
+    (`analysis_match.require_baseline_describes_same_system`); a API devolvia 200.
+
+    Ver `services/analysis_pairing.baseline_system_mismatches` para o critério.
+    """
+    mismatches = baseline_system_mismatches(current, baseline, baseline_field=baseline_field)
+    if not mismatches:
+        return
+    raise HTTPException(
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+        detail=error_detail(
+            code="BASELINE_SYSTEM_MISMATCH",
+            message=msg_baseline_system_mismatch(baseline_field=baseline_field),
             errors=mismatches,
         ),
     )

@@ -91,3 +91,29 @@ export function pushHistoryEntry(entry: AnalysisHistoryEntry): HistoryWriteOutco
   const next = [entry, ...cur.filter((e) => e.id !== entry.id)].slice(0, MAX_ENTRIES);
   return saveHistory(next);
 }
+
+/**
+ * Put back snapshots that a concurrent writer's copy of the list did not contain.
+ *
+ * localStorage offers no atomic read-modify-write. Two tabs that finish an analysis at the
+ * same instant both read the list, both add their own entry to the copy they read, and both
+ * write it back — so the second write erases the first tab's snapshot, with no error and no
+ * sign on screen that anything was lost. Shrinking that window does not close it; the only
+ * reliable signal is the `storage` event that tells the losing tab its entry is gone.
+ *
+ * Deliberately additive: entries already present are left exactly as they are, and the list
+ * is re-sorted newest-first so a restored snapshot lands where the user expects it. Callers
+ * decide *which* entries are eligible — see the provider, which offers only the ones this
+ * tab wrote moments ago, so an entry the user deliberately deleted cannot come back.
+ *
+ * Returns `true` when the stored list actually had to be repaired.
+ */
+export function restoreMissingEntries(entries: readonly AnalysisHistoryEntry[]): boolean {
+  if (entries.length === 0) return false;
+  const stored = loadHistory();
+  const present = new Set(stored.map((e) => e.id));
+  const lost = entries.filter((e) => !present.has(e.id));
+  if (lost.length === 0) return false;
+  saveHistory([...lost, ...stored].sort((a, b) => b.createdAt - a.createdAt));
+  return true;
+}

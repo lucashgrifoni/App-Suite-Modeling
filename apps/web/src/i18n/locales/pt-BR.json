@@ -17,6 +17,7 @@
   "layout": {
     "brandSubtitle": "Threat modeling profissional",
     "footerNote": "A validação e o motor executam no servidor — a UI não duplica regras de negócio.",
+    "skipToContent": "Saltar para o conteúdo",
     "ariaMainNav": "Principal"
   },
   "theme": {
@@ -40,6 +41,7 @@
   "errorBoundary": {
     "title": "Algo correu mal na interface",
     "fallback": "Erro inesperado ao renderizar este ecrã.",
+    "detailsSummary": "Detalhes técnicos",
     "reload": "Recarregar página",
     "home": "Voltar ao início"
   },
@@ -47,8 +49,10 @@
     "timeout": "A API não respondeu a tempo. Verifique se está em execução e acessível e tente novamente.",
     "unreachable": "Não foi possível alcançar a API. Verifique se está em execução e acessível e tente novamente.",
     "entityIdPattern": "Use apenas letras, dígitos, `_`, `.` ou `-`, começando por letra, dígito ou `_`.",
+    "reference": "Referência: {{id}} — cite este valor se reportar a falha.",
     "codes": {
-      "IMPORT_ARTIFACT_INVALID": "Não foi possível ler o artefacto como YAML ou JSON. Verifique que o ficheiro abre num editor sem erros de sintaxe e volte a carregá-lo."
+      "IMPORT_ARTIFACT_INVALID": "Não foi possível ler o artefacto como YAML ou JSON. Verifique que o ficheiro abre num editor sem erros de sintaxe e volte a carregá-lo.",
+      "PDF_DEPENDENCY": "Este servidor não consegue gerar PDFs: o componente opcional de PDF não está disponível. Use \"Markdown premium\" para o mesmo relatório, ou \"Gerar PDF\" mais abaixo nesta página para criar um no navegador. O PDF no servidor volta assim que um operador instalar o extra report."
     }
   },
   "home": {
@@ -591,6 +595,7 @@
     "restore": "Restaurar",
     "goExport": "Ir para exportar",
     "pdfSnapshot": "PDF deste snapshot",
+    "pdfSnapshotLoading": "A gerar PDF…",
     "remove": "Remover",
     "confirmRestore": "Restaurar este snapshot substitui o modelo e a análise actuais na sessão. Continuar?",
     "toastRestored": "Snapshot restaurado.",

@@ -25,6 +25,8 @@ e a pipes; o stdout mantém-se byte-a-byte igual ao de hoje.
 
 from __future__ import annotations
 
+import sys
+
 from otm_threat_engine import SEVERITY_ORDER, Severity
 from otm_threat_engine.gate import GatePolicy, GateResult, GateTrip
 
@@ -195,6 +197,25 @@ def gate_exit_code(result: GateResult) -> int:
     if result.not_evaluated_reason:
         return GATE_NOT_EVALUATED_EXIT_CODE
     return GATE_TRIP_EXIT_CODE if result.tripped else 0
+
+
+def report_gate_verdict(result: GateResult) -> int:
+    """Write the verdict to stderr and return the exit code it implies.
+
+    The order is the whole point. The report used to be written *first* and the exit code raised
+    afterwards, so a reader that closed the pipe mid-report — `otm diff … --fail-on high 2>&1 |
+    head` in a CI script — aborted the command before it ever reached the exit, and the pipeline
+    read a gate that had **tripped** as a pass. A gate may not fail open because someone stopped
+    reading. The code is decided before a single byte is written, and a write that fails cannot
+    take it away: the report is evidence, the code is the contract, and only one of them can
+    survive a dead pipe.
+    """
+    code = gate_exit_code(result)
+    try:
+        print(render_gate_result(result), file=sys.stderr)
+    except OSError:
+        pass
+    return code
 
 
 def render_gate_result(result: GateResult) -> str:

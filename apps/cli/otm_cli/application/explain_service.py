@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from otm_cli.io_util import refuse_character_device
 from otm_cli.shared.errors import CliUserError
 
 _KINDS = ("analysis", "compare")
@@ -115,6 +116,7 @@ def run_explain(
             next_step="drop the flag to use the default, or pass a positive number.",
         )
     try:
+        refuse_character_device(path)
         raw = json.loads(path.read_text(encoding="utf-8"))
     # UnicodeDecodeError belongs here rather than with the JSON errors: it comes out of
     # `read_text`, so the file was never decoded at all. It is a ValueError, not an OSError, and

@@ -52,13 +52,20 @@ def test_empty_upload_never_yields_a_draft_document(client: TestClient, route: s
 
 
 def test_non_empty_but_unrecognised_terraform_is_still_a_draft(client: TestClient) -> None:
-    """O import assistido é semi-automático por desenho: só o ficheiro vazio é inequívoco."""
-    r = _upload(client, "terraform", b"   ", name="main.tf")
+    """O import assistido é semi-automático por desenho: só o ficheiro *sem conteúdo* é inequívoco.
+
+    O conteúdo era `b"   "` — três espaços — e isso fixava como especificação o defeito que
+    `test_p2r5_api_imports_shape_and_blank.py` corrige: um ficheiro em branco produzia um
+    rascunho canónico completo que seguia para validate/analyze como se fosse um modelo. A
+    afirmação que este teste existe para proteger é outra, e mantém-se intacta: conteúdo
+    **presente** mas não reconhecido continua a dar rascunho + `unknowns[]`.
+    """
+    r = _upload(client, "terraform", b"# nothing here\n", name="main.tf")
     assert r.status_code == 200, r.text
 
 
 def test_the_unrecognised_draft_says_nothing_was_found(client: TestClient) -> None:
-    r = _upload(client, "terraform", b"   ", name="main.tf")
+    r = _upload(client, "terraform", b"# nothing here\n", name="main.tf")
     assert r.json()["unknowns"]
 
 

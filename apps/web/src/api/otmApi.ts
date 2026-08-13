@@ -1,4 +1,9 @@
-import { ApiError, apiFetch, fetchWithTimeout, REPORT_TIMEOUT_MS } from "./client";
+import {
+  apiErrorFromResponseText,
+  apiFetch,
+  fetchWithTimeout,
+  REPORT_TIMEOUT_MS,
+} from "./client";
 import type {
   AnalysisResult,
   ArtifactImportKind,
@@ -177,25 +182,10 @@ export async function fetchPremiumReport(args: {
     REPORT_TIMEOUT_MS,
   );
   if (!res.ok) {
-    const text = await res.text();
-    let detailMessage: string | undefined;
-    try {
-      const j = JSON.parse(text) as { detail?: { message?: string } };
-      if (j?.detail && typeof j.detail === "object" && "message" in j.detail) {
-        const m = (j.detail as { message?: string }).message;
-        if (m !== undefined) detailMessage = String(m);
-      }
-    } catch {
-      /* body was not JSON; the reason phrase is all there is */
-    }
-    // An ApiError, not a bare Error, so a gateway 502 here reads the same as everywhere
-    // else in the app instead of surfacing the naked reason phrase.
-    throw new ApiError(
-      detailMessage ?? res.statusText,
-      res.status,
-      text,
-      detailMessage !== undefined,
-    );
+    // Built by the shared helper, not by hand: this route answers 501 PDF_DEPENDENCY when
+    // the server cannot render PDFs, and that coded envelope only reaches the presentation
+    // layer if `body` carries the PARSED response. See `apiErrorFromResponseText`.
+    throw apiErrorFromResponseText(res.status, res.statusText, await res.text());
   }
   const ext = args.outputFormat === "pdf" ? "pdf" : "md";
   if (args.outputFormat === "pdf") {

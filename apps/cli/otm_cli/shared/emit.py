@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import secrets
+import time
 from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import Any
@@ -111,6 +112,23 @@ def _require_writable_parent(output: Path) -> None:
         raise directory_destination_error(output)
 
 
+def _os_error_detail(error: OSError) -> str:
+    """The operating system's reason, with the paths left out.
+
+    `str(OSError)` appends `filename` and `filename2`, and for a failed `os.replace` those are the
+    internal temp name and the destination: the user read `permission denied: [WinError 5] Acesso
+    negado: '.otm9fe6f00c.part' -> 'ro.json'` and went looking for a `.part` file they never typed
+    and which no longer exists. `_temp_creation_failure` states that intent — "never quote the
+    internal `.part` name" — and honours it; this is the other half of the same rule. The error
+    code survives because it is what a support thread actually needs, and the destination is
+    already named in the `failed` line.
+    """
+    winerror = getattr(error, "winerror", None)
+    code = f"WinError {winerror}" if winerror is not None else (f"errno {error.errno}" if error.errno else "")
+    reason = error.strerror or str(error)
+    return f"[{code}] {reason}" if code else reason
+
+
 def _write_failure(output: Path, error: OSError) -> CliUserError:
     """Every `OSError`, not only `PermissionError`.
 
@@ -122,13 +140,13 @@ def _write_failure(output: Path, error: OSError) -> CliUserError:
         return CliUserError(
             exit_code=1,
             failed=f"cannot write to `{output}`.",
-            cause=f"permission denied: {error}",
+            cause=f"permission denied: {_os_error_detail(error)}",
             next_step=_PERMISSION_NEXT_STEP,
         )
     return CliUserError(
         exit_code=1,
         failed=f"cannot write to `{output}`.",
-        cause=f"the destination is not writable: {error}",
+        cause=f"the destination is not writable: {_os_error_detail(error)}",
         next_step=_UNWRITABLE_NEXT_STEP,
     )
 
@@ -169,6 +187,56 @@ def _create_temp_sibling(parent: Path) -> Path:
     raise FileExistsError(f"no free temporary name in `{parent}` after {_TMP_ATTEMPTS} attempts.")
 
 
+#: How old a `.part` sibling must be before a later run reclaims it, in seconds.
+#:
+#: The whole point of the delay: a `.part` file that appeared a moment ago is **indistinguishable**
+#: from the live temp of another `otm` writing into the same directory right now, and deleting
+#: that one would break a run that was going to succeed — trading a disk-hygiene problem for a
+#: corrupted write. An hour is orders of magnitude beyond any write this tool performs (a 32 MB
+#: artifact spends tens of milliseconds in that state) and still reclaims the orphan on the next
+#: run. It deliberately does not reclaim a fresh orphan; nothing safe can.
+_STALE_TEMP_AGE_SECONDS = 3600.0
+
+#: `.otm` + 8 hex + `.part`. Matched exactly so the sweep can never touch a user's own file that
+#: happens to end in `.part`.
+_TMP_NAME_LENGTH = len(_TMP_PREFIX) + 8 + len(_TMP_SUFFIX)
+
+
+def _is_reclaimable_temp(entry: os.DirEntry[str], now: float) -> bool:
+    name = entry.name
+    if len(name) != _TMP_NAME_LENGTH or not name.startswith(_TMP_PREFIX) or not name.endswith(_TMP_SUFFIX):
+        return False
+    if not all(c in "0123456789abcdef" for c in name[len(_TMP_PREFIX) : -len(_TMP_SUFFIX)]):
+        return False
+    try:
+        return entry.is_file() and (now - entry.stat().st_mtime) > _STALE_TEMP_AGE_SECONDS
+    except OSError:  # vanished between listing and stat — someone else already reclaimed it
+        return False
+
+
+def _sweep_stale_temps(parent: Path) -> None:
+    """Reclaim `.part` siblings left behind by a kill this process could not observe.
+
+    `_write_atomically` cleans up in a `finally`, which covers Ctrl-C and a cancelled job but by
+    construction cannot run on `SIGKILL` / `Stop-Process -Force`. Those runs left an
+    `.otm<hex>.part` of up to the full payload size next to the destination and nothing ever
+    removed it — a CI job killed by its timeout leaves a multi-megabyte file that the next
+    artifact-upload glob happily collects.
+
+    Best effort throughout: a directory that cannot be listed, or a file that cannot be removed
+    because something else holds it, must never turn into the error the user sees for a write
+    that is otherwise fine.
+    """
+    now = time.time()
+    try:
+        with os.scandir(parent) as entries:
+            stale = [entry.path for entry in entries if _is_reclaimable_temp(entry, now)]
+    except OSError:
+        return
+    for path in stale:
+        _discard_temp(Path(path))
+
+
 def _discard_temp(temp: Path) -> None:
     """Remove the temp file, and never let the removal become the error the user sees.
 
@@ -201,11 +269,14 @@ def _write_atomically(output: Path, write_payload: Callable[[Path], object], sou
     directory, which nothing ever swept and which an artifact-upload glob in CI happily collects.
     After a successful `os.replace` the temp name no longer exists, so the unlink is a no-op and
     the success path is unchanged. Only a kill the process cannot observe (`SIGKILL`,
-    `Stop-Process -Force`) can still orphan a temp; no in-process cleanup can cover that one.
+    `Stop-Process -Force`) can still orphan a temp; no in-process cleanup can cover that one, so
+    it is reclaimed from the outside instead — `_sweep_stale_temps` runs before this write claims
+    its own name and removes the `.part` siblings old enough to be nobody's.
     """
     _require_output_is_not_a_source(output, sources)
     _require_writable_parent(output)
     parent = _parent_of(output)
+    _sweep_stale_temps(parent)
     try:
         temp = _create_temp_sibling(parent)
     except OSError as e:

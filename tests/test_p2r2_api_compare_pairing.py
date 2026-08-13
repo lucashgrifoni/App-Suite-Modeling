@@ -12,6 +12,7 @@ validar outro invariante sobre esses mesmos dois campos ("ambos ou nenhum").
 
 from __future__ import annotations
 
+from copy import deepcopy
 from typing import Any
 
 import pytest
@@ -167,12 +168,21 @@ def test_an_invalid_analysis_is_still_a_validation_error(client: TestClient, pai
 
 
 def test_premium_baseline_analysis_of_another_version_is_still_allowed(client: TestClient) -> None:
-    """A exceção real: em `/v1/reports/premium` não há documento com que comparar o baseline."""
-    doc = _document(client, _DOC_A)
+    """A exceção real: em `/v1/reports/premium` não há documento com que comparar o baseline.
+
+    A exceção é à guarda de *mesma revisão*, e o baseline usado aqui era a análise de outro
+    template — outro **sistema** — o que a alargava a "nenhuma guarda" e fixava como
+    especificação o defeito corrigido em `test_p2r5_api_premium_baseline_system.py`. A exceção
+    que interessa continua verificada: outra revisão do mesmo modelo passa.
+    """
+    previous = _document(client, _DOC_A)
+    current = deepcopy(previous)
+    current["metadata"]["title"] = "Portal admin (v2)"
+    current["components"].append({"id": "new_worker", "name": "New worker", "kind": "process"})
     body = {
-        "document": doc,
-        "analysis": _analysis(client, doc),
-        "baseline_analysis": _analysis(client, _document(client, _DOC_B)),
+        "document": current,
+        "analysis": _analysis(client, current),
+        "baseline_analysis": _analysis(client, previous),
         "level": "standard",
     }
 

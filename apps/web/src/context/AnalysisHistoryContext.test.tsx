@@ -334,6 +334,158 @@ describe("AnalysisHistoryProvider cross-tab synchronisation", () => {
 });
 
 /**
+ * Two tabs finishing an analysis at the same instant silently lost one snapshot.
+ *
+ * localStorage has no atomic read-modify-write. Both tabs read the list, both add their own
+ * entry to the copy they read, and both write it back — so the second write erases the first
+ * tab's entry. Nothing fails, nothing is reported: the user simply ends up with one snapshot
+ * where two runs happened, and History is the only record of a run that is not exported.
+ *
+ * `simulateClobber` is exactly that interleaving: another tab writes a list built from a
+ * read taken BEFORE this tab's snapshot existed.
+ */
+describe("AnalysisHistoryProvider concurrent snapshot loss", () => {
+  function otherTabEntry(id: string, createdAt: number): AnalysisHistoryEntry {
+    return {
+      id,
+      createdAt,
+      trigger: "analysis",
+      title: "Written in the other tab",
+      systemType: "api_backend",
+      maxScore: 9,
+      document: makeDoc("Written in the other tab"),
+      analysis: null,
+    };
+  }
+
+  /** The other tab's write, from a list it read before this tab's snapshot landed. */
+  function simulateClobber(entries: AnalysisHistoryEntry[]) {
+    const value = JSON.stringify(entries);
+    localStorage.setItem(HISTORY_KEY, value);
+    globalThis.dispatchEvent(
+      new StorageEvent("storage", { key: HISTORY_KEY, newValue: value }),
+    );
+  }
+
+  function seedAndSnapshot() {
+    const { result } = renderHook(() => useBoth(), { wrapper });
+    act(() => result.current.session.setDocument(makeDoc("Payments Gateway")));
+    act(() => result.current.history.appendSnapshot("analysis", makeAnalysis("Payments Gateway", 15)));
+    return result;
+  }
+
+  it("keeps this tab's snapshot when the other tab's write drops it", () => {
+    const result = seedAndSnapshot();
+    const mine = result.current.history.entries[0].id;
+
+    act(() => simulateClobber([otherTabEntry("theirs", 1_770_000_000_000)]));
+
+    expect(result.current.history.entries.map((e) => e.id)).toContain(mine);
+  });
+
+  it("keeps the other tab's snapshot as well — both runs happened", () => {
+    const result = seedAndSnapshot();
+
+    act(() => simulateClobber([otherTabEntry("theirs", 1_770_000_000_000)]));
+
+    expect(result.current.history.entries.map((e) => e.id)).toContain("theirs");
+  });
+
+  it("writes the repaired list back, so the other tab sees it too", () => {
+    const result = seedAndSnapshot();
+    const mine = result.current.history.entries[0].id;
+
+    act(() => simulateClobber([otherTabEntry("theirs", 1_770_000_000_000)]));
+
+    expect(loadHistory().map((e) => e.id)).toContain(mine);
+  });
+
+  it("keeps the list newest-first after the repair", () => {
+    const result = seedAndSnapshot();
+
+    act(() => simulateClobber([otherTabEntry("older", 1)]));
+
+    const times = result.current.history.entries.map((e) => e.createdAt);
+    expect(times).toEqual([...times].sort((a, b) => b - a));
+  });
+
+  it("leaves an ordinary cross-tab write alone when nothing of ours was dropped", () => {
+    const result = seedAndSnapshot();
+    const mine = result.current.history.entries[0];
+
+    act(() => simulateClobber([otherTabEntry("theirs", 1_770_000_000_000), mine]));
+
+    expect(result.current.history.entries.map((e) => e.id)).toEqual(["theirs", mine.id]);
+  });
+
+  /**
+   * The opposite defect this must not become. Restoring an entry the user asked to delete
+   * would be worse than the loss it repairs, so the repair set only ever holds snapshots
+   * this tab wrote, and a delete here drops the entry from it immediately.
+   */
+  it("does not resurrect a snapshot this tab deleted", () => {
+    const result = seedAndSnapshot();
+    const mine = result.current.history.entries[0].id;
+    act(() => result.current.history.remove(mine));
+
+    act(() => simulateClobber([otherTabEntry("theirs", 1_770_000_000_000)]));
+
+    expect(result.current.history.entries.map((e) => e.id)).toEqual(["theirs"]);
+  });
+
+  it("does not fight another tab that removed the last entry", () => {
+    const result = seedAndSnapshot();
+
+    act(() => {
+      localStorage.removeItem(HISTORY_KEY);
+      globalThis.dispatchEvent(
+        new StorageEvent("storage", { key: HISTORY_KEY, newValue: null }),
+      );
+    });
+
+    expect(result.current.history.entries).toEqual([]);
+  });
+
+  it("does not undo another tab clearing the whole store", () => {
+    const result = seedAndSnapshot();
+
+    act(() => {
+      localStorage.clear();
+      globalThis.dispatchEvent(new StorageEvent("storage", { key: null }));
+    });
+
+    expect(result.current.history.entries).toEqual([]);
+  });
+
+  it("stops defending a snapshot once the repair window has passed", () => {
+    const result = seedAndSnapshot();
+    // Six seconds later: the concurrent-write race resolves in milliseconds, so anything
+    // this old is a deliberate change by whoever is at the other tab.
+    vi.spyOn(Date, "now").mockReturnValue(Date.now() + 6_000);
+
+    act(() => simulateClobber([otherTabEntry("theirs", 1_770_000_000_000)]));
+
+    expect(result.current.history.entries.map((e) => e.id)).toEqual(["theirs"]);
+  });
+
+  it("does not defend a snapshot the browser refused to store", () => {
+    const { result } = renderHook(() => useBoth(), { wrapper });
+    act(() => result.current.session.setDocument(makeDoc("Payments Gateway")));
+    const setItem = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      const err = new Error("The quota has been exceeded.");
+      err.name = "QuotaExceededError";
+      throw err;
+    });
+    act(() => result.current.history.appendSnapshot("export"));
+    setItem.mockRestore();
+
+    act(() => simulateClobber([otherTabEntry("theirs", 1_770_000_000_000)]));
+
+    expect(result.current.history.entries.map((e) => e.id)).toEqual(["theirs"]);
+  });
+});
+
+/**
  * When the origin quota is exhausted the snapshot cannot be stored at all, and the caller
  * has to know: it is about to announce success for work that will not appear in History.
  */

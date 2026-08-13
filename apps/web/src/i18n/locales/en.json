@@ -17,6 +17,7 @@
   "layout": {
     "brandSubtitle": "Professional threat modeling",
     "footerNote": "Validation and the engine run on the server — the UI does not duplicate business rules.",
+    "skipToContent": "Skip to content",
     "ariaMainNav": "Main"
   },
   "theme": {
@@ -40,6 +41,7 @@
   "errorBoundary": {
     "title": "Something went wrong in the UI",
     "fallback": "Unexpected error while rendering this screen.",
+    "detailsSummary": "Technical details",
     "reload": "Reload page",
     "home": "Back to home"
   },
@@ -47,8 +49,10 @@
     "timeout": "The API did not respond in time. Check that it is running and reachable, then try again.",
     "unreachable": "Could not reach the API. Check that it is running and reachable, then try again.",
     "entityIdPattern": "Use only letters, digits, `_`, `.` or `-`, starting with a letter, digit or `_`.",
+    "reference": "Reference: {{id}} — quote this if you report the failure.",
     "codes": {
-      "IMPORT_ARTIFACT_INVALID": "The artifact could not be read as YAML or JSON. Check the file opens in an editor without syntax errors, then upload it again."
+      "IMPORT_ARTIFACT_INVALID": "The artifact could not be read as YAML or JSON. Check the file opens in an editor without syntax errors, then upload it again.",
+      "PDF_DEPENDENCY": "This server cannot render PDFs: its optional PDF component is unavailable. Use \"Premium Markdown\" for the same report, or \"Generate PDF\" further down this page to build one in your browser. Server-side PDF comes back once an operator installs the report extra."
     }
   },
   "home": {
@@ -591,6 +595,7 @@
     "restore": "Restore",
     "goExport": "Go to export",
     "pdfSnapshot": "PDF from this snapshot",
+    "pdfSnapshotLoading": "Generating PDF…",
     "remove": "Remove",
     "confirmRestore": "Restoring this snapshot replaces the current model and analysis in the session. Continue?",
     "toastRestored": "Snapshot restored.",

@@ -32,6 +32,16 @@ function normalizeAnalysis(raw: unknown): AnalysisResult | null {
   };
 }
 
+/**
+ * Exported because a fingerprint only matches if both sides hash the SAME document. The
+ * session stores the normalised form, so anything that wants to key data to "the document
+ * in session" — the import review, for one — has to normalise first or its key will miss
+ * on every reload. Idempotent: normalising an already-normalised document changes nothing.
+ */
+export function normalizeSessionDocument(raw: unknown): OtmDocument | null {
+  return normalizeDoc(raw);
+}
+
 function normalizeDoc(raw: unknown): OtmDocument | null {
   if (!raw || typeof raw !== "object") return null;
   const d = raw as OtmDocument;

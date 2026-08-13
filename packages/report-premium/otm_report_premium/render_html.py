@@ -10,7 +10,7 @@ from otm_threat_engine.severity import severity_for_score
 
 from .branding import report_logo_data_uri
 from .enums import ReportLevel
-from .models import PremiumReportPayload, TopRiskItem
+from .models import APPENDIX_ENTRY_PREFIX, PremiumReportPayload, TopRiskItem
 from .pdf_text import to_pdf_font_text
 
 # Tier / severity palette (aligned with product brief)
@@ -271,12 +271,10 @@ _DEGRADED_TEXT_NOTICE = (
     "replaced with '?'. The Markdown export carries the original text."
 )
 
-#: `TechnicalAppendix.full_threat_listing` is one Markdown block per threat:
-#: a `### id — title` heading followed by the description.
-_APPENDIX_HEADING_PREFIX = "### "
-#: The appendix of a large model can list hundreds of threats. The Markdown renderer caps the
-#: listing at 20 000 characters; the PDF caps by entry so the table stays a readable document
-#: instead of a hundred pages of rows, and says how many entries it left out.
+#: The appendix of a large model can list hundreds of threats. The PDF caps by entry so the table
+#: stays a readable document instead of a hundred pages of rows, and says how many entries it left
+#: out — measured against what the analysis produced, not against the listing it is handed, which
+#: the builder may already have shortened.
 _APPENDIX_MAX_ENTRIES = 60
 _APPENDIX_MAX_BODY_CHARS = 700
 
@@ -592,10 +590,10 @@ def _appendix_entries(listing: str) -> list[tuple[str, str]]:
     heading = ""
     body: list[str] = []
     for line in listing.splitlines():
-        if line.startswith(_APPENDIX_HEADING_PREFIX):
+        if line.startswith(APPENDIX_ENTRY_PREFIX):
             if heading:
                 entries.append((heading, " ".join(body)))
-            heading = line[len(_APPENDIX_HEADING_PREFIX) :].strip()
+            heading = line[len(APPENDIX_ENTRY_PREFIX) :].strip()
             body = []
         elif line.strip():
             body.append(line.strip())
@@ -622,14 +620,21 @@ def _html_technical_appendix(parts: list[str], payload: PremiumReportPayload) ->
     parts.append("<table class='risk-table'><colgroup>")
     parts.append("<col style='width:38%'/><col style='width:62%'/></colgroup>")
     parts.append("<tr><th>Threat</th><th>Description</th></tr>")
-    for heading, body in entries[:_APPENDIX_MAX_ENTRIES]:
+    shown = entries[:_APPENDIX_MAX_ENTRIES]
+    for heading, body in shown:
         parts.append(f"<tr><td>{_esc(heading)}</td><td>{_esc(body[:_APPENDIX_MAX_BODY_CHARS])}</td></tr>")
     parts.append("</table>")
-    omitted = len(entries) - _APPENDIX_MAX_ENTRIES
+    # Against `total_threat_count`, not against `entries`: the listing handed to this renderer is
+    # already the builder's shortened one, so counting inside it under-reported the omission by
+    # whatever the builder had dropped — 685 claimed against 4242 real on a 500-component model.
+    # The redirect names the artifact that genuinely holds everything; the Markdown report is
+    # bounded by the same builder budget and was never the complete listing it was sold as.
+    omitted = max(appendix.total_threat_count, len(entries)) - len(shown)
     if omitted > 0:
         parts.append(
             f"<p class='small-muted'>{omitted} further threat(s) omitted from the PDF appendix - "
-            "export the Markdown report for the complete listing.</p>"
+            "the complete listing is in the analysis bundle (`otm analyze --json-out`, "
+            "API `POST /v1/analysis`).</p>"
         )
     parts.append("</section>")
 

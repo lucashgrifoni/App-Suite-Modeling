@@ -8,7 +8,7 @@ from pathlib import Path
 from otm_threat_engine import AnalysisResult
 from pydantic import ValidationError
 
-from otm_cli.io_util import format_validation_error
+from otm_cli.io_util import format_validation_error, refuse_character_device
 from otm_cli.shared.errors import CliUserError
 
 _SCHEMA_INVALID = "the document is not valid for the canonical schema."
@@ -16,6 +16,7 @@ _SCHEMA_INVALID = "the document is not valid for the canonical schema."
 
 def load_analysis_result_from_path(path: Path) -> AnalysisResult:
     try:
+        refuse_character_device(path)
         raw = json.loads(path.read_text(encoding="utf-8"))
     # ValueError, not JSONDecodeError: `read_text` runs first, and a cp1252/latin-1 file raises
     # UnicodeDecodeError — a sibling ValueError, not an OSError — which used to escape both
@@ -41,6 +42,8 @@ def load_analysis_result_from_path(path: Path) -> AnalysisResult:
 
 def load_two_analysis_results(baseline: Path, revised: Path) -> tuple[AnalysisResult, AnalysisResult]:
     try:
+        refuse_character_device(baseline)
+        refuse_character_device(revised)
         b_obj = json.loads(baseline.read_text(encoding="utf-8"))
         r_obj = json.loads(revised.read_text(encoding="utf-8"))
     # See `load_analysis_result_from_path`: ValueError also covers the UnicodeDecodeError that

@@ -11,8 +11,14 @@ import { describe, expect, it } from "vitest";
 import { apiErrorMessage } from "./apiErrorMessage";
 import { ApiError, ApiMalformedResponseError, ApiTimeoutError } from "./client";
 
-/** Stand-in for i18next's `t`: echoes the key so assertions name the string chosen. */
-const t = ((key: string) => `t:${key}`) as unknown as Parameters<typeof apiErrorMessage>[1];
+/**
+ * Stand-in for i18next's `t`: echoes the key so assertions name the string chosen, and
+ * echoes any interpolation values so a key that must carry data can be checked for it.
+ */
+const t = ((key: string, opts?: Record<string, unknown>) => {
+  const values = opts ? Object.values(opts).join(",") : "";
+  return values ? `t:${key}(${values})` : `t:${key}`;
+}) as unknown as Parameters<typeof apiErrorMessage>[1];
 
 describe("apiErrorMessage", () => {
   it("names the timeout when the request was cut off", () => {
@@ -210,5 +216,92 @@ describe("apiErrorMessage envelope presentation", () => {
     ]);
 
     expect(apiErrorMessage(err, t, "wizard.validationFail")).toContain("id: Field required");
+  });
+});
+
+/**
+ * A 500 put the bare HTTP reason phrase on screen — "Internal Server Error" — and threw
+ * away both the server's own sentence and its `request_id`, the only value that ties what
+ * the user saw to the matching line in the server log. The cause was a shape mismatch: the
+ * unhandled-exception handler answers `{code, message, request_id}` at the TOP level while
+ * every other handler nests the same envelope under `detail`, and only `detail` was read.
+ */
+describe("apiErrorMessage top-level envelope", () => {
+  /** Exactly what the API's unhandled-exception handler returns. */
+  function internalError(requestId = "adadde6c-5ec1-4285-8cf5-3b84b3f54fe2"): ApiError {
+    const body = {
+      code: "INTERNAL_ERROR",
+      message: "An unexpected error occurred.",
+      request_id: requestId,
+    };
+    return new ApiError("INTERNAL_ERROR: An unexpected error occurred.", 500, body, true);
+  }
+
+  it("shows the server's own sentence instead of the HTTP reason phrase", () => {
+    expect(apiErrorMessage(internalError(), t, "export.toastPremiumFail")).toContain(
+      "An unexpected error occurred.",
+    );
+  });
+
+  it("keeps the request id, which is the only handle on the server log line", () => {
+    expect(apiErrorMessage(internalError("abc-123"), t, "export.toastPremiumFail")).toContain(
+      "t:apiErrors.reference(abc-123)",
+    );
+  });
+
+  it("carries the request id out of a nested envelope too", () => {
+    const err = new ApiError("x", 500, { detail: { code: "C", message: "m", request_id: "r-9" } }, true);
+
+    expect(apiErrorMessage(err, t, "export.toastPremiumFail")).toContain(
+      "t:apiErrors.reference(r-9)",
+    );
+  });
+
+  it("adds no reference line when the server sent no request id", () => {
+    const err = new ApiError("x", 422, { detail: { code: "C", message: "m" } }, true);
+
+    expect(apiErrorMessage(err, t, "export.toastPremiumFail")).toBe("C: m");
+  });
+
+  it("does not mistake a body that only carries a code for an envelope", () => {
+    // No `message`, so this is not the envelope shape and the transport message stands.
+    const err = new ApiError("Bad Gateway", 502, { code: "nginx" }, false);
+
+    expect(apiErrorMessage(err, t, "export.toastPremiumFail")).toBe("t:apiErrors.unreachable");
+  });
+
+  it("does not mistake a JSON array body for an envelope", () => {
+    const err = new ApiError("Conflict", 409, [{ code: "a", message: "b" }], false);
+
+    expect(apiErrorMessage(err, t, "export.toastPremiumFail")).toBe("Conflict");
+  });
+});
+
+/**
+ * The premium-report route answers 501 PDF_DEPENDENCY when the server has no PDF backend.
+ * The message it sends is an install line for whoever runs the server (`pip install
+ * 'open-threat-model[report]'`), which the person who just clicked "Premium PDF" in a
+ * browser cannot act on — while two working alternatives sit on that same page.
+ */
+describe("apiErrorMessage PDF_DEPENDENCY", () => {
+  function pdfDependency(): ApiError {
+    const detail = {
+      code: "PDF_DEPENDENCY",
+      message:
+        "PDF requer o pacote opcional: pip install 'open-threat-model[report]' ou pip install xhtml2pdf",
+    };
+    return new ApiError(`${detail.code}: ${detail.message}`, 501, { detail }, true);
+  }
+
+  it("words the 501 for the person at the screen", () => {
+    expect(apiErrorMessage(pdfDependency(), t, "export.toastPremiumFail")).toBe(
+      "t:apiErrors.codes.PDF_DEPENDENCY",
+    );
+  });
+
+  it("does not put a server-side pip command in front of a browser user", () => {
+    expect(apiErrorMessage(pdfDependency(), t, "export.toastPremiumFail")).not.toContain(
+      "pip install",
+    );
   });
 });

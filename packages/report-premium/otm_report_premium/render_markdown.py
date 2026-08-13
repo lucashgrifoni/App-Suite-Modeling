@@ -2,9 +2,60 @@
 
 from __future__ import annotations
 
+from typing import Any
+
+from otm_exporters.markdown_text import md_block, md_inline
+from pydantic import BaseModel
+
 from .enums import ReportLevel
-from .models import PremiumReportPayload
+from .models import ArchitectureSummary, PremiumReportPayload, TechnicalAppendix, count_appendix_entries
 from .report_i18n import PremiumRenderCopy, premium_render_copy
+
+#: Campos que o **builder** já entrega como Markdown pronto (estrutura escrita pelo produto, não
+#: valores colocados dentro de uma linha): a listagem do apêndice técnico e o diagrama Mermaid.
+#: Achatá-los destruiria o contorno que o próprio renderizador conta emitir, por isso o texto do
+#: modelo que entra neles é neutralizado onde é construído (`builder._build_tech_appendix`).
+_PREBUILT_MARKDOWN_FIELDS = frozenset(
+    {
+        (TechnicalAppendix, "full_threat_listing"),
+        (ArchitectureSummary, "mermaid_flowchart"),
+    }
+)
+
+
+def _inlined(value: Any) -> Any:
+    """Cópia do valor com todo o texto achatado a uma linha, recursivamente.
+
+    O contorno do relatório (títulos, listas, tabelas) é decisão deste renderizador; o documento é
+    dados do utilizador. Um nome de componente com `\\n\\n## Conclusion\\n\\nNo risks were found.`
+    fechava o bullet onde estava e passava a emitir um H2 verdadeiro seguido de um parágrafo — num
+    relatório de segurança entregue a um revisor, sete vezes no mesmo ficheiro. A defesa existia
+    nos exportadores (`otm_exporters.markdown_text`) e nas células de tabela daqui; faltava em
+    tudo o resto.
+
+    É feita **uma vez, à entrada**, e não em cada interpolação: o payload tem ~40 campos de texto
+    espalhados por doze secções, e a garantia tem de valer também para o campo que alguém
+    acrescentar amanhã. Só as exceções acima ficam de fora, explicitamente.
+    """
+    if isinstance(value, str):
+        return md_inline(value)
+    if isinstance(value, BaseModel):
+        cls = type(value)
+        return value.model_copy(
+            update={
+                name: (
+                    getattr(value, name) if (cls, name) in _PREBUILT_MARKDOWN_FIELDS else _inlined(getattr(value, name))
+                )
+                for name in cls.model_fields
+            }
+        )
+    if isinstance(value, dict):
+        return {_inlined(k): _inlined(v) for k, v in value.items()}
+    if isinstance(value, tuple):
+        return tuple(_inlined(v) for v in value)
+    if isinstance(value, list):
+        return [_inlined(v) for v in value]
+    return value
 
 
 def _md_cell(value: str) -> str:
@@ -41,7 +92,7 @@ def _md_cover_and_disclaimer(lines: list[str], payload: PremiumReportPayload, r:
     lines.append(f"- {r.md_overall_state} {payload.cover.overall_status_display}\n")
 
     lines.append(f"{r.md_inference_notice}\n")
-    lines.append(payload.disclaimer.summary)
+    lines.append(md_block(payload.disclaimer.summary))
     for bullet in payload.disclaimer.bullets:
         lines.append(f"- {bullet}")
     lines.append("")
@@ -118,7 +169,7 @@ def _md_architecture_and_stats(lines: list[str], payload: PremiumReportPayload, 
         return
     lines.append(f"{r.md_arch_overview}\n")
     ar = payload.architecture
-    lines.append(ar.narrative + "\n")
+    lines.append(md_block(ar.narrative) + "\n")
     lines.append(f"{r.md_main_components}\n")
     lines.append("\n".join(f"- {c}" for c in ar.main_components[:15]))
     lines.append(f"\n{r.md_main_flows}\n")
@@ -207,7 +258,7 @@ def _md_deep_details(lines: list[str], payload: PremiumReportPayload, r: Premium
 
     lines.append(f"{r.md_strategic}\n")
     for s in payload.strategic_recommendations:
-        lines.append(f"### {s.title}\n{s.detail}\n")
+        lines.append(f"### {s.title}\n{md_block(s.detail)}\n")
 
 
 def _md_roadmap(lines: list[str], payload: PremiumReportPayload, r: PremiumRenderCopy) -> None:
@@ -250,10 +301,33 @@ def _md_baseline_diff(lines: list[str], payload: PremiumReportPayload, r: Premiu
     if not (payload.baseline_diff and payload.baseline_diff.has_baseline):
         return
     lines.append(f"{r.md_baseline_diff}\n")
-    lines.append(payload.baseline_diff.narrative + "\n")
+    lines.append(md_block(payload.baseline_diff.narrative) + "\n")
     lines.append(f"{r.md_new} {', '.join(payload.baseline_diff.threats_added[:20])}\n")
     lines.append(f"{r.md_removed} {', '.join(payload.baseline_diff.threats_removed[:20])}\n")
     _md_baseline_semantic(lines, payload.baseline_diff, r)
+
+
+def _md_technical_appendix(lines: list[str], appendix: TechnicalAppendix, r: PremiumRenderCopy) -> None:
+    """Apêndice do nível `deep`, com a sua própria cobertura declarada.
+
+    A listagem era cortada aqui a 20 000 caracteres, a meio da palavra da última entrada e logo
+    seguida de `</details>` — indistinguível de um ficheiro truncado — sobre uma listagem que o
+    builder já tinha cortado. Passa a haver um único corte (o do builder, por entrada inteira) e
+    uma linha que diz quantas ameaças estão à vista de quantas existem, com o caminho para as
+    restantes quando ficaram de fora.
+    """
+    lines.append(f"{r.md_technical_appendix}\n")
+    lines.append(md_block(appendix.methodology_outputs_note) + "\n")
+    if appendix.import_evidence_note:
+        lines.append(md_block(appendix.import_evidence_note) + "\n")
+    shown = count_appendix_entries(appendix.full_threat_listing)
+    coverage = r.md_appendix_coverage.format(shown=shown, total=appendix.total_threat_count)
+    if shown < appendix.total_threat_count:
+        coverage = f"{coverage} {r.md_appendix_truncated}"
+    lines.append(f"{coverage}\n")
+    lines.append(f"{r.md_threats_excerpt}\n\n")
+    lines.append(appendix.full_threat_listing)
+    lines.append("\n</details>\n")
 
 
 def _md_tail_sections(lines: list[str], payload: PremiumReportPayload, r: PremiumRenderCopy) -> None:
@@ -272,13 +346,7 @@ def _md_tail_sections(lines: list[str], payload: PremiumReportPayload, r: Premiu
             lines.append(f"- **[{ex_snippet.category}]** {ex_snippet.message[:400]}\n")
 
     if lvl == ReportLevel.DEEP and payload.technical_appendix:
-        lines.append(f"{r.md_technical_appendix}\n")
-        lines.append(payload.technical_appendix.methodology_outputs_note + "\n")
-        if payload.technical_appendix.import_evidence_note:
-            lines.append(payload.technical_appendix.import_evidence_note + "\n")
-        lines.append(f"{r.md_threats_excerpt}\n\n")
-        lines.append(payload.technical_appendix.full_threat_listing[:20000])
-        lines.append("\n</details>\n")
+        _md_technical_appendix(lines, payload.technical_appendix, r)
 
     if payload.methodology_voice:
         lines.append(f"{r.md_methodology_adaptation}\n")
@@ -289,6 +357,7 @@ def _md_tail_sections(lines: list[str], payload: PremiumReportPayload, r: Premiu
 
 def render_premium_markdown(payload: PremiumReportPayload) -> str:
     """Gera Markdown completo; profundidade controlada por `payload.level`."""
+    payload = _inlined(payload)
     r = premium_render_copy(payload.locale)
     lines: list[str] = []
     _md_cover_and_disclaimer(lines, payload, r)

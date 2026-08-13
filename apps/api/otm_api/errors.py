@@ -19,6 +19,16 @@ from otm_api.api_error_messages import msg_request_validation_error
 # context for the user to identify the offending input.
 _MAX_INPUT_CHARS = 256
 
+# Cap the *number* of `errors[]` entries, the way `_truncate` already caps the number of items
+# inside one of them. Without it the per-value caps bounded each entry but nothing bounded the
+# array, so the response grew linearly with the number of invalid items while each one cost a
+# constant ~330 bytes of enum text: a 1 MB request of repeated enum violations produced a 66 MB
+# response in 1.4 s of server CPU, unauthenticated and unthrottled on the default posture. The
+# same 50 as the list/dict caps in `_truncate`, for one reason: a caller cannot act on the 51st
+# message before fixing the first fifty, and the marker entry says how many were withheld so the
+# count is never misread as "these are all the problems".
+_MAX_ERROR_ITEMS = 50
+
 
 def problem_detail(
     *,
@@ -91,15 +101,32 @@ def _truncate(value: Any, *, depth: int = 0) -> Any:
     return _truncate(str(value), depth=depth)
 
 
+def _suppressed_errors_marker(total: int) -> dict[str, Any]:
+    """The entry that tells the caller the list was cut, and by how much.
+
+    A silent slice would be worse than the amplification it fixes: "3 errors" would read as
+    "three problems in my document" when the document has three thousand, and the caller would
+    fix three and resubmit. Shaped like every other entry (`type`/`loc`/`msg`) so a client that
+    iterates `errors[]` does not need a special case.
+    """
+    return {
+        "type": "too_many_errors",
+        "loc": ["body"],
+        "msg": f"…[{total - _MAX_ERROR_ITEMS} further errors suppressed; {total} in total]",
+    }
+
+
 def _truncated_errors(errors: list[dict[str, Any]]) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
-    for err in errors:
+    for err in errors[:_MAX_ERROR_ITEMS]:
         new_err = dict(err)
         if "input" in new_err:
             new_err["input"] = _truncate(new_err["input"])
         if "ctx" in new_err and isinstance(new_err["ctx"], dict):
             new_err["ctx"] = _truncate(new_err["ctx"])
         out.append(new_err)
+    if len(errors) > _MAX_ERROR_ITEMS:
+        out.append(_suppressed_errors_marker(len(errors)))
     return out
 
 

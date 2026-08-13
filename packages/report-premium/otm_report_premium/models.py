@@ -233,10 +233,29 @@ class StrategicRecommendation(BaseModel):
     detail: str
 
 
+#: Contrato da listagem do apêndice: cada ameaça começa uma linha com este prefixo e o corpo vem
+#: na linha seguinte. É por aqui que o renderizador HTML volta a ler a listagem como estrutura
+#: para montar a tabela do PDF, e é por aqui que se conta quantas entradas ficaram à vista.
+APPENDIX_ENTRY_PREFIX = "### "
+
+
+def count_appendix_entries(listing: str) -> int:
+    """Entradas presentes na listagem — linhas iniciadas pelo prefixo, não ocorrências no texto."""
+    return sum(1 for line in listing.splitlines() if line.startswith(APPENDIX_ENTRY_PREFIX))
+
+
 class TechnicalAppendix(BaseModel):
     """Apêndice técnico (deep)."""
 
     full_threat_listing: str
+    total_threat_count: int = Field(
+        default=0,
+        description=(
+            "Ameaças que a análise produziu, antes de qualquer corte. `full_threat_listing` pode "
+            "trazer menos (orçamento de tamanho); quem renderiza declara 'N de M' a partir daqui, "
+            "e não do comprimento da listagem, que já vem cortada."
+        ),
+    )
     methodology_outputs_note: str
     import_evidence_note: str | None = None
 

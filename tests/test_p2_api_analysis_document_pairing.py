@@ -10,6 +10,7 @@ metodologia de B, e `/v1/reports/premium` emitia um relatório com o cabeçalho 
 
 from __future__ import annotations
 
+from copy import deepcopy
 from typing import Any
 
 import pytest
@@ -135,13 +136,50 @@ def test_matching_pair_still_works(client: TestClient, path: str, extra: dict[st
     assert r.status_code == 200, r.text
 
 
+def _next_revision_of(document: dict[str, Any]) -> dict[str, Any]:
+    """O mesmo modelo, renomeado e com um componente a mais — o que uma release faz."""
+    revised = deepcopy(document)
+    revised["metadata"]["title"] = f"{document['metadata']['title']} (v2)"
+    revised["components"].append({"id": "new_worker", "name": "New worker", "kind": "process"})
+    return revised
+
+
 def test_premium_baseline_analysis_of_a_previous_version_is_not_blocked(client: TestClient) -> None:
-    """`baseline_analysis` é, por definição, de outra versão — a divergência é o objetivo."""
+    """`baseline_analysis` é, por definição, de outra versão — a divergência é o objetivo.
+
+    O baseline usado aqui era a análise de **outro template** (`ai-agent-tool-use` ao lado de
+    `admin-portal`), ou seja de outro sistema, e isso fixava como especificação o defeito que
+    `test_p2r5_api_premium_baseline_system.py` corrige: a API devolvia 200 e uma secção
+    `## Baseline / diff` sobre uma revisão que nunca existiu. A afirmação que este teste existe
+    para proteger é a outra, e continua verdadeira: uma revisão anterior **do mesmo modelo**
+    é aceite, mesmo depois de renomeada e de crescer.
+    """
+    previous = _document(client, _DOC_A)
+    baseline = _analysis(client, previous)
+    current = _next_revision_of(previous)
+    r = client.post(
+        "/v1/reports/premium",
+        json={
+            "document": current,
+            "analysis": _analysis(client, current),
+            "baseline_analysis": baseline,
+            "level": "standard",
+        },
+    )
+    assert r.status_code == 200, r.text
+
+
+def test_premium_baseline_analysis_of_another_system_is_blocked(client: TestClient) -> None:
+    """O contra-caso que o teste acima costumava afirmar ao contrário."""
     doc = _document(client, _DOC_A)
-    analysis = _analysis(client, doc)
     other = _analysis(client, _document(client, _DOC_B))
     r = client.post(
         "/v1/reports/premium",
-        json={"document": doc, "analysis": analysis, "baseline_analysis": other, "level": "standard"},
+        json={
+            "document": doc,
+            "analysis": _analysis(client, doc),
+            "baseline_analysis": other,
+            "level": "standard",
+        },
     )
-    assert r.status_code == 200, r.text
+    assert r.status_code == 422, r.text

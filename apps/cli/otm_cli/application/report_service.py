@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from otm_report_premium import (
+    PdfSupportUnavailable,
     build_premium_report_payload,
     html_to_pdf_bytes,
     render_premium_html,
@@ -160,14 +161,25 @@ def run_report(
     html = render_premium_html(payload)
     try:
         pdf_bytes = html_to_pdf_bytes(html)
-    except ImportError as e:
-        # The renderer's own ImportError text is Portuguese and unstructured; re-raising it
-        # verbatim made the first error after the documented bare install the only non-English
-        # message in the CLI. Restate it in this layer's standard three-line shape.
+    except PdfSupportUnavailable as e:
+        # The renderer now names the reason and the remedy, in English and already split into the
+        # two halves this layer prints. Restating them here hard-coded the "not installed" case
+        # and would tell someone whose `[report]` extra is satisfied — but whose native Cairo
+        # library is missing — to install the extra they already have.
         raise CliUserError(
             exit_code=1,
             failed="PDF output for the premium report.",
-            cause="the optional `xhtml2pdf` package is not installed.",
+            cause=e.cause,
+            next_step=e.next_step,
+        ) from e
+    except ImportError as e:
+        # Kept as a net under the branch above. The renderer's own `ImportError` text is
+        # Portuguese and unstructured, and letting any import failure it does not classify escape
+        # is how the missing-Cairo `OSError` became a raw traceback in the first place.
+        raise CliUserError(
+            exit_code=1,
+            failed="PDF output for the premium report.",
+            cause="the optional PDF support could not be loaded.",
             next_step='install the extra: `pip install "open-threat-model[report]"`.',
         ) from e
     return ReportPremiumPdfResult(

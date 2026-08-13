@@ -95,6 +95,7 @@ def test_a_long_appendix_is_capped_and_says_so(document: ThreatModelDocument) ->
     payload = _payload(document, ReportLevel.DEEP)
     assert payload.technical_appendix is not None  # payload precondition, not the assertion
     payload.technical_appendix.full_threat_listing = "\n".join(f"### t{i} - Title {i}\nBody {i}\n" for i in range(80))
+    payload.technical_appendix.total_threat_count = 80
 
     assert "20 further threat(s) omitted from the PDF appendix" in render_premium_html(payload)
 
@@ -103,6 +104,9 @@ def test_a_short_appendix_says_nothing_about_omissions(document: ThreatModelDocu
     payload = _payload(document, ReportLevel.DEEP)
     assert payload.technical_appendix is not None  # payload precondition, not the assertion
     payload.technical_appendix.full_threat_listing = "### t1 - Only one\nBody\n"
+    # Both halves of the fixture, or the payload says "one entry listed, forty produced" and the
+    # renderer is right to disclose the other thirty-nine.
+    payload.technical_appendix.total_threat_count = 1
 
     assert "omitted from the PDF appendix" not in render_premium_html(payload)
 

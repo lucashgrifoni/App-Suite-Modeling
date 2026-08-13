@@ -44,6 +44,9 @@ class AnalysisMarkdownMessages:
     ref_more: str
     threats_harmonized_title: str
     threats_harmonized_blurb: str
+    threats_complete_title: str
+    threats_complete_blurb: str
+    engine_dedup_notes: str
     threat_line_fw_label: str
     more_entries: str
     harmonization_notes: str
@@ -145,6 +148,15 @@ _MSG: dict[ExportArtifactLocale, AnalysisMarkdownMessages] = {
         threats_harmonized_title="### Ameaças sugeridas (harmonizadas)",
         threats_harmonized_blurb=(
             "Visualização priorizada por especificidade (`biz_*`) com redução de redundância semântica."
+        ),
+        threats_complete_title="### Ameaças sugeridas (lista completa)",
+        threats_complete_blurb=(
+            "Visualização sem redução de redundância: todos os achados activos, ordenados por especificidade (`biz_*`)."
+        ),
+        engine_dedup_notes=(
+            "- **De-duplicação do motor:** {skipped} achados foram marcados como duplicados "
+            "e não entram em nenhuma vista deste relatório "
+            "(presentes no JSON com `skipped_as_duplicate`)."
         ),
         threat_line_fw_label="Frameworks",
         more_entries="\n… e mais {n} entradas.",
@@ -254,6 +266,14 @@ _MSG: dict[ExportArtifactLocale, AnalysisMarkdownMessages] = {
         ref_more="… (+{n})",
         threats_harmonized_title="### Suggested threats (harmonized)",
         threats_harmonized_blurb=("View prioritized by specificity (`biz_*`) with reduced semantic redundancy."),
+        threats_complete_title="### Suggested threats (complete list)",
+        threats_complete_blurb=(
+            "View without redundancy reduction: every active finding, ordered by specificity (`biz_*`)."
+        ),
+        engine_dedup_notes=(
+            "- **Engine de-duplication:** {skipped} findings were marked as duplicates and appear "
+            "in no view of this report (present in the JSON with `skipped_as_duplicate`)."
+        ),
         threat_line_fw_label="Frameworks",
         more_entries="\n… and {n} more entries.",
         harmonization_notes=(

@@ -25,6 +25,13 @@ Só é aplicado onde a análise **descreve o documento submetido**. Em `/v1/repo
 `baseline_analysis` é a análise de uma versão anterior *do documento que não foi enviado*:
 não há com que a comparar, e a divergência é o objetivo do endpoint.
 
+Isso isenta o baseline da guarda de *mesma revisão*, e não de guarda nenhuma — a distinção que
+faltava. A pergunta certa para um baseline é a outra do vocabulário partilhado, "mesmo
+sistema?", e é a que a CLI já fazia (`require_baseline_describes_same_system`). Sem ela, a API
+aceitava o baseline de um modelo sem relação nenhuma e devolvia 200 com uma secção
+`## Baseline / diff` a atribuir 13 ameaças adicionadas e 6 removidas a uma revisão que nunca
+existiu, enquanto a CLI recusava o mesmo par de artefactos. Ver `baseline_system_mismatches`.
+
 `/v1/models/compare` **não** é essa exceção, e tratá-lo como tal era um defeito: ali chegam
 dois pares completos (`baseline` + `baseline_analysis`, `revised` + `revised_analysis`), e
 cada análise descreve o documento que vem ao lado dela. Divergir *entre* os pares é o objetivo
@@ -38,7 +45,11 @@ from typing import Any
 
 from otm_core_schema import ThreatModelDocument
 from otm_threat_engine import AnalysisResult
-from otm_threat_engine.analysis_identity import foreign_entity_ids, unanalysed_component_ids
+from otm_threat_engine.analysis_identity import (
+    foreign_entity_ids,
+    system_overlap,
+    unanalysed_component_ids,
+)
 
 
 def analysis_document_mismatches(
@@ -92,3 +103,38 @@ def analysis_document_mismatches(
         )
 
     return mismatches
+
+
+def baseline_system_mismatches(
+    current: AnalysisResult,
+    baseline: AnalysisResult,
+    *,
+    baseline_field: str = "baseline_analysis",
+) -> list[dict[str, Any]]:
+    """
+    Divergências entre um baseline e a análise actual, no formato `errors[]` da API.
+
+    Relação deliberadamente mais fraca do que `analysis_document_mismatches`: um baseline é
+    outra revisão por definição, por isso nada aqui pode exigir que os dois concordem — nem o
+    título (renomear entre releases é banal, e recusar custava o relatório inteiro), nem o
+    conjunto de componentes (crescer é a mudança que um baseline existe para mostrar). Só se
+    recusa a troca de sistema, na mesma medida que `otm report --baseline` e `diff-analysis`
+    usam (`analysis_identity.system_overlap`).
+
+    Lista e não booleano para acompanhar `analysis_document_mismatches`: a resposta 422 carrega
+    `errors[]`, e a proporção medida é o que torna a recusa verificável por quem a lê.
+    """
+    overlap = system_overlap(baseline, current)
+    if overlap.is_same_system:
+        return []
+    return [
+        {
+            "loc": ["body", baseline_field, "heuristic_threats"],
+            "msg": (
+                f"{baseline_field} shares {overlap.shared} of the {overlap.smaller} structural entities "
+                "the smaller side models; a baseline is an earlier revision of the same system, so the "
+                "diff would be invented"
+            ),
+            "type": "baseline_system_mismatch.structure",
+        }
+    ]

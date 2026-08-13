@@ -151,8 +151,15 @@ def _priority_score(h) -> float:
 def _markdown_view_mode() -> str:
     """
     Controle para comparação before/after sem alterar o JSON.
-    - legacy: sem supressão (apresenta tudo)
-    - harmonized: supressão conservadora + categorias top-N
+
+    - `legacy`: sem a redução de redundância **deste exportador** — apresenta todos os achados
+      activos, sem categorias top-N.
+    - `harmonized` (predefinição): supressão conservadora + categorias top-N.
+
+    O que `legacy` **não** faz, apesar de a docstring anterior prometer "apresenta tudo": repor os
+    achados que o motor já marcou `skipped_as_duplicate` antes de o exportador correr. Esses estão
+    fora de ambas as vistas e só voltam com `OTM_ENGINE_STRIDE_NOISE_SUPPRESSION=0`; quantos são é
+    agora dito no resumo executivo, em vez de o leitor ter de descobrir pelo JSON.
     """
     mode = (os.environ.get("OTM_MARKDOWN_VIEW_MODE") or "harmonized").strip().lower()
     return mode if mode in {"legacy", "harmonized"} else "harmonized"
@@ -284,9 +291,13 @@ def _append_heuristic_block(
 ) -> None:
     if not harmonized:
         return
-    lines.append(msgs.threats_harmonized_title)
+    # The heading described the harmonized view even when the harmonized view was not what got
+    # rendered: `OTM_MARKDOWN_VIEW_MODE=legacy` printed "(harmonizadas)" over the complete,
+    # unreduced list, so a reader holding the report could not tell which of the two they had.
+    complete = _markdown_view_mode() == "legacy"
+    lines.append(msgs.threats_complete_title if complete else msgs.threats_harmonized_title)
     lines.append("")
-    lines.append(msgs.threats_harmonized_blurb)
+    lines.append(msgs.threats_complete_blurb if complete else msgs.threats_harmonized_blurb)
     lines.append("")
     for h in harmonized[:max_heuristic_rows]:
         tgt = _target_of(h)
@@ -379,6 +390,12 @@ def _append_executive_summary_from_harmonized(
             max_score=s.max_risk_score if s.max_risk_score is not None else "—",
         )
     )
+    # "Active" was accurate but incomplete: the engine had already withheld findings as duplicates
+    # before this exporter saw them, and the report said nowhere how many. A reader comparing the
+    # report against `otm analyze --json-out` found nine findings unaccounted for.
+    withheld = len(result.heuristic_threats) - len(active)
+    if withheld > 0:
+        lines.append(msgs.engine_dedup_notes.format(skipped=withheld))
     lines.append(f"{msgs.methodology_applied} **{result.methodology.value}**")
     if top:
         lines.append(msgs.immediate_priority)

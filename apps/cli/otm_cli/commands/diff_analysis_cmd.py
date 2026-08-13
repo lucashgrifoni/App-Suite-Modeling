@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import sys
 from pathlib import Path
 from typing import Annotated
 
@@ -17,7 +16,7 @@ from otm_cli.commands.handle_errors import exit_on_cli_error
 from otm_cli.shared.emit import write_json_file
 from otm_cli.shared.enums import DiffFormat
 from otm_cli.shared.errors import CliUserError
-from otm_cli.shared.gate import gate_exit_code, parse_fail_on, render_gate_result
+from otm_cli.shared.gate import parse_fail_on, report_gate_verdict
 from otm_cli.shared.render import safe
 
 
@@ -42,8 +41,10 @@ def register(app: typer.Typer) -> None:
     ) -> None:
         """Compare two analyze.json files without re-running the engine.
 
-        Exit codes: 0 no gate trip · 1 usage error, or an armed gate with no verdict (the two
-        analyses are not comparable) · 2 bad flag value · 3 gate tripped.
+        Exit codes: 0 no gate trip · 1 usage error, including an out-of-range `--fail-on` value,
+        or an armed gate with no verdict (the two analyses are not comparable) · 2 parsing error
+        raised by Typer/Click: unknown flag, missing argument, invalid enum value on `--format`
+        · 3 gate tripped.
         """
         try:
             policy = GatePolicy(fail_on=parse_fail_on(fail_on), fail_on_risk_increase=fail_on_risk_increase)
@@ -74,10 +75,9 @@ def register(app: typer.Typer) -> None:
 
         # Gate last: every artifact is on disk and stdout is complete before we can exit non-zero.
         if policy.active:
-            result = evaluate_gate(analysis_diff, policy)
-            print(render_gate_result(result), file=sys.stderr)
-            # Same mapping as `otm diff`, including the non-zero exit for a gate that could not
-            # judge: the two commands arm the same policy and must answer CI the same way.
-            code = gate_exit_code(result)
+            # Same mapping and same ordering as `otm diff`, including the non-zero exit for a gate
+            # that could not judge: the two commands arm the same policy and must answer CI the
+            # same way, whether or not anyone is still reading the report.
+            code = report_gate_verdict(evaluate_gate(analysis_diff, policy))
             if code:
                 raise typer.Exit(code)
