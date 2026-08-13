@@ -78,6 +78,7 @@ Guias em **[`features/`](features/)** — superfícies e capacidades de produto.
 |-----------|----------|
 | [`architecture/ARCHITECTURE.md`](architecture/ARCHITECTURE.md) | Visão técnica |
 | [`architecture/adr/`](architecture/adr/) | Architecture Decision Records |
+| [`architecture/THREAT_MODEL.md`](architecture/THREAT_MODEL.md) | Threat model do próprio produto (STRIDE, LINDDUN, abuse cases) |
 | [`architecture/DEPLOYMENT_INVARIANTS.md`](architecture/DEPLOYMENT_INVARIANTS.md) | Implantação e perímetro |
 | [`architecture/CONTRACTS_CI_HYBRID.md`](architecture/CONTRACTS_CI_HYBRID.md) | Contratos, CI, E2E híbrido |
 | [`architecture/SMOKE_VALIDATION.md`](architecture/SMOKE_VALIDATION.md) | Smoke / critérios |
