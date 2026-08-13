@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 from pathlib import Path
 from typing import Any
@@ -31,6 +32,29 @@ ENV_MAX_DOCUMENT_BYTES = "OTM_MAX_DOCUMENT_BYTES"
 #: Override: variável de ambiente `OTM_MAX_YAML_NODES`.
 MAX_YAML_EXPANDED_NODES = 500_000
 ENV_MAX_YAML_EXPANDED_NODES = "OTM_MAX_YAML_NODES"
+
+#: Tecto de **profundidade** de aninhamento do documento, em YAML e em JSON.
+#:
+#: O tecto de nós acima conta expansão de aliases, e um documento sem um único alias não gasta
+#: nada dele. `"a: " + "["*5000 + "]"*5000` são 10 KB de sequências encaixadas, zero aliases, e
+#: atravessava o contador até o `compose_node` do PyYAML esgotar a pilha do interpretador. O
+#: `RecursionError` que daí saía não é `ValueError`: nas rotas de import subia ao handler
+#: genérico como **500 `INTERNAL_ERROR`** e escrevia o traceback completo — 627 695 bytes de log
+#: para 10 003 bytes de entrada, 62,8x de amplificação por pedido. O custo real era esse, não o
+#: 500.
+#:
+#: O tecto é **um só para as duas serializações** porque descrevem a mesma forma de documento, e
+#: porque o defeito era literalmente o mesmo dos dois lados: `load_object_from_text` escolhe
+#: `json.loads` quando o texto começa por `{`, e esse ramo tinha exatamente o mesmo buraco —
+#: `{"a":` * 20000 devolvia 500 pela mesma razão, com o `RecursionError` a escapar a um `except
+#: (yaml.YAMLError, json.JSONDecodeError)`. Um tecto por formato deixaria a segunda porta aberta.
+#:
+#: 100 dá ~16x de folga: o documento mais profundo deste repositório tem profundidade 6 (23
+#: ficheiros YAML medidos — exemplos, fixtures, workflows, docker-compose), e os artefactos de
+#: terceiros que os importadores ingerem ficam bem abaixo disto. Override:
+#: `OTM_MAX_DOCUMENT_DEPTH`.
+MAX_DOCUMENT_DEPTH = 100
+ENV_MAX_DOCUMENT_DEPTH = "OTM_MAX_DOCUMENT_DEPTH"
 
 
 def _limit_from_env(name: str, default: int) -> int:
@@ -92,6 +116,8 @@ class _BoundedSafeLoader(yaml.SafeLoader):
         super().__init__(stream)
         self._max_expanded = _limit_from_env(ENV_MAX_YAML_EXPANDED_NODES, MAX_YAML_EXPANDED_NODES)
         self._expanded = 0
+        self._max_depth = _limit_from_env(ENV_MAX_DOCUMENT_DEPTH, MAX_DOCUMENT_DEPTH)
+        self._depth = 0
         # id(nó) -> custo expandido do sub-árvore. Usar `id` é seguro aqui porque todos os nós
         # compostos ficam vivos até ao fim (pendurados no pai ou em `self.anchors`), logo o
         # id não é reciclado durante a composição; `_pinned` garante-o mesmo assim.
@@ -99,6 +125,21 @@ class _BoundedSafeLoader(yaml.SafeLoader):
         self._pinned: list[Node] = []
 
     def compose_node(self, parent: Node | None, index: int) -> Node | None:
+        # A profundidade conta-se aqui porque `compose_node` é a própria recursão do PyYAML: um
+        # nível de aninhamento é uma chamada. O `finally` devolve o nível ao sair, para que o
+        # tecto meça a profundidade da árvore e não o total de nós já visitados — dois irmãos
+        # rasos não podem somar-se até ao limite.
+        self._depth += 1
+        try:
+            if self._depth > self._max_depth:
+                raise ValueError(
+                    f"YAML nesting exceeds {self._max_depth} levels (override with {ENV_MAX_DOCUMENT_DEPTH})."
+                )
+            return self._compose_node_bounded(parent, index)
+        finally:
+            self._depth -= 1
+
+    def _compose_node_bounded(self, parent: Node | None, index: int) -> Node | None:
         is_alias = self.check_event(yaml.AliasEvent)
         before = self._expanded
         node = super().compose_node(parent, index)
@@ -170,6 +211,55 @@ def safe_load_all_bounded(text: str) -> list[Any]:
         return out
     finally:
         loader.dispose()
+
+
+def json_loads_bounded(text: str) -> Any:
+    """`json.loads` com o mesmo tecto de profundidade que o loader YAML aplica.
+
+    `json.loads` desce recursivamente e não tem limite próprio: `'{"a":' * 20000` esgota a pilha
+    e levanta `RecursionError`, que não é `json.JSONDecodeError` nem `ValueError` — logo escapava
+    a quem só apanhava erros de parse e voltava a sair como 500 com o traceback inteiro no log.
+    Mesmo defeito do lado YAML, mesma consequência.
+
+    A profundidade mede-se por varrimento linear **antes** de entregar o texto ao parser: o
+    objectivo é recusar sem pagar a recursão, e não apanhar a explosão depois de ela custar. Um
+    `RecursionError` continua a ser traduzido pelo chamador como defesa em profundidade, para o
+    caso de um documento raso mas patológico de outra forma.
+    """
+    limit = _limit_from_env(ENV_MAX_DOCUMENT_DEPTH, MAX_DOCUMENT_DEPTH)
+    if _json_depth_exceeds(text, limit):
+        raise ValueError(f"JSON nesting exceeds {limit} levels (override with {ENV_MAX_DOCUMENT_DEPTH}).")
+    return json.loads(text)
+
+
+def _json_depth_exceeds(text: str, limit: int) -> bool:
+    """Verdadeiro assim que o aninhamento passa `limit`, sem construir nada.
+
+    Conta `{`/`[` fora de strings e sai à primeira violação, para que o custo de recusar uma
+    bomba seja proporcional ao prefixo hostil e não ao ficheiro todo. As chavetas dentro de
+    strings são ignoradas, incluindo as escapadas — senão `{"k": "}}}"}` contaria a menos e um
+    ficheiro legítimo com chavetas no texto contaria a mais.
+    """
+    depth = 0
+    in_string = False
+    escaped = False
+    for ch in text:
+        if in_string:
+            if escaped:
+                escaped = False
+            elif ch == "\\":
+                escaped = True
+            elif ch == '"':
+                in_string = False
+        elif ch == '"':
+            in_string = True
+        elif ch in "{[":
+            depth += 1
+            if depth > limit:
+                return True
+        elif ch in "}]":
+            depth -= 1
+    return False
 
 
 def load_document_from_yaml(text: str) -> ThreatModelDocument:

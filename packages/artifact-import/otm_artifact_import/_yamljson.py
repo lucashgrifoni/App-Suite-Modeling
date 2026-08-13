@@ -7,7 +7,7 @@ from collections.abc import Iterator
 from typing import Any
 
 import yaml
-from otm_core_schema.io import safe_load_all_bounded, safe_load_bounded
+from otm_core_schema.io import json_loads_bounded, safe_load_all_bounded, safe_load_bounded
 
 
 def load_object_from_text(text: str) -> dict[str, Any]:
@@ -17,7 +17,11 @@ def load_object_from_text(text: str) -> dict[str, Any]:
         raise ValueError("Artefacto vazio.")
     try:
         if text.startswith("{"):
-            data = json.loads(text)
+            # Bounded pela mesma razão que o ramo YAML, e com o mesmo tecto: `json.loads` desce
+            # recursivamente e `'{"a":' * 20000` esgotava a pilha. O `RecursionError` daí não é
+            # `JSONDecodeError`, escapava a este `except` e saía como 500 com o traceback
+            # completo no log — o mesmo defeito que o aninhamento YAML tinha do outro lado.
+            data = json_loads_bounded(text)
         else:
             # Bounded: estes ficheiros chegam por upload HTTP, tal como o documento
             # canónico. `yaml.safe_load` impede tipos arbitrários mas não limita a
@@ -25,6 +29,11 @@ def load_object_from_text(text: str) -> dict[str, Any]:
             data = safe_load_bounded(text)
     except (yaml.YAMLError, json.JSONDecodeError) as e:
         raise ValueError(f"Não foi possível interpretar como YAML/JSON: {e}") from e
+    except RecursionError as e:
+        # Defesa em profundidade. Os tectos acima recusam a bomba conhecida antes de a pagar;
+        # isto garante que qualquer outra forma patológica continua a ser "input do utilizador
+        # está mal" (400) e não um 500 com a pilha inteira no disco.
+        raise ValueError("Artefacto demasiado aninhado para ser interpretado.") from e
     if not isinstance(data, dict):
         raise ValueError("Raiz do artefacto deve ser um objecto (mapping).")
     return data

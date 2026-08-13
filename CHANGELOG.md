@@ -8,6 +8,31 @@ This project follows **Keep a Changelog** and **Semantic Versioning**.
 
 ## [Unreleased]
 
+### Security
+- **Um upload de 10 KB escrevia 628 KB de log e devolvia 500.** O documento não confiável tinha
+  tecto de bytes e tecto de expansão de aliases, mas nenhum de **profundidade**. `"a: " +
+  "["*5000 + "]"*5000` são 10 003 bytes sem um único alias, por isso não gastavam nada do
+  contador de nós e desciam até `compose_node` esgotar a pilha. O `RecursionError` daí não é
+  `ValueError`, e `_draft_from_upload` só traduz `UnicodeDecodeError`, `ValueError`,
+  `AttributeError` e `TypeError` — subia ao handler genérico como `500 INTERNAL_ERROR` com o
+  traceback inteiro no log. Medido: **627 695 bytes de log por 10 003 bytes de entrada, 62,8x de
+  amplificação**, em `POST /v1/imports/kubernetes` e `/v1/imports/openapi`. O 500 era o sintoma
+  visível; o custo real era disco e ingestão de logs a partir de um upload trivial. Agora:
+  **400 no envelope documentado, 13 bytes de log, 0,00x**.
+- **O mesmo buraco existia no ramo JSON, e foi encontrado a procurar variantes.**
+  `load_object_from_text` escolhe `json.loads` quando o texto começa por `{`, e `json.loads`
+  também desce recursivamente sem limite: `'{"a":' * 20000` devolvia 500 pela mesma razão, com o
+  `RecursionError` a escapar a um `except (yaml.YAMLError, json.JSONDecodeError)`. Fechado com o
+  **mesmo tecto** — são duas serializações da mesma forma de documento, e um limite por formato
+  deixaria a segunda porta aberta. A profundidade do JSON mede-se por varrimento linear antes do
+  parser, com saída à primeira violação: 600 KB hostis são recusados em 0,003 s, sem pagar a
+  recursão. `RecursionError` passa também a ser traduzido como defesa em profundidade.
+- **`MAX_DOCUMENT_DEPTH = 100`** (`OTM_MAX_DOCUMENT_DEPTH`), a par de `MAX_DOCUMENT_BYTES` e
+  `MAX_YAML_EXPANDED_NODES`. O documento mais profundo deste repositório tem profundidade **6**,
+  medida em 23 ficheiros YAML — exemplos, fixtures, workflows, `docker-compose`. A folga é ~16x,
+  na mesma linha dos 38x que o tecto de nós deixa. 25 testes de regressão, provados a
+  discriminar: com a guarda neutralizada e as constantes intactas, **11 falham**.
+
 ### Added
 - **Custom rules can match assets.** `match: { asset: { data_classification: [confidential, restricted], owner: null } }` — a rule now targets a component, a flow **or an asset**, and emits a threat carrying `target_asset_id`. This was shipped as a documented gap and it was the wrong one to leave open: a great deal of organisation policy is about the data rather than the component that happens to hold it. "Anything classified confidential has a named accountable owner" is a statement about the asset. Matchable: `asset_kind`, `sensitivity`, `data_classification`, `data_nature`, `business_criticality`, `regulatory_relevance`, `owner`, `location`, and the component/flow link fields. Same semantics as the other subjects — scalar is equality, list is any-of, unknown field names are an error.
 - **Route table coverage in the web app.** The suite had 68 tests and none touched the router; the `react-router` v8 migration rewrote imports in 15 files and stayed green throughout, proving nothing. The contents of `BrowserRouter` moved into an exported `AppRoutes` (behaviour identical) so tests can mount the app at a chosen URL, and 15 tests now assert that every declared path resolves to itself and that four kinds of unknown URL redirect home rather than leaving a blank screen. Web suite: 68 → 83.
