@@ -1,4 +1,4 @@
-import { useState, type SyntheticEvent } from "react";
+import { useRef, useState, type SyntheticEvent } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router";
 import { importArtifact } from "../api/otmApi";
@@ -14,6 +14,9 @@ import { WorkflowGuide } from "../components/onboarding/WorkflowGuide";
 import { ContextHint } from "../components/onboarding/ContextHint";
 import { useSession } from "../context/SessionContext";
 import { useToast } from "../context/ToastContext";
+import { useConfirmReplaceModel } from "../hooks/useConfirmReplaceModel";
+import { fileMatchesAccept } from "../utils/fileAccept";
+import { clearWizardStep } from "../utils/wizardStepStorage";
 import type { ArtifactImportKind, ArtifactInference, ExplanationRecord } from "../types/api";
 import type { OtmDocument } from "../types/document";
 
@@ -22,6 +25,7 @@ export function ImportPage() {
   const navigate = useNavigate();
   const { setDocument } = useSession();
   const toast = useToast();
+  const confirmReplaceModel = useConfirmReplaceModel();
 
   const KINDS: { value: ArtifactImportKind; labelKey: string; accept: string }[] = [
     { value: "openapi", labelKey: "import.kindOpenapi", accept: ".yaml,.yml,.json" },
@@ -31,6 +35,7 @@ export function ImportPage() {
 
   const [kind, setKind] = useState<ArtifactImportKind>("openapi");
   const [file, setFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [inferences, setInferences] = useState<ArtifactInference[] | null>(null);
@@ -43,6 +48,29 @@ export function ImportPage() {
     return t("import.confidenceLow");
   }
 
+  /**
+   * Drop a selection the new artifact type no longer accepts.
+   *
+   * The drop zone updated its "Accepted types" line while "Selected: main2.tf" stayed put,
+   * and submitting a perfectly well-formed Terraform file as OpenAPI answered "The artifact
+   * could not be read as YAML or JSON. Check the file opens in an editor without syntax
+   * errors" — sending the user to debug a healthy file instead of naming the type mismatch.
+   * The input's own value is reset too, or the browser keeps showing the file name next to
+   * a state that no longer has one.
+   *
+   * A `.yaml` that both OpenAPI and Kubernetes accept survives the switch: only a selection
+   * the app has just declared unacceptable is discarded.
+   */
+  function changeKind(next: ArtifactImportKind) {
+    setKind(next);
+    const accepted = KINDS.find((k) => k.value === next)?.accept ?? "";
+    if (!file || fileMatchesAccept(file.name, accepted)) return;
+    setFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    setError(null);
+    toast.info(t("import.selectionClearedByType", { name: file.name, accepted }));
+  }
+
   async function onSubmit(e: SyntheticEvent) {
     e.preventDefault();
     if (!file) {
@@ -51,6 +79,7 @@ export function ImportPage() {
       toast.warning(msg);
       return;
     }
+    if (!confirmReplaceModel()) return;
     setError(null);
     setLoading(true);
     setInferences(null);
@@ -59,6 +88,9 @@ export function ImportPage() {
     try {
       const res = await importArtifact(kind, file);
       setDocument(res.document as unknown as OtmDocument);
+      // The draft has never been reviewed, so the wizard opens at step 1 instead of at
+      // whatever step the replaced model had reached. See utils/wizardStepStorage.
+      clearWizardStep();
       setInferences(res.inferences);
       setUnknowns(res.unknowns);
       setStructuredExplanations(res.explanations ?? null);
@@ -115,7 +147,7 @@ export function ImportPage() {
             <Select
               id="kind"
               value={kind}
-              onChange={(e) => setKind(e.target.value as ArtifactImportKind)}
+              onChange={(e) => changeKind(e.target.value as ArtifactImportKind)}
               className="mt-1 w-full max-w-md"
             >
               {KINDS.map((k) => (
@@ -137,6 +169,7 @@ export function ImportPage() {
               </Label>
               <input
                 id="file"
+                ref={fileInputRef}
                 type="file"
                 accept={meta?.accept}
                 className="mx-auto block w-full max-w-sm text-sm text-otm-text-muted file:mr-3 file:rounded-otm-md file:border file:border-otm-border file:bg-otm-surface-2 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-otm-text"

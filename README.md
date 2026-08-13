@@ -168,7 +168,7 @@ repos:
 
 The hook validates every changed `.otm.yaml` against the canonical schema. `otm validate` accepts several files, so pre-commit needs no shell loop.
 
-**Exit codes, for scripting:** `0` no gate trip · `1` usage error · `3` gate tripped. The gate report goes to stderr, so `--format json` keeps stdout parseable. Full recipes in [`docs/CI_AND_SECURITY_EVIDENCE.md`](docs/CI_AND_SECURITY_EVIDENCE.md) §8.
+**Exit codes, for scripting:** `0` no gate trip · `1` usage error, or an armed gate that could not issue a verdict (the two models are not comparable — different methodology, engine version or pack) · `2` bad flag or bad flag value · `3` gate tripped. Only `0` means "no new risk": a script that treats anything else as a pass is treating a refusal as a clean bill of health. The gate report goes to stderr, so `--format json` keeps stdout parseable. Full recipes in [`docs/CI_AND_SECURITY_EVIDENCE.md`](docs/CI_AND_SECURITY_EVIDENCE.md) §8.
 
 > **PyPI:** `open-threat-model` is published from [`.github/workflows/publish-pypi.yml`](.github/workflows/publish-pypi.yml) via OIDC trusted publishing — no API token is stored in this repository. Each publish verifies that the built version matches the release tag and smoke-tests the wheel in a clean virtualenv before uploading.
 

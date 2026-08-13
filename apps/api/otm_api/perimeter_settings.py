@@ -231,4 +231,10 @@ def describe_effective_perimeter(
     )
     if trusted_proxy:
         line += " trusted_proxy=on"
+    # `cors_origins=1` descrevia `OTM_CORS_ORIGINS=*` exatamente como descreve uma origem
+    # real, e é o oposto: qualquer página web pode chamar `/v1/*`. Fora de `development` o
+    # arranque é recusado (ver `cors_settings`); aqui o marcador é o que resta para o
+    # distinguir no log.
+    if not profile.allow_credentials:
+        line += " cors_origins_wildcard=on cors_credentials=off"
     return line

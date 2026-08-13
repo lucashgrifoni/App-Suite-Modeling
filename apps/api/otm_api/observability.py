@@ -177,6 +177,10 @@ def register_unhandled_exception_handler(app: FastAPI) -> None:
                 "event_name": "unhandled_route_exception",
             },
         )
+        # A 500 sai por fora do `ObservabilityMiddleware` (o `ServerErrorMiddleware` do
+        # Starlette é o mais exterior de todos), por isso era a única resposta desta API sem
+        # `X-Request-ID` — presente em 200, 401, 422, 429. Um cliente que só tenha o cabeçalho
+        # para correlacionar ficava exatamente sem ele no estado em que mais precisa dele.
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={
@@ -184,4 +188,5 @@ def register_unhandled_exception_handler(app: FastAPI) -> None:
                 "message": msg_internal_error(),
                 "request_id": rid,
             },
+            headers={"X-Request-ID": rid} if rid else None,
         )

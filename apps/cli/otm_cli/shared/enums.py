@@ -36,6 +36,20 @@ class ExportFormat(StrEnum):
     otm = "otm"
 
 
+class TemplateComplexity(StrEnum):
+    """`otm templates list --complexity`.
+
+    Declared as a plain `str` before, so `--complexity bogus` exited 0 after printing a bare
+    catalog header — a user could not tell an unknown filter value from a catalog with no match.
+    Same defect and same fix as `BacklogGroupBy`. The three members are the whole vocabulary the
+    shipped template manifests use, and the help text already documented exactly these.
+    """
+
+    low = "low"
+    medium = "medium"
+    high = "high"
+
+
 class MethodologyOption(StrEnum):
     stride = "stride"
     linddun = "linddun"

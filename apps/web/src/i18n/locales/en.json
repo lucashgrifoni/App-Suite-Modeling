@@ -11,6 +11,9 @@
     "newModel": "New model",
     "confirmNewModel": "Starting a new model discards the model in this session, and this is its only copy. Continue?"
   },
+  "session": {
+    "confirmReplaceModel": "This replaces the model in this session, and this is its only copy. Continue?"
+  },
   "layout": {
     "brandSubtitle": "Professional threat modeling",
     "footerNote": "Validation and the engine run on the server — the UI does not duplicate business rules.",
@@ -140,7 +143,8 @@
     "explanationsCode": "explanations",
     "unknownTitle": "Not inferred",
     "unknownSubtitle": "Explicit limitations of this batch.",
-    "acceptedTypes": "Accepted types:"
+    "acceptedTypes": "Accepted types:",
+    "selectionClearedByType": "“{{name}}” is not one of the types this artifact accepts ({{accepted}}), so the selection was cleared. Choose a matching file."
   },
   "wizard": {
     "eyebrow": "Guided assistant",
@@ -160,6 +164,7 @@
     "methodology": "Methodology (analysis target)",
     "semanticProfile": "Template semantic profile (optional)",
     "templateSemanticProfilePlaceholder": "e.g. api_backend_rest",
+    "templateSemanticProfileLabel": "Profile identifier",
     "semanticProfileBody": "Fill if you use a gallery template or want to unlock adaptive questions. For example <0>internal_admin_portal</0>, <1>file_handling_application</1>, <2>api_backend_rest</2>.",
     "adaptiveTitle": "Context-adaptive questions",
     "adaptiveBody": "Answers are stored as tags on the model (JSON export includes them). They do not replace server validation.",
@@ -170,6 +175,9 @@
     "componentsSubtitle": "Diagram elements (processes, data, users…).",
     "id": "ID",
     "idTrailingWhitespace": "IDs cannot end with whitespace. Remove anything after the last visible character.",
+    "idDuplicate": "The id “{{id}}” is already used by another component. Ids must be unique.",
+    "removeCascadedToFlows_one": "Removing “{{name}}” also deleted 1 data flow that referenced it.",
+    "removeCascadedToFlows_other": "Removing “{{name}}” also deleted {{count}} data flows that referenced it.",
     "name": "Name",
     "type": "Type",
     "remove": "Remove",
@@ -420,7 +428,8 @@
     "stride": "STRIDE:",
     "liScore": "L×I {{score}}",
     "showing": "Showing {{shown}} of {{total}} active threats.",
-    "noneMatch": "No threats match the filters."
+    "noneMatch": "No threats match the filters.",
+    "noneAtAll": "The engine produced no threats for this model. Complete it in the wizard — components and data flows — then run the engine again."
   },
   "explanations": {
     "sectionTitle": "Result explainability",

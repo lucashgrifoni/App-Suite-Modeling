@@ -13,6 +13,7 @@ from otm_api.routers._errors import (
     analysis_from_payload_or_422,
     document_from_payload_or_422,
     ensure_analysis_matches_document,
+    ensure_pack_exists,
     raise_pack_not_found,
 )
 from otm_api.schemas.bodies import (
@@ -115,18 +116,19 @@ def compare_models(body: CompareBody) -> ThreatModelComparisonResult:
             b_doc, b_analysis, analysis_field="baseline_analysis", document_field="baseline"
         )
         ensure_analysis_matches_document(r_doc, r_analysis, analysis_field="revised_analysis", document_field="revised")
-    try:
-        result = comparison_from_validated_documents(
-            b_doc,
-            r_doc,
-            baseline_analysis=b_analysis,
-            revised_analysis=r_analysis,
-            run_analysis_flag=body.run_analysis,
-            pack_id=body.pack_id,
-        )
-    except FileNotFoundError as e:
-        raise raise_pack_not_found(e) from e
-    return result
+    # Verificado à cabeça, e não dentro do motor: aqui o pack só é lido no ramo `run_analysis`,
+    # por isso sem essa flag um `pack_id` com uma gralha era aceite com 200 — inerte, sem
+    # efeito nenhum na resposta e sem nada a dizê-lo — enquanto `/v1/models/analyze`,
+    # `/v1/exports` e `/v1/remediation/backlog` devolviam 404 para o mesmo valor.
+    ensure_pack_exists(body.pack_id)
+    return comparison_from_validated_documents(
+        b_doc,
+        r_doc,
+        baseline_analysis=b_analysis,
+        revised_analysis=r_analysis,
+        run_analysis_flag=body.run_analysis,
+        pack_id=body.pack_id,
+    )
 
 
 @router.post(
@@ -167,5 +169,5 @@ def analyze_model(body: AnalyzeBody) -> AnalysisResult:
             auto_recommend_methodology=body.auto_recommend_methodology,
         )
     except FileNotFoundError as e:
-        raise raise_pack_not_found(e) from e
+        raise raise_pack_not_found(body.pack_id) from e
     return result

@@ -1,5 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ApiError, ApiTimeoutError, apiFetch, fetchWithTimeout } from "./client";
+import {
+  ApiError,
+  ApiMalformedResponseError,
+  ApiTimeoutError,
+  apiFetch,
+  fetchWithTimeout,
+} from "./client";
 
 function mockFetch(status: number, body: string, ok = status < 400) {
   return vi.fn().mockResolvedValue({
@@ -22,9 +28,38 @@ describe("apiFetch", () => {
     expect(data).toEqual({ ok: true, n: 2 });
   });
 
-  it("returns null for an empty success body", async () => {
-    vi.stubGlobal("fetch", mockFetch(204, ""));
-    await expect(apiFetch("/noop")).resolves.toBeNull();
+  /**
+   * These three replace an earlier test that asserted an empty 2xx body "returns null for
+   * an empty success body". That was the defect written down as the specification: every
+   * route behind `apiFetch` answers with a JSON object or array, so `null` was never a
+   * result any caller could use — the analyze handler took it as a successful run and
+   * announced "Analysis generated." while storing nothing, and TemplatesPage called `.map`
+   * on it and crashed into the global error boundary.
+   */
+  it("rejects an empty 2xx body instead of calling it a result", async () => {
+    vi.stubGlobal("fetch", mockFetch(200, ""));
+    await expect(apiFetch("/noop")).rejects.toBeInstanceOf(ApiMalformedResponseError);
+  });
+
+  it("rejects a 2xx body that is HTML, as an SPA-fallback host serves", async () => {
+    vi.stubGlobal("fetch", mockFetch(200, "<!doctype html><title>app</title>"));
+    await expect(apiFetch("/v1/templates")).rejects.toBeInstanceOf(ApiMalformedResponseError);
+  });
+
+  it("rejects truncated JSON on a 2xx", async () => {
+    vi.stubGlobal("fetch", mockFetch(200, '{"items": [{"id": "a", "titl'));
+    await expect(apiFetch("/v1/templates")).rejects.toBeInstanceOf(ApiMalformedResponseError);
+  });
+
+  it("names the status it received so the failure is diagnosable", async () => {
+    vi.stubGlobal("fetch", mockFetch(200, "null"));
+    const err = (await apiFetch("/x").catch((e: unknown) => e)) as ApiMalformedResponseError;
+    expect(err.status).toBe(200);
+  });
+
+  it("still accepts a JSON array, which the templates list is", async () => {
+    vi.stubGlobal("fetch", mockFetch(200, JSON.stringify([{ id: "a" }])));
+    await expect(apiFetch("/v1/templates")).resolves.toEqual([{ id: "a" }]);
   });
 
   it("serialises a `json` option as the body with a JSON content-type", async () => {

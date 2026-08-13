@@ -15,6 +15,53 @@ _KINDS = ("analysis", "compare")
 _ANALYSIS_MARKER = "engine_version"
 _COMPARE_MARKER = "structural"
 
+#: The key both kinds expose, and the whole content of a hand-written explanations file.
+_EXPLANATIONS_KEY = "explanations"
+
+#: `otm diff --json-out` without `--with-analysis` writes a bare `ThreatModelDiff` — a real
+#: comparison this product emits, which carries no `structural` key (that is the *wrapper* the
+#: `--with-analysis` payload adds) and no explanations, because the model has no such field. It
+#: is identified by the title pair no other artifact here puts at the top level. Recognising it
+#: matters: refusing it would tell a user that a file `otm diff` had just written was "not a
+#: comparison JSON", which is both false and a new failure where none existed.
+_STRUCTURAL_DIFF_MARKERS = ("baseline_title", "revised_title")
+
+_KNOWN_SHAPE_MARKERS = (_ANALYSIS_MARKER, _COMPARE_MARKER, _EXPLANATIONS_KEY)
+
+
+def _is_known_shape(raw: dict) -> bool:
+    return any(marker in raw for marker in _KNOWN_SHAPE_MARKERS) or all(m in raw for m in _STRUCTURAL_DIFF_MARKERS)
+
+
+def _reject_foreign_file(raw: dict) -> None:
+    """Refuse a JSON object that is none of the things this command can read.
+
+    "No explanations in this file." was printed with exit 0 for a SARIF report, a backlog JSON and
+    `{}` alike. It reads as "your analysis carries no explainability" when the truth is "this is
+    not an analysis", and it sent a user chasing empty output in the wrong direction. Every
+    sibling consumer of the same artifact — `report --analysis-json`, `backlog`, `diff-analysis` —
+    already rejects those exact files, and `explain` itself already rejected a JSON *array*; only
+    the object case was unguarded.
+
+    Recognition stays deliberately weak, positive markers per shape, because the alternative is to
+    validate against `AnalysisResult` and thereby reject a hand-trimmed file that carries perfectly
+    readable explanations. A file is readable here if it says it is an analysis, says it is a
+    comparison — either flavour this product writes — or simply *is* a list of explanations. For
+    those the message stays what it was, because "this file has no explanations" is then true.
+    Anything else is not this command's input, and saying so is the useful answer.
+    """
+    if _is_known_shape(raw):
+        return
+    raise CliUserError(
+        exit_code=1,
+        failed="this file is not an analysis or comparison JSON.",
+        cause=(
+            f"none of `{_ANALYSIS_MARKER}`, `{_COMPARE_MARKER}` or `{_EXPLANATIONS_KEY}` is "
+            "present, so the file carries no explainability to read."
+        ),
+        next_step="pass an `analysis.json` from `otm analyze --json-out`.",
+    )
+
 
 def _reject_wrong_kind(raw: dict, kind: str) -> None:
     """`--from` advertises the input kind, so it has to actually check it.
@@ -94,10 +141,11 @@ def run_explain(
             cause=f"expected an object, got {type(raw).__name__}.",
             next_step="pass an `analysis.json` from `otm analyze --json-out`.",
         )
+    _reject_foreign_file(raw)
     _reject_wrong_kind(raw, kind)
     # Both kinds expose explanations under the same key — the difference `--from` encodes is
     # which document the file is, which `_reject_wrong_kind` above is what actually enforces.
-    explanations = list(raw.get("explanations") or [])
+    explanations = list(raw.get(_EXPLANATIONS_KEY) or [])
     if not explanations:
         return []
     if category:

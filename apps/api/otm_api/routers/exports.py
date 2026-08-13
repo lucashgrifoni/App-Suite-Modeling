@@ -45,6 +45,6 @@ def export_artifacts(body: ExportBody) -> ExportResponse:
             locale=normalize_export_locale(body.locale),
         )
     except FileNotFoundError as e:
-        raise raise_pack_not_found(e) from e
+        raise raise_pack_not_found(body.pack_id) from e
 
     return ExportResponse(artifacts=artifacts)

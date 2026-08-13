@@ -17,7 +17,10 @@ from otm_report_premium.i18n_locale import normalize_premium_locale
 from otm_threat_engine import AnalysisResult, analyze_document
 
 from otm_cli.application.analysis_io import load_analysis_result_from_path
-from otm_cli.application.analysis_match import require_analysis_matches_document
+from otm_cli.application.analysis_match import (
+    require_analysis_matches_document,
+    require_baseline_describes_same_system,
+)
 from otm_cli.reporting import export_full_report_markdown
 from otm_cli.shared.document_loader import load_otm_document, load_pack_or_raise
 from otm_cli.shared.errors import CliUserError
@@ -134,7 +137,11 @@ def run_report(
     baseline: AnalysisResult | None = None
     if baseline_json:
         baseline = load_analysis_result_from_path(baseline_json)
-        require_analysis_matches_document(doc, baseline, flag="--baseline")
+        # Not `require_analysis_matches_document`: a baseline is an analysis of an *earlier
+        # revision* of this model, so demanding that it describe the current revision refused
+        # every legitimate use of the flag — a renamed title, or the added component the
+        # baseline section exists to show — and the refusal cost the user the whole report.
+        require_baseline_describes_same_system(result, baseline, flag="--baseline")
 
     requested_locale = normalize_premium_locale(locale)
     is_pdf = report_format == PremiumReportFormat.PDF

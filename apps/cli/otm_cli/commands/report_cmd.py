@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Annotated
 
 import typer
+from otm_exporters.export_locale import recognized_export_locale
 from otm_report_premium.enums import ReportFormat as PremiumReportFormat
 from otm_report_premium.enums import ReportLevel as PremiumReportLevel
 
@@ -20,6 +21,27 @@ from otm_cli.commands.handle_errors import exit_on_cli_error
 from otm_cli.shared.emit import input_paths, write_bytes_file, write_text_file
 from otm_cli.shared.errors import CliUserError
 from otm_cli.shared.render import safe
+
+
+def _require_supported_locale(locale: str | None) -> None:
+    """Reject a locale this report cannot render, instead of silently rendering another one.
+
+    `--locale` is documented as a two-value option (`pt-BR` default, or `en`) but was typed as a
+    free string and normalised with a server-style fallback, so `--locale ptBR` — the obvious
+    typo, made by exactly the audience the pt-BR default is for — produced an English deliverable
+    with exit 0 and no warning. That is a *different* language from the one the same command gives
+    with no flag at all. Every sibling option (`--level`, `--format`, `--group-by`,
+    `--methodology`) already refuses an unknown value with exit 2; this one now does too.
+
+    The accepted set is whatever the shared resolver recognises, not a second list kept in step by
+    hand: `pt`, `pt-PT`, `PT-BR`, `en-US` and friends keep working.
+    """
+    if locale is None or recognized_export_locale(locale) is not None:
+        return
+    raise typer.BadParameter(
+        f"'{locale}' is not one of 'pt-BR', 'en'.",
+        param_hint="--locale",
+    )
 
 
 def _emit_text_report(text: str, *, output: Path | None, label: str, sources: tuple[Path, ...]) -> None:
@@ -101,6 +123,8 @@ def register(app: typer.Typer) -> None:
         ] = None,
     ) -> None:
         """Legacy report (Markdown) or premium report (executive/standard/deep)."""
+        _require_supported_locale(locale)
+
         try:
             outcome = run_report(
                 path,

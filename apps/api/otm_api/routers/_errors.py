@@ -4,6 +4,7 @@ from typing import Any, cast
 
 from fastapi import HTTPException, status
 from otm_core_schema import ThreatModelDocument
+from otm_industry_packs.loader import list_pack_ids
 from otm_threat_engine import AnalysisResult
 from pydantic import ValidationError as PydanticValidationError
 
@@ -11,7 +12,9 @@ from otm_api.api_error_messages import (
     msg_analysis_document_mismatch,
     msg_analysis_validation_error,
     msg_document_validation_error,
+    msg_pack_not_found,
     msg_template_invalid,
+    msg_template_not_found,
 )
 from otm_api.errors import _truncated_errors
 from otm_api.services.analysis_pairing import analysis_document_mismatches
@@ -106,19 +109,46 @@ def ensure_analysis_matches_document(
     )
 
 
-def raise_pack_not_found(exc: FileNotFoundError) -> HTTPException:
-    """404 when the requested industry pack does not exist."""
+def raise_pack_not_found(pack_id: str | None) -> HTTPException:
+    """
+    404 when the requested industry pack does not exist.
+
+    Recebe o `pack_id` e não a `FileNotFoundError`: o texto do loader é uma frase em
+    português fixo, e reemiti-la punha metade de uma resposta em inglês na outra língua
+    (ver `api_error_messages.msg_pack_not_found`).
+    """
     return HTTPException(
         status_code=status.HTTP_404_NOT_FOUND,
-        detail=error_detail(code="PACK_NOT_FOUND", message=str(exc)),
+        detail=error_detail(
+            code="PACK_NOT_FOUND",
+            message=msg_pack_not_found(pack_id=pack_id, accepted=", ".join(list_pack_ids())),
+        ),
     )
 
 
-def raise_template_not_found(exc: FileNotFoundError) -> HTTPException:
+def ensure_pack_exists(pack_id: str | None) -> None:
+    """
+    404 `PACK_NOT_FOUND` para um `pack_id` desconhecido, antes de qualquer trabalho.
+
+    `/v1/models/compare` só resolvia o pack dentro do ramo `run_analysis`, por isso sem essa
+    flag um id com uma gralha era aceite com 200 — inerte e silencioso — enquanto todas as
+    rotas irmãs davam 404 para o mesmo valor. O `is not None` acompanha `services.analysis`:
+    `pack_id: ""` é uma escolha falhada do chamador, não "sem pack".
+    """
+    if pack_id is None:
+        return
+    if pack_id not in list_pack_ids():
+        raise raise_pack_not_found(pack_id)
+
+
+def raise_template_not_found(template_id: str) -> HTTPException:
     """404 when the template does not exist in the embedded catalog."""
     return HTTPException(
         status_code=status.HTTP_404_NOT_FOUND,
-        detail=error_detail(code="TEMPLATE_NOT_FOUND", message=str(exc)),
+        detail=error_detail(
+            code="TEMPLATE_NOT_FOUND",
+            message=msg_template_not_found(template_id=template_id),
+        ),
     )
 
 

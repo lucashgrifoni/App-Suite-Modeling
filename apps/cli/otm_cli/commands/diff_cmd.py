@@ -17,7 +17,7 @@ from otm_cli.commands.handle_errors import exit_on_cli_error
 from otm_cli.shared.emit import write_json_file
 from otm_cli.shared.enums import DiffFormat, MethodologyOption
 from otm_cli.shared.errors import CliUserError
-from otm_cli.shared.gate import GATE_TRIP_EXIT_CODE, parse_fail_on, render_gate_result
+from otm_cli.shared.gate import gate_exit_code, parse_fail_on, render_gate_result
 from otm_cli.shared.render import safe
 
 
@@ -31,8 +31,10 @@ def _apply_gate(analysis_diff: AnalysisDiff | None, policy: GatePolicy) -> None:
         return
     result = evaluate_gate(analysis_diff, policy)
     print(render_gate_result(result), file=sys.stderr)
-    if result.tripped:
-        raise typer.Exit(GATE_TRIP_EXIT_CODE)
+    # `gate_exit_code` owns the mapping: a gate that could not judge exits non-zero too.
+    code = gate_exit_code(result)
+    if code:
+        raise typer.Exit(code)
 
 
 def _write_diff_json(payload: dict, output: Path, sources: tuple[Path, ...]) -> None:
@@ -146,7 +148,8 @@ def register(app: typer.Typer) -> None:
     ) -> None:
         """Compare two threat model versions.
 
-        Exit codes: 0 no gate trip · 1 usage error · 3 gate tripped.
+        Exit codes: 0 no gate trip · 1 usage error, or an armed gate with no verdict
+        (methodology changed between the two models) · 2 bad flag value · 3 gate tripped.
         """
         if methodology is not None and auto_methodology:
             raise typer.BadParameter(

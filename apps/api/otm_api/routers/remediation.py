@@ -106,7 +106,7 @@ def post_remediation_backlog(
             auto_recommend_methodology=body.auto_recommend_methodology,
         )
     except FileNotFoundError as e:
-        raise raise_pack_not_found(e) from e
+        raise raise_pack_not_found(body.pack_id) from e
     if export_format == "markdown":
         from otm_exporters import export_remediation_backlog_markdown
 

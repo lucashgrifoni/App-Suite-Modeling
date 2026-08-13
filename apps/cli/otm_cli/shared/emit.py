@@ -169,6 +169,22 @@ def _create_temp_sibling(parent: Path) -> Path:
     raise FileExistsError(f"no free temporary name in `{parent}` after {_TMP_ATTEMPTS} attempts.")
 
 
+def _discard_temp(temp: Path) -> None:
+    """Remove the temp file, and never let the removal become the error the user sees.
+
+    This runs on the way out of a failed or interrupted write, where an exception is usually
+    already propagating. An `OSError` raised here — a scanner or indexer holding the file open for
+    a moment is the realistic case on Windows — would replace that exception with a raw traceback
+    naming a `.part` path the user never typed, against the "user error, no stack trace" contract
+    in `docs/features/CLI.md`. Failing to delete leaves the very file this is meant to remove, but
+    that is a hygiene problem; masking the real failure is a correctness one.
+    """
+    try:
+        temp.unlink(missing_ok=True)
+    except OSError:
+        pass
+
+
 def _write_atomically(output: Path, write_payload: Callable[[Path], object], sources: Sequence[Path] = ()) -> None:
     """Fill a sibling temp file, then replace the destination in one step.
 
@@ -177,6 +193,15 @@ def _write_atomically(output: Path, write_payload: Callable[[Path], object], sou
     artifact is already gone and a 0-byte file stands where the next step expects a report. The
     temp file shares the destination's directory so `os.replace` stays a same-volume rename, which
     is atomic: the destination only ever holds the old artifact or a complete new one.
+
+    Cleanup is a `finally`, not an `except OSError`, because the interruption this function exists
+    for does not arrive as an `OSError`. Ctrl-C raises `KeyboardInterrupt` and a cancelled job can
+    raise `SystemExit`; both are `BaseException`, both walked past an `except OSError` clause, and
+    both left a hidden `.otm<hex>.part` — up to the full payload size — in the user's working
+    directory, which nothing ever swept and which an artifact-upload glob in CI happily collects.
+    After a successful `os.replace` the temp name no longer exists, so the unlink is a no-op and
+    the success path is unchanged. Only a kill the process cannot observe (`SIGKILL`,
+    `Stop-Process -Force`) can still orphan a temp; no in-process cleanup can cover that one.
     """
     _require_output_is_not_a_source(output, sources)
     _require_writable_parent(output)
@@ -189,8 +214,9 @@ def _write_atomically(output: Path, write_payload: Callable[[Path], object], sou
         write_payload(temp)
         os.replace(temp, output)
     except OSError as e:
-        temp.unlink(missing_ok=True)
         raise _write_failure(output, e) from e
+    finally:
+        _discard_temp(temp)
 
 
 def write_text_file(*, content: str, output: Path, sources: Sequence[Path] = ()) -> None:

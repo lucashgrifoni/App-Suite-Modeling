@@ -85,13 +85,24 @@ def test_mismatch_error_names_both_titles(
     assert "Agente com ferramentas" in first_error
 
 
+def _error_of_type(payload: dict[str, Any], error_type: str) -> dict[str, Any]:
+    """Pin the error by its stable `type`, not by position.
+
+    The list grew a third entry (`…stale_components`), and indexing it positionally made a
+    correct addition look like a regression while proving nothing about *which* error was read.
+    """
+    matching = [e for e in payload["detail"]["errors"] if e["type"] == error_type]
+    assert len(matching) == 1, payload["detail"]["errors"]
+    return matching[0]
+
+
 def test_mismatch_error_names_the_unknown_components(
     client: TestClient,
     crossed: tuple[dict[str, Any], dict[str, Any]],
 ) -> None:
     doc_a, analysis_b = crossed
     r = client.post("/v1/remediation/backlog", json={"document": doc_a, "analysis": analysis_b})
-    assert "agent" in r.json()["detail"]["errors"][-1]["msg"]
+    assert "agent" in _error_of_type(r.json(), "analysis_document_mismatch.components")["msg"]
 
 
 def test_run_analysis_true_with_a_foreign_analysis_is_rejected(

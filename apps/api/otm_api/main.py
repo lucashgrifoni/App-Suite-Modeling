@@ -11,9 +11,10 @@ import logging
 from fastapi import APIRouter, FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from otm_api.cors_settings import resolve_cors_profile
-from otm_api.errors import request_validation_handler
+from otm_api.errors import http_exception_handler, request_validation_handler
 from otm_api.middleware_api_key import OptionalApiKeyMiddleware
 from otm_api.middleware_rate_limit import RateLimitMiddleware, parse_rate_limit
 from otm_api.observability import (
@@ -62,6 +63,9 @@ app = FastAPI(
 )
 
 app.add_exception_handler(RequestValidationError, request_validation_handler)  # type: ignore[arg-type]
+# Substitui o handler de `HTTPException` do FastAPI: serializa os 422 sem morrer num
+# surrogate solto e põe o 400 de corpo ilegível no envelope documentado. Ver `errors.py`.
+app.add_exception_handler(StarletteHTTPException, http_exception_handler)
 register_unhandled_exception_handler(app)
 
 _rate_limit_spec = resolve_rate_limit_default()
@@ -115,7 +119,8 @@ app.add_middleware(ObservabilityMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_cors.origins,
-    allow_credentials=True,
+    # Nunca `True` a par de uma origem `*` — ver `cors_settings._credentials_allowed`.
+    allow_credentials=_cors.allow_credentials,
     allow_methods=_cors.allow_methods,
     allow_headers=_cors.allow_headers,
 )

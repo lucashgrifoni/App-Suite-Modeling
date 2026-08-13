@@ -9,12 +9,23 @@ from rich.panel import Panel
 from otm_cli.application import templates_service as tmpl
 from otm_cli.commands.bootstrap import console
 from otm_cli.commands.handle_errors import exit_on_cli_error
+from otm_cli.shared.enums import TemplateComplexity
 from otm_cli.shared.errors import CliUserError
 from otm_cli.shared.render import safe
 
 
 def _print_template_infos(infos: list[TemplateInfo]) -> None:
-    """Imprime o catálogo de templates (id, título e metadados opcionais)."""
+    """Imprime o catálogo de templates (id, título e metadados opcionais).
+
+    Uma lista vazia diz-se em voz alta. `--query zzzzz` imprimia só o cabeçalho e saía 0, e o
+    utilizador não conseguia distinguir "o filtro não encontrou nada" de "o filtro estava mal
+    escrito" — a mesma distinção que `otm explain -c <categoria>` já faz ("No explanations for the
+    given filter."). O cabeçalho desaparece com a lista: anunciar um catálogo e não mostrar
+    nenhuma entrada é a leitura errada.
+    """
+    if not infos:
+        console.print("[yellow]No templates match the given filters.[/yellow]")
+        return
     console.print("[bold]Templates[/bold] (use: [cyan]otm init -t ID[/cyan]):")
     for info in infos:
         console.print(f"  • [cyan]{safe(info.id)}[/cyan] — {safe(info.title)}")
@@ -41,7 +52,7 @@ def build_templates_app() -> typer.Typer:
     def cmd_templates_list(
         category: str | None = typer.Option(None, "--category", "-c", help="Filter by category key."),
         tag: str | None = typer.Option(None, "--tag", help="Exact tag (case-insensitive)."),
-        complexity: str | None = typer.Option(
+        complexity: TemplateComplexity | None = typer.Option(
             None,
             "--complexity",
             help="low | medium | high",
@@ -49,7 +60,16 @@ def build_templates_app() -> typer.Typer:
         q: str | None = typer.Option(None, "--query", "-q", help="Free text (id, title, description, tags)."),
     ) -> None:
         """List templates with optional filters."""
-        _print_template_infos(tmpl.list_template_infos(category=category, tag=tag, complexity=complexity, q=q))
+        _print_template_infos(
+            tmpl.list_template_infos(
+                category=category,
+                tag=tag,
+                # The filter compares against manifest strings, so the enum goes back to its value
+                # here rather than the service learning about a CLI type.
+                complexity=complexity.value if complexity else None,
+                q=q,
+            )
+        )
 
     @templates_app.command("show")
     def cmd_templates_show(

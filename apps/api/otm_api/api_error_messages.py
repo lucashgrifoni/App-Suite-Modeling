@@ -107,6 +107,50 @@ def msg_analysis_document_mismatch(*, analysis_field: str = "analysis", document
     )
 
 
+def msg_pack_not_found(*, pack_id: str | None, accepted: str) -> str:
+    """
+    A lista de packs válidos faz parte da mensagem: é o que a torna acionável.
+
+    Antes, a resposta era o texto da `FileNotFoundError` do loader — uma frase em português
+    fixo, dentro de uma resposta que o resto do envelope já tinha traduzido para inglês.
+
+    `pack_id` acompanha o tipo do campo do pedido (`str | None`). Só o loader levanta o erro
+    que traz aqui, e ele só corre quando o campo veio preenchido, mas repetir a garantia com
+    um `assert` seria uma linha que nenhum teste pode alcançar.
+    """
+    return _t(
+        f"Unknown pack: {pack_id!r}. Accepted values: {accepted}.",
+        f"Pack desconhecido: {pack_id!r}. Valores aceites: {accepted}.",
+    )
+
+
+def msg_template_not_found(*, template_id: str) -> str:
+    return _t(
+        f"Unknown template: {template_id!r}. List the built-in catalog with GET /v1/templates.",
+        f"Template desconhecido: {template_id!r}. Consulte o catálogo embutido em GET /v1/templates.",
+    )
+
+
+def msg_import_artifact_invalid(*, parser_detail: str | None) -> str:
+    """
+    Enquadramento traduzido para um artefacto ilegível, com o detalhe do parser preservado.
+
+    O texto vinha do importador (`otm_artifact_import`), que escreve em português fixo, e
+    saía tal e qual numa resposta em inglês. O que a API sabe sem depender da redação desse
+    pacote é estrutural: houve, ou não, um erro de parser encadeado (`__cause__`). A
+    localização que o PyYAML dá — "line 3, column 5" — é o valor da mensagem para quem tem
+    de corrigir o ficheiro, por isso segue como cauda técnica em vez de ser descartada.
+    """
+    head = _t(
+        "The artifact is not a YAML or JSON object (a mapping) this importer can read.",
+        "O artefacto não é um objecto YAML ou JSON (mapping) que este importador consiga ler.",
+    )
+    if not parser_detail:
+        return head
+    tail = _t("Parser reported: ", "O parser indicou: ")
+    return f"{head} {tail}{parser_detail}"
+
+
 def msg_remediation_input() -> str:
     return _t(
         "Provide `analysis` or set `run_analysis: true`.",

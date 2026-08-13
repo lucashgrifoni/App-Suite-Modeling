@@ -25,6 +25,7 @@ import {
   sanitizeEntityIdInput,
 } from "../utils/documentNormalize";
 import { applyComponentIdRename, nextEntityId } from "../utils/wizardEdits";
+import { readWizardStep, writeWizardStep } from "../utils/wizardStepStorage";
 import { useStableRowKeys } from "../utils/useStableRowKeys";
 import {
   getAdaptiveAnswer,
@@ -50,9 +51,6 @@ const STEP_DEFS = [
 
 const LAST_STEP = STEP_DEFS.length - 1;
 
-/** Which step the wizard was left on, so a refresh does not throw the user back to step 1. */
-const STEP_KEY = "otm.web.wizard.step";
-
 /** Espaço/tab/etc. no fim do ID quebra correspondência com fluxos e validação no servidor. */
 function idHasTrailingWhitespace(value: string): boolean {
   return /\s$/.test(value);
@@ -76,23 +74,12 @@ export function furthestStepForDocument(
   return 0;
 }
 
-function readStoredStep(): number {
-  try {
-    const raw = sessionStorage.getItem(STEP_KEY);
-    const n = raw === null ? Number.NaN : Number(raw);
-    if (!Number.isInteger(n) || n < 0) return 0;
-    return Math.min(n, LAST_STEP);
-  } catch {
-    return 0;
-  }
-}
-
 export function WizardPage() {
   const { t, i18n } = useTranslation();
   const { document, setDocument } = useSession();
   const toast = useToast();
   const [step, setStep] = useState(() =>
-    Math.min(readStoredStep(), furthestStepForDocument(document)),
+    Math.min(readWizardStep(LAST_STEP), furthestStepForDocument(document)),
   );
   /** Highest step reached this mount; a step does not re-lock because the user went back. */
   const [maxVisited, setMaxVisited] = useState(step);
@@ -113,6 +100,24 @@ export function WizardPage() {
     [document?.components],
   );
 
+  /**
+   * Component ids used by more than one row.
+   *
+   * The collision is fully decidable in the browser, and deferring it to "Next" meant the
+   * user met it as the server's raw verdict — `DOCUMENT_VALIDATION_ERROR: … components:
+   * Value error, duplicate id in components` — at the top of the step, with nothing saying
+   * which of the rows was wrong. The rows now carry it themselves, next to the field.
+   */
+  const duplicateComponentIds = useMemo(() => {
+    const seen = new Set<string>();
+    const repeated = new Set<string>();
+    for (const id of componentIds) {
+      if (seen.has(id)) repeated.add(id);
+      seen.add(id);
+    }
+    return repeated;
+  }, [componentIds]);
+
   // Row identity for the two editable grids. Not the array index: see useStableRowKeys.
   const componentRowKeys = useStableRowKeys(document?.components.length ?? 0);
   const flowRowKeys = useStableRowKeys(document?.data_flows.length ?? 0);
@@ -126,13 +131,7 @@ export function WizardPage() {
   /** Unlocked by what the model already contains, or by how far this visit has walked. */
   const reachableStep = Math.max(furthestStepForDocument(document), maxVisited);
 
-  useEffect(() => {
-    try {
-      sessionStorage.setItem(STEP_KEY, String(step));
-    } catch {
-      /* quota / private mode */
-    }
-  }, [step]);
+  useEffect(() => writeWizardStep(step), [step]);
 
   if (!document) return <Navigate to="/" replace />;
   const doc = document;
@@ -323,7 +322,10 @@ export function WizardPage() {
                 />
               </p>
               <div className="mt-2">
-                <Label htmlFor="tprofile">template_semantic_profile</Label>
+                {/* Was the literal string `template_semantic_profile` — the canonical field
+                    name used as the visible label, untranslated, under a summary and a help
+                    paragraph that are both translated. */}
+                <Label htmlFor="tprofile">{t("wizard.templateSemanticProfileLabel")}</Label>
                 <Input
                   id="tprofile"
                   className="mt-1 font-mono text-sm"
@@ -351,13 +353,25 @@ export function WizardPage() {
                   {adaptivePrompts.map((p) => (
                     <li key={p.id} className="grid gap-1 sm:grid-cols-[1fr_auto] sm:items-center">
                       <div>
-                        <p className="text-otm-text">{adaptivePromptLabel(p)}</p>
+                        {/* The question is the control's name. Sitting in a plain sibling
+                            paragraph, it was invisible to assistive tech: all three selects
+                            announced as a bare "combobox" with no name (WCAG 2.1 4.1.2),
+                            while the answers are real data entry — they are stored as tags
+                            on the model and travel into the JSON export. `aria-labelledby`
+                            keeps the layout exactly as designed. */}
+                        <p id={`adaptive-${p.id}-label`} className="text-otm-text">
+                          {adaptivePromptLabel(p)}
+                        </p>
                         {adaptivePromptHint(p) ? (
-                          <p className="text-xs text-otm-text-muted">{adaptivePromptHint(p)}</p>
+                          <p id={`adaptive-${p.id}-hint`} className="text-xs text-otm-text-muted">
+                            {adaptivePromptHint(p)}
+                          </p>
                         ) : null}
                       </div>
                       <Select
                         className="max-w-[140px] justify-self-end font-mono text-xs"
+                        aria-labelledby={`adaptive-${p.id}-label`}
+                        aria-describedby={adaptivePromptHint(p) ? `adaptive-${p.id}-hint` : undefined}
                         value={getAdaptiveAnswer(doc.metadata.tags, templateProfile, p.id) ?? "unk"}
                         onChange={(e) => {
                           const v = e.target.value as AdaptiveAnswer | "unk";
@@ -399,9 +413,14 @@ export function WizardPage() {
                   <Input
                     id={`comp-${idx}-id`}
                     value={c.id}
-                    aria-invalid={idHasTrailingWhitespace(c.id) || undefined}
+                    aria-invalid={idHasTrailingWhitespace(c.id) || duplicateComponentIds.has(c.id) || undefined}
                     aria-describedby={
-                      idHasTrailingWhitespace(c.id) ? `comp-${idx}-id-trail-hint` : undefined
+                      [
+                        idHasTrailingWhitespace(c.id) ? `comp-${idx}-id-trail-hint` : null,
+                        duplicateComponentIds.has(c.id) ? `comp-${idx}-id-dup-hint` : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" ") || undefined
                     }
                     onFocus={() => {
                       componentIdFocusStartRef.current.set(idx, c.id);
@@ -453,6 +472,15 @@ export function WizardPage() {
                       {t("wizard.idTrailingWhitespace")}
                     </p>
                   ) : null}
+                  {duplicateComponentIds.has(c.id) ? (
+                    <p
+                      id={`comp-${idx}-id-dup-hint`}
+                      role="alert"
+                      className="mt-1 text-xs font-medium text-amber-600 dark:text-amber-400"
+                    >
+                      {t("wizard.idDuplicate", { id: c.id })}
+                    </p>
+                  ) : null}
                 </div>
                 <div className="sm:col-span-4">
                   <Label htmlFor={`comp-${idx}-name`}>{t("wizard.name")}</Label>
@@ -501,9 +529,25 @@ export function WizardPage() {
                     // Cascades to flows, assets and trust boundaries. A plain splice here
                     // left orphan references that the canonical schema rejects, bricking
                     // validate/analyze/export for the rest of the session.
+                    //
+                    // The cascade is right; doing it in silence was not. Data flows are
+                    // authored separately, on their own wizard step, and two of them could
+                    // vanish from one click on "Remove" with no dialog, no notification and
+                    // no inline message — the only trace was a count changing on a step the
+                    // user may not revisit.
                     onClick={() => {
                       componentRowKeys.noteRemoval(idx);
-                      setDocument(removeComponents(doc, [c.id]));
+                      const next = removeComponents(doc, [c.id]);
+                      const droppedFlows = doc.data_flows.length - next.data_flows.length;
+                      setDocument(next);
+                      if (droppedFlows > 0) {
+                        toast.warning(
+                          t("wizard.removeCascadedToFlows", {
+                            count: droppedFlows,
+                            name: c.name || c.id,
+                          }),
+                        );
+                      }
                     }}
                   >
                     {t("wizard.remove")}

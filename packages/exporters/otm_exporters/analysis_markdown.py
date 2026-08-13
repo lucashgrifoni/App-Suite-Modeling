@@ -19,6 +19,7 @@ from otm_exporters.analysis_markdown_i18n import (
     risk_category_key,
     risk_category_title,
 )
+from otm_exporters.markdown_text import md_inline
 
 
 def _target_of(h) -> str:
@@ -210,7 +211,7 @@ def _append_risk_categories_block(
         for h in items:
             tgt = _target_of(h)
             sc = h.risk.score if h.risk.score is not None else "—"
-            lines.append(f"- {h.title} (`{h.id}`) {msgs.risk_item_in_target} `{tgt}` — score {sc}")
+            lines.append(f"- {md_inline(h.title)} (`{h.id}`) {msgs.risk_item_in_target} `{tgt}` — score {sc}")
         lines.append("")
 
 
@@ -292,7 +293,7 @@ def _append_heuristic_block(
         sc = h.risk.score if h.risk.score is not None else "—"
         refs = _format_framework_refs_compact(h.framework_refs, msgs)
         lines.append(
-            f"- **{h.title}** (`{h.id}`) → {msgs.threat_target_label} `{tgt}` — score {sc}  \n"
+            f"- **{md_inline(h.title)}** (`{h.id}`) → {msgs.threat_target_label} `{tgt}` — score {sc}  \n"
             f"  - {msgs.threat_line_fw_label}: {refs}"
         )
     if len(harmonized) > max_heuristic_rows:
@@ -308,7 +309,7 @@ def _append_bullet_section(lines: list[str], header: str, items: list[str], limi
         return
     lines.append(header)
     for item in items[:limit]:
-        lines.append(f"  - {item}")
+        lines.append(f"  - {md_inline(item)}")
 
 
 def _append_plot4ai_ai_context_block(
@@ -321,10 +322,10 @@ def _append_plot4ai_ai_context_block(
         return
     lines.append(msgs.plot4ai_title)
     lines.append("")
-    lines.append(ctx.synopsis)
+    lines.append(md_inline(ctx.synopsis))
     lines.append("")
     if ctx.pattern_tags:
-        lines.append(f"{msgs.plot_patterns} {', '.join(ctx.pattern_tags)}")
+        lines.append(f"{msgs.plot_patterns} {md_inline(', '.join(ctx.pattern_tags))}")
     _append_bullet_section(lines, msgs.plot_surfaces, ctx.primary_risk_surfaces, 6)
     _append_bullet_section(lines, msgs.plot_recs, ctx.prioritized_recommendations, 7)
     _append_bullet_section(lines, msgs.plot_sensitive, ctx.sensitive_data_notes, 5)
@@ -350,13 +351,13 @@ def _append_methodology_insights_block(
     lines.append(msgs.methodology_insights_title)
     lines.append("")
     if insights.profile:
-        lines.append(f"{msgs.profile_prefix} **{insights.profile}**")
+        lines.append(f"{msgs.profile_prefix} **{md_inline(insights.profile)}**")
         lines.append("")
     for b in insights.blocks:
-        lines.append(f"#### {b.title}")
+        lines.append(f"#### {md_inline(b.title)}")
         lines.append("")
         for item in b.items:
-            lines.append(f"- {item}")
+            lines.append(f"- {md_inline(item)}")
         lines.append("")
 
 
@@ -385,7 +386,7 @@ def _append_executive_summary_from_harmonized(
             tgt = _target_of(h) or msgs.scope_general
             lines.append(
                 msgs.priority_item.format(
-                    title=h.title,
+                    title=md_inline(h.title),
                     score=h.risk.score,
                     tgt=tgt,
                     prep=msgs.risk_item_in_target,
@@ -411,7 +412,7 @@ def _append_explainability_compact(
     for ex in result.explanations[:max_items]:
         cat = getattr(ex.category, "value", ex.category)
         typ = getattr(ex.type, "value", ex.type)
-        lines.append(f"- **[{typ}/{cat}]** {ex.subject} — {ex.message}")
+        lines.append(f"- **[{typ}/{cat}]** {md_inline(ex.subject)} — {md_inline(ex.message)}")
     if len(result.explanations) > max_items:
         lines.append(msgs.explain_more.format(n=len(result.explanations) - max_items))
     lines.append("")
@@ -434,8 +435,8 @@ def _append_quality_block(lines: list[str], result: AnalysisResult, msgs: Analys
             )
         )
     if mc is not None:
-        reasons = "; ".join(mc.reasons[:3]) if mc.reasons else "—"
-        note = mc.note or ""
+        reasons = md_inline("; ".join(mc.reasons[:3])) if mc.reasons else "—"
+        note = md_inline(mc.note or "")
         note_suffix = f" · _{note}_" if note else ""
         lines.append(msgs.completeness_line.format(state=mc.state.value, reasons=reasons, note=note_suffix))
     lines.append("")
@@ -449,7 +450,7 @@ def _append_wizard_context_block(lines: list[str], result: AnalysisResult, msgs:
     lines.append(msgs.wizard_context_blurb)
     lines.append("")
     for note in result.wizard_context_notes[:8]:
-        lines.append(f"- {note}")
+        lines.append(f"- {md_inline(note)}")
     lines.append("")
 
 
@@ -464,12 +465,12 @@ def _append_audit_trail_block(lines: list[str], result: AnalysisResult, msgs: An
         areas = ", ".join(entry.impact_areas) if entry.impact_areas else "—"
         lines.append(
             msgs.audit_entry.format(
-                tag=entry.source_tag,
-                effect=entry.effect,
+                tag=md_inline(entry.source_tag),
+                effect=md_inline(entry.effect),
                 weight=entry.weight,
-                mechanism=entry.mechanism,
-                areas=areas,
-                explanation=entry.explanation,
+                mechanism=md_inline(entry.mechanism),
+                areas=md_inline(areas),
+                explanation=md_inline(entry.explanation),
             )
         )
     lines.append("")
@@ -485,7 +486,7 @@ def _append_model_gaps_block(lines: list[str], result: AnalysisResult, msgs: Ana
     lines.append(msgs.model_gaps_title)
     lines.append("")
     for c in failed:
-        lines.append(f"- [{c.code}] {c.message}")
+        lines.append(f"- [{md_inline(c.code)}] {md_inline(c.message)}")
     lines.append("")
 
 
@@ -496,7 +497,10 @@ def _append_anti_patterns_block(lines: list[str], result: AnalysisResult, msgs: 
     lines.append("")
     for hit in result.anti_pattern_hits[:10]:
         conf = getattr(hit, "confidence_hint", None) or "medium"
-        lines.append(f"- **{hit.name}** (`{hit.id}`){msgs.anti_pattern_confidence.format(conf=conf)}{hit.message}")
+        lines.append(
+            f"- **{md_inline(hit.name)}** (`{hit.id}`)"
+            f"{msgs.anti_pattern_confidence.format(conf=md_inline(conf))}{md_inline(hit.message)}"
+        )
     lines.append("")
 
 
@@ -522,7 +526,8 @@ def _append_top_groups(lines: list[str], ar: dict[str, Any], msgs: AnalysisMarkd
         items = ar.get(key) or []
         if items:
             lines.append(
-                f"- **{label}:** " + ", ".join(f"`{x.get('id')}` ({x.get('aggregate_score')})" for x in items[:4])
+                f"- **{label}:** "
+                + ", ".join(f"`{md_inline(x.get('id'))}` ({x.get('aggregate_score')})" for x in items[:4])
             )
 
 
@@ -545,24 +550,29 @@ def _append_aggregate_block(lines: list[str], ar: dict[str, Any], msgs: Analysis
     if top_t:
         lines.append(f"- **{msgs.agg_top_threats}:**")
         for row in top_t[:5]:
-            lines.append(f"  - `{row.get('id')}` — {row.get('title', '')[:80]} (score {row.get('score')})")
+            lines.append(
+                f"  - `{md_inline(row.get('id'))}` — {md_inline(row.get('title', ''))[:80]} (score {row.get('score')})"
+            )
     _append_top_groups(lines, ar, msgs)
     themes = ar.get("dominant_themes") or []
     if themes:
-        lines.append(f"- **{msgs.agg_dominant_themes}:** " + "; ".join(str(t) for t in themes[:6]))
+        lines.append(f"- **{msgs.agg_dominant_themes}:** " + "; ".join(md_inline(t) for t in themes[:6]))
     starters = ar.get("mitigation_starters") or []
     if starters:
         lines.append(f"- **{msgs.agg_mitigation_starters}:**")
         for st in starters[:6]:
-            lines.append(f"  - {st}")
+            lines.append(f"  - {md_inline(st)}")
 
 
 def _append_cockpit_block(lines: list[str], dc: dict[str, Any], msgs: AnalysisMarkdownMessages) -> None:
-    lines.append(f"- **{msgs.cockpit_posture}:** `{dc.get('risk_posture', '—')}` — {dc.get('headline', '')}")
+    lines.append(
+        f"- **{msgs.cockpit_posture}:** `{md_inline(dc.get('risk_posture', '—'))}` — "
+        f"{md_inline(dc.get('headline', ''))}"
+    )
     for kd in dc.get("key_decisions") or []:
-        lines.append(f"  - {kd}")
+        lines.append(f"  - {md_inline(kd)}")
     for nr in (dc.get("next_reviews") or [])[:4]:
-        lines.append(f"  - *{msgs.cockpit_next_review}:* {nr}")
+        lines.append(f"  - *{msgs.cockpit_next_review}:* {md_inline(nr)}")
 
 
 def _append_aggregate_risk_and_cockpit(
@@ -625,7 +635,7 @@ def export_analysis_markdown(
         f"{msgs.bullet_methodology} `{result.methodology.value}`",
     ]
     if result.methodology_recommendation_reason:
-        lines.append(f"{msgs.bullet_recommendation} {result.methodology_recommendation_reason}")
+        lines.append(f"{msgs.bullet_recommendation} {md_inline(result.methodology_recommendation_reason)}")
     if result.industry_pack_id:
         lines.append(f"{msgs.bullet_industry_pack} `{result.industry_pack_id}`")
     lines.extend(
@@ -647,19 +657,19 @@ def export_analysis_markdown(
         lines.append(msgs.pack_control_title)
         lines.append("")
         for hint in result.pack_control_hints:
-            lines.append(f"- {hint}")
+            lines.append(f"- {md_inline(hint)}")
         lines.append("")
     if result.structural_findings:
         lines.append(msgs.section_structural)
         lines.append("")
         for f in result.structural_findings:
-            lines.append(f"- [{f.severity}] {f.message}")
+            lines.append(f"- [{f.severity}] {md_inline(f.message)}")
         lines.append("")
     if result.trust_boundary_findings:
         lines.append(msgs.section_trust_flows)
         lines.append("")
         for tbf in result.trust_boundary_findings:
-            lines.append(f"- {tbf.message}")
+            lines.append(f"- {md_inline(tbf.message)}")
         lines.append("")
     _append_guided_context_and_audit(lines, result, msgs)
     active = _active_threats(result)

@@ -49,7 +49,12 @@ def _load_analysis_json(path: Path) -> AnalysisResult:
         raise CliUserError(
             exit_code=1,
             failed="not a valid AnalysisResult.",
-            cause=str(e),
+            # Not `str(e)`. Pydantic's own rendering — `[type=missing, input_value={}, ...]` and
+            # the `errors.pydantic.dev` URL — used to land in the `Likely cause:` slot *and* the
+            # same two errors were then repeated by `validation_detail` below, so the user read
+            # one failure twice, once in framework language. `analysis_io` already words it this
+            # way; the field list under it is the part the user can act on.
+            cause="incompatible structure.",
             next_step="fix the JSON or regenerate with `otm analyze --json-out`.",
             validation_detail=format_validation_error(e),
         ) from e

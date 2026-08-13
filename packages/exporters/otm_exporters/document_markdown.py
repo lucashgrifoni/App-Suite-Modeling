@@ -10,17 +10,18 @@ from __future__ import annotations
 from otm_core_schema import ThreatModelDocument
 
 from otm_exporters.document_markdown_i18n import DocumentMarkdownMessages, document_markdown_messages
+from otm_exporters.markdown_text import md_block, md_inline
 
 
 def _append_header(lines: list[str], doc: ThreatModelDocument, msgs: DocumentMarkdownMessages) -> None:
     m = doc.metadata
-    lines.extend([f"# {m.title}", ""])
+    lines.extend([f"# {md_inline(m.title)}", ""])
     if m.summary:
-        lines.extend([m.summary, ""])
+        lines.extend([md_block(m.summary), ""])
     if m.owner:
-        lines.append(f"{msgs.owner_label} {m.owner}")
+        lines.append(f"{msgs.owner_label} {md_inline(m.owner)}")
     if m.document_version:
-        lines.append(f"{msgs.document_version_label} {m.document_version}")
+        lines.append(f"{msgs.document_version_label} {md_inline(m.document_version)}")
     lines.extend(
         [
             "",
@@ -45,7 +46,7 @@ def _append_business_context(lines: list[str], doc: ThreatModelDocument, msgs: D
     if not (doc.business_context and doc.business_context.description):
         return
     _append_section(lines, msgs.section_business)
-    lines.extend([doc.business_context.description.strip(), ""])
+    lines.extend([md_block(doc.business_context.description), ""])
 
 
 def _append_assets(lines: list[str], doc: ThreatModelDocument, msgs: DocumentMarkdownMessages) -> None:
@@ -54,7 +55,7 @@ def _append_assets(lines: list[str], doc: ThreatModelDocument, msgs: DocumentMar
     _append_section(lines, msgs.section_assets)
     _append_bulleted(
         lines,
-        [f"- **{a.name}** (`{a.id}`) — {a.asset_kind.value}" for a in doc.assets],
+        [f"- **{md_inline(a.name)}** (`{a.id}`) — {a.asset_kind.value}" for a in doc.assets],
     )
 
 
@@ -65,8 +66,8 @@ def _append_components(lines: list[str], doc: ThreatModelDocument, msgs: Documen
     items: list[str] = []
     for c in doc.components:
         tb = msgs.component_trust_boundary.format(boundary=c.in_trust_boundary) if c.in_trust_boundary else ""
-        tech = f" — {c.technology}" if c.technology else ""
-        items.append(f"- **{c.name}** (`{c.id}`) — {c.kind.value}{tech}{tb}")
+        tech = f" — {md_inline(c.technology)}" if c.technology else ""
+        items.append(f"- **{md_inline(c.name)}** (`{c.id}`) — {c.kind.value}{tech}{tb}")
     _append_bulleted(lines, items)
 
 
@@ -76,7 +77,7 @@ def _append_data_flows(lines: list[str], doc: ThreatModelDocument, msgs: Documen
     _append_section(lines, msgs.section_data_flows)
     items: list[str] = []
     for f in doc.data_flows:
-        nm = f.name or f.id
+        nm = md_inline(f.name) if f.name else f.id
         items.append(f"- **{nm}** (`{f.id}`): `{f.from_component}` → `{f.to_component}`")
     _append_bulleted(lines, items)
 
@@ -85,7 +86,7 @@ def _append_trust_boundaries(lines: list[str], doc: ThreatModelDocument, msgs: D
     if not doc.trust_boundaries:
         return
     _append_section(lines, msgs.section_trust_boundaries)
-    _append_bulleted(lines, [f"- **{b.name}** (`{b.id}`)" for b in doc.trust_boundaries])
+    _append_bulleted(lines, [f"- **{md_inline(b.name)}** (`{b.id}`)" for b in doc.trust_boundaries])
 
 
 def _append_threats(lines: list[str], doc: ThreatModelDocument, msgs: DocumentMarkdownMessages) -> None:
@@ -99,7 +100,7 @@ def _append_threats(lines: list[str], doc: ThreatModelDocument, msgs: DocumentMa
             risk = f"{msgs.threat_risk_li}{t.risk.likelihood}×{t.risk.impact}"
             if t.risk.score is not None:
                 risk += f"{msgs.threat_risk_score}{t.risk.score})"
-        items.append(f"- **{t.title}** (`{t.id}`) [{t.stride.value}]{risk}")
+        items.append(f"- **{md_inline(t.title)}** (`{t.id}`) [{t.stride.value}]{risk}")
     _append_bulleted(lines, items)
 
 
@@ -109,7 +110,7 @@ def _append_mitigations(lines: list[str], doc: ThreatModelDocument, msgs: Docume
     _append_section(lines, msgs.section_mitigations)
     _append_bulleted(
         lines,
-        [f"- **{m.title}** (`{m.id}`) — {m.status.value}" for m in doc.mitigations],
+        [f"- **{md_inline(m.title)}** (`{m.id}`) — {m.status.value}" for m in doc.mitigations],
     )
 
 

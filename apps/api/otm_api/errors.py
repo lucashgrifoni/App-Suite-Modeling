@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import json
 import math
 from typing import Any, cast
 
-from fastapi import Request, status
+from fastapi import Request, Response, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from otm_api.api_error_messages import msg_request_validation_error
 
@@ -101,11 +103,38 @@ def _truncated_errors(errors: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return out
 
 
+class SurrogateSafeJSONResponse(JSONResponse):
+    """
+    `JSONResponse` que sobrevive a um surrogate UTF-16 solto vindo do cliente.
+
+    `{"title": "\\ud800"}` é JSON sintaticamente válido — `json.loads` aceita-o, e
+    `JSON.stringify` de um browser emite exatamente isto para uma string com meio par
+    substituto. O Pydantic rejeita-o corretamente (`string_unicode`) e a rota levantava o 422
+    documentado; era a **serialização** desse 422 que rebentava, porque o valor ofensivo é
+    ecoado de volta em `errors[].input` (e pode aparecer em `errors[].loc`, quando o surrogate
+    está numa *chave*) e `.encode("utf-8")` recusa surrogates soltos. O cliente recebia um 500
+    `INTERNAL_ERROR` opaco em vez do 422 que o produto já tinha calculado.
+
+    `backslashreplace` reescreve o carater como a sequência de escape JSON `\\ud800`: continua a
+    ser o mesmo code point para quem faça `JSON.parse`/`json.loads`, portanto o utilizador vê
+    o valor que enviou, e nenhum outro carater é afetado (UTF-8 codifica tudo o resto).
+    """
+
+    def render(self, content: Any) -> bytes:
+        return json.dumps(
+            content,
+            ensure_ascii=False,
+            allow_nan=False,
+            indent=None,
+            separators=(",", ":"),
+        ).encode("utf-8", "backslashreplace")
+
+
 def request_validation_handler(
     _request: Request,
     exc: RequestValidationError,
 ) -> JSONResponse:
-    return JSONResponse(
+    return SurrogateSafeJSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
         content=problem_detail(
             code="REQUEST_VALIDATION_ERROR",
@@ -113,4 +142,67 @@ def request_validation_handler(
             status_code=422,
             errors=_truncated_errors(cast(list[dict[str, Any]], exc.errors())),
         ),
+    )
+
+
+def _body_is_allowed(status_code: int) -> bool:
+    """Estados em que o HTTP proíbe corpo (RFC 9110), tal como o handler do FastAPI trata."""
+    return status_code >= 200 and status_code not in (204, 205, 304)
+
+
+def _unparsable_body_response() -> JSONResponse:
+    """
+    O `400` genérico do FastAPI para um corpo ilegível, no envelope documentado.
+
+    `fastapi/routing.py` levanta `HTTPException(400, "There was an error parsing the body")`
+    para qualquer falha de leitura do corpo que não seja `JSONDecodeError` — por exemplo o
+    `RecursionError` de um JSON com 10 000 níveis de aninhamento. `detail` saía como string
+    solta: uma **terceira** forma de erro, que `docs/features/API.md` exclui ("Não há exceções
+    ao envelope nestas rotas"), e que rebenta com `TypeError: string indices must be integers`
+    num cliente escrito contra o contrato — o mesmo defeito já corrigido uma vez no 413.
+
+    A resposta é a do irmão imediato: um corpo que não é JSON válido (`JSONDecodeError`, o
+    ramo logo acima no FastAPI) já produz este envelope `REQUEST_VALIDATION_ERROR`/422. As
+    duas falhas são a mesma — "o corpo do pedido não se consegue ler" — por isso passam a ser
+    indistinguíveis, em vez de diferirem no estado *e* na forma consoante o motivo interno.
+    """
+    return SurrogateSafeJSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+        content=problem_detail(
+            code="REQUEST_VALIDATION_ERROR",
+            message=msg_request_validation_error(),
+            status_code=422,
+            errors=[
+                {
+                    "type": "body_unparsable",
+                    "loc": ["body"],
+                    "msg": "Request body could not be parsed",
+                }
+            ],
+        ),
+    )
+
+
+async def http_exception_handler(_request: Request, exc: Exception) -> Response:
+    """
+    Substitui o handler de `HTTPException` do FastAPI por dois motivos concretos.
+
+    1. Serializa com `SurrogateSafeJSONResponse`: os 422 das rotas transportam o input do
+       cliente em `errors[]`, e o handler do FastAPI morria a codificá-lo (ver essa classe).
+    2. Converte o `400` de corpo ilegível para o envelope documentado (ver
+       `_unparsable_body_response`).
+
+    Tudo o resto passa igual, incluindo o `404`/`405` do router do Starlette para caminhos
+    fora da tabela de rotas documentada, que não é o contrato que esta API publica.
+    """
+    exc = cast(StarletteHTTPException, exc)
+    headers = getattr(exc, "headers", None)
+    if not _body_is_allowed(exc.status_code):
+        return Response(status_code=exc.status_code, headers=headers)
+    if exc.status_code == status.HTTP_400_BAD_REQUEST and isinstance(exc.detail, str):
+        return _unparsable_body_response()
+    return SurrogateSafeJSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail},
+        headers=headers,
     )

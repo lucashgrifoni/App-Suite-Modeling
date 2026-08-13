@@ -2,12 +2,19 @@
 
 from __future__ import annotations
 
+import json
 from collections.abc import Callable
 
+import yaml
 from fastapi import APIRouter, File, HTTPException, UploadFile, status
 from otm_artifact_import.types import ArtifactImportResult
 
-from otm_api.api_error_messages import msg_import_empty_artifact, msg_import_not_utf8, msg_import_too_large
+from otm_api.api_error_messages import (
+    msg_import_artifact_invalid,
+    msg_import_empty_artifact,
+    msg_import_not_utf8,
+    msg_import_too_large,
+)
 from otm_api.routers._errors import error_detail
 from otm_api.schemas.bodies import ArtifactImportResponse, InferenceRecordBody
 from otm_api.services.imports import (
@@ -50,6 +57,21 @@ def _import_error(*, status_code: int, code: str, message: str) -> HTTPException
     contrato de `docs/features/API.md` rebentava a ler `detail["code"]`.
     """
     return HTTPException(status_code=status_code, detail=error_detail(code=code, message=message))
+
+
+def _parser_detail(exc: ValueError) -> str | None:
+    """
+    A explicação do parser YAML/JSON, quando existe uma.
+
+    Sinal estrutural e não textual: `otm_artifact_import` encadeia o erro original
+    (`raise ValueError(...) from e`) exatamente quando o conteúdo não se conseguiu ler, e
+    encadeia outra coisa nenhuma. Depender disso, em vez de reconhecer a frase do pacote,
+    é o que impede a tradução de deixar silenciosamente de funcionar quando essa frase mudar.
+    """
+    cause = exc.__cause__
+    if isinstance(cause, (yaml.YAMLError, json.JSONDecodeError)):
+        return str(cause)
+    return None
 
 
 async def _read_limited(file: UploadFile) -> tuple[bytes, str]:
@@ -98,12 +120,14 @@ async def _draft_from_upload(
             message=msg_import_not_utf8(),
         ) from e
     except ValueError as e:
-        # Mensagem do importador (ex.: "Raiz do artefacto deve ser um objecto (mapping)."):
-        # é acionável e escrita para humanos; o que faltava era o envelope à volta dela.
+        # A mensagem do importador é acionável mas está escrita em português fixo, e saía
+        # tal e qual dentro de respostas em inglês (`Accept-Language: en`), ao lado de
+        # irmãs traduzidas. A API reescreve-a no locale do pedido e preserva a parte que
+        # não sabe produzir sozinha — a localização do parser ("line 3, column 5").
         raise _import_error(
             status_code=status.HTTP_400_BAD_REQUEST,
             code="IMPORT_ARTIFACT_INVALID",
-            message=str(e),
+            message=msg_import_artifact_invalid(parser_detail=_parser_detail(e)),
         ) from e
 
 

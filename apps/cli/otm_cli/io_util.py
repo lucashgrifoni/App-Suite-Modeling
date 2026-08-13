@@ -23,9 +23,18 @@ def load_doc(path: Path) -> ThreatModelDocument:
         raise RuntimeError(f"Could not read file: {path}\n{e}") from e
 
 
-def format_validation_error(err: ValidationError) -> str:
-    """One line per error with field location."""
-    lines = ["The document is not valid for the canonical schema:", ""]
+#: Cabeçalho por omissão — o caso original, um documento canónico.
+_SCHEMA_HEADER = "The document is not valid for the canonical schema:"
+
+
+def format_validation_error(err: ValidationError, *, header: str = _SCHEMA_HEADER) -> str:
+    """One line per error with field location.
+
+    `header` existe porque o mesmo formatador serve agora ficheiros que não são o documento
+    canónico (um ficheiro de regras, por exemplo); só muda a frase de abertura, o corpo `• [campo]
+    mensagem` é o mesmo em todo o CLI. Sem parâmetro, o texto é byte a byte o de antes.
+    """
+    lines = [header, ""]
     for e in err.errors():
         loc = " → ".join(str(x) for x in e.get("loc", ()))
         msg = e.get("msg", "")

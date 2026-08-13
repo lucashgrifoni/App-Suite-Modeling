@@ -1,5 +1,5 @@
 import type { TFunction } from "i18next";
-import { ApiError, ApiTimeoutError } from "./client";
+import { ApiError, ApiMalformedResponseError, ApiTimeoutError } from "./client";
 
 /**
  * Statuses a proxy, gateway or load balancer emits when it cannot reach the backend at
@@ -16,6 +16,14 @@ const GATEWAY_STATUSES: ReadonlySet<number> = new Set([502, 503, 504]);
  * `OTM_ENTITY_ID_REGEX` in utils/documentNormalize.
  */
 const PATTERN_VIOLATION = /^String should match pattern /;
+
+/**
+ * Pydantic prefixes every message raised by a custom validator with `Value error, `. It is
+ * the library naming its own exception class, and it reached the screen in front of the
+ * sentence the validator actually wrote: "components: Value error, duplicate id in
+ * components". Nothing after the comma changes, so only the prefix is dropped.
+ */
+const PYDANTIC_VALUE_ERROR_PREFIX = /^Value error, /;
 
 function objectField(value: unknown, field: string): unknown {
   if (typeof value !== "object" || value === null) return undefined;
@@ -70,7 +78,8 @@ function locationLabel(loc: unknown): string {
 }
 
 function violationLabel(msg: string, t: TFunction): string {
-  return PATTERN_VIOLATION.test(msg) ? t("apiErrors.entityIdPattern") : msg;
+  if (PATTERN_VIOLATION.test(msg)) return t("apiErrors.entityIdPattern");
+  return msg.replace(PYDANTIC_VALUE_ERROR_PREFIX, "");
 }
 
 /** One readable line per field the server rejected. */
@@ -108,14 +117,16 @@ function describeEnvelope(
 /**
  * Turn anything thrown by the API layer into a message worth putting in front of a user.
  *
- * Precedence: a timeout is described as a timeout; a gateway failure with no server body
- * is described as the backend being unreachable; a coded envelope the UI can word better
+ * Precedence: a timeout is described as a timeout; a gateway failure with no server body,
+ * and a 2xx that did not come from this API at all, are described as the backend being
+ * unreachable — which is the user's actual situation; a coded envelope the UI can word better
  * is reworded (and its field violations humanised); anything else the server actually
  * explained is shown as the server explained it; and anything else falls back to the
  * caller's own key, which is the operation that failed ("Could not run the analysis").
  */
 export function apiErrorMessage(error: unknown, t: TFunction, fallbackKey: string): string {
   if (error instanceof ApiTimeoutError) return t("apiErrors.timeout");
+  if (error instanceof ApiMalformedResponseError) return t("apiErrors.unreachable");
   if (error instanceof ApiError) {
     if (!error.fromServerDetail && GATEWAY_STATUSES.has(error.status)) {
       return t("apiErrors.unreachable");

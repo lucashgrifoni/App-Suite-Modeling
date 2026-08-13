@@ -61,21 +61,47 @@ function persistDocument(doc: OtmDocument | null) {
   }
 }
 
-function persistAnalysis(a: AnalysisResult | null) {
+function storageRemove(key: string) {
   try {
-    if (a) sessionStorage.setItem(ANALYSIS_KEY, JSON.stringify(a));
-    else sessionStorage.removeItem(ANALYSIS_KEY);
+    sessionStorage.removeItem(key);
   } catch {
-    /* ignore */
+    /* private mode */
   }
 }
 
-function persistAnalysisDocKey(key: string | null) {
+/** `true` when the value is now in sessionStorage; `false` when the browser refused it. */
+function storageWrite(key: string, value: string): boolean {
   try {
-    if (key) sessionStorage.setItem(ANALYSIS_DOC_KEY, key);
-    else sessionStorage.removeItem(ANALYSIS_DOC_KEY);
+    sessionStorage.setItem(key, value);
+    return true;
   } catch {
-    /* ignore */
+    return false;
+  }
+}
+
+/**
+ * The analysis and the fingerprint of the document it was computed from are one fact, so
+ * they are written as one: either both land, or neither is left behind.
+ *
+ * Writing them independently is what turned a full quota into a correctness failure. A large
+ * model's analysis (megabytes) is refused by the browser while the fingerprint (8 chars)
+ * always fits, so storage kept the PREVIOUS model's analysis stamped with the CURRENT
+ * model's fingerprint. After a reload the pairing guard below compared those two and
+ * concluded they matched, and the new document was shown — and exported, and put in a
+ * History snapshot, and printed into a client-side PDF the server never sees — carrying
+ * another system's threat list. Dropping the cache is the only honest outcome here: the
+ * analysis is still on screen for this page load, and a reload simply asks the user to run
+ * the engine again.
+ */
+function persistAnalysisPair(a: AnalysisResult | null, key: string | null) {
+  if (!a || !key) {
+    storageRemove(ANALYSIS_KEY);
+    storageRemove(ANALYSIS_DOC_KEY);
+    return;
+  }
+  if (!storageWrite(ANALYSIS_KEY, JSON.stringify(a)) || !storageWrite(ANALYSIS_DOC_KEY, key)) {
+    storageRemove(ANALYSIS_KEY);
+    storageRemove(ANALYSIS_DOC_KEY);
   }
 }
 
@@ -128,19 +154,17 @@ export function SessionProvider({ children }: Readonly<{ children: ReactNode }>)
     persistDocument(normalized);
     if (!d) {
       setAnalysis(null);
-      persistAnalysis(null);
       setAnalysisDocKey(null);
-      persistAnalysisDocKey(null);
+      persistAnalysisPair(null, null);
     }
   }, []);
 
   const setAnalysisValue = useCallback((a: AnalysisResult | null) => {
     const n = a ? normalizeAnalysis(a) : null;
     setAnalysis(n);
-    persistAnalysis(n);
     const key = n ? hashDocument(documentRef.current) : null;
     setAnalysisDocKey(key);
-    persistAnalysisDocKey(key);
+    persistAnalysisPair(n, key);
   }, []);
 
   const reset = useCallback(() => {
@@ -149,8 +173,7 @@ export function SessionProvider({ children }: Readonly<{ children: ReactNode }>)
     setAnalysis(null);
     setAnalysisDocKey(null);
     persistDocument(null);
-    persistAnalysis(null);
-    persistAnalysisDocKey(null);
+    persistAnalysisPair(null, null);
   }, []);
 
   // An analysis computed from a different document is not this model's analysis. Hiding

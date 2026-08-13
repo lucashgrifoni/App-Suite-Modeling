@@ -33,6 +33,28 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * A 2xx whose body is not the JSON document the route promises.
+ *
+ * `parseJson` returns the raw text when a body is not JSON, and `null` when it is empty;
+ * both used to be handed to the caller as a successful result. Everything that answers 200
+ * without being this API does exactly that — an SPA-fallback static host serving
+ * `index.html` for `/api/...`, a captive portal, a gateway pointed at the wrong upstream —
+ * so "Analysis generated." was announced (and a History snapshot written) for a run that
+ * never happened, and `items.map is not a function` took the Templates page down into the
+ * global error boundary. For the person at the screen, reaching something that is not this
+ * API is the same situation as not reaching it at all, so it is reported the same way.
+ */
+export class ApiMalformedResponseError extends Error {
+  readonly status: number;
+
+  constructor(status: number) {
+    super(`The ${status} response body was not the JSON this endpoint returns`);
+    this.name = "ApiMalformedResponseError";
+    this.status = status;
+  }
+}
+
 /** The request was cut off by `DEFAULT_TIMEOUT_MS`, not answered by the server. */
 export class ApiTimeoutError extends Error {
   readonly timeoutMs: number;
@@ -157,7 +179,12 @@ export async function apiFetch<T>(
     timeoutMs,
   );
   const data = await parseJson(res);
-  if (res.ok) return data as T;
+  // Every route reachable through `apiFetch` answers with a JSON object or array, so
+  // anything else on a 2xx is not an answer from this API. See ApiMalformedResponseError.
+  if (res.ok) {
+    if (typeof data !== "object" || data === null) throw new ApiMalformedResponseError(res.status);
+    return data as T;
+  }
 
   const detailMessage = extractApiErrorMessage(data);
   throw new ApiError(

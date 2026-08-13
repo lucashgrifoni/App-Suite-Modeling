@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from yaml.nodes import Node
+from yaml.nodes import MappingNode, Node
 
 from otm_core_schema.document import ThreatModelDocument
 
@@ -48,7 +48,45 @@ def _limit_from_env(name: str, default: int) -> int:
 
 
 class _BoundedSafeLoader(yaml.SafeLoader):
-    """`SafeLoader` que contabiliza o custo expandido dos aliases e desiste a tempo."""
+    """`SafeLoader` que contabiliza o custo expandido dos aliases e recusa chaves duplicadas."""
+
+    def construct_mapping(self, node: MappingNode, deep: bool = False) -> dict[Any, Any]:
+        """Recusa uma chave repetida em vez de deixar a última vencer.
+
+        O YAML manda a última ganhar, em silêncio. Num `.otm.yaml` isso significa que um
+        merge mal resolvido — dois blocos `components:`, duas secções `metadata:` — passa por
+        `otm validate` com o painel verde enquanto metade do modelo desaparece: os componentes
+        do primeiro bloco não existem, as ameaças que dependiam deles nunca são geradas, e o
+        relatório que sai daí parece completo. É exatamente a classe de erro que o hook de
+        pre-commit anunciado no README existe para apanhar.
+
+        A verificação é feita ao nível dos nós, antes da construção, porque no dicionário
+        resultante a duplicação já se perdeu.
+
+        Corre **antes** de `flatten_mapping`, e por duas razões. A chave de merge (`<<`) não
+        tem construtor próprio, por isso construí-la aqui rebentava; e depois do flatten as
+        chaves herdadas da âncora aparecem na mesma lista que as locais, o que faria de
+        `<<: *base` seguido de um override explícito um falso duplicado — que é precisamente
+        o motivo pelo qual se usa uma âncora.
+        """
+        seen: set[Any] = set()
+        for key_node, _ in node.value:
+            if key_node.tag == "tag:yaml.org,2002:merge":
+                continue
+            key = self.construct_object(key_node, deep=deep)
+            try:
+                duplicated = key in seen
+            except TypeError:  # pragma: no cover - defensive: chave não-hashable
+                continue
+            if duplicated:
+                mark = key_node.start_mark
+                raise ValueError(
+                    f"duplicate key {key!r} at line {mark.line + 1}, column {mark.column + 1}: "
+                    "YAML would silently keep only the last block and discard the first. "
+                    "Merge the two blocks into one."
+                )
+            seen.add(key)
+        return super().construct_mapping(node, deep=deep)
 
     def __init__(self, stream: Any) -> None:
         super().__init__(stream)

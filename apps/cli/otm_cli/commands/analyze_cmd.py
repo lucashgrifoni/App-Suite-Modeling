@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Annotated
+from urllib.parse import quote
 
 import typer
 from otm_core_schema.enums import ThreatModelMethodology
@@ -19,6 +20,23 @@ from otm_cli.shared.emit import write_json_file, write_text_file
 from otm_cli.shared.enums import MethodologyOption
 from otm_cli.shared.errors import CliUserError
 from otm_cli.shared.render import safe
+
+#: Characters RFC 3986 allows unencoded in a path: unreserved (which `quote` never touches),
+#: plus the sub-delims, `:` and `@`, and `/` as the segment separator. Everything else — the
+#: space above all — has to be percent-encoded to be a URI reference at all.
+_URI_PATH_SAFE = "/:@!$&'()*+,;="
+
+
+def _model_uri(model: Path) -> str:
+    """The model path as an `artifactLocation.uri`, which SARIF defines as a URI reference.
+
+    Two conversions, both required and neither optional on Windows. `as_posix()` because a
+    backslash resolves nowhere in a URI. `quote()` because the space does not exist in the RFC
+    3986 character set, and a path with a space is the normal case on Windows and common on
+    macOS — the repository this ships from lives under one. Without it every result in the file
+    carried a raw space and the artifact was not a valid SARIF URI reference.
+    """
+    return quote(model.as_posix(), safe=_URI_PATH_SAFE)
 
 
 def _emit_json_output(result: AnalysisResult, json_out: Path, *, quiet: bool, model: Path) -> None:
@@ -37,10 +55,9 @@ def _emit_sarif_output(result: AnalysisResult, sarif_out: Path, *, quiet: bool, 
     Without `model_uri` the exporter falls back to its canonical `threat-model.otm.yaml` — right
     for the API, which analyses an uploaded document with no path, and wrong here: every alert
     GitHub ingested pointed at a file that usually does not exist in the repository, and several
-    models scanned in one run collapsed onto that same phantom path. `as_posix()` because
-    `artifactLocation.uri` is a URI: a Windows `threat-models\\orders.otm.yaml` resolves nowhere.
+    models scanned in one run collapsed onto that same phantom path.
     """
-    sarif = export_analysis_sarif(result, model_uri=model.as_posix())
+    sarif = export_analysis_sarif(result, model_uri=_model_uri(model))
     try:
         write_text_file(content=sarif, output=sarif_out, sources=(model,))
     except CliUserError as e:

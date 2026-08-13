@@ -59,7 +59,7 @@ def get_template_detail(
 ) -> TemplateListItem:
     item = get_template(template_id)
     if item is None:
-        raise raise_template_not_found(FileNotFoundError(f"Template desconhecido: {template_id!r}"))
+        raise raise_template_not_found(template_id)
     return item
 
 
@@ -84,7 +84,7 @@ def instantiate_template(
     try:
         doc = document_from_template(template_id)
     except FileNotFoundError as e:
-        raise raise_template_not_found(e) from e
+        raise raise_template_not_found(template_id) from e
     except PydanticValidationError as e:  # pragma: no cover - defensive guard
         raise raise_template_invalid(e) from e
     return CreateModelResponse(document=doc.model_dump(mode="json", by_alias=True))

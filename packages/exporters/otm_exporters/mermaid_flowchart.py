@@ -54,22 +54,61 @@ def export_flowchart_mermaid(doc: ThreatModelDocument) -> str:
     por fluxo (ver `test_export_flowchart_mermaid_minimal_node_and_edge_line_counts`).
     IDs Mermaid sanitizados; labels com aspas duplas escapadas para aspas simples.
     """
+    node_ids = _mermaid_node_ids(doc)
     lines: list[str] = ["flowchart LR"]
     for c in doc.components:
         label = _mermaid_label(c.name)
-        nid = _mermaid_node_id(c.id)
-        lines.append(f'    {nid}["{label}"]')
+        lines.append(f'    {node_ids[c.id]}["{label}"]')
 
     for f in doc.data_flows:
-        a = _mermaid_node_id(f.from_component)
-        b = _mermaid_node_id(f.to_component)
+        a = node_ids[f.from_component]
+        b = node_ids[f.to_component]
         label = _mermaid_edge_label(f.name or f.id)
         lines.append(f"    {a} -->|{label}| {b}")
 
     return "\n".join(lines) + "\n"
 
 
-def _mermaid_node_id(raw: str) -> str:
+def _mermaid_node_ids(doc: ThreatModelDocument) -> dict[str, str]:
+    """One Mermaid node id per entity id, and never the same one twice.
+
+    The per-id sanitiser is not injective and cannot be: `-`, `.` and every other character the
+    entity-id pattern allows but Mermaid does not all fold to `_`, so `svc-a`, `svc.a` and
+    `svc_a` — three ids `otm validate` accepts as distinct components — produced one node id
+    defined three times, and both flows between them rendered as self-loops. The reserved-word
+    escape collided the same way: `end` and `end_` both became `end_`. The diagram was silently
+    wrong: three boxes drawn as one, with no warning and exit 0.
+
+    Injectivity is a property of the whole set, so it is resolved over the whole set. Each id
+    takes its sanitised form when that form is free, and otherwise the first `<base>_<n>` that
+    collides with neither an id already assigned nor a base another id will claim — checking the
+    bases too is what stops the disambiguated name from stealing a later id's node. Assignment
+    follows document order, so the output stays deterministic, and a model whose sanitised ids
+    are already distinct — every shipped example and template — renders byte for byte as before.
+
+    Flow endpoints are looked up in the same table rather than re-sanitised, which is what keeps
+    an edge attached to the node it names. Every endpoint is in it: the schema rejects a flow
+    whose `from_component`/`to_component` is not a declared component, and rejects duplicate
+    component ids, so the table is total over the endpoints and one entry per component.
+    """
+    component_ids = [c.id for c in doc.components]
+    bases = {_mermaid_base_id(raw) for raw in component_ids}
+    assigned: dict[str, str] = {}
+    taken: set[str] = set()
+    for raw in component_ids:
+        base = _mermaid_base_id(raw)
+        candidate = base
+        suffix = 2
+        while candidate in taken or (candidate != base and candidate in bases):
+            candidate = f"{base}_{suffix}"
+            suffix += 1
+        taken.add(candidate)
+        assigned[raw] = candidate
+    return assigned
+
+
+def _mermaid_base_id(raw: str) -> str:
+    """The node id an entity id maps to before collisions are resolved."""
     ident = "".join(ch if ch.isalnum() else "_" for ch in raw)
     if ident.lower() in _RESERVED_NODE_IDS:
         return f"{ident}_"

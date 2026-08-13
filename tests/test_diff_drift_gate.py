@@ -370,14 +370,27 @@ def test_diff_rejects_methodology_and_auto_methodology_together() -> None:
     assert r.exit_code != _GATE_TRIP
 
 
-def test_cli_methodology_switch_exits_zero(tmp_path: Path) -> None:
+def test_cli_methodology_switch_fails_the_armed_gate_closed(tmp_path: Path) -> None:
+    """Replaces `test_cli_methodology_switch_exits_zero`, which specified the defect.
+
+    That test asserted exit 0 for exactly the input that turned a FAILED verdict into a green
+    build: the methodology is declared *inside the model under review*, so the author of a PR
+    could add one line and switch the gate off. Exit 0 is the code CI reads as "no new risk", and
+    the engine never judged anything here. The verdict itself is unchanged — still `NOT
+    EVALUATED`, still `tripped=False` — only the exit code, which is the CI contract, is now the
+    same `1` that the engine-version and pack mismatches already return on `diff-analysis`.
+    """
     raw = yaml.safe_load(_MINIMAL.read_text(encoding="utf-8"))
     raw["model"]["methodology"] = "nist_data_centric"
     revised = tmp_path / "meth.otm.yaml"
     revised.write_text(yaml.safe_dump(raw, sort_keys=False), encoding="utf-8")
 
     r = CliRunner().invoke(app, ["diff", str(_MINIMAL), str(revised), "--fail-on", "high"])
-    assert r.exit_code == 0
+
+    assert r.exit_code == 1, r.output
+    assert "NOT EVALUATED" in r.output
+    # Without a gate armed the same pair is still diffable: only the armed path refuses.
+    assert CliRunner().invoke(app, ["diff", str(_MINIMAL), str(revised)]).exit_code == 0
 
 
 def test_within_band_worsening_of_a_non_maximum_threat_is_caught() -> None:

@@ -24,12 +24,22 @@ class InvalidEnvironmentError(ValueError):
     """`OTM_ENV` tem um valor que não corresponde a nenhum perfil documentado."""
 
 
+class InvalidCorsOriginsError(ValueError):
+    """`OTM_CORS_ORIGINS` pede uma configuração que não pode ser servida em segurança."""
+
+
+# Uma origem `*` não é uma origem: é "qualquer página web da internet".
+_WILDCARD_ORIGIN = "*"
+
+
 @dataclass(frozen=True)
 class CorsProfile:
     origins: list[str]
     allow_methods: list[str]
     allow_headers: list[str]
     environment: str
+    # Falso quando a lista de origens é (ou inclui) `*`. Ver `_credentials_allowed`.
+    allow_credentials: bool = True
 
 
 def resolve_environment() -> str:
@@ -55,6 +65,35 @@ def resolve_environment() -> str:
     return environment
 
 
+def _refuse_wildcard_origins(environment: str) -> InvalidCorsOriginsError:
+    """A recusa de arranque, escrita para quem está a meio de um deploy.
+
+    `OTM_ENV=prd` e `OTM_TRUSTED_PROXY=maybe` já abortam o arranque em vez de degradarem em
+    silêncio; `OTM_CORS_ORIGINS=*` era a excepção, e a mais cara delas.
+    """
+    return InvalidCorsOriginsError(
+        f"OTM_CORS_ORIGINS='{_WILDCARD_ORIGIN}' opens /v1/* to every origin on the web, and this is a "
+        f"{environment} deployment. docs/architecture/DEPLOYMENT_INVARIANTS.md requires explicit CORS "
+        "lists outside development. List the origins that may call this API, comma separated "
+        "(OTM_CORS_ORIGINS=https://app.example.com,https://admin.example.com), or unset the variable to "
+        "serve no browser origin at all. Refusing to start with a wildcard, which no log line would "
+        "have distinguished from a correctly configured server."
+    )
+
+
+def _credentials_allowed(origins: list[str]) -> bool:
+    """
+    `Access-Control-Allow-Credentials: true` só com uma lista concreta de origens.
+
+    Combinar as duas coisas era uma escalada silenciosa e não o que o operador pediu: com
+    `allow_credentials=True`, o `CORSMiddleware` do Starlette **não** emite um `*` literal —
+    reflecte a `Origin` de quem chama e junta-lhe `Allow-Credentials: true`. Um `*` literal faz
+    o browser recusar leituras cross-origin com credenciais; a reflexão autoriza-as. Escrever
+    `*` passava assim a permitir estritamente mais do que escrever `*`.
+    """
+    return _WILDCARD_ORIGIN not in origins
+
+
 def resolve_cors_profile() -> CorsProfile:
     environment = resolve_environment()
 
@@ -68,6 +107,9 @@ def resolve_cors_profile() -> CorsProfile:
             "http://localhost:5173",
             "http://127.0.0.1:5173",
         ]
+
+    if _WILDCARD_ORIGIN in origins and environment != "development":
+        raise _refuse_wildcard_origins(environment)
 
     if environment == "development":
         methods = ["*"]
@@ -87,4 +129,5 @@ def resolve_cors_profile() -> CorsProfile:
         allow_methods=methods,
         allow_headers=headers,
         environment=environment,
+        allow_credentials=_credentials_allowed(origins),
     )

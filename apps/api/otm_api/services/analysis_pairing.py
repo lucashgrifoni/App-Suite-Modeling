@@ -6,10 +6,20 @@ análise do modelo B devolvia 200 e produzia um artefacto com duas identidades �
 backlog rotulado com o título e a metodologia de B, o relatório premium com o cabeçalho
 de A e as ameaças de B. Nada no produto avisava.
 
-O `AnalysisResult` descreve-se a si próprio, por isso a incompatibilidade é detetável:
+A identidade é lida em `otm_threat_engine.analysis_identity`, o mesmo módulo que a CLI
+(`otm report`, `otm backlog`, `otm diff-analysis`) usa — as duas superfícies respondiam à
+mesma pergunta com critérios diferentes e discordavam uma da outra. Três divergências, cada
+uma com o seu `errors[].type`:
 
-- `document_title` — a identidade que a análise carrega;
-- `heuristic_threats[].target_component_id` — os componentes que a análise assume existirem.
+- **título** (`…mismatch.title`) — sinal fraco: `otm init -t <template>` copia o título do
+  template, por isso dois modelos diferentes colidem nele. Fica porque, quando difere, o par
+  está mesmo trocado; nunca é o *único* critério.
+- **entidades estranhas** (`…mismatch.components`) — a análise pendura ameaças em componentes,
+  fluxos ou ativos que o documento não define, logo não foi produzida a partir dele.
+- **componentes por analisar** (`…mismatch.stale_components`) — o documento define componentes
+  que a análise nunca viu. É o sinal de *desactualização*: uma análise da revisão 1 referencia
+  um subconjunto estrito da revisão 2, passava em todos os outros critérios, e o relatório
+  inventariava o componente novo sem lhe apontar uma única ameaça.
 
 Só é aplicado onde a análise **descreve o documento submetido**. Em `/v1/reports/premium`,
 `baseline_analysis` é a análise de uma versão anterior *do documento que não foi enviado*:
@@ -28,12 +38,7 @@ from typing import Any
 
 from otm_core_schema import ThreatModelDocument
 from otm_threat_engine import AnalysisResult
-
-
-def _unknown_target_component_ids(document: ThreatModelDocument, analysis: AnalysisResult) -> list[str]:
-    known = {c.id for c in document.components}
-    referenced = {t.target_component_id for t in analysis.heuristic_threats if t.target_component_id}
-    return sorted(referenced - known)
+from otm_threat_engine.analysis_identity import foreign_entity_ids, unanalysed_component_ids
 
 
 def analysis_document_mismatches(
@@ -63,13 +68,26 @@ def analysis_document_mismatches(
             }
         )
 
-    unknown = _unknown_target_component_ids(document, analysis)
-    if unknown:
+    foreign = foreign_entity_ids(document, analysis)
+    if foreign:
         mismatches.append(
             {
                 "loc": ["body", analysis_field, "heuristic_threats"],
-                "msg": (f"{analysis_field} targets components absent from the {document_field}: {', '.join(unknown)}"),
+                "msg": (f"{analysis_field} targets entities absent from the {document_field}: {', '.join(foreign)}"),
                 "type": "analysis_document_mismatch.components",
+            }
+        )
+
+    unanalysed = unanalysed_component_ids(document, analysis)
+    if unanalysed:
+        mismatches.append(
+            {
+                "loc": ["body", analysis_field, "heuristic_threats"],
+                "msg": (
+                    f"{analysis_field} never analysed components the {document_field} defines "
+                    f"({', '.join(unanalysed)}); it was produced for an earlier revision"
+                ),
+                "type": "analysis_document_mismatch.stale_components",
             }
         )
 

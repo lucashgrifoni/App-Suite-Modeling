@@ -9,7 +9,7 @@
 
 import { describe, expect, it } from "vitest";
 import { apiErrorMessage } from "./apiErrorMessage";
-import { ApiError, ApiTimeoutError } from "./client";
+import { ApiError, ApiMalformedResponseError, ApiTimeoutError } from "./client";
 
 /** Stand-in for i18next's `t`: echoes the key so assertions name the string chosen. */
 const t = ((key: string) => `t:${key}`) as unknown as Parameters<typeof apiErrorMessage>[1];
@@ -51,6 +51,14 @@ describe("apiErrorMessage", () => {
   it("keeps a bodyless 500, which is the API answering rather than a gateway failing", () => {
     const err = new ApiError("Internal Server Error", 500, null, false);
     expect(apiErrorMessage(err, t, "analysis.toastFail")).toBe("Internal Server Error");
+  });
+
+  it("describes a 200 that did not come from this API as unreachable", () => {
+    // A static host with SPA fallback answers `/api/v1/templates` with index.html, 200.
+    // The user's situation is the same as a dead backend, so the guidance is the same.
+    expect(apiErrorMessage(new ApiMalformedResponseError(200), t, "analysis.toastFail")).toBe(
+      "t:apiErrors.unreachable",
+    );
   });
 
   it("falls back to the caller's key for a non-API failure", () => {

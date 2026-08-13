@@ -11,6 +11,9 @@
     "newModel": "Novo modelo",
     "confirmNewModel": "Começar um novo modelo descarta o modelo desta sessão, e esta é a única cópia. Continuar?"
   },
+  "session": {
+    "confirmReplaceModel": "Isto substitui o modelo desta sessão, e esta é a única cópia. Continuar?"
+  },
   "layout": {
     "brandSubtitle": "Threat modeling profissional",
     "footerNote": "A validação e o motor executam no servidor — a UI não duplica regras de negócio.",
@@ -140,7 +143,8 @@
     "explanationsCode": "explanations",
     "unknownTitle": "Não inferido",
     "unknownSubtitle": "Limitações explícitas deste lote.",
-    "acceptedTypes": "Tipos aceites:"
+    "acceptedTypes": "Tipos aceites:",
+    "selectionClearedByType": "“{{name}}” não é um dos tipos que este artefacto aceita ({{accepted}}), por isso a selecção foi limpa. Escolha um ficheiro compatível."
   },
   "wizard": {
     "eyebrow": "Assistente guiado",
@@ -160,6 +164,7 @@
     "methodology": "Metodologia (alvo da análise)",
     "semanticProfile": "Perfil semântico do template (opcional)",
     "templateSemanticProfilePlaceholder": "ex.: api_backend_rest",
+    "templateSemanticProfileLabel": "Identificador do perfil",
     "semanticProfileBody": "Preencha se usar um template da galeria ou quiser desbloquear perguntas adaptativas. Ex.: <0>internal_admin_portal</0>, <1>file_handling_application</1>, <2>api_backend_rest</2>.",
     "adaptiveTitle": "Perguntas adaptativas ao contexto",
     "adaptiveBody": "Respostas são guardadas como etiquetas no modelo (export JSON inclui). Não substituem validação no servidor.",
@@ -170,6 +175,9 @@
     "componentsSubtitle": "Elementos do diagrama (processos, dados, utilizadores…).",
     "id": "ID",
     "idTrailingWhitespace": "O ID não pode ter espaço em branco no fim. Apague o que vier depois do último carácter visível.",
+    "idDuplicate": "O id “{{id}}” já é usado por outro componente. Os ids têm de ser únicos.",
+    "removeCascadedToFlows_one": "Remover “{{name}}” apagou também 1 fluxo de dados que o referenciava.",
+    "removeCascadedToFlows_other": "Remover “{{name}}” apagou também {{count}} fluxos de dados que o referenciavam.",
     "name": "Nome",
     "type": "Tipo",
     "remove": "Remover",
@@ -420,7 +428,8 @@
     "stride": "STRIDE:",
     "liScore": "L×I {{score}}",
     "showing": "A mostrar {{shown}} de {{total}} ameaças ativas.",
-    "noneMatch": "Nenhuma ameaça corresponde aos filtros."
+    "noneMatch": "Nenhuma ameaça corresponde aos filtros.",
+    "noneAtAll": "O motor não produziu ameaças para este modelo. Complete-o no assistente — componentes e fluxos de dados — e volte a correr o motor."
   },
   "explanations": {
     "sectionTitle": "Explicabilidade do resultado",

@@ -6,7 +6,8 @@ traduzimos para a linha de comandos.
 Contrato de códigos de saída:
     0  sucesso, gate não reprovou (e sempre, quando nenhuma flag de gate é usada)
     1  erro de utilização levantado pelo CLI: ficheiro inexistente, YAML inválido,
-       `--fail-on` inválido, pack desconhecido, destino de escrita inacessível
+       `--fail-on` inválido, pack desconhecido, destino de escrita inacessível — **e** um
+       gate armado que não conseguiu emitir veredito (ver `gate_exit_code`)
     2  erro de utilização levantado pelo Typer/Click: valor inválido num enum
        (`--methodology`, `--format`, `--kind`), flag desconhecida, argumento em falta
     3  **gate reprovou** — há ameaças novas ou agravadas acima do limiar
@@ -31,6 +32,14 @@ from otm_cli.shared.errors import CliUserError
 
 #: Código de saída quando a política reprova (distinto de erro de utilização).
 GATE_TRIP_EXIT_CODE = 3
+
+#: Código de saída quando um gate **armado** não conseguiu emitir veredito.
+#:
+#: É o mesmo `1` com que `otm diff-analysis` já recusa comparar duas análises de versões
+#: diferentes do motor ou de packs diferentes: o comando, tal como foi escrito, não consegue
+#: produzir um veredito. Sair `0` aqui seria um fail-open — e num gate de CI o `0` é lido como
+#: build verde, por quem o escreveu e pela action que o embrulha.
+GATE_NOT_EVALUATED_EXIT_CODE = 1
 
 _NONE = "none"
 _ALLOWED = (_NONE, *SEVERITY_ORDER)
@@ -60,11 +69,14 @@ def _fmt(score: float | None) -> str:
 _BAR = "=" * 60
 
 #: Deliberately not "PASSED": nothing was judged. Saying "passed" here would be the gate
-#: claiming a clean bill of health it never checked.
+#: claiming a clean bill of health it never checked — and exiting 0 would say exactly that to
+#: every CI runner, which is why an armed gate that reaches this state exits non-zero.
 _NOT_EVALUATED_NOTE = (
     "The methodology changed between the two models, so the heuristics differ and new or "
-    "worsened threats cannot be attributed to the model change. No verdict was issued; "
-    "exit code 0. Re-run the gate with both sides on the same methodology to get one."
+    f"worsened threats cannot be attributed to the model change. No verdict was issued; exit "
+    f"code {GATE_NOT_EVALUATED_EXIT_CODE}, because a gate that judged nothing must not answer "
+    "the code that means `no new risk`. Pin one lens with `--methodology`/`-m` on both sides "
+    "to get a verdict."
 )
 
 
@@ -160,6 +172,29 @@ def _unranked_note_lines(unranked_threat_ids: list[str]) -> list[str]:
         f"Note: {len(unranked_threat_ids)} new threat(s) carry no score and were not "
         f"evaluated against the band: {', '.join(unranked_threat_ids)}",
     ]
+
+
+def gate_exit_code(result: GateResult) -> int:
+    """O código de saída que o veredito implica. Só chamado com a política activa.
+
+    Três estados, três códigos — e o `0` é o único que um runner de CI lê como "sem risco novo",
+    por isso é o único que um gate que **avaliou** pode devolver:
+
+    * reprovou            → `3`, a política falhou;
+    * não conseguiu avaliar → `1`, o comando como foi escrito não produz veredito;
+    * aprovou             → `0`.
+
+    O caso do meio era `0`. Bastava acrescentar `methodology: linddun` ao modelo em revisão —
+    uma linha dentro do próprio artefacto a ser revisto — para um veredito FAILED passar a build
+    verde, sem tocar no workflow. As duas condições irmãs em `diff-analysis` (versão do motor,
+    pack) já falham fechadas com `1` pela mesma razão: quando as heurísticas dos dois lados não
+    são as mesmas, o delta não é atribuível à mudança do modelo. Fecha-se aqui também, em vez de
+    fixar uma lente à revelia, porque escolher a lente é uma decisão do operador — e a mensagem
+    diz-lhe qual flag a fixa.
+    """
+    if result.not_evaluated_reason:
+        return GATE_NOT_EVALUATED_EXIT_CODE
+    return GATE_TRIP_EXIT_CODE if result.tripped else 0
 
 
 def render_gate_result(result: GateResult) -> str:

@@ -14,21 +14,28 @@ import { HelpCallout } from "../components/onboarding/HelpCallout";
 import { ContextHint } from "../components/onboarding/ContextHint";
 import { useSession } from "../context/SessionContext";
 import { useToast } from "../context/ToastContext";
+import { useConfirmReplaceModel } from "../hooks/useConfirmReplaceModel";
+import { clearWizardStep } from "../utils/wizardStepStorage";
 
 export function HomePage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { setDocument, document } = useSession();
   const toast = useToast();
+  const confirmReplaceModel = useConfirmReplaceModel();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   async function startBlank() {
+    if (!confirmReplaceModel()) return;
     setError(null);
     setLoading(true);
     try {
       const { document: doc } = await createBlankModel();
       setDocument(doc);
+      // A blank model starts at step 1; without this it would inherit the step the replaced
+      // model was left on. See utils/wizardStepStorage.
+      clearWizardStep();
       toast.success(t("home.toastCreated"));
       navigate("/wizard");
     } catch (e) {

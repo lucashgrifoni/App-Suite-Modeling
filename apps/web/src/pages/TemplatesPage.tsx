@@ -15,6 +15,8 @@ import { EmptyState } from "../components/patterns/EmptyState";
 import { Skeleton } from "../components/patterns/Skeleton";
 import { useSession } from "../context/SessionContext";
 import { useToast } from "../context/ToastContext";
+import { useConfirmReplaceModel } from "../hooks/useConfirmReplaceModel";
+import { clearWizardStep } from "../utils/wizardStepStorage";
 import type { TemplateListItem } from "../types/api";
 
 export function TemplatesPage() {
@@ -22,6 +24,7 @@ export function TemplatesPage() {
   const navigate = useNavigate();
   const { setDocument } = useSession();
   const toast = useToast();
+  const confirmReplaceModel = useConfirmReplaceModel();
   const [items, setItems] = useState<TemplateListItem[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loadingId, setLoadingId] = useState<string | null>(null);
@@ -101,11 +104,15 @@ export function TemplatesPage() {
   }, [category, complexity, tag, queryDebounced]);
 
   async function pick(id: string) {
+    if (!confirmReplaceModel()) return;
     setError(null);
     setLoadingId(id);
     try {
       const { document } = await instantiateTemplate(id);
       setDocument(document);
+      // A template the user has never seen opens at step 1, not wherever the previous
+      // model was left. See utils/wizardStepStorage.
+      clearWizardStep();
       toast.success(t("templates.toastOk"));
       navigate("/wizard");
     } catch (e) {
