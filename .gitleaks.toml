@@ -1,0 +1,46 @@
+# Configuração do Gitleaks.
+#
+# Este ficheiro existe porque `.gitleaksignore` **não** aceita caminhos. Aceita apenas
+# *fingerprints* (`commit:ficheiro:regra:linha`), e durante meses conteve cinco globs que o
+# gitleaks rejeitava um a um, em silêncio para quem não lesse o stderr:
+#
+#     WRN Invalid .gitleaksignore entry  fingerprint=.venv/
+#     WRN Invalid .gitleaksignore entry  fingerprint=**/node_modules/
+#     WRN Invalid .gitleaksignore entry  fingerprint=dist/
+#
+# O efeito medido em 2026-08-13: `gitleaks detect --no-git` devolvia **31 achados, 29 deles**
+# em `.venv/`, `.venv-broken-old/` e `gitpage/.design-sync/` — 94 % de ruído vindo de código
+# que não é nosso. Um ficheiro de exclusão que parece proteger e não protege é pior do que
+# nenhum: ninguém volta a olhar para a saída.
+#
+# O que se exclui aqui é exclusivamente **código de terceiros e artefactos gerados**, nunca
+# código-fonte deste repositório. Todos os caminhos abaixo são também ignorados pelo git, por
+# isso não existem no histórico: esta lista serve o scan do worktree (`--no-git`), que é como
+# se corre localmente. Uma chave em qualquer destes sítios pertence a uma dependência e não é
+# um segredo nosso; uma chave em `apps/`, `packages/`, `scripts/` ou `tests/` continua a ser
+# apanhada.
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Dependências instaladas, ambientes virtuais e artefactos de build — não são código-fonte deste projeto."
+paths = [
+  '''^\.venv/''',
+  '''^\.venv-broken-old/''',
+  '''(^|/)node_modules/''',
+  '''(^|/)__pycache__/''',
+  '''(^|/)dist/''',
+  '''(^|/)build/''',
+  '''\.egg-info/''',
+  '''(^|/)\.mypy_cache/''',
+  '''(^|/)\.ruff_cache/''',
+  '''(^|/)\.pytest_cache/''',
+  # Caches locais do gitpage: `.design-sync/.cache/` guarda respostas JSON de revisão de
+  # design cujas strings longas disparam `generic-api-key`. Ambos são gitignored.
+  '''^gitpage/\.design-sync/''',
+  '''^gitpage/\.ds-sync/''',
+  # Lockfiles: hashes de integridade em massa, ruído garantido em regras de entropia. O
+  # conteúdo que interessa neles (versões, registry) é auditado por SCA, não por secret scan.
+  '''(^|/)package-lock\.json$''',
+]

@@ -53,7 +53,7 @@ def deployed_app() -> Iterator[Any]:
     """A app recarregada com o perímetro que um deployment real usa."""
     os.environ["OTM_ENV"] = "production"
     os.environ["OTM_CORS_ORIGINS"] = _ORIGIN
-    os.environ["OTM_API_KEY"] = "s3cr3t-Key-abc123"
+    os.environ["OTM_API_KEY"] = "not-a-real-key"
     os.environ["OTM_RATE_LIMIT_DISABLED"] = "1"
     import otm_api.main as main
 
@@ -104,7 +104,7 @@ def test_an_undeclared_header_is_still_refused(deployed_app: Any) -> None:
 def test_the_key_header_still_authenticates_a_non_browser_client(deployed_app: Any) -> None:
     client = TestClient(deployed_app)
 
-    r = client.get("/v1/templates", headers={"X-OTM-API-Key": "s3cr3t-Key-abc123"})
+    r = client.get("/v1/templates", headers={"X-OTM-API-Key": "not-a-real-key"})
 
     assert r.status_code == 200, r.text
 

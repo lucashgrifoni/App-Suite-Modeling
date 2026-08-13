@@ -21,7 +21,7 @@ from fastapi.testclient import TestClient  # noqa: E402
 from otm_api.main import app  # noqa: E402
 from otm_api.observability import resolve_request_id  # noqa: E402
 
-_KEY = "p2-diagnostics-secret"
+_KEY = "not-a-real-key"
 
 
 @pytest.fixture
