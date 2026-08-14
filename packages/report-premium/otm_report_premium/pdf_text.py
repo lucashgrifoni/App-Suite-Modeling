@@ -135,12 +135,35 @@ def _needs_degrading(ch: str) -> bool:
     return ch.isalpha() or _in_ranges(ch, _ALWAYS_DEGRADE_RANGES)
 
 
+#: Caracteres que o fold nunca pode **produzir**.
+#:
+#: `to_pdf_font_text` tem um único consumidor — `render_html.py:661`, que o corre sobre o HTML já
+#: montado e já escapado. Um `<` que apareça nessa passagem não é texto: é uma tag. E o fold sabia
+#: produzi-lo, porque NFKD dobra `＜` (U+FF1C) para `<`, e `＜` não é um metacaractere ASCII, logo
+#: atravessa o `html.escape` intacto. O escape corria, e a transformação seguinte desfazia-o.
+#:
+#: Isto tornava `metadata.title`, `components[].name` e `threats[].description` capazes de injetar
+#: markup arbitrário no PDF premium: cabeçalhos forjados no outline, `<img src="http://…">` que o
+#: xhtml2pdf ia buscar (SSRF a partir de um corpo de pedido não autenticado), `<img src="C:/…">`
+#: que embutia um ficheiro do host no PDF devolvido, e anotações `/Link` — o renderer não emite um
+#: único link próprio, por isso todos eram de autoria do atacante.
+_MARKUP_CHARS = frozenset("<>&\"'")
+
+
 def _folded(ch: str) -> str:
-    """Drawable form via canonical decomposition (`ā` -> `a`, `Ｑ` -> `Q`, `ά` -> `α`), or `""`."""
+    """Drawable form via canonical decomposition (`ā` -> `a`, `Ｑ` -> `Q`, `ά` -> `α`), or `""`.
+
+    Nunca devolve uma forma que contenha markup: essa cai para a transliteração ou para `?`, como
+    qualquer outro caractere sem forma segura. O custo é um `＜` legítimo sair como `?`, que é a
+    mesma degradação já aplicada a tudo o que as fontes não desenham — e o rodapé do relatório já
+    avisa que houve degradação. Ver `_MARKUP_CHARS`.
+    """
     stripped = "".join(c for c in unicodedata.normalize("NFKD", ch) if not unicodedata.combining(c))
-    if stripped and stripped != ch and _drawable(stripped):
-        return stripped
-    return ""
+    if not stripped or stripped == ch or not _drawable(stripped):
+        return ""
+    if _MARKUP_CHARS.intersection(stripped):
+        return ""
+    return stripped
 
 
 def _replacement(ch: str) -> str:
