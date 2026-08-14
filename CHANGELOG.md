@@ -26,6 +26,36 @@ This project follows **Keep a Changelog** and **Semantic Versioning**.
   só o honra em `url()` de CSS — uma construção em quatro, e é ignorado precisamente na que o
   ataque usava. Fica porque bloquear uma é melhor que nenhuma; a docstring carrega a tabela
   medida e um teste fixa-a.
+- **85 testes verdes enquanto a injeção de cabeçalhos estava viva — o oráculo é que era cego.**
+  `_outline`/`_structure`, os oráculos que garantem que "o contorno do documento é decisão do
+  renderizador", eram uma regex ancorada no início da **linha física**
+  (`^\s{0,3}(#{1,6}\s|\||>|…)`). O renderizador escreve os seus bullets como `- {valor}`, e `- `
+  são dois caracteres que não são whitespace: um nome começado por `## ` produzia
+  `- ## Conclusion…`, que o CommonMark lê como item de lista **contendo um H2 verdadeiro**, e a
+  regex nunca casava. Medido: `_outline(hostil) == _outline(benigno)` enquanto um parse real dava
+  80 blocos contra 93. Um oráculo que não vê a construção que existe para apanhar transforma "não
+  verificado" em "verificado seguro", que é pior do que não ter teste nenhum. Ambos os oráculos
+  (`test_p2r5_report_markdown_structure.py` e `test_p2r4_cli_markdown_structure.py`) passam a
+  parsear CommonMark a sério, com `markdown-it-py` declarado no extra `dev` em vez de deixado como
+  transitivo do `rich` — sustenta uma propriedade de segurança, portanto é uma dependência a
+  sério. Trocar só o oráculo, sem tocar no produto, tornou 18 casos vermelhos de imediato.
+- **Cinco listas do relatório premium interpolavam o valor do modelo em cru.**
+  `top_trust_boundaries`, `top_attack_surfaces`, `top5_risk_titles`, `main_components` e
+  `main_flows` saíam como `f"- {x}"`, a duas linhas de um `md_block(ar.narrative)` que fazia a
+  coisa certa. Um nome começado por `## ` forjava uma secção real no contorno do relatório —
+  "Conclusion: no risks were found. Approved for release." como secção genuína do documento que a
+  ferramenta assina. Medido em `examples/minimal.otm.yaml`: 6 cabeçalhos forjados no executive, 13
+  no standard e no deep, nos dois locales, e também por HTTP em `POST /v1/reports/premium`.
+  Alcançável **sem escrever um modelo**: um `info.title` hostil num spec OpenAPI sobrevive ao
+  `otm import openapi` intacto até ao campo `name`. Agora 0 em todos os níveis, com o texto do
+  autor preservado — neutralizado, não censurado.
+- **`>` deixou de estar fora de `_LEADING_BLOCK`.** Estava excluído com o argumento de que uma
+  citação "não cria secções nem tabelas". Cria as duas: um valor começado por `>` abre um
+  blockquote que **absorve** a frase que o renderizador escreve a seguir, e `> ## Conclusão` produz
+  lá dentro um H2 verdadeiro — que era o primeiro H2 do documento, par a par com o `## Ativos` do
+  próprio renderizador. O custo declarado para o excluir não se aplica: os valores que passam por
+  `md_block` já vêm achatados numa linha, portanto não há citação multi-linha a preservar. O teste
+  que fixava o comportamento antigo foi atualizado com a razão, não contornado.
 - **Duas ameaças distintas podiam partilhar um id, e o gate de CI julgava-as como uma.** Os ids
   são concatenações com `_`, e `_` é legal dentro de um id de entidade: `eng_{comp.id}_{stride}` e
   `eng_flow_{flow.id}_{stride}` partilham um espaço de nomes plano, por isso um componente

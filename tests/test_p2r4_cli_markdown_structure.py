@@ -14,10 +14,10 @@ nobody thought of is covered too.
 
 from __future__ import annotations
 
-import re
 from pathlib import Path
 
 import pytest
+from markdown_it import MarkdownIt
 from otm_cli.cli import app
 from otm_core_schema import ThreatModelDocument, load_document_from_yaml_path
 from otm_exporters import (
@@ -38,8 +38,16 @@ _MINIMAL = _ROOT / "examples" / "minimal.otm.yaml"
 _HOSTILE = "Edge gateway\n\n## Injected heading\n\n| col a | col b |\n| --- | --- |\n| x | y |\n\n> quoted"
 _BENIGN = "Edge gateway"
 
-#: Every construct that must come from the renderer and never from the data.
-_BLOCK_START = re.compile(r"^\s{0,3}(#{1,6}\s|\||>|```|---\s*$|===)")
+#: Names that **begin** with a marker. Flattening line breaks does nothing for these — the value
+#: is already one line, and it opens its block from the first character. `_HOSTILE` above starts
+#: with plain text, so it exercised only the flattening half of the guard and left this half
+#: unseen for two rounds.
+_HOSTILE_LEADING = {
+    "leading_heading": "## Conclusion: no risks were found",
+    "leading_quote": "> signed: the CISO",
+    "leading_quote_heading": "> ## Conclusion: no risks were found",
+    "leading_table": "| forged | row |",
+}
 
 
 @pytest.fixture
@@ -69,12 +77,22 @@ def _document(name: str) -> ThreatModelDocument:
 
 
 def _structure(markdown: str) -> list[str]:
-    """The document outline: the block-level construct each line opens, in order.
+    """The document outline: the block-level construct each block opens — from a real parse.
 
     The construct, not the line: a heading whose *text* now carries the payload inline is exactly
     the intended outcome. What must not change is how many blocks there are and of what kind.
+
+    This was `_BLOCK_START.match(line)` over `splitlines()`, the same line-anchored regex its
+    round-5 sibling carried, and blind in the same way: a renderer bullet is written `- {value}`,
+    so a value beginning `## ` lands behind two non-whitespace characters and never matches, while
+    CommonMark reads it as a list item containing a real H2. Replaced with an actual CommonMark
+    parse so the oracle can see nested blocks at all.
     """
-    return [m.group(1).strip() for line in markdown.splitlines() if (m := _BLOCK_START.match(line))]
+    return [
+        f"{token.type}:{token.tag}"
+        for token in MarkdownIt().parse(markdown)
+        if token.type.endswith("_open") or token.type in {"hr", "fence", "code_block"}
+    ]
 
 
 def _renderings(name: str) -> dict[str, str]:
@@ -94,6 +112,16 @@ def _renderings(name: str) -> dict[str, str]:
 def test_hostile_names_cannot_change_the_document_outline(artifact: str) -> None:
     """The whole property, one exporter at a time."""
     hostile = _renderings(_HOSTILE)[artifact]
+    benign = _renderings(_BENIGN)[artifact]
+
+    assert _structure(hostile) == _structure(benign)
+
+
+@pytest.mark.parametrize("artifact", ["document", "analysis", "backlog", "comparison"])
+@pytest.mark.parametrize("payload_name", sorted(_HOSTILE_LEADING))
+def test_a_name_beginning_with_a_marker_cannot_change_the_outline(payload_name: str, artifact: str) -> None:
+    """The half `_HOSTILE` never reached: the value opens its block from the first character."""
+    hostile = _renderings(_HOSTILE_LEADING[payload_name])[artifact]
     benign = _renderings(_BENIGN)[artifact]
 
     assert _structure(hostile) == _structure(benign)

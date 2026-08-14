@@ -25,10 +25,19 @@ import re
 #: um `summary` de `## Conclusão` não precisa sequer de uma quebra de linha para virar um H2
 #: verdadeiro, porque `md_block` põe o valor no princípio da sua própria linha.
 #:
-#: Ficam deliberadamente de fora `-`/`*`/`+` (lista), `>` (citação) e `1.` (lista ordenada): não
-#: criam secções nem tabelas, aparecem com frequência em descrições legítimas, e neutralizá-los
-#: custaria formatação que o autor quis mesmo.
-_LEADING_BLOCK = re.compile(r"^(?:#{1,6}(?=\s|$)|\||`{3,}|~{3,}|-{3,}[ \t]*$|={3,}[ \t]*$)")
+#: `>` **está** na lista desde 2026-08-13. Estava excluído com o argumento de que uma citação
+#: "não cria secções nem tabelas". Cria as duas coisas: um valor que começa por `>` abre um
+#: blockquote que **absorve** o texto que o renderizador escreve a seguir — medido em
+#: `otm export -f md`, onde a frase de estatísticas de arquitetura passou a sair dentro do callout
+#: do autor — e `> ## Conclusão` produz um H2 verdadeiro lá dentro, que foi o primeiro H2 do
+#: documento, par a par com o `## Ativos` do próprio renderizador. O custo declarado para o
+#: excluir ("neutralizá-lo custaria formatação que o autor quis mesmo") não se aplica aqui: os
+#: valores que passam por `md_block` já vêm achatados numa única linha, portanto não há citação
+#: de várias linhas para preservar.
+#:
+#: Ficam deliberadamente de fora `-`/`*`/`+` (lista) e `1.` (lista ordenada): não criam secções
+#: nem tabelas, e aparecem com frequência em descrições legítimas.
+_LEADING_BLOCK = re.compile(r"^(?:#{1,6}(?=\s|$)|\||>|`{3,}|~{3,}|-{3,}[ \t]*$|={3,}[ \t]*$)")
 
 _LINE_BREAKS = re.compile("[\r\n\x0b\x0c\x85\u2028\u2029]+")
 

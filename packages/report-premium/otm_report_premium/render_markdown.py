@@ -121,12 +121,12 @@ def _md_executive_summary(lines: list[str], payload: PremiumReportPayload, r: Pr
         )
     )
     lines.append(f"{r.md_top_tb}\n")
-    lines.append("\n".join(f"- {x}" for x in es.top_trust_boundaries) or r.md_none_listed)
+    lines.append("\n".join(f"- {md_block(x)}" for x in es.top_trust_boundaries) or r.md_none_listed)
     lines.append(f"\n{r.md_top_surfaces}\n")
-    lines.append("\n".join(f"- {x}" for x in es.top_attack_surfaces) or r.md_none_listed)
+    lines.append("\n".join(f"- {md_block(x)}" for x in es.top_attack_surfaces) or r.md_none_listed)
     lines.append(f"\n{r.md_top5_titles}\n")
     for t in es.top5_risk_titles:
-        lines.append(f"- {t}")
+        lines.append(f"- {md_block(t)}")
     lines.append(f"\n{r.md_readiness_questions}\n")
     for q in es.readiness_questions:
         lines.append(f"- {q}")
@@ -171,9 +171,9 @@ def _md_architecture_and_stats(lines: list[str], payload: PremiumReportPayload, 
     ar = payload.architecture
     lines.append(md_block(ar.narrative) + "\n")
     lines.append(f"{r.md_main_components}\n")
-    lines.append("\n".join(f"- {c}" for c in ar.main_components[:15]))
+    lines.append("\n".join(f"- {md_block(c)}" for c in ar.main_components[:15]))
     lines.append(f"\n{r.md_main_flows}\n")
-    lines.append("\n".join(f"- {f}" for f in ar.main_flows[:15]))
+    lines.append("\n".join(f"- {md_block(f)}" for f in ar.main_flows[:15]))
     lines.append(f"\n{r.md_meth_used_vs_rec}\n")
     lines.append(f"- {r.md_used} {ar.methodology_used}")
     lines.append(f"- {r.md_recommended} {ar.methodology_recommended or r.nd}")

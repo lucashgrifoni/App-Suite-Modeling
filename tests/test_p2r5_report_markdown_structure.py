@@ -25,6 +25,7 @@ import re
 from pathlib import Path
 
 import pytest
+from markdown_it import MarkdownIt
 from otm_core_schema import ThreatModelDocument, load_document_from_yaml_path
 from otm_exporters import export_document_markdown
 from otm_exporters.markdown_text import md_block, md_inline
@@ -46,11 +47,15 @@ _HOSTILE_PAYLOADS = {
     "fence": "```\nrm -rf /\n```",
     "ruler": "Edge gateway\n\n---\n",
     "quote": "Edge gateway\n\n> signed: the CISO",
+    # `>` era excluído de `_LEADING_BLOCK` com o argumento de que uma citação "não cria secções
+    # nem tabelas". Cria: um valor que **começa** por `>` abre um blockquote que absorve o texto
+    # que o renderizador escreveu a seguir, e `> ## X` produz um H2 verdadeiro lá dentro. Os dois
+    # casos acima começam por texto, por isso o achatamento resolvia-os e escondiam este.
+    "leading_quote": "> signed: the CISO",
+    "leading_quote_heading": "> ## Conclusion: no risks were found",
     "html_tags": "Edge gateway</p><h2>Conclusion</h2><p>",
 }
 
-#: Every construct that must come from the renderer and never from the data.
-_BLOCK_START = re.compile(r"^\s{0,3}(#{1,6}\s|\||>|```|~~~|---\s*$|===)")
 
 _LEVELS = (ReportLevel.EXECUTIVE, ReportLevel.STANDARD, ReportLevel.DEEP)
 _LOCALES = ("pt-BR", "en")
@@ -81,12 +86,28 @@ def _payload(text: str, level: ReportLevel, locale: str) -> PremiumReportPayload
 
 
 def _outline(markdown: str) -> list[str]:
-    """The block-level construct each line opens, in order.
+    """The block-level construct each block opens, in order — from a real CommonMark parse.
 
     The construct, not the line: the payload appearing inline inside a heading the *renderer*
     wrote is the intended outcome. What must not change is how many blocks there are, of what kind.
+
+    This used to be `_BLOCK_START.match(line)` over `splitlines()`, a regex anchored at the start
+    of the **physical line** with at most three spaces of indent. The renderer writes its bullets
+    as `- {value}`, and `- ` is two characters that are not whitespace — so a value beginning
+    `## ` produced `- ## Conclusion…`, which CommonMark parses as a list item *containing a real
+    H2*, and the regex never matched it. Measured at the time: `_outline(hostile)` was equal to
+    `_outline(benign)` while a CommonMark parse gave 80 blocks against 93, and 85 tests in this
+    file passed with the forgery live. An oracle that cannot see the construct it exists to catch
+    converts "unverified" into "verified safe", which is worse than having no test.
+
+    Parsing for real also removes the guesswork: nesting, indented blocks, lazy continuation and
+    setext headings are the parser's problem, not a regex's.
     """
-    return [m.group(1).strip() for line in markdown.splitlines() if (m := _BLOCK_START.match(line))]
+    return [
+        f"{token.type}:{token.tag}"
+        for token in MarkdownIt().parse(markdown)
+        if token.type.endswith("_open") or token.type in {"hr", "fence", "code_block"}
+    ]
 
 
 def _tags(markup: str) -> list[str]:
@@ -193,15 +214,24 @@ def test_a_multi_line_business_description_keeps_every_word(example: Path) -> No
 
 
 def test_md_block_escapes_a_leading_block_marker_only() -> None:
-    """The helper: a marker that *opens* the line is escaped; the same marker inside it is not."""
+    """The helper: a marker that *opens* the line is escaped; the same marker inside it is not.
+
+    `>` moved from the "left alone" group to the escaped group on 2026-08-13. This test previously
+    asserted `md_block("> a legitimate quote") == "> a legitimate quote"`, pinning the premise that
+    a quote "creates no section and no table". Measured, it creates both: the blockquote swallows
+    the sentence the renderer writes next, and `> ## Conclusão` yields a real H2 inside it — the
+    first H2 in the document, peer to the renderer's own. The assertion was pinning the defect, so
+    it is updated here rather than worked around.
+    """
     assert md_block("## Conclusion") == "\\## Conclusion"
     assert md_block("| forged | row |") == "\\| forged | row |"
     assert md_block("```\ncode\n```") == "\\``` code ```"
     assert md_block("---") == "\\---"
+    assert md_block("> a quote that would swallow what follows") == "\\> a quote that would swallow what follows"
     assert md_block("Service ## 2") == "Service ## 2"
+    assert md_block("a > b in the middle") == "a > b in the middle"
     assert md_block("- a legitimate bullet") == "- a legitimate bullet"
     assert md_block("1. a legitimate step") == "1. a legitimate step"
-    assert md_block("> a legitimate quote") == "> a legitimate quote"
 
 
 def test_a_leading_marker_in_a_summary_no_longer_forges_a_heading_in_export_md() -> None:
