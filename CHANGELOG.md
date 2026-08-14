@@ -9,6 +9,38 @@ This project follows **Keep a Changelog** and **Semantic Versioning**.
 ## [Unreleased]
 
 ### Security
+- **O fold de fontes do PDF recriava markup que o escape já tinha neutralizado.** O renderer
+  premium escapa cada string do modelo com `html.escape(quote=True)` e, no fim, corre
+  `to_pdf_font_text` sobre o HTML **já escapado** para degradar caracteres que as fontes WinAnsi
+  não desenham. Essa degradação é NFKD, e a ordem era o defeito: `＜` (U+FF1C) não é `<`, atravessa
+  o escape intacto, e o fold convertia-o num `<` verdadeiro. Consequências, todas reproduzidas:
+  markup arbitrário no PDF (outline forjado a dizer "NO CRITICAL RISKS FOUND", `/Title` sob
+  controlo do modelo); **SSRF** — um `<img src="http://…">` injetado era buscado pelo xhtml2pdf,
+  reproduzido contra `POST /v1/reports/premium` **sem autenticação**; **leitura de ficheiro local**
+  embutida no PDF devolvido; e anotações `/Link`, das quais 100% eram de autoria do atacante,
+  porque o renderer não emite nenhum link próprio. O fold passa a ser fechado em relação a markup:
+  pode substituir um caractere que não desenha, nunca produzir um que mude o significado do
+  documento à volta. Provado ponta a ponta contra um servidor de sonda: zero pedidos.
+  <br>Um `link_callback` foi acrescentado ao `pisa.CreatePDF`, mas **não** como segunda linha de
+  defesa: medido, este xhtml2pdf ignora-o em `<img src>`, `<link rel=stylesheet>` e `@import`, e
+  só o honra em `url()` de CSS — uma construção em quatro, e é ignorado precisamente na que o
+  ataque usava. Fica porque bloquear uma é melhor que nenhuma; a docstring carrega a tabela
+  medida e um teste fixa-a.
+- **Duas ameaças distintas podiam partilhar um id, e o gate de CI julgava-as como uma.** Os ids
+  são concatenações com `_`, e `_` é legal dentro de um id de entidade: `eng_{comp.id}_{stride}` e
+  `eng_flow_{flow.id}_{stride}` partilham um espaço de nomes plano, por isso um componente
+  `flow_svc` e um fluxo `svc` produzem a mesma string — com o documento a passar em `otm validate`
+  como **Valid**, 0 avisos estruturais. As regras personalizadas têm a mesma forma: regra `a` sobre
+  `b_c` colide com regra `a_b` sobre `c`. Três consumidores colapsavam o par **em silêncio**: o
+  dict de `analysis_diff` (o último vencia), `merge_heuristic_threats` (saltava sem diagnóstico) e
+  o `partialFingerprints.otmThreatId` do SARIF, que é a identidade do alerta no GitHub code
+  scanning. O efeito prático era o gate de drift ver uma ameaça **substituída** onde tinha sido
+  **acrescentada**. A análise passa a ser recusada, nomeando os dois sujeitos.
+  <br>**Porque recusar e não renomear:** tornar a junção injetiva mudaria *todos* os ids,
+  invalidando os fingerprints SARIF e todas as baselines guardadas — a primeira execução após a
+  atualização reportaria cada ameaça como nova e faria disparar os gates de toda a gente. O
+  formato documentado em `docs/features/CUSTOM_RULES.md` fica intacto, e quem não tem colisão não
+  paga nada.
 - **Um upload de 10 KB escrevia 628 KB de log e devolvia 500.** O documento não confiável tinha
   tecto de bytes e tecto de expansão de aliases, mas nenhum de **profundidade**. `"a: " +
   "["*5000 + "]"*5000` são 10 003 bytes sem um único alias, por isso não gastavam nada do

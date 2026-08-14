@@ -125,6 +125,14 @@ id:    custom_<ruleset-id>_<rule-id>_<target-id>
 title: [rules:<ruleset-id>] <your title>
 ```
 
+Because the three parts are joined with `_`, and `_` is legal inside a rule id and inside an
+entity id, two different pairs can produce the same string: rule `a` on component `b_c` and rule
+`a_b` on component `c` both give `custom_rs_a_b_c`. The engine **refuses the analysis** when that
+happens, naming both subjects, instead of letting one silently overwrite the other — a collided
+id would be indistinguishable to the CI drift gate, to `otm diff`, and to the SARIF fingerprint
+GitHub uses as an alert's identity. Rename one of the two and the analysis runs. The same applies
+to the engine's own ids: a component `flow_x` collides with a data flow `x`.
+
 **Your `refs` are kept and labelled `custom`.** They appear alongside the CAPEC/CWE/ASVS
 references the engine attaches, but under their own catalogue — because they are your labels,
 not a verified mapping to a published standard. `framework_ref_counts_by_catalog` keeps them

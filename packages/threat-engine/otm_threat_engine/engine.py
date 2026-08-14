@@ -28,7 +28,11 @@ from otm_threat_engine.engine_support import (
 )
 from otm_threat_engine.methodology_completeness import assess_methodology_completeness
 from otm_threat_engine.recommendation_gate import filter_pack_control_hints
-from otm_threat_engine.result import AnalysisResult, HeuristicThreat
+from otm_threat_engine.result import (
+    AnalysisResult,
+    HeuristicThreat,
+    assert_threat_ids_are_injective,
+)
 from otm_threat_engine.risk_aggregate import build_aggregate_and_cockpit
 from otm_threat_engine.structural import collect_structural_findings
 from otm_threat_engine.trust_insights import analyze_trust_boundary_crossings
@@ -257,6 +261,10 @@ class ThreatAnalysisEngine:
             pack_gen=pack_gen,
             pack_skip=pack_skip,
         )
+
+        # Depois de todas as fontes (base, composite, pack, regras da organização) e antes de o
+        # resultado sair daqui: nenhum consumidor a jusante distingue duas ameaças com o mesmo id.
+        assert_threat_ids_are_injective(heuristics)
 
         raw = AnalysisResult(
             engine_version=ENGINE_VERSION,
