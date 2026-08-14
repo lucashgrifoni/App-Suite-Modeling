@@ -179,4 +179,6 @@ def export_analysis_sarif_obj(result: AnalysisResult, *, model_uri: str = _DEFAU
 
 def export_analysis_sarif(result: AnalysisResult, *, model_uri: str = _DEFAULT_MODEL_URI) -> str:
     """SARIF 2.1.0 JSON text for the analysis result."""
-    return json.dumps(export_analysis_sarif_obj(result, model_uri=model_uri), indent=2, ensure_ascii=False)
+    return json.dumps(
+        export_analysis_sarif_obj(result, model_uri=model_uri), indent=2, ensure_ascii=False, allow_nan=False
+    )

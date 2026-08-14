@@ -15,7 +15,7 @@ import re
 from typing import Annotated, Any, Literal
 
 from otm_core_schema import Asset, Component, DataFlow, StrideCategory
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
 #: Ids entram em ids de ameaça gerados, em nomes de ficheiro de relatório e em tabelas
 #: Markdown. Restringir a um slug ASCII evita ter de escapar em cada superfície de saída.
@@ -125,7 +125,12 @@ class CustomRule(BaseModel):
     impact_delta: int = Field(default=0, ge=-2, le=2)
     #: Referências livres (CWE-306, ASVS 4.0.3 V2.2.1, uma norma interna). São rótulos de
     #: rastreabilidade, não uma alegação de cobertura.
-    refs: list[str] = Field(default_factory=list, max_length=20)
+    # `max_length` numa lista limita o **número de itens**, não o comprimento de cada um: um único
+    # ref de 400 000 caracteres passava, enquanto `title`, `description` e `control_hint` acima
+    # têm todos tecto próprio. O ref é reemitido no relatório e no SARIF por **cada** ameaça que a
+    # regra dispara, portanto o custo multiplica pela população que casa. 200 é o mesmo tecto de
+    # `title`, e um identificador de norma nunca se aproxima disso.
+    refs: list[Annotated[str, StringConstraints(max_length=200)]] = Field(default_factory=list, max_length=20)
     control_hint: str | None = Field(default=None, max_length=500)
 
 

@@ -26,6 +26,29 @@ This project follows **Keep a Changelog** and **Semantic Versioning**.
   só o honra em `url()` de CSS — uma construção em quatro, e é ignorado precisamente na que o
   ataque usava. Fica porque bloquear uma é melhor que nenhuma; a docstring carrega a tabela
   medida e um teste fixa-a.
+- **Cinco limites em falta, de baixa severidade, agrupados por causa.** Nenhum é explorável para
+  acesso indevido; três são de integridade de saída e dois de limite de entrada ausente onde os
+  campos irmãos já o têm.
+  - **JSON com `NaN`/`Infinity`.** `json.dumps` aceita não-finitos por omissão e escreve `NaN`
+    cru, que não é JSON: um consumidor em Go ou Java rejeita o documento inteiro, e o `jq`
+    reescreve o valor para `null` — num campo de score, pior do que rejeitar. `risk.score` é um
+    `float` do Pydantic e aceita atribuição de não-finito, por isso o caminho é real. Os seis
+    exportadores passam a `allow_nan=False`: erro alto no momento da geração em vez de um
+    ficheiro inválido em silêncio.
+  - **ANSI e NUL em Markdown.** `md_inline`/`md_block` achatavam terminadores de linha e deixavam
+    passar o resto. `CSI 2K` + `CSI G` num nome de componente repintam a linha num terminal — e
+    `otm report` escreve para stdout com um `print()` — enquanto um NUL literal fica dentro do
+    `.md` entregue. Não muda o contorno do documento, por isso o oráculo de estrutura não o via.
+  - **Separadores Unicode em Mermaid.** `_LABEL_CONTROL_RE` cobria `\r\n\t\f\v` e não NEL (U+0085),
+    LS (U+2028) nem PS (U+2029). O invariante que o exportador declara é "um nome não pode
+    acrescentar uma linha"; estes três acrescentavam.
+  - **Profundidade do ficheiro de regras.** `load_custom_rules` tinha tecto de bytes e usava
+    `yaml.safe_load` — o mesmo sem tecto de profundidade já corrigido para o documento canónico.
+    4 KB rebentavam a pilha e saíam como `RecursionError` cru, fora do contrato `ValueError` que o
+    loader declara. Ligado ao tecto existente, não a um segundo.
+  - **Comprimento de cada `refs`.** `max_length=20` limita a lista, não cada item: 400 000
+    caracteres num único ref passavam, enquanto `title`, `description` e `control_hint` têm tecto
+    próprio. O ref é reemitido por cada ameaça que a regra dispara, portanto o custo multiplica.
 - **85 testes verdes enquanto a injeção de cabeçalhos estava viva — o oráculo é que era cego.**
   `_outline`/`_structure`, os oráculos que garantem que "o contorno do documento é decisão do
   renderizador", eram uma regex ancorada no início da **linha física**

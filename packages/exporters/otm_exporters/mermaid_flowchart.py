@@ -13,7 +13,12 @@ from otm_core_schema import ThreatModelDocument
 # Line breaks / control chars would let an attacker-controlled component or
 # data-flow name inject extra Mermaid statements (new nodes/edges) into the
 # generated diagram source.
-_LABEL_CONTROL_RE = re.compile(r"[\r\n\t\f\v]+")
+#: NEL (U+0085), LINE SEPARATOR (U+2028) e PARAGRAPH SEPARATOR (U+2029) foram acrescentados em
+#: 2026-08-13. O invariante que este exportador declara acima é "um nome não pode acrescentar uma
+#: linha", e estes três acrescentam — enquanto `\r\n\t\f\v` eram achatados, os separadores Unicode
+#: passavam intactos. Não foi construída injeção de statement (as aspas seguram o label), por isso
+#: o impacto é `INFO`; o invariante é que estava falso.
+_LABEL_CONTROL_RE = re.compile("[\r\n\t\f\v\x85\u2028\u2029]+")
 
 #: Characters that are safe in an *unquoted* edge label (`-->|like this|`).
 #: Everything else — notably `( ) [ ] { }` and `@`, which open a node-shape or an

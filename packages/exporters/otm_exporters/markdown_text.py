@@ -41,6 +41,18 @@ _LEADING_BLOCK = re.compile(r"^(?:#{1,6}(?=\s|$)|\||>|`{3,}|~{3,}|-{3,}[ \t]*$|=
 
 _LINE_BREAKS = re.compile("[\r\n\x0b\x0c\x85\u2028\u2029]+")
 
+#: Controlos C0 que sobram depois de achatar os terminadores de linha, mais DEL. Removidos, n\u00e3o
+#: substitu\u00eddos por espa\u00e7o: n\u00e3o representam nada que o autor queira ver.
+#:
+#: Achatar linhas nunca os cobriu, e eles n\u00e3o mudam o *contorno* do documento \u2014 por isso o or\u00e1culo
+#: de estrutura n\u00e3o os via. Mudam o que o leitor v\u00ea, que \u00e9 o mesmo ativo: `CSI 2K` seguido de
+#: `CSI G` num nome de componente limpa a linha e devolve o cursor ao in\u00edcio, repintando o
+#: cabe\u00e7alho do relat\u00f3rio num terminal \u2014 e `otm report` escreve para stdout com um `print()`. Um
+#: NUL literal apenas fica dentro do `.md` entregue, como lixo que ningu\u00e9m escreveu.
+#:
+#: `\t` fica de fora de prop\u00f3sito: \u00e9 espa\u00e7o em branco leg\u00edtimo e o Markdown trata-o como tal.
+_CONTROL_CHARS = re.compile(r"[\x00-\x08\x0e-\x1f\x7f]")
+
 
 def md_inline(value: object) -> str:
     """Texto do modelo pronto a entrar **dentro** de uma linha de Markdown já formatada.
@@ -50,7 +62,7 @@ def md_inline(value: object) -> str:
     novo. Não escapa `|`: os exportadores deste pacote não emitem tabelas, e onde há tabelas
     (`otm_report_premium._md_cell`) o escape do pipe já existe junto do achatamento.
     """
-    return _LINE_BREAKS.sub(" ", str(value))
+    return _CONTROL_CHARS.sub("", _LINE_BREAKS.sub(" ", str(value)))
 
 
 def md_block(value: object) -> str:
