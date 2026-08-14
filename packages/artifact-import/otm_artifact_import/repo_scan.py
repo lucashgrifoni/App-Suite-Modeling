@@ -432,6 +432,12 @@ def scan_node_express_repo(root: Path) -> dict[str, Any]:
     return {
         "root": str(root),
         "files_scanned": len(files),
+        # Caminhos relativos a `root`, para que o chamador possa recusar escrever por cima de um
+        # ficheiro que acabou de ler. `otm import repo` era o único comando de escrita do CLI que
+        # não passava `sources=` ao emissor, e destruía um `.js` lido segundos antes, com exit 0 —
+        # enquanto `export`, `analyze`, `diff` e `backlog` recusam o caso análogo com exit 1.
+        # Relativos e não absolutos: o artefacto continua portátil, e `root` já vai ao lado.
+        "files_scanned_paths": [str(path.relative_to(root)) for path, _ in files],
         "inferences": unique[:80],
         "directory_hints": dir_hints,
         "corpus_excerpt": "\n\n".join(corpus_chunks)[:8000],

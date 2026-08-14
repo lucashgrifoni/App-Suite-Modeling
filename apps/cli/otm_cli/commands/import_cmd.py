@@ -66,14 +66,27 @@ def _print_inference_summary(inferences: list[Any]) -> None:
     )
 
 
+def _scanned_sources(payload: dict[str, Any]) -> tuple[Path, ...]:
+    """Os ficheiros que o scan leu, para o emissor recusar escrever por cima de um deles.
+
+    Este comando era o único do CLI a escrever sem passar `sources=`, e por isso destruía um
+    ficheiro do repositório analisado segundos depois de o ler, devolvendo **exit 0** — enquanto
+    `export`, `analyze`, `diff` e `backlog` recusam o caso equivalente com exit 1 e uma mensagem
+    que diz porquê. Reproduzido com um `src/app.js` de um repositório Node.
+    """
+    root = Path(str(payload.get("root", "")))
+    return tuple(root / rel for rel in payload.get("files_scanned_paths", []))
+
+
 def _emit_repo_scan(payload: dict[str, Any], *, json_out: Path | None, draft_out: Path | None) -> None:
     """Write whichever artifacts were asked for; with neither, show the payload on screen."""
+    sources = _scanned_sources(payload)
     if json_out:
-        _write_json_or_exit(payload=payload, output=json_out)
+        _write_json_or_exit(payload=payload, output=json_out, sources=sources)
         console.print(f"[green]Scan repo[/green] → {safe(json_out.resolve())}")
     if draft_out:
         yaml_text = import_app.scan_payload_to_draft_yaml(payload)
-        _write_text_or_exit(content=yaml_text, output=draft_out)
+        _write_text_or_exit(content=yaml_text, output=draft_out, sources=sources)
         console.print(f"[green]Draft[/green] → {safe(draft_out.resolve())}")
     if not json_out and not draft_out:
         txt = json.dumps(payload, indent=2, ensure_ascii=False)

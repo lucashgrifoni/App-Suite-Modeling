@@ -221,3 +221,46 @@ def test_the_list_length_cap_still_applies() -> None:
     """A correção acrescenta um tecto; não pode ter removido o que já existia."""
     with pytest.raises(ValueError):
         CustomRuleSet.model_validate(_ruleset([f"ref-{i}" for i in range(50)]))
+
+
+# --- higiene de escrita: `otm import repo` -------------------------------------------------
+#
+# Não é um limite, é a mesma família: um guarda que os irmãos têm e este não tinha.
+# `_emit_repo_scan` era o único caminho de escrita do CLI que não passava `sources=` ao emissor,
+# por isso destruía um ficheiro do repositório analisado segundos depois de o ler, com **exit 0**
+# — enquanto `export`, `analyze`, `diff` e `backlog` recusam o caso equivalente com exit 1.
+
+
+def _node_repo(tmp_path: Path) -> Path:
+    root = tmp_path / "repo"
+    (root / "src").mkdir(parents=True)
+    (root / "package.json").write_text('{"name":"x"}\n', encoding="utf-8")
+    (root / "src" / "app.js").write_text("PRECIOUS SOURCE\n", encoding="utf-8")
+    return root
+
+
+def test_import_repo_refuses_to_write_over_a_file_it_just_scanned(tmp_path: Path) -> None:
+    from otm_cli.cli import app
+    from typer.testing import CliRunner
+
+    root = _node_repo(tmp_path)
+    victim = root / "src" / "app.js"
+
+    result = CliRunner().invoke(app, ["import", "repo", str(root), "--json-out", str(victim)])
+
+    assert result.exit_code == 1
+    assert victim.read_text(encoding="utf-8") == "PRECIOUS SOURCE\n"
+
+
+def test_import_repo_still_writes_to_a_new_path_inside_the_same_tree(tmp_path: Path) -> None:
+    """O guarda é sobre ficheiros lidos, não sobre a árvore: `--json-out ./scan.json` é legítimo."""
+    from otm_cli.cli import app
+    from typer.testing import CliRunner
+
+    root = _node_repo(tmp_path)
+    out = root / "scan.json"
+
+    result = CliRunner().invoke(app, ["import", "repo", str(root), "--json-out", str(out)])
+
+    assert result.exit_code == 0, result.output
+    assert json.loads(out.read_text(encoding="utf-8"))["files_scanned"] >= 1
