@@ -27,10 +27,30 @@ from otm_artifact_import.types import ArtifactImportResult, InferenceRecord
 SourceKind = Literal["openapi", "terraform", "kubernetes", "helm"]
 
 
+#: `ENTITY_ID_PATTERN` do schema canónico, repetido aqui para não importar o módulo inteiro só
+#: por uma constante. Se divergirem, o schema é a autoridade e este `slug_id` passa a reescrever
+#: ids que o schema aceitava — o teste de round-trip apanha isso.
+_ALREADY_VALID_ID = re.compile(r"^[a-zA-Z0-9_][a-zA-Z0-9_.-]*$")
+
+
 def slug_id(text: str, *, prefix: str = "c") -> str:
     """
     Converte texto em id válido para o schema canónico (``ENTITY_ID_PATTERN``).
+
+    Um id que **já** é válido volta intacto. Antes não voltava: o `.lower()` era incondicional,
+    por isso `User.Portal` — que casa `ENTITY_ID_PATTERN` sem uma única alteração — saía como
+    `user.portal`. Reescrever um id que já era válido não normaliza nada, apenas quebra a
+    identidade: `otm export -f otm` seguido de `otm import otm` devolvia um documento com outros
+    ids, logo com **outros ids de ameaça derivados** (`eng_User.Portal_tampering` ->
+    `eng_user.portal_tampering`), logo com outros fingerprints SARIF — e uma baseline guardada
+    deixava de casar com nada.
+
+    Isto vale para todos os importadores, não só para o round-trip: um recurso Kubernetes ou um
+    título de OpenAPI que já sejam ids válidos passam a sobreviver tal como o autor os escreveu.
+    Texto livre que **não** é um id continua a ser slugificado exatamente como antes.
     """
+    if _ALREADY_VALID_ID.match(text) and len(text) <= 56:
+        return text
     s = re.sub(r"[^a-zA-Z0-9_.-]+", "_", text.strip().lower())
     s = s.strip("._-") or "x"
     if not re.match(r"^\w", s, re.ASCII):

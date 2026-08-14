@@ -313,3 +313,62 @@ def test_an_explicit_output_is_never_second_guessed(tmp_path: Path, monkeypatch)
 
     assert result.exit_code == 0, result.output
     assert "replaced" not in result.output
+
+
+# --- identidade: SARIF diz a que a sua URI é relativa --------------------------------------
+
+
+def test_sarif_declares_what_its_uri_is_relative_to() -> None:
+    """Sem `uriBaseId` o consumidor adivinha, e o GitHub adivinha "raiz do repositório".
+
+    Com `working-directory: apps/api` na Action, `sub/m.otm.yaml` era resolvido a partir da raiz
+    do repositório — um caminho que pode existir e ser **outro ficheiro**.
+    """
+    from otm_exporters.analysis_sarif import export_analysis_sarif_obj
+
+    result = analyze_document(load_document_from_yaml_path(_MINIMAL))
+    sarif = export_analysis_sarif_obj(result, model_uri="sub/m.otm.yaml")
+    run = sarif["runs"][0]
+
+    assert run["results"][0]["locations"][0]["physicalLocation"]["artifactLocation"]["uriBaseId"]
+    assert run["originalUriBaseIds"]
+
+
+def test_every_result_carries_the_same_declared_base() -> None:
+    """Um resultado sem base num run que a declara é pior do que nenhum: silenciosamente relativo."""
+    from otm_exporters.analysis_sarif import export_analysis_sarif_obj
+
+    result = analyze_document(load_document_from_yaml_path(_MINIMAL))
+    run = export_analysis_sarif_obj(result, model_uri="sub/m.otm.yaml")["runs"][0]
+    declared = set(run["originalUriBaseIds"])
+
+    for res in run["results"]:
+        base = res["locations"][0]["physicalLocation"]["artifactLocation"]["uriBaseId"]
+        assert base in declared
+
+
+# --- identidade: o round-trip OTM preserva ids que já eram válidos --------------------------
+
+
+def test_slug_id_leaves_an_already_valid_id_alone() -> None:
+    """`User.Portal` casa `ENTITY_ID_PATTERN` sem alteração; reescrevê-lo só quebra identidade."""
+    from otm_artifact_import.builders import slug_id
+
+    for valid in ("User.Portal", "API-Gateway", "Flow.One", "db_2", "a"):
+        assert slug_id(valid) == valid
+
+
+def test_slug_id_still_slugifies_free_text() -> None:
+    """A correção não pode ter desligado a slugificação do que não é um id."""
+    from otm_artifact_import.builders import slug_id
+
+    assert slug_id("Orders API") == "orders_api"
+    assert slug_id("My Service (v2)") == "my_service_v2"
+    assert slug_id("has spaces") == "has_spaces"
+
+
+def test_an_over_long_valid_id_is_still_capped() -> None:
+    """O tecto de 56 continua a valer — um id válido mas enorme não passa por ser válido."""
+    from otm_artifact_import.builders import slug_id
+
+    assert len(slug_id("a" * 200)) == 56

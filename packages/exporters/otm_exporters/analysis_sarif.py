@@ -30,6 +30,12 @@ _DISTRIBUTION = "open-threat-model"
 #: canónico por omissão em vez de campo nenhum.
 _DEFAULT_MODEL_URI = "threat-model.otm.yaml"
 
+#: Identificador convencional para "a raiz do checkout". O GitHub code scanning resolve-o contra
+#: o repositório; sem ele, a `uri` de cada resultado não diz a que é relativa e o consumidor
+#: adivinha. Ver `_physical_location`.
+_URI_BASE_ID = "%SRCROOT%"
+_URI_BASE_DESCRIPTION = "The root of the repository checkout the analysis ran in."
+
 
 def product_version() -> str:
     """Versão do produto instalado, para `tool.driver.version`.
@@ -94,7 +100,10 @@ def _physical_location(model_uri: str) -> dict[str, Any]:
     localizados. A ameaça não tem linha própria — é o documento inteiro que a origina — por isso
     todas ancoram na linha 1 do modelo, que é a convenção para achados ao nível do ficheiro.
     """
-    return {"artifactLocation": {"uri": model_uri}, "region": {"startLine": 1}}
+    return {
+        "artifactLocation": {"uri": model_uri, "uriBaseId": _URI_BASE_ID},
+        "region": {"startLine": 1},
+    }
 
 
 def _location(threat: HeuristicThreat, model_uri: str) -> dict[str, Any]:
@@ -172,6 +181,13 @@ def export_analysis_sarif_obj(result: AnalysisResult, *, model_uri: str = _DEFAU
                     }
                 },
                 "results": sarif_results,
+                # Diz a que a `uri` de cada resultado é relativa. Sem isto o consumidor tem de
+                # adivinhar, e o GitHub adivinha "raiz do repositório": um `otm analyze` corrido
+                # com `working-directory: apps/api` emitia `sub/m.otm.yaml` e o alerta anexava a
+                # `sub/m.otm.yaml` a partir da raiz — um caminho que pode existir e ser **outro
+                # ficheiro**. `%SRCROOT%` é o identificador convencional para "a raiz do
+                # checkout", e é o que o GitHub resolve contra o repositório.
+                "originalUriBaseIds": {_URI_BASE_ID: {"description": {"text": _URI_BASE_DESCRIPTION}}},
             }
         ],
     }
