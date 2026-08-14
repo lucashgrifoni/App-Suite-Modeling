@@ -40,6 +40,7 @@ O executável é **`otm`** (ou `python -m otm_cli.cli`).
 | `otm recommend-methodology <arquivo>` | Sugere metodologia e explica o motivo. |
 | `otm report <arquivo>` | Markdown: modelo + análise (stdout ou `-o`) — relatório legado. |
 | `otm report <arquivo> --level executive\|standard\|deep` | Report premium (Markdown ou PDF com `-f markdown\|pdf`). Ver `docs/features/PREMIUM_REPORTS.md`. |
+| `otm report ... -f pdf` **sem `-o`** | Escreve `report-premium.pdf` no directório actual. É a única escrita do CLI para um caminho que não foi nomeado: se já existir um ficheiro com esse nome, é **substituído**, e o comando di-lo. Use `-o <caminho>` para escolher o destino. |
 | `otm report ... --analysis-json <ficheiro>` | Reutiliza `AnalysisResult` JSON. |
 | `otm report ... --baseline <ficheiro>` | Análise anterior para diff no report premium. |
 | `otm diagram <arquivo>` | Mermaid flowchart (stdout ou `-o`). |

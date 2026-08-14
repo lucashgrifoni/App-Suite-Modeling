@@ -56,12 +56,35 @@ def _emit_text_report(text: str, *, output: Path | None, label: str, sources: tu
         print(text, end="")
 
 
-def _emit_pdf_report(pdf_bytes: bytes, *, output: Path, locale_notice: str | None, sources: tuple[Path, ...]) -> None:
-    """A PDF is never printed to stdout; without `--output` it lands on the report's default path."""
+def _emit_pdf_report(
+    pdf_bytes: bytes,
+    *,
+    output: Path,
+    locale_notice: str | None,
+    sources: tuple[Path, ...],
+    named_by_user: bool,
+) -> None:
+    """A PDF is never printed to stdout; without `--output` it lands on the report's default path.
+
+    Esse default — `report-premium.pdf` no directório actual — é a **única** escrita do CLI para um
+    caminho que o utilizador não nomeou, e substituía um ficheiro já existente sem dizer nada:
+    correr o comando duas vezes na mesma pasta deitava fora o primeiro entregável, com exit 0.
+
+    Substituir continua a ser o comportamento — recusar quebraria quem já corre isto em sequência,
+    e reescrever para stdout não faz sentido para um PDF. O que muda é o silêncio: quando o
+    destino não foi nomeado **e** já existia um ficheiro lá, isso é dito. Com `-o` explícito nada
+    é avisado, porque aí o caminho é escolha de quem chamou, como em qualquer CLI.
+    """
+    replacing_unnamed = not named_by_user and output.exists()
     try:
         write_bytes_file(content=pdf_bytes, output=output, sources=sources)
     except CliUserError as e:
         exit_on_cli_error(console, e)
+    if replacing_unnamed:
+        console.print(
+            f"[yellow]Note:[/yellow] replaced the existing {safe(output.name)} in this directory. "
+            "Pass `-o <path>` to choose the destination."
+        )
     if locale_notice:
         console.print(f"[yellow]Note:[/yellow] {safe(locale_notice)}")
     console.print(f"[green]Report premium (PDF)[/green] → {safe(output.resolve())}")
@@ -154,4 +177,5 @@ def register(app: typer.Typer) -> None:
                 output=output or outcome.default_path,
                 locale_notice=outcome.locale_notice,
                 sources=inputs,
+                named_by_user=output is not None,
             )

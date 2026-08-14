@@ -264,3 +264,52 @@ def test_import_repo_still_writes_to_a_new_path_inside_the_same_tree(tmp_path: P
 
     assert result.exit_code == 0, result.output
     assert json.loads(out.read_text(encoding="utf-8"))["files_scanned"] >= 1
+
+
+# --- higiene de escrita: o default do PDF premium ------------------------------------------
+#
+# `otm report -f pdf` sem `-o` escreve `report-premium.pdf` no directório actual — a única
+# escrita do CLI para um caminho que o utilizador não nomeou. Substituir continua a ser o
+# comportamento (recusar quebraria quem corre isto em sequência); o que muda é o silêncio.
+
+
+def _pdf_invocation(tmp_path: Path, *extra: str):
+    from otm_cli.cli import app
+    from typer.testing import CliRunner
+
+    model = tmp_path / "m.otm.yaml"
+    model.write_text(_MINIMAL.read_text(encoding="utf-8"), encoding="utf-8")
+    return CliRunner().invoke(app, ["report", str(model), "--level", "executive", "-f", "pdf", *extra])
+
+
+def test_replacing_the_unnamed_default_is_announced(tmp_path: Path, monkeypatch) -> None:
+    """Correr duas vezes na mesma pasta deitava fora o primeiro entregável sem dizer nada."""
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "report-premium.pdf").write_text("PRIOR DELIVERABLE", encoding="utf-8")
+
+    result = _pdf_invocation(tmp_path)
+
+    assert result.exit_code == 0, result.output
+    assert "replaced" in result.output
+
+
+def test_a_first_run_says_nothing_about_replacing(tmp_path: Path, monkeypatch) -> None:
+    """O aviso é sobre substituir, não sobre escrever."""
+    monkeypatch.chdir(tmp_path)
+
+    result = _pdf_invocation(tmp_path)
+
+    assert result.exit_code == 0, result.output
+    assert "replaced" not in result.output
+
+
+def test_an_explicit_output_is_never_second_guessed(tmp_path: Path, monkeypatch) -> None:
+    """Com `-o` o caminho é escolha de quem chamou, como em qualquer CLI."""
+    monkeypatch.chdir(tmp_path)
+    named = tmp_path / "mine.pdf"
+    named.write_text("PRIOR", encoding="utf-8")
+
+    result = _pdf_invocation(tmp_path, "-o", str(named))
+
+    assert result.exit_code == 0, result.output
+    assert "replaced" not in result.output
