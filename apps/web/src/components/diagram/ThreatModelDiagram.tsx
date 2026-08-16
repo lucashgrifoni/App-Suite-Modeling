@@ -163,11 +163,20 @@ function ThreatModelDiagramInner({
   const updateSelectedLabel = useCallback(
     (name: string) => {
       if (!selectedId || !editMode) return;
-      const label = sanitizeDiagramLabel(name);
+      // Grava o nome **tal como foi escrito**. Aqui corria `sanitizeDiagramLabel`, que é um filtro
+      // de exibição e é destrutivo por desenho: uma tecla apagava `<…>` do documento canónico
+      // ("Customer DB <unencrypted, internet-facing>" -> "Customer DB "), a perda sobrevivia ao
+      // reload e seguia para o JSON exportado e para a lista de Componentes, sem undo. E o campo é
+      // controlado sobre o `name` cru, por isso o utilizador via a string inteira até ela sumir.
+      //
+      // Não muda a superfície de XSS: `buildNodes`/`buildEdges` continuam a sanitizar ao desenhar,
+      // que é o que a docstring do filtro manda. O controlo real, medido, é o escaping de text
+      // node do React mais a CSP — um `<img src=x onerror>` num nome produz zero elementos `<img>`
+      // com ou sem este filtro.
       setDocument({
         ...document,
         components: document.components.map((c) =>
-          c.id === selectedId ? { ...c, name: label } : c,
+          c.id === selectedId ? { ...c, name } : c,
         ),
       });
     },
