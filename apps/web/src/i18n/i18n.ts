@@ -23,7 +23,17 @@ void i18n.use(initReactI18next).init({
   fallbackLng: "en",
   supportedLngs: ["pt-BR", "en"],
   interpolation: {
-    escapeValue: true,
+    // `false` é o valor que a documentação do i18next recomenda para React, e é correto aqui: o
+    // React escapa os seus text nodes de qualquer forma, por isso `true` não acrescentava defesa —
+    // acrescentava corrupção nos sinks que **não** são HTML. O PDF do cliente imprimia
+    // `CI&#x2F;CD` e `Bob&#39;s`, e a mesma string aparecia escapada num sítio e limpa noutro no
+    // mesmo cartão de História.
+    //
+    // A premissa foi verificada, não assumida: não existe um único `dangerouslySetInnerHTML` nem
+    // `innerHTML` nos 133 ficheiros de `apps/web` — a única ocorrência dessas palavras é um
+    // comentário em `diagramSanitize.ts` a proibi-los. Se algum dia entrar um, este valor tem de
+    // ser reconsiderado junto com ele.
+    escapeValue: false,
   },
   returnNull: false,
   returnEmptyString: false,

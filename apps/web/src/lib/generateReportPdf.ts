@@ -3,10 +3,23 @@ import type { AnalysisResult } from "../types/api";
 import type { OtmDocument } from "../types/document";
 import { localeFromUiLanguage, type ExportArtifactLocale } from "../i18n/exportArtifactLocale";
 import i18n from "../i18n/i18n";
-import { sanitizeDiagramLabel } from "../utils/diagramSanitize";
 
+/**
+ * Achata espaço em branco e trunca. **Não** remove `<…>`.
+ *
+ * Isto passava por `sanitizeDiagramLabel`, um removedor de tags herdado do caminho do diagrama.
+ * Numa etiqueta de diagrama isso é aceitável; sobre prosa inverte o sentido — "The channel is
+ * <not> encrypted" imprimia "The channel is encrypted", no artefacto que alguém arquiva como
+ * evidência.
+ *
+ * E não comprava segurança nenhuma: este ficheiro desenha **texto**, não HTML — é o que a
+ * docstring de `generateReportPdfBlob` já dizia — e o jsPDF escapa `(`, `)` e `\` ao construir o
+ * content stream. Verificado com um payload cru `… ) Tj /JavaScript (app.alert\(1\)) …`: a string
+ * não escapou e não apareceu chave `/JavaScript` nenhuma.
+ */
 function safeText(s: string, max = 2000): string {
-  return sanitizeDiagramLabel(s, max).replaceAll(/[^\S\r\n]+/g, " ");
+  const flattened = s.replaceAll(/[^\S\r\n]+/g, " ").trim();
+  return flattened.length > max ? `${flattened.slice(0, max - 1)}…` : flattened;
 }
 
 function pdfT(lng: ExportArtifactLocale): TFunction {
@@ -51,10 +64,16 @@ export async function generateReportPdfBlob(
     }
   };
 
+  // Quebrado em linhas como todo o resto. Era desenhado com um `pdf.text` directo, sem
+  // `splitTextToSize`, por isso um título longo saía cortado na margem — dois relatórios com
+  // versões diferentes no título produziam cabeçalhos pixel-idênticos e nomes de ficheiro iguais.
   pdf.setFontSize(16);
-  ensureSpace(10);
-  pdf.text(safeText(doc.metadata.title, 200), margin, y);
-  y += 10;
+  for (const line of pdf.splitTextToSize(safeText(doc.metadata.title, 200), maxW)) {
+    ensureSpace(10);
+    pdf.text(line, margin, y);
+    y += 8;
+  }
+  y += 2;
 
   if (doc.metadata.summary) {
     addLines(`${t("artifactPdf.summary")} ${safeText(doc.metadata.summary ?? "", 500)}`, 10);
