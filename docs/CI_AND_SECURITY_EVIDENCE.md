@@ -1,7 +1,7 @@
 # Evidência consolidada — CI, tipagem, SCA, CLI, observabilidade e perímetro da API
 
 Documento único que substitui relatórios de execução dispersos (rodada de higiene docs, 2026-04).  
-**Índice:** [Ruff + Bandit](#0-ruff-lint--formato) · [Mypy](#1-mypy-no-ci-monorepo) · [SCA](#2-sca-supply-chain) · [CLI modular](#3-refatoração-da-cli) · [Observabilidade](#4-observabilidade-da-api) · [Perímetro / CORS](#5-endurecimento-de-perímetro-da-api) · [Semgrep](#6-semgrep) · [Trivy](#7-trivy-imagem-api)
+**Índice:** [Ruff + Bandit](#0-ruff-lint--formato) · [Mypy](#1-mypy-no-ci-monorepo) · [SCA](#2-sca-supply-chain) · [CLI modular](#3-refatoração-da-cli) · [Observabilidade](#4-observabilidade-da-api) · [Perímetro / CORS](#5-endurecimento-de-perímetro-da-api) · [Semgrep](#6-semgrep) · [Trivy](#7-trivy-dependências)
 
 ---
 
@@ -161,10 +161,25 @@ API keys/OAuth2/mTLS + testes de autorização + OpenAPI/UI alinhados ao fluxo c
 
 ---
 
-## 7. Trivy (imagem API)
+## 7. Trivy (dependências)
 
-- Job `trivy-image`: `docker build -f apps/api/Dockerfile -t otm-api:ci .` seguido de `aquasecurity/trivy-action@0.35.0` com `severity: CRITICAL,HIGH` e `exit-code: 1`.
-- Complementa pip-audit (Python na host) com visão de **imagem** (OS + dependências instaladas na layer).
+- Job `sca-trivy`, `scan-type: fs` sobre o repositório, `ignore-unfixed: true`.
+- **Bloqueia** em dependências de **runtime**, ao nível `MEDIUM,HIGH,CRITICAL`.
+- **Reporta e não bloqueia** as **dev-dependencies**, num passo separado com `--include-dev-deps`,
+  cujo resultado vai para o Step Summary. A separação é deliberada: o que corre na máquina de quem
+  desenvolve e no runner é risco real de cadeia de suprimentos, mas não é o mesmo risco de um
+  pacote entregue no `dist/`, e um limiar único trocaria um ponto cego por um gate que grita.
+
+> **Não existe gate de imagem.** Esta secção descrevia um job `trivy-image` que fazia
+> `docker build -f apps/api/Dockerfile` e falhava em CRITICAL/HIGH. Esse job **não existe em
+> nenhum workflow** — foi removido e o documento não acompanhou, de modo que o próprio artefacto
+> de evidência de segurança do projecto afirmava um controlo bloqueante inexistente.
+>
+> Não foi reposto, e a razão é medível: das 24 CVE CRITICAL/HIGH de pacotes de SO na imagem,
+> **nenhuma tem correção a montante**. Um gate assim ficaria permanentemente vermelho sem que
+> houvesse nada a fazer — que é o modo de falha oposto e igualmente inútil. A imagem é analisada
+> localmente quando alguém a constrói; se voltar a haver um gate, terá de vir com uma política de
+> `--ignore-unfixed` e um dono para as exceções.
 
 ---
 

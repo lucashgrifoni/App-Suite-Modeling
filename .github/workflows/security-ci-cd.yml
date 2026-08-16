@@ -478,7 +478,12 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Scan dependencies for vulnerabilities
+      # Bloqueia em dependências de RUNTIME. Trivy exclui dev-dependencies por omissão ao ler um
+      # `package-lock.json`, e isso não estava escrito em lado nenhum: o gate ficava verde tendo
+      # olhado para 96 dos 466 pacotes npm. Medido — `trivy fs` em `apps/web` devolve 0
+      # CRITICAL/HIGH por omissão e 1 com `--include-dev-deps`, e esse 1 é um advisory com
+      # correção disponível. Verde significava "não olhámos", não "não há nada".
+      - name: Scan runtime dependencies for vulnerabilities
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           scan-type: fs
@@ -490,6 +495,51 @@ jobs:
           format: sarif
           output: trivy-deps.sarif
           skip-dirs: ${{ env.TRIVY_SKIP_DIRS }}
+
+      # As dev-dependencies são analisadas e **reportadas**, não bloqueadas, e a distinção é
+      # deliberada: o que corre na máquina de quem desenvolve e no runner é risco real de cadeia
+      # de suprimentos, mas não é o mesmo risco de um pacote que vai no `dist/`. Bloquear os dois
+      # com o mesmo limiar troca um ponto cego por um gate que grita — e um advisory que não é
+      # entregue a ninguém passaria a impedir merges. O que não é aceitável é o silêncio: o
+      # resultado vai para o Step Summary de qualquer forma.
+      # Chamado directamente, e não através da action: `trivy-action` **não tem** um input de
+      # flags livres — a primeira versão deste passo passou-lhe `trivy-flags`, que a action ignora
+      # em silêncio, e o resultado teria sido um passo com ar de funcionar a analisar exactamente
+      # o mesmo que o anterior. O binário está no PATH porque a action acima corre
+      # `aquasecurity/setup-trivy`.
+      #
+      # Sem `continue-on-error`: `--exit-code 0` faz com que os *findings* não falhem o passo, mas
+      # um trivy ausente ou um erro de invocação falham — que é a diferença entre "não há nada" e
+      # "não corremos".
+      - name: Scan dev dependencies (report only)
+        shell: bash
+        run: |
+          trivy fs . \
+            --scanners vuln \
+            --severity "${TRIVY_SEVERITY}" \
+            --ignore-unfixed \
+            --include-dev-deps \
+            --exit-code 0 \
+            --format table \
+            --output trivy-dev-deps.txt \
+            --skip-dirs "${TRIVY_SKIP_DIRS}"
+
+      - name: Report dev-dependency findings
+        if: ${{ always() }}
+        run: |
+          {
+            echo "### Trivy — dev dependencies (report only)"
+            echo
+            echo "Não bloqueia o merge. Bloqueiam apenas as dependências de runtime, no passo acima."
+            echo
+            if [ -s trivy-dev-deps.txt ]; then
+              echo '```'
+              cat trivy-dev-deps.txt
+              echo '```'
+            else
+              echo "Sem findings ao nível ${TRIVY_SEVERITY} com correção disponível."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload Trivy dependency SARIF
         if: ${{ always() && needs.preflight.outputs.code_scanning == 'true' }}
