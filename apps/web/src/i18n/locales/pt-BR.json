@@ -604,7 +604,8 @@
     "toastPdfOk": "PDF gerado a partir do snapshot.",
     "toastPdfFail": "Falha ao gerar PDF.",
     "toastRemoved": "Entrada removida.",
-    "toastStorageFull": "O armazenamento do browser está cheio: este snapshot não foi adicionado ao Histórico. Remova entradas aí, ou exporte os resultados."
+    "toastStorageFull": "O armazenamento do browser está cheio: este snapshot não foi adicionado ao Histórico. Remova entradas aí, ou exporte os resultados.",
+    "toastStorageEvicted": "O armazenamento do browser está cheio: snapshots mais antigos foram removidos para guardar este. O Histórico tem agora menos entradas do que o seu limite."
   },
   "templates": {
     "eyebrow": "Catálogo técnico",

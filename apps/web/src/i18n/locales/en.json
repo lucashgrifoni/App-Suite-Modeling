@@ -604,7 +604,8 @@
     "toastPdfOk": "PDF generated from snapshot.",
     "toastPdfFail": "Failed to generate PDF.",
     "toastRemoved": "Entry removed.",
-    "toastStorageFull": "Browser storage is full: this snapshot was not added to History. Remove entries there, or export the results."
+    "toastStorageFull": "Browser storage is full: this snapshot was not added to History. Remove entries there, or export the results.",
+    "toastStorageEvicted": "Browser storage is full: older snapshots were removed to save this one. History now holds fewer entries than its limit."
   },
   "templates": {
     "eyebrow": "Technical catalog",

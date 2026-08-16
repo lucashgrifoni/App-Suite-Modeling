@@ -110,6 +110,10 @@ export function ExportPage() {
       const stored = appendSnapshot("export");
       toast.success(t("export.toastReady"));
       if (stored === "failed") toast.warning(t("history.toastStorageFull"));
+      // `"evicted"` era calculado e deitado fora: snapshots antigos desapareciam para
+      // abrir espaço a este, debaixo de um toast de sucesso sem ressalva, e o "máximo 20"
+      // que a página de Histórico anuncia deixava de se verificar sem ninguém saber.
+      else if (stored === "evicted") toast.warning(t("history.toastStorageEvicted"));
     } catch (e) {
       const msg = apiErrorMessage(e, t, "export.toastFail");
       setError(msg);
@@ -134,6 +138,10 @@ export function ExportPage() {
       const stored = appendSnapshot("export");
       toast.success(t("export.toastPdf"));
       if (stored === "failed") toast.warning(t("history.toastStorageFull"));
+      // `"evicted"` era calculado e deitado fora: snapshots antigos desapareciam para
+      // abrir espaço a este, debaixo de um toast de sucesso sem ressalva, e o "máximo 20"
+      // que a página de Histórico anuncia deixava de se verificar sem ninguém saber.
+      else if (stored === "evicted") toast.warning(t("history.toastStorageEvicted"));
     } catch {
       const msg = t("export.toastPdfFail");
       setError(msg);
@@ -158,6 +166,10 @@ export function ExportPage() {
       const stored = appendSnapshot("export");
       toast.success(kind === "pdf" ? t("export.toastPremiumPdf") : t("export.toastPremiumMd"));
       if (stored === "failed") toast.warning(t("history.toastStorageFull"));
+      // `"evicted"` era calculado e deitado fora: snapshots antigos desapareciam para
+      // abrir espaço a este, debaixo de um toast de sucesso sem ressalva, e o "máximo 20"
+      // que a página de Histórico anuncia deixava de se verificar sem ninguém saber.
+      else if (stored === "evicted") toast.warning(t("history.toastStorageEvicted"));
     } catch (e) {
       const msg = apiErrorMessage(e, t, "export.toastPremiumFail");
       setError(msg);

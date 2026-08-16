@@ -96,6 +96,10 @@ export function AnalysisPage() {
       // The analysis itself succeeded; only the History snapshot was lost. Saying so beats
       // a run that silently stops appearing in History once the browser's quota is full.
       if (stored === "failed") toast.warning(t("history.toastStorageFull"));
+      // `"evicted"` era calculado e deitado fora: snapshots antigos desapareciam para
+      // abrir espaço a este, debaixo de um toast de sucesso sem ressalva, e o "máximo 20"
+      // que a página de Histórico anuncia deixava de se verificar sem ninguém saber.
+      else if (stored === "evicted") toast.warning(t("history.toastStorageEvicted"));
     } catch (e) {
       const msg = apiErrorMessage(e, t, "analysis.toastFail");
       setError(msg);
