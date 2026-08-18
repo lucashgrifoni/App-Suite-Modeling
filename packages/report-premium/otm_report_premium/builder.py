@@ -18,6 +18,7 @@ from otm_exporters.markdown_text import md_block, md_inline
 from otm_threat_engine import build_remediation_backlog
 from otm_threat_engine.analysis_diff import diff_analysis_results
 from otm_threat_engine.methodologies import recommend_methodology
+from otm_threat_engine.remediation.classify import ComponentIndex
 from otm_threat_engine.result import AnalysisResult, HeuristicThreat
 from otm_threat_engine.semantic_comparison import semantic_diff_from_analyses_only
 from otm_threat_engine.severity import severity_at_least, severity_for_score
@@ -231,11 +232,12 @@ def _build_distributions(
     active: list[HeuristicThreat],
     meth: Any,
     tb_by_component: dict[str, str],
+    index: ComponentIndex,
 ) -> DistributionBlock:
     comp_scores: dict[str, float] = defaultdict(float)
     for t in active:
         if t.target_component_id:
-            comp_scores[t.target_component_id] += composite_priority_score(t, doc, meth)
+            comp_scores[t.target_component_id] += composite_priority_score(t, doc, meth, index=index)
     tb_scores: dict[str, float] = defaultdict(float)
     for cid, sc in comp_scores.items():
         bid = tb_by_component.get(cid)
@@ -265,11 +267,12 @@ def _build_top_risks(
     meth: Any,
     backlog: Any,
     b: PremiumBuilderCopy,
+    index: ComponentIndex,
 ) -> list[TopRiskItem]:
     top_risks: list[TopRiskItem] = []
     for i, t in enumerate(sorted_threats[:10]):
         tier = assign_priority_tier(i, min(10, len(sorted_threats)))
-        ex = infer_exploitability(t, doc)
+        ex = infer_exploitability(t, doc, index=index)
         bi_labels = build_business_impact_row(t).labels + ai_business_labels_if_applicable(t)
         backlog_match = next(
             (b for b in backlog.items if any(r.id == t.id for r in b.related_findings if r.kind == "heuristic_threat")),
@@ -290,7 +293,7 @@ def _build_top_risks(
                 exploitability_summary=ex.notes,
                 business_impact_labels=list(dict.fromkeys(bi_labels))[:8],
                 priority_tier=tier,
-                composite_score=composite_priority_score(t, doc, meth),
+                composite_score=composite_priority_score(t, doc, meth, index=index),
                 recommended_action=action,
                 suggested_horizon=horizon_for_tier(tier),
             )
@@ -300,8 +303,13 @@ def _build_top_risks(
 
 def _build_root_cause_groups(backlog: Any, loc: PremiumReportLocale) -> list[RootCauseGroup]:
     rc_groups: list[RootCauseGroup] = []
+    # `item_ids` visto como conjunto. Testar pertença contra uma **lista**, uma vez por item e
+    # por grupo, é O(grupos x itens x ids): 0,44 s num único relatório de 1500 entidades, e a
+    # crescer ao quadrado. A iteração continua a ser sobre `backlog.items`, para o grupo manter
+    # exactamente a mesma ordem de antes.
     for root_key, item_ids in backlog.by_root_cause.items():
-        items = [i for i in backlog.items if i.id in item_ids]
+        wanted = set(item_ids)
+        items = [i for i in backlog.items if i.id in wanted]
         if not items:
             continue  # pragma: no cover - defensive guard
         comps: set[str] = set()
@@ -627,6 +635,9 @@ def build_premium_report_payload(
     status_key, status_display = _overall_status(max_score, b)
 
     comp_names = {c.id: c.name for c in doc.components}
+    # Um índice para todo o pipeline: sem ele cada classificação por ameaça revarre
+    # `doc.components` (ver `ComponentIndex`).
+    index = ComponentIndex.of(doc)
     tb_by_component = _trust_boundary_by_component(doc)
 
     sev_counter, stride_counter, comp_counter, tb_counter, heatmap = _build_distribution_counters(
@@ -641,7 +652,7 @@ def build_premium_report_payload(
 
     sorted_threats = sorted(
         active,
-        key=lambda x: composite_priority_score(x, doc, meth),
+        key=lambda x: composite_priority_score(x, doc, meth, index=index),
         reverse=True,
     )
     top5_titles = [t.title for t in sorted_threats[:5]]
@@ -675,12 +686,13 @@ def build_premium_report_payload(
         active=active,
         meth=meth,
         tb_by_component=tb_by_component,
+        index=index,
     )
 
-    top_risks = _build_top_risks(sorted_threats, doc, meth, backlog, b)
+    top_risks = _build_top_risks(sorted_threats, doc, meth, backlog, b, index)
     rc_groups = _build_root_cause_groups(backlog, loc)
 
-    exploit_profiles = [infer_exploitability(t, doc) for t in sorted_threats[:15]]
+    exploit_profiles = [infer_exploitability(t, doc, index=index) for t in sorted_threats[:15]]
     business_rows = [build_business_impact_row(t) for t in sorted_threats[:15]]
 
     quick_wins = _build_quick_wins(backlog)
@@ -688,7 +700,7 @@ def build_premium_report_payload(
     strategic = _build_strategic(result, b)
     roadmap = _build_roadmap(backlog, b)
     baseline_section = _build_baseline_section(baseline, result, b)
-    dedupe: list[DedupeGroup] = build_dedupe_groups(active, meth, doc)
+    dedupe: list[DedupeGroup] = build_dedupe_groups(active, meth, doc, index=index)
     explain_snippets = _build_explain_snippets(result)
     tech_appendix = _build_tech_appendix(doc, active, b, level)
 

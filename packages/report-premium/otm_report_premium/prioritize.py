@@ -6,7 +6,7 @@ from typing import Literal
 
 from otm_core_schema import StrideCategory, ThreatModelMethodology
 from otm_core_schema.document import ThreatModelDocument
-from otm_threat_engine.remediation.classify import classify_threat, effort_for_threat
+from otm_threat_engine.remediation.classify import ComponentIndex, classify_threat, effort_for_threat
 from otm_threat_engine.result import HeuristicThreat
 
 from .risk_context import infer_exploitability
@@ -31,16 +31,21 @@ def composite_priority_score(
     threat: HeuristicThreat,
     doc: ThreatModelDocument | None,
     methodology: ThreatModelMethodology,
+    *,
+    index: ComponentIndex | None = None,
 ) -> float:
     """
     Score contínuo para ordenação; não é CVSS.
+
+    Chamada uma vez por ameaça e O(n log n) vezes dentro do `sorted` do relatório, por isso
+    `index` não é uma micro-optimização: sem ele cada chamada varre `doc.components`.
     """
     rs = _risk_score(threat)
-    root, _ctrl, _cat, _layer = classify_threat(threat, doc, methodology)
+    root, _ctrl, _cat, _layer = classify_threat(threat, doc, methodology, index=index)
     effort = effort_for_threat(threat, root)
     ew = _exploit_weight(rs / 25.0)
 
-    ex = infer_exploitability(threat, doc)
+    ex = infer_exploitability(threat, doc, index=index)
     remote_boost = 0.15 if ex.attack_locality in ("remote", "hybrid") else 0.0
     edge_boost = 0.1 if ex.requires_external_access else 0.0
 

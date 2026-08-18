@@ -7,7 +7,7 @@ from typing import Literal
 
 from otm_core_schema import ComponentKind, StrideCategory
 from otm_core_schema.document import ThreatModelDocument
-from otm_threat_engine.remediation.classify import component_kind_for_id
+from otm_threat_engine.remediation.classify import ComponentIndex, component_kind_for_id
 from otm_threat_engine.result import HeuristicThreat
 
 from .models import BusinessImpactRow, ExploitabilityProfile
@@ -56,11 +56,15 @@ def _infer_locality(
 def infer_exploitability(
     threat: HeuristicThreat,
     doc: ThreatModelDocument | None,
+    *,
+    index: ComponentIndex | None = None,
 ) -> ExploitabilityProfile:
     """
     Infere contexto de exploração com base em STRIDE, alvo e texto — heurística.
+
+    `index` evita reconstruir o mapa de componentes por ameaça (ver `ComponentIndex`).
     """
-    ck = component_kind_for_id(doc, threat.target_component_id)
+    ck = component_kind_for_id(doc, threat.target_component_id, index=index)
     text = _blob(threat)
 
     ext = ck in (ComponentKind.EXTERNAL_ENTITY, ComponentKind.GATEWAY)

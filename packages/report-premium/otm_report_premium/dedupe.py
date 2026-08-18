@@ -6,7 +6,7 @@ from collections import defaultdict
 
 from otm_core_schema import ThreatModelMethodology
 from otm_core_schema.document import ThreatModelDocument
-from otm_threat_engine.remediation.classify import classify_threat
+from otm_threat_engine.remediation.classify import ComponentIndex, classify_threat
 from otm_threat_engine.result import HeuristicThreat
 
 from .models import DedupeGroup
@@ -16,6 +16,8 @@ def build_dedupe_groups(
     threats: list[HeuristicThreat],
     methodology: ThreatModelMethodology,
     doc: ThreatModelDocument | None,
+    *,
+    index: ComponentIndex | None = None,
 ) -> list[DedupeGroup]:
     """
     Agrupa por (grouped_root_cause, stride) vindo de classify_threat.
@@ -26,7 +28,7 @@ def build_dedupe_groups(
     for t in threats:
         if t.skipped_as_duplicate:
             continue  # pragma: no cover - defensive guard
-        root, _ctrl, _cat, _layer = classify_threat(t, doc, methodology)
+        root, _ctrl, _cat, _layer = classify_threat(t, doc, methodology, index=index)
         key = f"{root}|{t.stride.value}"
         buckets[key].append(t)
         keys_display[key] = root

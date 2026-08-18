@@ -148,13 +148,18 @@ otm report examples/minimal.otm.yaml -o REPORT.md
 - uses: lucashgrifoni/App-Suite-Modeling@v7.9.0
   with:
     model: threat-model.otm.yaml
-    # Drift gate: compare against the model as it exists on the base branch.
+    # Drift gate. On a pull request this path is read from the BASE branch, not from the
+    # pull request's own checkout — see "Where the baseline comes from" below.
     baseline: baseline/threat-model.otm.yaml
     fail-on: high
     upload-sarif: "true"   # needs `security-events: write` on the job
 ```
 
 By default the action installs the engine from its own checkout, so the CLI is exactly the version you pinned in `uses:` — there is no skew between the action and the tool. Pass `version: 7.9.0` to install that release from PyPI instead. Outputs: `sarif-file`, `analysis-file`, and `gate-outcome` (`passed`, `tripped`, `not-evaluated`, or `skipped`). See [`action.yml`](action.yml) for every input.
+
+**Where the baseline comes from — and why it is not a file path.** A baseline addressed as a path resolves inside the pull request's own checkout, which is written by the same author the gate exists to judge: one pull request that adds the risky component *and* copies the new model over the baseline file reports `gate-outcome: passed` and a green check. So on a `pull_request` event the action reads `baseline` from the **base branch** (`git show origin/$GITHUB_BASE_REF:<baseline>`) and ignores the copy in the checkout. On `push`, tags and schedules there is no pull request to tamper with, so the file in the tree is used.
+
+If the base revision cannot be read — a shallow checkout with no network access to the base branch, for instance — the gate **refuses to issue a verdict**: `gate-outcome: not-evaluated`, an `::error::` annotation, and a failing step. A green check there would mean "not measured", not "no new risk". Three ways out, in order of preference: check out with `fetch-depth: 0`; name the revision yourself with `baseline-ref: v1.4.0`; or set `baseline-ref: worktree` to accept the copy in the checkout, which is only safe when that file is protected by CODEOWNERS or branch protection.
 
 **pre-commit — catch a malformed model before it is committed:**
 
@@ -167,6 +172,14 @@ repos:
 ```
 
 The hook validates every changed `.otm.yaml` against the canonical schema. `otm validate` accepts several files, so pre-commit needs no shell loop.
+
+> **Pin the commit SHA, not the tag.** Both snippets above name `v7.9.0` because it is readable, but a git tag is mutable: anyone who can push to this repository can move it, and both of these execute code — the action inside your CI job, with your `GITHUB_TOKEN` and secrets; the hook on your developers' machines, on every commit. `uses:` and pre-commit's `rev:` both accept a 40-character commit SHA, and that is what a security gate deserves:
+>
+> ```yaml
+> - uses: lucashgrifoni/App-Suite-Modeling@<commit-sha>   # v7.9.0
+> ```
+>
+> Resolve it with `gh api repos/lucashgrifoni/App-Suite-Modeling/commits/v7.9.0 --jq .sha`, or let `pre-commit autoupdate --freeze` and Dependabot keep it current through reviewable pull requests. This repository holds itself to the same rule: every action reference in `.github/workflows/` and its own ruff hook are pinned to commit SHAs.
 
 **Exit codes, for scripting:** `0` no gate trip · `1` usage error, or an armed gate that could not issue a verdict (the two models are not comparable — different methodology, engine version or pack) · `2` bad flag or bad flag value · `3` gate tripped. Only `0` means "no new risk": a script that treats anything else as a pass is treating a refusal as a clean bill of health. The gate report goes to stderr, so `--format json` keeps stdout parseable. Full recipes in [`docs/CI_AND_SECURITY_EVIDENCE.md`](docs/CI_AND_SECURITY_EVIDENCE.md) §8.
 

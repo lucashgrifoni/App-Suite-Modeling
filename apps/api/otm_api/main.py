@@ -8,12 +8,13 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter, FastAPI
+from fastapi import APIRouter, Depends, FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from otm_api.cors_settings import resolve_cors_profile
+from otm_api.document_limits import resolve_max_document_entities
 from otm_api.errors import http_exception_handler, request_validation_handler
 from otm_api.middleware_api_key import OptionalApiKeyMiddleware
 from otm_api.middleware_rate_limit import RateLimitMiddleware, parse_rate_limit
@@ -22,9 +23,11 @@ from otm_api.observability import (
     register_unhandled_exception_handler,
     setup_api_logging,
 )
+from otm_api.openapi_security import api_key_header, bearer_token
 from otm_api.perimeter_settings import (
     describe_effective_perimeter,
     describe_shared_bucket_consequence,
+    describe_weak_api_key_consequence,
     resolve_api_key_perimeter,
     resolve_rate_limit_default,
     resolve_trusted_proxy,
@@ -100,6 +103,25 @@ _shared_bucket_line = describe_shared_bucket_consequence(
 if _shared_bucket_line:
     LOG.warning(_shared_bucket_line, extra={"event_name": "rate_limit_shared_bucket"})
 
+# `api_key=enforced` lê-se exatamente igual com 32 bytes aleatórios e com a palavra `x`. Um
+# segredo curto é uma escolha legítima e não aborta o arranque (ao contrário de um valor que é
+# um interruptor, recusado em `resolve_api_key_perimeter`), mas não pode ficar indistinguível
+# de um forte na única evidência que o operador tem.
+_weak_key_line = describe_weak_api_key_consequence(_api_key)
+if _weak_key_line:
+    LOG.warning(_weak_key_line, extra={"event_name": "api_key_weak"})
+
+# Resolvido no arranque para que uma gralha em `OTM_MAX_DOCUMENT_ENTITIES` aborte o deploy em
+# vez de aparecer como um 500 no primeiro pedido com documento — e anunciado quando está
+# ligado, porque um 413 num documento legítimo tem de ter uma linha no arranque a explicá-lo.
+_entity_ceiling = resolve_max_document_entities()
+if _entity_ceiling is not None:
+    LOG.info(
+        f"document_entity_ceiling max_entities={_entity_ceiling} "
+        "(components + data flows + assets per submitted document)",
+        extra={"event_name": "document_entity_ceiling"},
+    )
+
 # Ordem de registo: o Starlette empilha ao contrário, por isso o **último** registado fica
 # por fora. Efetivo (fora -> dentro): Observability -> CORS -> RateLimit -> ApiKey -> rotas.
 #
@@ -162,7 +184,11 @@ def root() -> dict[str, str]:
 
 app.include_router(system.router)
 
-v1 = APIRouter(prefix="/v1")
+# As dependências só **documentam** a credencial que `OptionalApiKeyMiddleware` já exige: com
+# `auto_error=False` não recusam nada, e o ponto de aplicação continua a ser o middleware. Sem
+# elas o contrato não tinha `securitySchemes` nenhum, e o /docs desta API não tinha como
+# autenticar-se contra ela. Ver `openapi_security.py`.
+v1 = APIRouter(prefix="/v1", dependencies=[Depends(api_key_header), Depends(bearer_token)])
 v1.include_router(models.router)
 v1.include_router(analyses.router)
 v1.include_router(templates.router)

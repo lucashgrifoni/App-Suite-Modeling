@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import os
+from collections.abc import Mapping
 from collections.abc import Set as AbstractSet
+from types import MappingProxyType
 
 from otm_core_schema import ThreatModelDocument, ThreatModelMethodology
 from otm_core_schema.model_quality_precheck import assess_model_precheck
@@ -43,17 +45,29 @@ from otm_threat_engine.wizard_signals import (
     signals_for_profile,
 )
 
-
-def _biz_family_flags_from_heuristics(heuristics: list[HeuristicThreat]) -> dict[str, bool]:
-    ids = " ".join(h.id.lower() for h in heuristics if h.id.startswith("biz_"))
-    return {
-        "webhook": "biz_webhook_" in ids,
-        "coupon": "biz_coupon_" in ids,
-        "payment_entitlement": "biz_payment_entitlement_" in ids,
-        "authorization": "biz_authorization_" in ids,
-        "balance": "biz_balance_" in ids,
-        "cancel": "biz_cancel_" in ids,
-    }
+#: Família de abuso de negócio → vocabulário genérico que a delata numa heurística `eng_*`.
+#: A chave é também o infixo do id `biz_` que arma a família (`biz_<família>_...`).
+_BIZ_FAMILY_TOKENS: dict[str, tuple[str, ...]] = {
+    # Webhook / gateway / replay / idempotência
+    "webhook": ("webhook", "gateway_webhook", "payment_gateway", "payment_webhook_provider"),
+    # Cupão / desconto
+    "coupon": ("coupon", "cupom", "desconto", "discount", "checkout_coupon", "coupon_store"),
+    # Entitlement / billing mismatch / activação indevida
+    "payment_entitlement": (
+        "entitlement",
+        "premium",
+        "billing",
+        "subscription",
+        "subscription_service",
+        "entitlement_service",
+    ),
+    # Autorização contextual
+    "authorization": ("authorization", "autoriz", "ownership", "vinculo", "vínculo"),
+    # Saldo / ledger / consistência
+    "balance": ("balance", "saldo", "ledger", "transactions", "transacoes", "ledger_service"),
+    # Cancelamento / revogação
+    "cancel": ("cancel", "revog", "subscription"),
+}
 
 
 def _token_hit(h: HeuristicThreat, *, tokens: tuple[str, ...]) -> bool:
@@ -61,22 +75,27 @@ def _token_hit(h: HeuristicThreat, *, tokens: tuple[str, ...]) -> bool:
     return any(tok in t for tok in tokens)
 
 
-def _biz_authorization_targets(heuristics: list[HeuristicThreat]) -> set[str]:
-    """Targets actually covered by a `biz_authorization_*` finding.
+def _biz_family_targets(heuristics: list[HeuristicThreat]) -> dict[str, set[str]]:
+    """Por família `biz_*`, os alvos que essa família **realmente** cobre neste modelo.
 
-    The authorization branch below matches on very generic tokens
-    ("authorization", "ownership", ...). Requiring a shared target keeps it from
-    suppressing a component that merely happens to carry one of those words in
-    its name while the business finding points somewhere else entirely.
+    O vocabulário de cada família é comércio corrente — "billing", "subscription", "ledger",
+    "cancel", "webhook", "coupon". Armar uma família pela mera *presença* de um achado `biz_*`
+    em qualquer ponto do modelo e depois casar por substring apagava achados em alvos que a
+    ameaça de negócio nunca tocou: um `biz_payment_entitlement_mismatch` sobre
+    `entitlement_service` silenciava um fluxo `billing_admin_sync` do outro lado do sistema,
+    e bastava renomear o fluxo para `partner_admin_sync` — mesmas propriedades de segurança —
+    para o mesmo achado CRITICAL voltar a existir e o gate de CI voltar a disparar.
+
+    Exigir alvo partilhado era o que já se fazia para a família `authorization`; as outras
+    cinco continuavam globais. Um achado de negócio só pode falar pelo que aponta.
     """
-    targets: set[str] = set()
+    targets: dict[str, set[str]] = {}
     for h in heuristics:
-        if not h.id.startswith("biz_authorization_"):
-            continue
-        if h.target_component_id:
-            targets.add(h.target_component_id)
-        if h.target_data_flow_id:
-            targets.add(h.target_data_flow_id)
+        for family in _BIZ_FAMILY_TOKENS:
+            if not h.id.startswith(f"biz_{family}_"):
+                continue
+            bucket = targets.setdefault(family, set())
+            bucket.update(t for t in (h.target_component_id, h.target_data_flow_id) if t)
     return targets
 
 
@@ -87,10 +106,9 @@ def _shares_target(h: HeuristicThreat, targets: AbstractSet[str]) -> bool:
 def _should_suppress_stride_noise(
     *,
     h: HeuristicThreat,
-    flags: dict[str, bool],
-    # Defaults to "nothing is covered", so a caller that omits it keeps findings
+    # Defaults to "no family covers anything", so a caller that omits it keeps findings
     # rather than silently dropping them.
-    authorization_targets: AbstractSet[str] = frozenset(),
+    family_targets: Mapping[str, AbstractSet[str]] = MappingProxyType({}),
 ) -> bool:
     # Somente reduzir ruído STRIDE base (não mexer em `biz_*` ou pack).
     if not h.id.startswith("eng_"):
@@ -99,59 +117,10 @@ def _should_suppress_stride_noise(
         return False
     if h.stride.value not in {"tampering", "elevation_of_privilege"}:
         return False
-
-    # Webhook / gateway / replay / idempotência
-    if flags.get("webhook") and _token_hit(
-        h,
-        tokens=(
-            "webhook",
-            "gateway_webhook",
-            "payment_gateway",
-            "payment_webhook_provider",
-        ),
-    ):
-        return True
-
-    # Cupom / desconto
-    if flags.get("coupon") and _token_hit(
-        h,
-        tokens=("coupon", "cupom", "desconto", "discount", "checkout_coupon", "coupon_store"),
-    ):
-        return True
-
-    # Entitlement / billing mismatch / ativação indevida
-    if flags.get("payment_entitlement") and _token_hit(
-        h,
-        tokens=(
-            "entitlement",
-            "premium",
-            "billing",
-            "subscription",
-            "subscription_service",
-            "entitlement_service",
-        ),
-    ):
-        return True
-
-    # Authorization contextual — target-scoped, see `_biz_authorization_targets`.
-    if (
-        flags.get("authorization")
-        and _shares_target(h, authorization_targets)
-        and _token_hit(h, tokens=("authorization", "autoriz", "ownership", "vinculo", "vínculo"))
-    ):
-        return True
-
-    # Saldo / ledger / consistência
-    if flags.get("balance") and _token_hit(
-        h, tokens=("balance", "saldo", "ledger", "transactions", "transacoes", "ledger_service")
-    ):
-        return True
-
-    # Cancelamento / revogação
-    if flags.get("cancel") and _token_hit(h, tokens=("cancel", "revog", "subscription")):
-        return True
-
-    return False
+    return any(
+        _shares_target(h, targets) and _token_hit(h, tokens=_BIZ_FAMILY_TOKENS[family])
+        for family, targets in family_targets.items()
+    )
 
 
 def suppress_stride_genericity_noise(heuristics: list[HeuristicThreat]) -> int:
@@ -160,19 +129,18 @@ def suppress_stride_genericity_noise(heuristics: list[HeuristicThreat]) -> int:
 
     Importante:
     - Não remove achados: marca como `skipped_as_duplicate=True` (rastreável no JSON).
-    - Conservador: somente `eng_*` + `tampering/elevation_of_privilege` + clusters com famílias
-      `biz_*`.
+    - Conservador: somente `eng_*` + `tampering/elevation_of_privilege` + o **mesmo alvo** que
+      o achado `biz_*` da família aponta (ver `_biz_family_targets`).
     """
     toggle = (os.environ.get("OTM_ENGINE_STRIDE_NOISE_SUPPRESSION") or "1").strip().lower()
     if toggle in {"0", "false", "off", "no"}:
         return 0
-    flags = _biz_family_flags_from_heuristics(heuristics)
-    if not any(flags.values()):
+    family_targets = _biz_family_targets(heuristics)
+    if not family_targets:
         return 0
-    authorization_targets = _biz_authorization_targets(heuristics)
     suppressed = 0
     for h in heuristics:
-        if _should_suppress_stride_noise(h=h, flags=flags, authorization_targets=authorization_targets):
+        if _should_suppress_stride_noise(h=h, family_targets=family_targets):
             h.skipped_as_duplicate = True
             suppressed += 1
     return suppressed
@@ -241,14 +209,27 @@ class ThreatAnalysisEngine:
             covered=covered,
             pack=pack,
         )
+        # O filtro de âncora existe para os hints de pack, que são emitidos incondicionalmente:
+        # descarta o que não tem correspondência no domínio do modelo. Corre aqui, **antes** dos
+        # controlos das regras da organização, e nunca sobre eles.
+        pack_hints = filter_pack_control_hints(doc, pack_hints)
+
         # Regras da organização correm por último e são aditivas: não suprimem nem são
         # suprimidas pelas heurísticas base (ver `iter_custom_rule_threats`).
+        #
+        # Os seus `control_hint` também não passam pelo filtro de âncora, e por uma razão de
+        # fundo: `collect_control_hints` só devolve controlos de regras que **dispararam** neste
+        # modelo, portanto a pergunta que o filtro faz — "existe âncora para isto?" — já foi
+        # respondida pela própria correspondência da regra. Passá-los pelo filtro apagava o
+        # controlo de regras que tinham acabado de levantar a ameaça: uma regra sobre
+        # `privilege_level: admin` ou `supports_file_upload: true` casa em campos estruturados
+        # que o corpus do filtro nem lê, por isso o motor levantava o achado e deitava fora a
+        # correcção, sem nota, aviso ou registo.
         if custom_rules is not None:
             custom_threats, fired_rules = iter_custom_rule_threats(doc, custom_rules)
             heuristics.extend(custom_threats)
             pack_hints = [*pack_hints, *collect_control_hints(custom_rules, fired_rules)]
 
-        pack_hints = filter_pack_control_hints(doc, pack_hints)
         skipped += suppress_stride_genericity_noise(heuristics)
         _, wizard_notes, boost_trace = apply_wizard_context_to_heuristics(doc, heuristics)
         corpus_trace = build_corpus_mitigation_trace(signals_for_profile(doc))

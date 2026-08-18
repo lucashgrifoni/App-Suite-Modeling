@@ -12,11 +12,13 @@ from otm_api.api_error_messages import (
     msg_analysis_document_mismatch,
     msg_analysis_validation_error,
     msg_baseline_system_mismatch,
+    msg_document_too_large,
     msg_document_validation_error,
     msg_pack_not_found,
     msg_template_invalid,
     msg_template_not_found,
 )
+from otm_api.document_limits import count_document_entities, resolve_max_document_entities
 from otm_api.errors import _truncated_errors
 from otm_api.services.analysis_pairing import analysis_document_mismatches, baseline_system_mismatches
 from otm_api.services.documents import document_from_payload
@@ -195,11 +197,32 @@ def raise_template_invalid(exc: PydanticValidationError) -> HTTPException:
     )
 
 
+def raise_document_too_large(*, entities: int, ceiling: int) -> HTTPException:
+    """413 quando o documento excede o tecto de entidades que o operador configurou."""
+    return HTTPException(
+        status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+        detail=error_detail(
+            code="DOCUMENT_TOO_LARGE",
+            message=msg_document_too_large(entities=entities, ceiling=ceiling),
+        ),
+    )
+
+
 def document_from_payload_or_422(data: dict[str, Any]) -> ThreatModelDocument:
+    """
+    O funil por onde passam todas as rotas que recebem um documento — e por isso o sítio onde
+    o tecto opcional de entidades é aplicado, antes de o motor correr e antes de a resposta
+    ser construída. Ver `otm_api.document_limits`.
+    """
     try:
-        return document_from_payload(data)
+        document = document_from_payload(data)
     except PydanticValidationError as e:
         raise raise_document_validation_error(e) from e
+    ceiling = resolve_max_document_entities()
+    entities = count_document_entities(document)
+    if ceiling is not None and entities > ceiling:
+        raise raise_document_too_large(entities=entities, ceiling=ceiling)
+    return document
 
 
 def analysis_from_payload_or_422(data: dict[str, Any] | None) -> AnalysisResult | None:

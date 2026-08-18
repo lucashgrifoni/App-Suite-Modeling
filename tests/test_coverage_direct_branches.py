@@ -334,10 +334,13 @@ def test_should_suppress_stride_noise_cancel_branch() -> None:
         title="cancel subscription revog",
         description="d",
         stride=StrideCategory.TAMPERING,
+        target_component_id="subscription_service",
         risk=build_risk_assessment(3, 3),
     )
-    # only the `cancel` family armed -> earlier families skipped, cancel-token branch returns True
-    assert _should_suppress_stride_noise(h=h, flags={"cancel": True}) is True
+    # only the `cancel` family armed, and it covers this threat's target -> suppressed.
+    assert _should_suppress_stride_noise(h=h, family_targets={"cancel": {"subscription_service"}}) is True
+    # same family armed, but pointing somewhere else -> the finding survives.
+    assert _should_suppress_stride_noise(h=h, family_targets={"cancel": {"other_service"}}) is False
 
 
 def test_description_for_component_handles_credentials() -> None:

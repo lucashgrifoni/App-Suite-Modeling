@@ -98,6 +98,43 @@ def msg_api_key_misconfigured() -> str:
     )
 
 
+def msg_document_too_large(*, entities: int, ceiling: int) -> str:
+    """
+    A recusa do tecto opcional de entidades.
+
+    Nomeia a variável porque o tecto **não** é um limite do produto: é uma escolha de
+    capacidade deste deployment, e quem recebe o 413 (muitas vezes o próprio operador, com o
+    seu documento legítimo) tem de saber onde é que ele foi decidido. Ver
+    `otm_api.document_limits`.
+    """
+    return _t(
+        f"The document carries {entities} entities (components + data flows + assets), above the "
+        f"{ceiling} this deployment accepts via OTM_MAX_DOCUMENT_ENTITIES. Split the model, or "
+        "raise the ceiling on the server.",
+        f"O documento tem {entities} entidades (componentes + fluxos + ativos), acima das {ceiling} "
+        f"que este deployment aceita via OTM_MAX_DOCUMENT_ENTITIES. Divida o modelo, ou aumente o "
+        "tecto no servidor.",
+    )
+
+
+def msg_api_key_unusable() -> str:
+    """
+    O irmão de `msg_api_key_misconfigured` para um valor que é um interruptor e não um segredo.
+
+    Reutilizar a mensagem do valor em branco diria ao operador que a variável está vazia
+    quando ela tem `false` lá dentro, ou seja, mandava-o procurar no sítio errado. Ver
+    `perimeter_settings._SWITCH_LIKE_API_KEYS`.
+    """
+    return _t(
+        "OTM_API_KEY is set to a switch value (such as `false` or `off`), which is not a usable "
+        "credential, so no credential can be accepted. Unset the variable on the server to serve "
+        "/v1 without a key, or set a random secret.",
+        "OTM_API_KEY está definida com um valor de interruptor (como `false` ou `off`), que não é "
+        "uma credencial utilizável, por isso nenhuma credencial pode ser aceite. Remova a variável "
+        "no servidor para servir /v1 sem chave, ou defina um segredo aleatório.",
+    )
+
+
 def msg_analysis_document_mismatch(*, analysis_field: str = "analysis", document_field: str = "document") -> str:
     """
     Os nomes dos campos são parâmetros porque o mesmo erro aparece em rotas onde o par não se

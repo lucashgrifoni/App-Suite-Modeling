@@ -23,8 +23,20 @@
 #
 # Supply-chain hardening:
 #   - Every action is pinned to an immutable commit SHA, with the resolved tag in a comment.
-#   - The build job has no `id-token`, so only `publish` can mint an OIDC token.
 #   - Artifacts carry a build provenance attestation.
+#   - The `build` job DOES hold `id-token: write` — `actions/attest-build-provenance` needs it
+#     to sign through Sigstore. This comment used to assert the opposite: that only `publish`
+#     could mint an OIDC token, fifteen lines above the permissions block that grants one to
+#     `build`. That sentence was the reason a reader would have believed the `pypi` environment
+#     gate was unbypassable, and it was not true. The permission is not the defect — it is
+#     required where it sits — the claim was.
+#   - What actually keeps publishing authority on the `publish` job is TWO things, and both
+#     have to hold: `publish` is bound to the `pypi` environment (so its protection rules
+#     apply), and the PyPI trusted publisher for `open-threat-model` is registered WITH
+#     `Environment name: pypi`, so PyPI rejects any token that does not carry that claim — a
+#     token minted inside `build`, which declares no environment, does not. Verify that field
+#     on pypi.org: it is the control this whole design leans on, and it is configured
+#     server-side where no check in this repository can see it.
 
 name: Publish to PyPI
 

@@ -25,6 +25,59 @@ class ApiKeyPerimeter:
     misconfigured: bool
 
 
+class ApiKeyConfigError(ValueError):
+    """``OTM_API_KEY`` tem um valor que declara uma intenção em vez de ser uma credencial."""
+
+
+#: Valores que um operador escreve para **comandar** a variável, não para ser o segredo.
+#:
+#: Metade destas palavras são exatamente as que `_truthy` e `_TRUSTED_PROXY_BY_VALUE` leem
+#: como on/off nas variáveis vizinhas *deste mesmo módulo*, por isso a confusão não é
+#: hipotética: `OTM_API_KEY=false` era a forma óbvia de desligar o perímetro, e o efeito era
+#: ligá-lo com a palavra `false` como segredo partilhado. As restantes (`none`, `null`,
+#: `disabled`, `changeme`) são o mesmo erro por outro caminho — um marcador de posição que
+#: sobreviveu ao deploy. Ambas as polaridades são recusadas: `OTM_API_KEY=1` lê-se "liga
+#: isto", não "o segredo é 1".
+_SWITCH_LIKE_API_KEYS = frozenset(
+    {
+        "0",
+        "1",
+        "changeme",
+        "disable",
+        "disabled",
+        "enable",
+        "enabled",
+        "false",
+        "nil",
+        "no",
+        "none",
+        "null",
+        "off",
+        "on",
+        "true",
+        "yes",
+    }
+)
+
+#: Abaixo disto o segredo é anunciado como fraco no arranque (não recusado — ver
+#: `describe_weak_api_key_consequence`). 16 carateres de uma fonte aleatória é o mínimo que
+#: `token_urlsafe` produz de forma confortável e o valor que a documentação passa a pedir.
+_WEAK_API_KEY_LENGTH = 16
+
+
+def _switch_like_api_key_error(value: str) -> ApiKeyConfigError:
+    """A recusa, escrita como runbook: o operador tem de saber qual das duas coisas queria."""
+    return ApiKeyConfigError(
+        f"OTM_API_KEY={value!r} is a switch, not a credential — and this variable is not a switch. "
+        "Read literally it would become the shared secret for every /v1 route, which an attacker "
+        "guesses on the first or second try, while the startup line still reports api_key=enforced. "
+        "Pick one: to turn the perimeter OFF, unset OTM_API_KEY entirely (leaving it set but empty "
+        "keeps the perimeter ON with no usable credential); to turn it ON, set a secret from a random "
+        f"source of at least {_WEAK_API_KEY_LENGTH} characters "
+        '(python -c "import secrets; print(secrets.token_urlsafe(32))").'
+    )
+
+
 def resolve_api_key_perimeter() -> ApiKeyPerimeter:
     """
     Lê ``OTM_API_KEY`` e diz três coisas distintas: se o perímetro está ligado, qual o
@@ -36,6 +89,16 @@ def resolve_api_key_perimeter() -> ApiKeyPerimeter:
     sem uma linha de log a dizê-lo. A intenção do operador aqui é inequívoca (quer o
     perímetro ligado), por isso o perímetro fica ligado e nenhuma credencial serve: falha
     fechado, ruidosamente, em vez de falhar aberto em silêncio.
+
+    Um valor que é um **interruptor** (`false`, `off`, `1`, `changeme`, ...) é o caso oposto:
+    a intenção é desligar e o efeito era ligar com uma palavra adivinhável como segredo. Aí
+    não há leitura fail-closed possível — servir 401 a toda a gente também não é o que o
+    operador pediu — por isso o valor é recusado com um erro nomeado, como já acontece com
+    ``OTM_ENV`` e ``OTM_TRUSTED_PROXY``. O arranque aborta; ver ``main.py``.
+
+    Um segredo real mas curto **não** é recusado: a intenção e o efeito coincidem e recusá-lo
+    partiria deployments legítimos. Leva uma linha de aviso própria — ver
+    ``describe_weak_api_key_consequence``.
     """
     raw = os.environ.get("OTM_API_KEY")
     if raw is None:
@@ -43,7 +106,37 @@ def resolve_api_key_perimeter() -> ApiKeyPerimeter:
     secret = raw.strip()
     if not secret:
         return ApiKeyPerimeter(enforced=True, secret=None, misconfigured=True)
+    if secret.lower() in _SWITCH_LIKE_API_KEYS:
+        raise _switch_like_api_key_error(secret)
     return ApiKeyPerimeter(enforced=True, secret=secret, misconfigured=False)
+
+
+def describe_weak_api_key_consequence(api_key: ApiKeyPerimeter) -> str | None:
+    """
+    A linha de arranque para quem ligou o perímetro com um segredo curto.
+
+    ``api_key=enforced`` é a única evidência que o operador tem de que o controlo está ligado,
+    e lê-se exatamente igual com 32 bytes aleatórios ou com a palavra `x`. Recusar o arranque
+    aqui seria errado — um segredo curto é uma escolha legítima, e há instalações a correr com
+    um — mas deixá-lo indistinguível de um segredo forte é o que torna a fraqueza invisível.
+
+    ``None`` quando não há nada a dizer: perímetro desligado, segredo em branco (esse caso já
+    tem a sua linha, ``api_key=misconfigured``), ou segredo com comprimento suficiente.
+
+    O valor **nunca** aparece na mensagem: esta linha vai para o stdout do processo, que é
+    recolhido, e o segredo não pode ir com ela.
+    """
+    if not api_key.enforced or api_key.secret is None:
+        return None
+    if len(api_key.secret) >= _WEAK_API_KEY_LENGTH:
+        return None
+    return (
+        f"api_key_weak OTM_API_KEY is {len(api_key.secret)} characters long, below the "
+        f"{_WEAK_API_KEY_LENGTH} this deployment asks for. The perimeter is ON and the startup line "
+        "reads api_key=enforced either way, so nothing else distinguishes this from a strong secret. "
+        'Replace it with python -c "import secrets; print(secrets.token_urlsafe(32))" '
+        "(docs/features/API.md)."
+    )
 
 
 def resolve_optional_api_secret() -> str | None:

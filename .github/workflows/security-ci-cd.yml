@@ -45,11 +45,18 @@
 #   - Keep `.github/dependabot.yml` enabled for `github-actions` so Dependabot
 #     can refresh SHA pins through reviewable pull requests.
 #
-# Harden-Runner egress:
-#   - Start with `egress-policy: audit` for 2-4 weeks per repository.
-#   - Review the Harden-Runner insights/recommended policy for each job.
-#   - Then switch to `egress-policy: block` and add the observed
-#     job-specific `allowed-endpoints` allowlist.
+# Harden-Runner egress — CURRENT STATE: audit, in all 24 invocations across the five
+# workflows. Audit mode OBSERVES egress; it blocks nothing. Say that plainly rather than let
+# the presence of the action read as enforcement: every job here runs third-party install
+# scripts (`npm ci`, `pip install`, `npm install -g snyk`, `python -m build`), and in audit
+# mode any of them can reach any host.
+#   - The burn-in this staged rollout was waiting for has elapsed. What is missing is the
+#     evidence, not the decision: the `allowed-endpoints` list has to come from the
+#     Harden-Runner insights page for each job, and an allowlist written from guesswork fails
+#     the job hard on the first missed host — worst of all on the release path.
+#   - Order when the data is in hand: `publish-pypi.yml` (`build`, `publish` — they hold
+#     `id-token: write` and touch the released artifact) first, then `github-ci-cd.yml` `web`,
+#     E2E jobs last (Playwright's endpoint set is the noisiest). Do not flip all 24 at once.
 #   - Block-mode syntax:
 #       egress-policy: block
 #       allowed-endpoints: |
@@ -71,6 +78,11 @@
 
 name: Security CI/CD
 
+# The two branch allowlists are deliberately IDENTICAL. They had drifted -- `develop` was
+# scanned on push but not on pull_request -- which advertises coverage of a branch nothing
+# gates before a merge. `develop` does not exist on the remote, so it was removed rather than
+# added; a test asserts the two lists stay equal, so a branch can never again be scanned only
+# after the code has already landed on it.
 on:
   pull_request:
     branches:
@@ -80,7 +92,6 @@ on:
     branches:
       - main
       - master
-      - develop
   workflow_dispatch:
   schedule:
     - cron: "0 3 * * 1"
@@ -134,6 +145,7 @@ jobs:
           ACTOR: ${{ github.actor }}
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         run: |
+          set -euo pipefail
           if [ "$ACTOR" = "dependabot[bot]" ]; then
             echo "is_dependabot=true" >> "$GITHUB_OUTPUT"
           else
@@ -145,10 +157,49 @@ jobs:
           else
             echo "snyk_enabled=false" >> "$GITHUB_OUTPUT"
           fi
-          # Visibility is always readable with the default token; Advanced
-          # Security status may not be (defaults to empty -> treated as off).
-          VIS="$(gh api "repos/$REPO" --jq '.visibility' 2>/dev/null || echo unknown)"
-          GHAS="$(gh api "repos/$REPO" --jq '.security_and_analysis.advanced_security.status' 2>/dev/null || echo unknown)"
+
+          # This step decides whether CodeQL, Dependency Review and seven SARIF uploads run
+          # at all, and a job skipped by an `if:` reports neutral, never red. So the two
+          # states below must never be collapsed:
+          #   - "the API answered, and code scanning is unavailable"  -> a decision
+          #   - "the API could not be reached"                        -> NOT a decision
+          # The previous `2>/dev/null || echo unknown` collapsed them, which meant a rate
+          # limit, a 502 or a DNS blip silently disabled the whole SAST and dependency gate
+          # behind a green run. Retry, then FAIL CLOSED: a security preflight that cannot
+          # determine the context must stop the pipeline, not quietly switch the scanners off.
+          probe() {
+            attempt=1
+            while :; do
+              if value="$(gh api "repos/$REPO" --jq "$1" 2>/dev/null)"; then
+                printf '%s' "$value"
+                return 0
+              fi
+              if [ "$attempt" -ge 3 ]; then
+                return 1
+              fi
+              attempt=$((attempt + 1))
+              sleep "${PREFLIGHT_PROBE_BACKOFF:-5}"
+            done
+          }
+
+          if ! VIS="$(probe '.visibility')"; then
+            echo "::error::Preflight could not read repository metadata from the GitHub API after 3 attempts. Refusing to decide whether code scanning is available, because guessing 'unavailable' silently disables CodeQL, Dependency Review and every SARIF upload behind a green run. Re-run the job."
+            exit 1
+          fi
+          if [ -z "$VIS" ] || [ "$VIS" = "null" ]; then
+            echo "::error::Preflight read repository metadata but it carried no visibility field, so the code-scanning decision has no basis. Failing closed."
+            exit 1
+          fi
+          # An EMPTY Advanced Security field is an ANSWER (the repo has no GHAS), not a
+          # failure to reach the API -- the exit status above is what separates the two.
+          if ! GHAS="$(probe '.security_and_analysis.advanced_security.status')"; then
+            echo "::error::Preflight could not read the Advanced Security status from the GitHub API after 3 attempts. Failing closed rather than assuming it is off."
+            exit 1
+          fi
+          if [ -z "$GHAS" ] || [ "$GHAS" = "null" ]; then
+            GHAS="disabled"
+          fi
+
           if [ "$VIS" = "public" ] || [ "$GHAS" = "enabled" ]; then
             echo "code_scanning=true" >> "$GITHUB_OUTPUT"
           else
@@ -159,6 +210,9 @@ jobs:
             echo "- visibility: \`$VIS\`"
             echo "- advanced_security: \`$GHAS\`"
             echo "- dependabot: \`$ACTOR\`"
+            echo ""
+            echo "Both values were READ from the API, not defaulted: an unreachable API fails"
+            echo "this job instead of reporting that code scanning is unavailable."
             echo ""
             echo "When code scanning is unavailable, SARIF-upload / CodeQL /"
             echo "Dependency-Review steps are skipped (not failed); scanners still gate."
@@ -191,7 +245,14 @@ jobs:
       - name: Install Semgrep
         # Pinned to an exact version for reproducible scans. Bump deliberately
         # (or via Dependabot 'pip') rather than floating across releases.
+        #
+        # PYTHONSAFEPATH keeps the working directory off `sys.path`. `python -m pip` resolves
+        # `pip` through `sys.path`, whose first entry is the CWD -- here the repository
+        # checkout -- so a file named `pip.py` in the tree would shadow the real pip and run
+        # its module body as this job, before any install happens.
         run: python -m pip install "semgrep==1.163.0"
+        env:
+          PYTHONSAFEPATH: "1"
 
       - name: Scan application and workflow code
         # `--severity` is a FILTER, and it is repeatable. A single `--severity WARNING`
@@ -292,6 +353,15 @@ jobs:
         #     COULD have run. Fail closed and loud, so a transient error never silently
         #     drops Snyk coverage behind a green check.
         # Snyk stays a hard gate on real findings whenever the token authenticates.
+        #
+        # The classifier is what makes that split real, so every alternative below has to be
+        # specific to an auth rejection. A bare `401` is not: it matched those three digits
+        # ANYWHERE in the output -- inside a request id, a trace id, a `host:8401` -- and each
+        # collision routed an outage to the SKIP branch, dropping the gate behind a green
+        # check and sending the maintainer to rotate a perfectly healthy token. `401` now
+        # only counts with HTTP context around it, and the loose `not recognized` (which also
+        # matches a shell's "is not recognized as an internal or external command") is gone.
+        # Keep this expression identical in both Snyk jobs; a test asserts that it is.
         run: |
           set +e
           auth_out="$(snyk auth "$SNYK_TOKEN" 2>&1)"
@@ -299,7 +369,7 @@ jobs:
           set -e
           if [ "$auth_rc" -eq 0 ]; then
             echo "ok=true" >> "$GITHUB_OUTPUT"
-          elif printf '%s' "$auth_out" | grep -qiE 'SNYK-0005|401|authentication error|not recognized|not provisioned'; then
+          elif printf '%s' "$auth_out" | grep -qiE 'SNYK-0005|authentication error|not provisioned|401 unauthorized|unauthorized \(401\)|http(/[0-9.]+)? 401'; then
             echo "ok=false" >> "$GITHUB_OUTPUT"
             {
               echo "### Snyk Code skipped - SNYK_TOKEN not usable"
@@ -431,7 +501,7 @@ jobs:
           set -e
           if [ "$auth_rc" -eq 0 ]; then
             echo "ok=true" >> "$GITHUB_OUTPUT"
-          elif printf '%s' "$auth_out" | grep -qiE 'SNYK-0005|401|authentication error|not recognized|not provisioned'; then
+          elif printf '%s' "$auth_out" | grep -qiE 'SNYK-0005|authentication error|not provisioned|401 unauthorized|unauthorized \(401\)|http(/[0-9.]+)? 401'; then
             echo "ok=false" >> "$GITHUB_OUTPUT"
             {
               echo "### Snyk Open Source skipped - SNYK_TOKEN not usable"

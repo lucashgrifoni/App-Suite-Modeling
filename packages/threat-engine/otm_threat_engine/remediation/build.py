@@ -15,6 +15,7 @@ from otm_explainability import (
 )
 
 from otm_threat_engine.remediation.classify import (
+    ComponentIndex,
     classify_threat,
     effort_for_threat,
     impact_level_from_risk,
@@ -67,8 +68,10 @@ def _item_from_threat(
     methodology: ThreatModelMethodology,
     seq: int,
     exp_seq_ref: list[int],
+    *,
+    index: ComponentIndex,
 ) -> BacklogItem:
-    rid, ctrl, cat, layer = classify_threat(threat, doc, methodology)
+    rid, ctrl, cat, layer = classify_threat(threat, doc, methodology, index=index)
     effort = effort_for_threat(threat, rid)
     impact = impact_level_from_risk(threat)
     score = _risk_score(threat)
@@ -76,12 +79,9 @@ def _item_from_threat(
     urgent = plab == "urgent"
 
     comps: list[str] = []
-    labels: list[str] = []
     if threat.target_component_id:
         comps.append(threat.target_component_id)
-    if doc:
-        by_id = {c.id: c.name for c in doc.components}
-        labels = [by_id[c] for c in comps if c in by_id]
+    labels = [index.names[c] for c in comps if c in index.names]
 
     owner, owner_expl = _owner_for(layer, cat, ctrl)
 
@@ -352,11 +352,13 @@ def _collect_backlog_items(result: AnalysisResult, doc: ThreatModelDocument | No
     items: list[BacklogItem] = []
     n = 0
     exp_seq_ref = [0]
+    # Uma passagem por `doc.components`, não uma por ameaça: ver `ComponentIndex`.
+    index = ComponentIndex.of(doc)
     for t in result.heuristic_threats:
         if t.skipped_as_duplicate:
             continue
         n += 1
-        items.append(_item_from_threat(t, doc, result.methodology, n, exp_seq_ref))
+        items.append(_item_from_threat(t, doc, result.methodology, n, exp_seq_ref, index=index))
     for i, sf in enumerate(result.structural_findings):
         items.append(_item_from_structural(sf.code, sf.message, i, exp_seq_ref))
     for i, tf in enumerate(result.trust_boundary_findings):
@@ -416,10 +418,14 @@ def build_remediation_backlog(
             top_5_action_ids=[],
         )
 
+    # Índice em vez de varrimento: `_sort_score` corre dentro de `sorted()`, portanto o
+    # `next(...)` linear que estava aqui percorria todas as heurísticas uma vez por item —
+    # 8400 itens x 14 000 ameaças num modelo de 2000 entidades, o custo dominante do pedido.
+    threats_by_id = {h.id: h for h in result.heuristic_threats}
+
     def _sort_score(it: BacklogItem) -> float:
         if it.related_findings and it.related_findings[0].kind == "heuristic_threat":
-            hid = it.related_findings[0].id
-            ht = next((h for h in result.heuristic_threats if h.id == hid), None)
+            ht = threats_by_id.get(it.related_findings[0].id)
             return _risk_score(ht) if ht else 0.0
         return {"urgent": 22.0, "high": 16.0, "medium": 10.0, "low": 5.0}[it.priority_label]
 

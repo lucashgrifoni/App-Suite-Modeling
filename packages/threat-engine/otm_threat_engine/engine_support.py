@@ -22,10 +22,26 @@ __all__ = [
 
 
 def existing_threat_keys(doc: ThreatModelDocument) -> set[tuple[str | None, str | None, str]]:
-    keys: set[tuple[str | None, str | None, str]] = set()
-    for t in doc.threats:
-        keys.add((t.target_component_id, t.target_data_flow_id, t.stride.value))
-    return keys
+    """Cobertura já declarada no documento — e só o que traz uma avaliação de risco a declara.
+
+    A chave de cobertura era `(componente, fluxo, stride)` e mais nada: o conteúdo da ameaça
+    declarada nunca era consultado. `Threat.risk` é opcional, portanto quatro linhas — id,
+    título "n/a", stride e alvo — bastavam para marcar as heurísticas correspondentes como
+    `skipped_as_duplicate`. E `skipped_as_duplicate` é filtro de exclusão duro em
+    `analysis_diff`, logo essas ameaças eram removidas **antes** de o diff ser construído: o
+    gate de drift nunca as via, `unranked_threat_ids` nunca as reportava, e o veredito passava
+    de "3 ameaças HIGH novas, exit 3" para "No new or worsened threats", exit 0.
+
+    O ficheiro julgado pelo gate é escrito pelo próprio autor do PR, por isso a única defesa
+    possível é exigir que a declaração custe alguma coisa. `RiskAssessment` obriga a
+    `likelihood` e `impact` (1–5), ou seja, quem declara cobertura tem de escrever um número
+    que o revisor vê no diff. Uma entrada sem risco deixa de esconder o que quer que seja: a
+    heurística fica activa e o gate volta a julgá-la.
+
+    É a mesma falha que o projecto já fechou para `methodology:` — uma linha dentro do
+    artefacto em revisão a desarmar o controlo que o revê.
+    """
+    return {(t.target_component_id, t.target_data_flow_id, t.stride.value) for t in doc.threats if t.risk is not None}
 
 
 def _active_risk_scores(heuristics: list[HeuristicThreat]) -> list[float]:

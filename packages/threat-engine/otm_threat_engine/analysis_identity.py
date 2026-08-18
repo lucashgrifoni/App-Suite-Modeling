@@ -29,8 +29,13 @@ Two facts about the engine make that enough, and both are pinned by tests:
    `strides_for_component` never returns an empty tuple; noise suppression *flags*
    `skipped_as_duplicate` rather than dropping the record). So a component the analysis never
    names is a component that did not exist when the analysis ran — a staleness signal that a
-   title comparison cannot see. The one lens that summarises instead of enumerating is named in
-   `_SUMMARISING_METHODOLOGIES`.
+   title comparison cannot see. Every lens holds this: a lens adds heuristics, notes and
+   insight blocks, and none removes. `cia_die` used to be the exception — it returned the ten
+   highest-scoring actives and dropped the rest — and this module carried a
+   `_SUMMARISING_METHODOLOGIES` exemption for it. That truncation was a defect, not a
+   methodology: it also emptied the CI drift gate, the SARIF upload and the premium report.
+   It now keeps every heuristic and expresses the top ten as a `methodology_insights` block,
+   so the exemption is gone and `cia_die` is held to fact 1 like every other lens.
 2. No heuristic ever targets an entity absent from the document it was produced from, so an
    analysis that names one was produced from a different document.
 
@@ -42,7 +47,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from otm_core_schema import ThreatModelDocument, ThreatModelMethodology
+from otm_core_schema import ThreatModelDocument
 
 from otm_threat_engine.result import AnalysisResult, HeuristicThreat, TrustBoundaryFinding
 
@@ -51,14 +56,6 @@ from otm_threat_engine.result import AnalysisResult, HeuristicThreat, TrustBound
 #: shared, they collide on catalog ids like `api`, `db`, `user`) and the same system across
 #: renames, prose edits and growth (>= 0.79). See `system_overlap`.
 MIN_SHARED_SHAPE = 2 / 3
-
-#: Lenses that return a *selection* of the heuristics instead of all of them, breaking fact 1 of
-#: the module docstring. `cia_die` keeps the ten highest-scoring active threats, so most
-#: components of a fresh analysis go unnamed and "component the analysis never saw" stops meaning
-#: "component added after the analysis". Measured over every model in the repository against every
-#: methodology: `cia_die` is the only one, and `test_p2r4_identity_shared.py` fails if that
-#: changes rather than letting a new lens quietly cause false refusals.
-_SUMMARISING_METHODOLOGIES = frozenset({ThreatModelMethodology.CIA_DIE})
 
 
 def _threat_shape(threat: HeuristicThreat) -> set[str]:
@@ -157,8 +154,10 @@ def unanalysed_component_ids(document: ThreatModelDocument, analysis: AnalysisRe
     This is the staleness signal a title comparison cannot produce: an analysis of revision 1
     references a strict subset of revision 2's components, so every other pairing check passes
     while the report inventories the new component and reports no threat against it.
+
+    No methodology is exempt. The exemption that used to sit here existed only because the
+    `cia_die` lens truncated its own output; the lens now keeps every heuristic, so every lens
+    names every component and a gap here means the analysis really is older than the document.
     """
-    if analysis.methodology in _SUMMARISING_METHODOLOGIES:
-        return []
     seen = {threat.target_component_id for threat in analysis.heuristic_threats if threat.target_component_id}
     return sorted({component.id for component in document.components} - seen)

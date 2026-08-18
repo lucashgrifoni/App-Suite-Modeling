@@ -23,14 +23,17 @@
 #   - On push, the web build emits an SLSA build-provenance attestation for the
 #     UI build output. It is skipped on pull_request.
 #
-# Harden-Runner egress:
-#   - Start with `egress-policy: audit` for 2-4 weeks per repository, then
-#     switch to `block` with the observed `allowed-endpoints` allowlist.
+# Harden-Runner egress — CURRENT STATE: audit, which observes egress and blocks nothing.
+#   - The `block` transition and its ordering are tracked in the header of
+#     security-ci-cd.yml; it needs the per-job `allowed-endpoints` data from the
+#     Harden-Runner insights page, not another decision.
 #
 # Secrets: none.
 
 name: GitHub CI/CD
 
+# Both branch allowlists are deliberately IDENTICAL: a branch that is worth building after a
+# merge is worth building before one. See the note in security-ci-cd.yml; a test asserts it.
 on:
   pull_request:
     branches:
@@ -40,7 +43,6 @@ on:
     branches:
       - main
       - master
-      - develop
   workflow_dispatch:
   merge_group:
 
@@ -92,6 +94,28 @@ jobs:
 
       - name: Ruff (format)
         run: ruff format --check packages apps tests
+
+      # SAST and SCA for the Python side. docs/CI_AND_SECURITY_EVIDENCE.md described both of
+      # these as blocking gates in this job while neither existed in any workflow — the
+      # project's own security-evidence document asserting a control nobody ran. They are
+      # implemented here rather than deleted from the document, because both are clean today
+      # (verified: bandit exit 0, pip-audit "No known vulnerabilities found"), so the claim
+      # costs nothing to make true and the coverage is worth having.
+      - name: Bandit (SAST)
+        run: python -m bandit -r packages apps -ll -q
+
+      - name: pip-audit (SCA)
+        # Pinned like semgrep: an SCA gate that floats across releases changes its own verdict.
+        # Installed into its OWN virtualenv on purpose. Dropping pip-audit into the environment
+        # the previous steps built would let its dependency requirements resolve against the
+        # project's, quietly moving a package that ruff, mypy and pytest are about to run on --
+        # a scanner that perturbs what it is measuring. `pip_audit .` audits the project's
+        # resolved tree from pyproject.toml, so the tool's own dependencies stay out of scope.
+        run: |
+          set -euo pipefail
+          python -m venv "${RUNNER_TEMP}/pip-audit-venv"
+          "${RUNNER_TEMP}/pip-audit-venv/bin/python" -m pip install --quiet "pip-audit==2.10.1"
+          "${RUNNER_TEMP}/pip-audit-venv/bin/python" -m pip_audit --desc on -S .
 
       - name: Mypy (monorepo)
         run: |
@@ -156,6 +180,15 @@ jobs:
       - name: Install UI dependencies
         working-directory: apps/web
         run: npm ci
+
+      # The Node half of the same gap: claimed as a blocking gate in
+      # docs/CI_AND_SECURITY_EVIDENCE.md, absent from every workflow. `moderate` rather than
+      # `critical` because the finding that made this worth implementing (nanoid, HIGH) sat
+      # below `critical` and had never reddened a build. Clean at the time of writing:
+      # `npm audit --audit-level=moderate` reports 0 vulnerabilities.
+      - name: npm audit (SCA)
+        working-directory: apps/web
+        run: npm audit --audit-level=moderate
 
       # Mirror of the Python `OpenAPI contract not stale` gate for the web side:
       # fails if the committed generated TS types drift from contracts/openapi.json.
@@ -352,10 +385,17 @@ jobs:
 
       - name: Run the action against an identical baseline (gate must pass)
         id: gated
+        # `baseline-ref: worktree` is deliberate: what this step asserts is the gate's VERDICT
+        # logic — a model compared against itself must not fail a build — so the baseline has
+        # to be that same file, not whatever `examples/minimal.otm.yaml` happens to be on the
+        # base branch. Where the baseline is READ FROM (base revision vs. this checkout, and
+        # the refusal to issue a verdict when the revision cannot be read) is covered by
+        # tests/test_cicd_pipeline_invariants.py, which drives the real step body directly.
         uses: ./
         with:
           model: examples/minimal.otm.yaml
           baseline: examples/minimal.otm.yaml
+          baseline-ref: worktree
           fail-on: low
           fail-on-risk-increase: "true"
           sarif-out: ""

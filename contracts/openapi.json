@@ -77,7 +77,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "ApiKeyHeader": []
+          },
+          {
+            "BearerToken": []
+          }
+        ]
       }
     },
     "/v1/models/validate": {
@@ -119,7 +127,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "ApiKeyHeader": []
+          },
+          {
+            "BearerToken": []
+          }
+        ]
       }
     },
     "/v1/models/precheck": {
@@ -161,7 +177,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "ApiKeyHeader": []
+          },
+          {
+            "BearerToken": []
+          }
+        ]
       }
     },
     "/v1/models/diff": {
@@ -203,7 +227,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "ApiKeyHeader": []
+          },
+          {
+            "BearerToken": []
+          }
+        ]
       }
     },
     "/v1/models/compare": {
@@ -245,7 +277,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "ApiKeyHeader": []
+          },
+          {
+            "BearerToken": []
+          }
+        ]
       }
     },
     "/v1/models/recommend-methodology": {
@@ -287,7 +327,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "ApiKeyHeader": []
+          },
+          {
+            "BearerToken": []
+          }
+        ]
       }
     },
     "/v1/models/analyze": {
@@ -329,7 +377,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "ApiKeyHeader": []
+          },
+          {
+            "BearerToken": []
+          }
+        ]
       }
     },
     "/v1/analyses/diff": {
@@ -371,7 +427,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "ApiKeyHeader": []
+          },
+          {
+            "BearerToken": []
+          }
+        ]
       }
     },
     "/v1/templates": {
@@ -382,6 +446,14 @@
         "summary": "List templates",
         "description": "Built-in templates from `otm_industry_packs` (IDs used with `otm init -t`). Optional query filters combine with AND semantics.",
         "operationId": "get_templates_v1_templates_get",
+        "security": [
+          {
+            "ApiKeyHeader": []
+          },
+          {
+            "BearerToken": []
+          }
+        ],
         "parameters": [
           {
             "name": "category",
@@ -492,6 +564,14 @@
         "summary": "Get template metadata",
         "description": "Detalhe de um template embutido (metadados do manifest).",
         "operationId": "get_template_detail_v1_templates__template_id__get",
+        "security": [
+          {
+            "ApiKeyHeader": []
+          },
+          {
+            "BearerToken": []
+          }
+        ],
         "parameters": [
           {
             "name": "template_id",
@@ -537,6 +617,14 @@
         "summary": "Instantiate model from template",
         "description": "Loads template YAML and returns the validated canonical document.",
         "operationId": "instantiate_template_v1_templates__template_id__instantiate_post",
+        "security": [
+          {
+            "ApiKeyHeader": []
+          },
+          {
+            "BearerToken": []
+          }
+        ],
         "parameters": [
           {
             "name": "template_id",
@@ -613,7 +701,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "ApiKeyHeader": []
+          },
+          {
+            "BearerToken": []
+          }
+        ]
       }
     },
     "/v1/imports/openapi": {
@@ -655,7 +751,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "ApiKeyHeader": []
+          },
+          {
+            "BearerToken": []
+          }
+        ]
       }
     },
     "/v1/imports/terraform": {
@@ -697,7 +801,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "ApiKeyHeader": []
+          },
+          {
+            "BearerToken": []
+          }
+        ]
       }
     },
     "/v1/imports/kubernetes": {
@@ -739,7 +851,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "ApiKeyHeader": []
+          },
+          {
+            "BearerToken": []
+          }
+        ]
       }
     },
     "/v1/remediation/backlog": {
@@ -750,6 +870,14 @@
         "summary": "Generate remediation backlog",
         "description": "Body: canonical `document`; optional `analysis` (`AnalysisResult`). If `analysis` is omitted, set `run_analysis: true` to run the engine.",
         "operationId": "post_remediation_backlog_v1_remediation_backlog_post",
+        "security": [
+          {
+            "ApiKeyHeader": []
+          },
+          {
+            "BearerToken": []
+          }
+        ],
         "parameters": [
           {
             "name": "format",
@@ -874,7 +1002,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "ApiKeyHeader": []
+          },
+          {
+            "BearerToken": []
+          }
+        ]
       }
     }
   },
@@ -4288,6 +4424,19 @@
         ],
         "title": "WizardSignalTraceEntry",
         "description": "Uma linha auditável: o que foi declarado, efeito e onde se reflecte."
+      }
+    },
+    "securitySchemes": {
+      "ApiKeyHeader": {
+        "type": "apiKey",
+        "description": "API key for every `/v1` operation. Required when the server sets `OTM_API_KEY`; ignored when it does not. See `docs/features/API.md` and `docs/architecture/DEPLOYMENT_INVARIANTS.md`.",
+        "in": "header",
+        "name": "X-OTM-API-Key"
+      },
+      "BearerToken": {
+        "type": "http",
+        "description": "The same `OTM_API_KEY` secret sent as a bearer token. Required when the server sets `OTM_API_KEY`; ignored when it does not. See `docs/features/API.md` and `docs/architecture/DEPLOYMENT_INVARIANTS.md`.",
+        "scheme": "bearer"
       }
     }
   },

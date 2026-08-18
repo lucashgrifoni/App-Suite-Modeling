@@ -9,11 +9,26 @@ from __future__ import annotations
 from otm_core_schema import ThreatModelDocument
 from otm_core_schema.enums import AssetKind
 
+#: Campo booleano do modelo → a palavra que o mesmo facto teria em prosa.
+#:
+#: As âncoras abaixo são lexicais, e o corpus lia apenas texto livre: metadados, componentes e
+#: ativos. Um modelo que declara a sua natureza em campos estruturados — `privilege_level: admin`,
+#: `supports_file_upload: true` — não tinha âncora nenhuma, e o filtro descartava exactamente os
+#: controlos que esse modelo precisava. Traduzir o campo para a palavra correspondente mantém o
+#: heurístico como está e deixa-o ver o que já estava declarado.
+_STRUCTURED_COMPONENT_SIGNALS: tuple[tuple[str, str], ...] = (("supports_admin_operations", "admin"),)
+_STRUCTURED_FLOW_SIGNALS: tuple[tuple[str, str], ...] = (("supports_file_upload", "upload"),)
+
 
 def _corpus(doc: ThreatModelDocument) -> str:
     parts = [doc.metadata.title, doc.metadata.summary or ""]
     for c in doc.components:
         parts.append(f"{c.id} {c.name} {c.description or ''} {c.responsibility or ''} {c.technology or ''}")
+        parts.append(c.privilege_level or "")
+        parts.extend(word for field, word in _STRUCTURED_COMPONENT_SIGNALS if getattr(c, field) is True)
+    for f in doc.data_flows:
+        parts.append(f"{f.id} {f.name or ''} {f.description or ''}")
+        parts.extend(word for field, word in _STRUCTURED_FLOW_SIGNALS if getattr(f, field) is True)
     for a in doc.assets:
         parts.append(f"{a.name} {a.asset_kind.value} {a.description or ''}")
     return " ".join(parts).lower()

@@ -6,6 +6,16 @@
 #       hooks:
 #         - id: otm-validate
 #
+# `rev: v7.9.0` is a git TAG, and a tag can be moved by anyone who can push to this repository.
+# This hook runs on your developers' machines, with their credentials, on every commit, so
+# prefer the commit SHA — pre-commit accepts one, and `pre-commit autoupdate --freeze` writes
+# that form for you:
+#
+#       rev: <40-character commit SHA>  # frozen: v7.9.0
+#
+# This repository holds itself to that rule: every GitHub Action it uses, and its own
+# ruff hook in .pre-commit-config.yaml, are pinned to commit SHAs.
+#
 # `language: python` makes pre-commit install this project from `pyproject.toml` into its own
 # isolated environment. That works without `additional_dependencies` because the CLI runtime
 # (Typer, Rich, Click) is a base dependency, not an extra.

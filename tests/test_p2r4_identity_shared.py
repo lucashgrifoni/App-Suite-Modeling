@@ -15,10 +15,12 @@ depends on, because a change to either turns a correct guard into a wrong one si
 2. no heuristic targets an entity the document does not define, which is what makes a foreign
    entity proof of a different document.
 
-Fact 1 has exactly one exception — the `cia_die` lens returns a top-ten selection instead of an
-enumeration — and `_SUMMARISING_METHODOLOGIES` exists for it. If another lens starts summarising,
-`test_every_methodology_except_the_summarising_one_names_every_component` fails here rather than
-turning into false refusals in front of a user.
+Fact 1 holds for every lens: a lens adds heuristics, notes and insight blocks, and none removes.
+`cia_die` used to be an exception — it returned a top-ten selection and this module carried a
+`_SUMMARISING_METHODOLOGIES` exemption for it — but that truncation was a defect (it also emptied
+the SARIF upload and the CI drift gate) and has been removed. If a lens starts summarising again,
+`test_every_methodology_names_every_component` fails here rather than turning into false refusals
+in front of a user.
 """
 
 from __future__ import annotations
@@ -71,8 +73,8 @@ def saas_analysis(saas_doc: ThreatModelDocument) -> AnalysisResult:
 # --- fact 1: an analysis names every component of its own document -----------------------------
 
 
-@pytest.mark.parametrize("methodology", [m for m in ThreatModelMethodology if m is not ThreatModelMethodology.CIA_DIE])
-def test_every_methodology_except_the_summarising_one_names_every_component(
+@pytest.mark.parametrize("methodology", list(ThreatModelMethodology))
+def test_every_methodology_names_every_component(
     saas_doc: ThreatModelDocument, methodology: ThreatModelMethodology
 ) -> None:
     analysis = analyze_document(saas_doc, methodology=methodology)
@@ -80,22 +82,35 @@ def test_every_methodology_except_the_summarising_one_names_every_component(
     assert unanalysed_component_ids(saas_doc, analysis) == []
 
 
-def test_the_summarising_lens_really_does_drop_components(saas_doc: ThreatModelDocument) -> None:
-    """Why `cia_die` is excluded, pinned so the exception cannot become dead weight.
+def test_the_executive_lens_names_every_component_instead_of_being_exempted(
+    saas_doc: ThreatModelDocument,
+) -> None:
+    """Replaces `test_the_summarising_lens_really_does_drop_components`.
 
-    It keeps the ten highest-scoring active threats, so most components go unnamed in a
-    perfectly fresh analysis. Reading that as staleness would refuse a correct pair.
+    That test asserted `cia_die` named a *strict subset* of the components, and the
+    `_SUMMARISING_METHODOLOGIES` exemption existed to stop that subset reading as staleness.
+    Both were consequences of the lens truncating its own analysis to ten threats, which also
+    emptied the SARIF, the premium report and the CI drift gate. The lens now keeps every
+    heuristic and expresses the top ten as a `methodology_insights` block, so fact 1 holds for
+    it like for every other lens and the exemption is gone: a component missing from a
+    `cia_die` analysis once again means the analysis predates it.
     """
     analysis = analyze_document(saas_doc, methodology=ThreatModelMethodology.CIA_DIE)
     named = {t.target_component_id for t in analysis.heuristic_threats if t.target_component_id}
 
-    assert named < {c.id for c in saas_doc.components}
+    assert named == {c.id for c in saas_doc.components}
 
 
-def test_the_summarising_lens_is_exempt_from_the_staleness_signal(saas_doc: ThreatModelDocument) -> None:
+def test_the_executive_lens_still_reports_a_component_added_after_the_analysis(
+    saas_doc: ThreatModelDocument,
+) -> None:
+    """The staleness signal the exemption used to blind: it must fire under `cia_die` too."""
     analysis = analyze_document(saas_doc, methodology=ThreatModelMethodology.CIA_DIE)
+    grown = _doc(
+        {**_saas(), "components": [*_saas()["components"], {"id": "added_later", "name": "New", "kind": "process"}]}
+    )
 
-    assert unanalysed_component_ids(saas_doc, analysis) == []
+    assert unanalysed_component_ids(grown, analysis) == ["added_later"]
 
 
 @pytest.mark.parametrize("pack_id", ["cloud_native", "finance", "saas", "telecom", "transport"])

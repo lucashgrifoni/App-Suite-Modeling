@@ -41,14 +41,26 @@ def _collect_call_route(node: Any, hits: list[tuple[str, str]]) -> None:
 
 
 def _walk(node: Any, hits: list[tuple[str, str]]) -> None:
-    if isinstance(node, dict):
-        if node.get("type") == "CallExpression":
-            _collect_call_route(node, hits)
-        for v in node.values():
-            _walk(v, hits)
-    elif isinstance(node, list):
-        for x in node:
-            _walk(x, hits)
+    """Percorre a árvore com uma pilha explícita — a profundidade custa heap, não stack.
+
+    A versão recursiva gastava uma frame por nó, por isso a profundidade da árvore era a
+    profundidade da pilha do interpretador: `a+a+a…` com mil termos (2 KB de JavaScript, e o
+    ficheiro é de quem estamos a analisar precisamente por não confiarmos nele) rebentava com
+    `RecursionError` para fora do comando. Limitar a profundidade teria trocado o crash por rotas
+    silenciosamente em falta; uma pilha explícita não perde nenhuma.
+
+    Os filhos entram invertidos porque `pop()` tira do fim: a ordem de visita — e portanto a ordem
+    das rotas devolvidas — fica idêntica à da travessia recursiva.
+    """
+    stack: list[Any] = [node]
+    while stack:
+        current = stack.pop()
+        if isinstance(current, dict):
+            if current.get("type") == "CallExpression":
+                _collect_call_route(current, hits)
+            stack.extend(reversed(current.values()))
+        elif isinstance(current, list):
+            stack.extend(reversed(current))
 
 
 def collect_express_routes_ast_lite(source: str) -> list[tuple[str, str]]:
@@ -62,10 +74,13 @@ def collect_express_routes_ast_lite(source: str) -> list[tuple[str, str]]:
         import esprima
     except ImportError:
         return []
+    hits: list[tuple[str, str]] = []
     try:
         tree = esprima.parseScript(source, tolerant=True, loc=False)
+        _walk(tree.toDict() if hasattr(tree, "toDict") else tree, hits)
     except Exception:
+        # O contrato do módulo é degradação total para a heurística regex. A conversão e a
+        # travessia estavam fora deste `try` enquanto o parse estava dentro, por isso um ficheiro
+        # que o parser aceitava mas cuja árvore rebentava a travessia saía como traceback.
         return []
-    hits: list[tuple[str, str]] = []
-    _walk(tree.toDict() if hasattr(tree, "toDict") else tree, hits)
     return hits

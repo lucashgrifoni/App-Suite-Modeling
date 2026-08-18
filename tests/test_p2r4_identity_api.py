@@ -232,7 +232,7 @@ def test_a_same_title_cross_pair_reports_no_title_error(
     ["stride", "linddun", "nist_data_centric", "octave_allegro", "cia_die", "pasta", "plot4ai"],
 )
 def test_every_methodology_still_pairs_with_its_own_document(client: TestClient, methodology: str) -> None:
-    """`cia_die` returns a top-ten selection, so most components go unnamed in a *fresh* run."""
+    """Every lens, `cia_die` included, must still pair with the document it was produced from."""
     document = _document(client, _TEMPLATE_A)
     analysis = _analysis(client, document, methodology=methodology)
 

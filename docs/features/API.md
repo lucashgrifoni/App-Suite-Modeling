@@ -25,13 +25,29 @@ Contrato exportado, gate anti-stale, goldens HTTP e E2E híbrido: ver **`docs/ar
 
 | Variável | Efeito |
 |----------|--------|
-| `OTM_API_KEY` | Se definida (não vazia), todos os pedidos a **`/v1/*`** exigem **`X-OTM-API-Key: <valor>`** ou **`Authorization: Bearer <valor>`**. Rotas como `/health`, `/docs`, `/openapi.json` permanecem sem chave. O rate limit é aplicado **antes** da verificação da chave, por isso um 401 gasta orçamento como qualquer outro pedido — ver `OTM_RATE_LIMIT`. |
+| `OTM_API_KEY` | Se definida (não vazia), todos os pedidos a **`/v1/*`** exigem **`X-OTM-API-Key: <valor>`** ou **`Authorization: Bearer <valor>`**. Rotas como `/health`, `/docs`, `/openapi.json` permanecem sem chave. O rate limit é aplicado **antes** da verificação da chave, por isso um 401 gasta orçamento como qualquer outro pedido — ver `OTM_RATE_LIMIT`. O perímetro cobre `/v1` **como o router o resolve**, ou seja também num deployment em sub-caminho (`uvicorn --root-path /api`, `FastAPI(root_path=...)`, proxy que corta o prefixo). |
 | `OTM_RATE_LIMIT` | Expressão no formato [`limits`](https://limits.readthedocs.io/) (ex.: `120/minute`). Se definida, aplica-se como limite global a **todas** as rotas, incluindo `/health` e `/v1/*`, e a **todos** os pedidos, autenticados ou não: o limitador corre por fora da verificação de chave de API, por isso um 401 (`API_KEY_REQUIRED`) conta para o orçamento tal como um 200, e uma vez esgotado o orçamento a resposta é 429 sem sequer se avaliar a chave. Contado por chamador (ver `OTM_TRUSTED_PROXY`). Uma expressão malformada — ou `0/...`, que não aceitaria pedido nenhum — faz a app falhar no arranque, em vez de desactivar (ou trancar) o controlo em silêncio. O contador é em memória do processo: com vários workers o limite é por worker. |
 | `OTM_RATE_LIMIT_DISABLED` | `1` / `true` — desativa o rate limit mesmo em staging/produção. |
 | `OTM_TRUSTED_PROXY` | Declaração obrigatória em `staging`/`production` quando o limite está ativo: sem ela a app **não arranca**. `1`/`true` — a API está atrás de um reverse proxy do operador, e o endereço resolvido de `X-Forwarded-For` conta como identidade do chamador (o limite é por chamador; **requer flags específicas do uvicorn**). `0`/`false` — não há tal proxy, e todos os pedidos com esse cabeçalho partilham **um** balde, ou seja o limite passa a ser o orçamento de todos eles juntos e um cliente ocupado devolve 429 aos outros. Em qualquer dos casos, rodar o cabeçalho não cria um balde novo. Ver `docs/architecture/DEPLOYMENT_INVARIANTS.md`. |
 | (sem `OTM_RATE_LIMIT` e sem `OTM_RATE_LIMIT_DISABLED`) | Em **`development`** (defeito de `OTM_ENV`): sem limite. Em **staging** / **production**: limite por defeito **`120/minute`**. |
 
 Sem `OTM_API_KEY`, o comportamento permanece o de API aberta na rede onde estiver exposta — ver **`docs/architecture/DEPLOYMENT_INVARIANTS.md`**.
+
+**O valor de `OTM_API_KEY` é um segredo, não um interruptor.** `false`, `off`, `0`, `1`, `true`,
+`none`, `null`, `disabled`, `changeme` e companhia **abortam o arranque** com um erro nomeado: lidas
+à letra, cada uma passaria a ser o segredo partilhado de `/v1` — adivinhado à primeira ou segunda
+tentativa — enquanto a linha de arranque continuaria a dizer `api_key=enforced`. Para **desligar** o
+perímetro, remova a variável (defini-la vazia mantém o perímetro ligado e sem credencial possível,
+`API_KEY_MISCONFIGURED`); para o **ligar**, use pelo menos **16** carateres de uma fonte aleatória —
+`python -c "import secrets; print(secrets.token_urlsafe(32))"`. Um segredo mais curto é aceite (há
+instalações a correr com um) mas o arranque passa a escrever uma linha `api_key_weak` a dizê-lo, para
+que `api_key=enforced` deixe de ser indistinguível entre 32 bytes aleatórios e a letra `x`.
+
+O contrato declara o perímetro: `components.securitySchemes` traz `ApiKeyHeader`
+(`X-OTM-API-Key`) e `BearerToken`, e cada operação `/v1` lista os dois como alternativas. É
+**documentação** — a aplicação continua a ser feita pelo middleware, e os esquemas não recusam nada
+por si —, mas é o que faz aparecer o botão **Authorize** em `/docs` e o que dá credencial aos
+clientes gerados a partir de `contracts/openapi.json`.
 
 Em `staging`/`production`, os cabeçalhos aceites em CORS são explícitos e incluem `X-OTM-API-Key`, para que um cliente de browser possa autenticar-se com o mecanismo que esta API documenta.
 
@@ -43,6 +59,37 @@ arranque com um erro que o nomeia, em vez de servir 200 sem `Access-Control-Allo
 no preflight enquanto a linha de perímetro continua a dizer `cors_origins=1`. Uma entrada
 malformada recusa a lista inteira: descartar só a má repunha o servidor meio-partido que a
 verificação existe para tornar visível.
+
+## Tamanho da resposta e tecto de entidades
+
+A entrada desta API é limitada em vários eixos (bytes do documento, nós YAML expandidos,
+profundidade, 2 MiB por upload em `/v1/imports`); a **saída** é proporcional ao número de entidades
+do documento, porque o motor produz da ordem de sete ameaças por componente e o `AnalysisResult`
+inteiro é serializado numa resposta construída em memória antes do primeiro byte sair.
+
+A amplificação é **linear** e praticamente constante — medida em `/v1/models/analyze`, com o corpo
+HTTP real como denominador:
+
+| Componentes | Pedido | Resposta | Razão |
+|-------------|--------|----------|-------|
+| 1 005 | 490 KB | 10,5 MB | 22,0x |
+| 2 005 | 974 KB | 21,0 MB | 22,1x |
+| 4 005 | 1 943 KB | 42,1 MB | 22,2x |
+
+Documentos com componentes mais ricos chegam a ~58x. Conte com **~25x, até ~60x no pior caso**, ao
+dimensionar o limite de corpo do gateway que `docs/architecture/DEPLOYMENT_INVARIANTS.md` torna
+obrigatório: é esse limite que delimita a resposta, e sem este número não há como o escolher.
+`/v1/remediation/backlog` e `/v1/exports` têm o mesmo perfil.
+
+| Variável | Efeito |
+|----------|--------|
+| `OTM_MAX_DOCUMENT_ENTITIES` | Tecto de entidades (`components` + `data_flows` + `assets`) por documento submetido. Acima do tecto, **413** `DOCUMENT_TOO_LARGE` antes de o motor correr. Aplica-se a todas as rotas que recebem `document` (`/v1/models/*`, `/v1/exports`, `/v1/remediation/backlog`, `/v1/reports/premium`) e **não** às rotas `/v1/imports/*`. Por definir = sem tecto. Um valor que não seja um inteiro positivo aborta o arranque. |
+
+Não há tecto por omissão, e é uma decisão: um tecto útil teria de estar na ordem dos milhares, e é
+exatamente aí que recusaria trabalho legítimo — um `.tf` de 1,64 MiB, aceite pelo limite de 2 MiB da
+própria rota `/v1/imports/terraform`, produz um rascunho com **30 001 componentes**, e `analyze`
+responde hoje a 4 005 componentes em 3,6 s. Quem precisa do tecto escolhe o número para a sua
+capacidade; quando está ligado, o arranque escreve `document_entity_ceiling`.
 
 ## Endpoints (MVP)
 
@@ -175,6 +222,7 @@ Códigos estáveis usados nas rotas (sempre dentro de `detail`):
 
 `, tabulações) ou só um BOM UTF-8. As três rotas respondem o mesmo para o mesmo ficheiro em branco. Conteúdo presente mas não reconhecido (um comentário, HTML) **não** é este erro: continua a produzir rascunho + `unknowns[]`. |
 | `IMPORT_TOO_LARGE` | 413 | Upload acima do limite de 2 MiB em `/v1/imports/*`. |
+| `DOCUMENT_TOO_LARGE` | 413 | O `document` submetido tem mais entidades do que `OTM_MAX_DOCUMENT_ENTITIES` permite neste deployment. A mensagem nomeia o número enviado, o tecto e a variável, porque o tecto é uma escolha de capacidade do servidor e não um limite do produto. Sem a variável definida não há tecto. |
 | `IMPORT_NOT_UTF8` | 400 | O artefacto não é texto UTF-8. |
 | `IMPORT_ARTIFACT_INVALID` | 400 | O artefacto é texto mas não tem a forma esperada. Inclui o artefacto que faz *parse* e cujos nós não têm o tipo previsto (ex.: `{"openapi":"3.0.0","info":[1]}`, com `info` como lista), que antes escapava como 500. |
 | `TEMPLATE_INVALID` | 422 | Template existe mas o YAML não valida como documento canónico. |

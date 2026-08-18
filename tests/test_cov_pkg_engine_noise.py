@@ -25,11 +25,17 @@ _SUPPRESSIBLE = {StrideCategory.TAMPERING, StrideCategory.ELEVATION_OF_PRIVILEGE
 
 
 def _threat(tid: str, title: str, stride: StrideCategory, *, skipped: bool = False) -> HeuristicThreat:
+    """Every threat here names the same component on purpose.
+
+    Suppression is scoped to the target the `biz_*` finding points at, so a pair with no
+    target is never suppressed and could not exercise the counting guard below.
+    """
     return HeuristicThreat(
         id=tid,
         title=title,
         description="x",
         stride=stride,
+        target_component_id="coupon_store",
         risk=RiskAssessment(likelihood=1, impact=1, score=1.0),
         skipped_as_duplicate=skipped,
     )

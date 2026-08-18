@@ -50,7 +50,19 @@ inputs:
   baseline:
     description: >-
       Baseline `.otm.yaml` to diff against. Required for the drift gate — without it,
-      `fail-on` has nothing to compare and is ignored.
+      `fail-on` has nothing to compare and is ignored. On a pull request this path is
+      read from the BASE branch, not from the pull request's checkout (see `baseline-ref`).
+    required: false
+    default: ""
+
+  baseline-ref:
+    description: >-
+      Git revision the `baseline` path is read from. Empty (the default) resolves it from the
+      pull request's base branch, and falls back to the checkout on events that have no base
+      ref (push, tag, schedule, dispatch). Set `worktree` to read the baseline from the
+      checkout even on a pull request — only safe when that file is protected by CODEOWNERS
+      or branch protection, because otherwise the author being judged can rewrite it.
+      Any other value is used verbatim as a revision (`v1.4.0`, a commit SHA, `origin/main`).
     required: false
     default: ""
 
@@ -98,9 +110,17 @@ runs:
       with:
         python-version: ${{ inputs.python-version }}
 
+    # Deliberately NOT `working-directory: ${{ inputs.working-directory }}`. That directory is
+    # the caller's checkout, which on a pull request is attacker-influenced by construction,
+    # and `python -m pip` resolves `pip` through `sys.path` with the CWD first. A file named
+    # `pip.py` at the root of the repository being scanned would therefore shadow the real
+    # pip and execute its module body as this job — with the caller's GITHUB_TOKEN, secrets
+    # and `$GITHUB_ENV` — before a single package was installed. The install has no reason to
+    # run in that tree at all, so it runs in the runner's temp directory instead, and
+    # PYTHONSAFEPATH keeps the CWD off `sys.path` as a second, independent barrier.
     - name: Install open-threat-model
       shell: bash
-      working-directory: ${{ inputs.working-directory }}
+      working-directory: ${{ runner.temp }}
       run: |
         set -euo pipefail
         if [ -n "${VERSION}" ]; then
@@ -113,6 +133,7 @@ runs:
         echo "otm $(python -c 'import importlib.metadata as m; print(m.version("open-threat-model"))')"
       env:
         VERSION: ${{ inputs.version }}
+        PYTHONSAFEPATH: "1"
 
     - name: Validate model
       shell: bash
@@ -156,10 +177,49 @@ runs:
           exit 0
         fi
 
+        # WHERE the baseline is read from decides whether this gate means anything. Addressed
+        # as a path, it resolves inside the pull request's own checkout — written by the same
+        # author the gate exists to judge. One pull request that both adds the risky component
+        # AND copies the new model over the baseline file turns a tripped gate into
+        # `gate-outcome: passed` and a green check, with no special access and no crafted
+        # input. So the baseline is a REVISION, not a path in the tree: on a pull request it
+        # is read from the base branch, and the copy sitting in the checkout is ignored.
+        baseline_file="${BASELINE#./}"
+        ref="${BASELINE_REF}"
+        if [ "${ref}" = "worktree" ]; then
+          echo "::warning::baseline-ref: worktree — the drift gate is comparing against '${BASELINE}' as it exists in THIS checkout, which the pull request can rewrite in the same commit. Protect that file with CODEOWNERS or branch protection, or leave baseline-ref empty to read it from the base branch."
+        else
+          if [ -z "${ref}" ] && [ -n "${GITHUB_BASE_REF:-}" ]; then
+            ref="origin/${GITHUB_BASE_REF}"
+            # A shallow checkout (the default) has no remote-tracking branch for the base, so
+            # fetch just its tip — and only when it is genuinely missing, because a --depth=1
+            # fetch into a full clone would make it shallow for every later step in the job.
+            # Failure is not fatal here: the `git show` below is the only thing that decides,
+            # and it fails closed.
+            if ! git rev-parse --verify --quiet "${ref}^{commit}" >/dev/null 2>&1; then
+              git fetch --no-tags --depth=1 origin "+refs/heads/${GITHUB_BASE_REF}:refs/remotes/origin/${GITHUB_BASE_REF}" >/dev/null 2>&1 || true
+            fi
+          fi
+          if [ -n "${ref}" ]; then
+            baseline_file="${RUNNER_TEMP:-/tmp}/otm-gate-baseline.otm.yaml"
+            if ! git show "${ref}:./${BASELINE#./}" > "${baseline_file}" 2>/dev/null; then
+              rm -f "${baseline_file}"
+              echo "outcome=not-evaluated" >> "$GITHUB_OUTPUT"
+              echo "::error::Could not read '${BASELINE}' from '${ref}', so the drift gate has no baseline it can trust and refuses to issue a verdict — a green check here would mean 'not measured', not 'no new risk'. Fix one of: give the checkout access to the base branch (actions/checkout with fetch-depth: 0), name the revision explicitly with baseline-ref, or set baseline-ref: worktree to accept the copy in this checkout as the baseline."
+              {
+                echo "### Threat-model drift gate — NOT EVALUATED"
+                echo ""
+                echo "The baseline could not be read from \`${ref}\`."
+              } >> "$GITHUB_STEP_SUMMARY"
+              exit 1
+            fi
+          fi
+        fi
+
         # The gate MUST judge under the same lens and pack the Analyze step used. Without
         # these the gate compared a different threat set than the SARIF it uploads, which
         # could report `passed` on a PR that adds a HIGH threat under the configured lens.
-        args=("${BASELINE}" "${MODEL}" --fail-on "${FAIL_ON}")
+        args=("${baseline_file}" "${MODEL}" --fail-on "${FAIL_ON}")
         [ -n "${METHODOLOGY}" ] && args+=(--methodology "${METHODOLOGY}")
         [ -n "${PACK}" ] && args+=(--pack "${PACK}")
         [ "${RISK_INCREASE}" = "true" ] && args+=(--fail-on-risk-increase)
@@ -204,6 +264,7 @@ runs:
       env:
         MODEL: ${{ inputs.model }}
         BASELINE: ${{ inputs.baseline }}
+        BASELINE_REF: ${{ inputs.baseline-ref }}
         FAIL_ON: ${{ inputs.fail-on }}
         RISK_INCREASE: ${{ inputs.fail-on-risk-increase }}
         METHODOLOGY: ${{ inputs.methodology }}

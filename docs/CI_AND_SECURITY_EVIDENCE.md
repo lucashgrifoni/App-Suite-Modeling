@@ -31,6 +31,14 @@ ruff format packages apps tests
 - Job `python`: `python -m bandit -r packages apps -ll -q` (severidade **medium** e acima; `-q` reduz ruído).
 - Dependência: `bandit>=1.7` no extra `[dev]` do `pyproject.toml` (instalado com `pip install -e ".[dev,cli,api]"` no CI).
 
+> **Este passo foi implementado, não descrito.** Até 2026-08, esta secção afirmava o comando
+> acima como gate do job `python` e **nenhum workflow o executava** — `bandit` estava declarado
+> como dependência de desenvolvimento e nunca era invocado. O passo existe agora em
+> `.github/workflows/github-ci-cd.yml`; a alternativa (apagar a afirmação) foi rejeitada porque
+> o comando passa limpo hoje, de modo que tornar a afirmação verdadeira não custava nada.
+> `tests/test_cicd_pipeline_invariants.py` liga as duas pontas: cada comando que este documento
+> atribui a um job tem de aparecer nesse job, e vice-versa.
+
 ---
 
 ## 1. Mypy no CI (monorepo)
@@ -73,8 +81,19 @@ O comando no `.github/workflows/github-ci-cd.yml` (job `python`) inclui **todos*
 
 ### Thresholds
 
-- **Python:** `python -m pip_audit --desc on -S .` — gate estrito (qualquer vulnerabilidade conhecida falha o CI na árvore resolvida).
-- **Node:** `npm audit --audit-level=critical` e **`npm audit --audit-level=moderate`** (job `web`; após upgrade Vite 6 / Vitest 3 a árvore `apps/web` ficou sem CVEs reportados na resolução actual).
+- **Python:** `python -m pip_audit --desc on -S .` — gate estrito (qualquer vulnerabilidade conhecida falha o CI na árvore resolvida). `pip-audit` é fixado em `pip-audit==2.10.1` e instalado num **virtualenv próprio**, para que as suas dependências não se resolvam contra as do projecto nos passos que correm a seguir.
+- **Node:** **`npm audit --audit-level=moderate`** (job `web`, em `apps/web`, depois de `npm ci`).
+
+> **Estes dois gates foram implementados, não descritos.** Esta secção afirmava-os como gates
+> bloqueantes do CI e **nenhum workflow os executava**: `grep -rniE 'pip.audit|npm audit' .github/`
+> não devolvia nada. Ambos passam limpos hoje (`pip-audit`: *No known vulnerabilities found*;
+> `npm audit --audit-level=moderate`: *found 0 vulnerabilities*), pelo que o custo de tornar a
+> afirmação verdadeira era zero e o de a apagar era perder cobertura real — o achado que motivou
+> a verificação (nanoid, HIGH, hoje corrigido em 3.3.18) estava **abaixo** de `critical`, que é a
+> razão de o limiar Node ser `moderate` e de o antigo `--audit-level=critical` não voltar.
+> Consequência aceite e explícita: qualquer um destes gates pode ficar vermelho por um aviso novo
+> publicado a montante, sem que nada neste repositório tenha mudado. É o comportamento pretendido
+> de um gate de SCA; a política de exceção abaixo é o que o mantém honesto.
 
 ### Política de exceção
 
@@ -155,9 +174,18 @@ API keys/OAuth2/mTLS + testes de autorização + OpenAPI/UI alinhados ao fluxo c
 
 ## 6. Semgrep
 
-- Job `semgrep` no CI: imagem `semgrep/semgrep`, configs **`p/python`**, **`p/typescript`**, **`p/javascript`**, **`p/react`** sobre `packages` e `apps/web/src`.
+- Job `sast-semgrep` em `security-ci-cd.yml`: `semgrep==1.163.0` instalado via pip (fixado), configs `p/security-audit`, `p/github-actions` e `rules/semgrep/appsec-runtime-footguns.yml`, sobre a raiz do repositório.
+- Severidades carregadas: `WARNING` **e** `ERROR` — `--severity` é um filtro repetível, e um único `--severity WARNING` deixaria cair todas as regras de severidade alta.
 - Exclusões: **`.semgrepignore`** na raiz (artefactos, `node_modules`, `.venv`, etc.).
 - Política de triagem, `nosemgrep` e evolução: **[`SEMGREP_POLICY.md`](architecture/SEMGREP_POLICY.md)**.
+
+> **Correção de cobertura declarada.** Esta secção descrevia um job que corria a imagem
+> `semgrep/semgrep` com os packs `p/python`, `p/typescript`, `p/javascript` e `p/react` sobre
+> `packages` e `apps/web/src`. O job real nunca correu esses packs. Ao contrário dos gates acima,
+> aqui não havia controlo em falta — havia cobertura descrita a mais — por isso o documento foi
+> corrigido para os configs efectivamente carregados, em vez de se acrescentarem quatro packs que
+> ninguém tinha decidido adoptar. `tests/test_cicd_pipeline_invariants.py` compara agora esta
+> lista com as flags `--config` do workflow e falha se divergirem.
 
 ---
 

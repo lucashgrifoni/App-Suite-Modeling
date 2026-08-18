@@ -330,11 +330,22 @@ def test_diff_accepts_the_same_methodology_flag_as_analyze() -> None:
 def _revised_with_bare_admin_actor(tmp_path: Path) -> Path:
     """A change whose verdict genuinely depends on the lens.
 
-    Adding an unconnected external actor raises spoofing/repudiation concerns that
-    STRIDE scores at/above `high`, while the CIA-DIE lens — which scores impact on
-    data, not actors — stays below the bar. `_revised_with_new_risk` is unusable
-    here: it also adds an unauthenticated plaintext flow carrying sensitive data,
-    which trips every lens and so could not detect the flag being ignored.
+    Adding an unconnected external actor raises spoofing/repudiation concerns. STRIDE scores
+    the worst of them at 15 — `high`, and below the `critical` bar — while the LINDDUN lens
+    boosts the impact of that same finding to 20 and crosses it. The divergence therefore
+    comes from a lens *rescoring*, which is what a lens is for.
+
+    This used to read the divergence off `cia_die` instead, and justified it as "the CIA-DIE
+    lens — which scores impact on data, not actors — stays below the bar". That explanation
+    was false: `_apply_cia_die_lens` contained no rescoring code at all. It kept the ten
+    highest-scoring active threats and deleted the rest, so the actor's threats were not
+    scored below the bar, they were gone — from the gate, from the SARIF and from the report.
+    The test passed and specified the defect. The lens no longer truncates, and
+    `tests/test_p3_engine_cia_die_lens.py` pins the gate verdict under `cia_die`.
+
+    `_revised_with_new_risk` is unusable here: it also adds an unauthenticated plaintext flow
+    carrying sensitive data, which trips every lens and so could not detect the flag being
+    ignored.
     """
     doc = yaml.safe_load(_MINIMAL.read_text(encoding="utf-8"))
     doc["components"].append({"id": "admin", "name": "Admin", "kind": "external_entity"})
@@ -348,16 +359,16 @@ def test_gate_verdict_follows_the_requested_methodology(tmp_path: Path) -> None:
     runner = CliRunner()
 
     under_stride = runner.invoke(
-        app, ["diff", str(_MINIMAL), str(revised), "--methodology", "stride", "--fail-on", "high"]
+        app, ["diff", str(_MINIMAL), str(revised), "--methodology", "stride", "--fail-on", "critical"]
     )
-    under_cia_die = runner.invoke(
-        app, ["diff", str(_MINIMAL), str(revised), "--methodology", "cia_die", "--fail-on", "high"]
+    under_linddun = runner.invoke(
+        app, ["diff", str(_MINIMAL), str(revised), "--methodology", "linddun", "--fail-on", "critical"]
     )
 
     # If the flag were ignored, both runs would return the same code — which is
     # exactly the silent-pass/spurious-failure bug this guards.
-    assert under_stride.exit_code == _GATE_TRIP, under_stride.output
-    assert under_cia_die.exit_code == 0, under_cia_die.output
+    assert under_stride.exit_code == 0, under_stride.output
+    assert under_linddun.exit_code == _GATE_TRIP, under_linddun.output
 
 
 def test_diff_rejects_methodology_and_auto_methodology_together() -> None:
