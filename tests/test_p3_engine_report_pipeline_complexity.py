@@ -23,6 +23,8 @@ the scans returned, and the groups keep the order they had.
 
 from __future__ import annotations
 
+import math
+import statistics
 import time
 from pathlib import Path
 from typing import Any
@@ -37,14 +39,24 @@ from otm_threat_engine.remediation.classify import ComponentIndex, component_kin
 _ROOT = Path(__file__).resolve().parents[1]
 _SAAS = _ROOT / "examples" / "saas-ordering-v1.otm.yaml"
 
-#: Two sizes a factor of four apart. Quadratic growth costs ~16x here and was measured at 10-16x
-#: before the fix; linear costs ~4x and measures ~4.6x with the `sorted` term. The bar sits at 8,
-#: which no linear implementation approaches and no quadratic one survives — the same criterion
-#: the finding proposed, with room for a loaded CI runner.
-_SMALL = 200
-_LARGE = 800
-_MAX_GROWTH = 8.0
-_REPEATS = 3
+#: Sixteen-fold apart, and the verdict is read as an exponent: cost fitted to `n**k`, where a
+#: linear implementation gives k~1 and a quadratic one k~2. Stating the invariant that way is
+#: what makes the ceiling meaningful, because a raw ratio conflates the algorithm with the size
+#: step — 8x at a 4x step and 55x at a 16x step are the same claim.
+#:
+#: The step is 16x rather than the original 4x because the quadratic term only earns its weight
+#: as n grows, and at 4x the two populations nearly touched: the backlog measured 6.9 healthy
+#: against 9.8 for the quadratic implementation this file exists to catch, so the 8.0 bar sat
+#: 1.09x above the worst healthy sample. It failed on healthy code in CI. Measured at 16x, in
+#: ratio terms: worst healthy 32.5, ceiling 55.7, lowest quadratic 88.5 — ~1.7x of room on both
+#: sides.
+#:
+#: The ceiling is stricter than the one it replaces, not looser: 8.0 across a 4x step is k=1.50.
+_SMALL = 100
+_LARGE = 1600
+_MAX_EXPONENT = 1.45
+#: Rounds of the paired measurement below. Odd, so the median is an observed ratio.
+_ROUNDS = 5
 
 
 def _wide_model(n: int) -> ThreatModelDocument:
@@ -87,40 +99,59 @@ def _wide_model(n: int) -> ThreatModelDocument:
     return ThreatModelDocument.model_validate(payload)
 
 
-def _best_of(run: Any, reps: int = _REPEATS) -> float:
-    """The fastest of a few runs: scheduler noise only ever makes a run slower."""
-    return min(_timed(run) for _ in range(reps))
-
-
 def _timed(run: Any) -> float:
     start = time.perf_counter()
     run()
     return time.perf_counter() - start
 
 
-def _growth(build: Any) -> float:
+def _growth_exponent(build: Any) -> float:
+    """The exponent `k` in `cost ~ n**k`, measured so a slow machine cannot fake a regression.
+
+    The obvious shape — time the small model, then time the large one — is what shipped, and it
+    fails on healthy code. It measures the two sides in *different windows*, so any slowdown that
+    arrives between them lands only on the numerator and goes straight into the ratio. Taking the
+    fastest of a few runs per side does not help: the inflation observed in CI was a sustained
+    condition, not a spike, so every repetition paid it. Injecting a slowdown midway through the
+    old design, at its original sizes, moved the ratio to a median of 12.6 (max 15.1) with the
+    algorithm untouched — a gate failing merges over machine weather.
+
+    Pairing fixes it. Each round times the small model and then the large one back to back, so a
+    slowdown spanning the round hits both sides and cancels in the division; the median over
+    rounds then absorbs any round where it did not. Under that same injected drift this shape held
+    at 5.2 (max 5.4) where the old one reached 15.1, and its spread on a quiet machine is no wider.
+
+    Neither shape loosens what is being asked: the quadratic implementation this file exists to
+    catch — the component index rebuilt on every lookup — measures k~1.62 against healthy code's
+    k~1.19, and the ceiling sits between them with room on both sides.
+    """
     small_doc, large_doc = _wide_model(_SMALL), _wide_model(_LARGE)
     small_result, large_result = analyze_document(small_doc), analyze_document(large_doc)
-    small = _best_of(lambda: build(small_doc, small_result))
-    large = _best_of(lambda: build(large_doc, large_result))
-    return large / small
+
+    ratios = []
+    for _ in range(_ROUNDS):
+        small = _timed(lambda: build(small_doc, small_result))
+        large = _timed(lambda: build(large_doc, large_result))
+        ratios.append(large / small)
+
+    return math.log(statistics.median(ratios)) / math.log(_LARGE / _SMALL)
 
 
 # ------------------------------------------------------------------ growth
 
 
 def test_premium_report_growth_is_sub_quadratic() -> None:
-    growth = _growth(
+    exponent = _growth_exponent(
         lambda doc, result: build_premium_report_payload(doc, result, level=ReportLevel.DEEP, include_mermaid=False)
     )
 
-    assert growth < _MAX_GROWTH, f"4x the entities cost {growth:.1f}x the time"
+    assert exponent < _MAX_EXPONENT, f"cost grew as n**{exponent:.2f} (linear is 1.0, quadratic 2.0)"
 
 
 def test_remediation_backlog_growth_is_sub_quadratic() -> None:
-    growth = _growth(lambda doc, result: build_remediation_backlog(result, doc))
+    exponent = _growth_exponent(lambda doc, result: build_remediation_backlog(result, doc))
 
-    assert growth < _MAX_GROWTH, f"4x the entities cost {growth:.1f}x the time"
+    assert exponent < _MAX_EXPONENT, f"cost grew as n**{exponent:.2f} (linear is 1.0, quadratic 2.0)"
 
 
 def test_the_component_index_is_built_a_bounded_number_of_times(monkeypatch: pytest.MonkeyPatch) -> None:

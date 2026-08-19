@@ -45,7 +45,14 @@ def build_exports(
         resolved = run_analysis(doc, pack_id=pack_id)
 
     out: dict[str, str] = {}
-    for fmt in formats:
+    # `out` é indexado pelo formato, por isso uma entrada repetida em `formats` sobrescrevia a
+    # chave que acabara de escrever — mas a exportação corria na mesma. Nada no caminho do pedido
+    # deduplicava a lista e nada lhe limita o comprimento: medido contra servidor real na postura
+    # por omissão, um pedido de 47 KB com `analysis_markdown` 2000 vezes custou 558 ms e devolveu
+    # exactamente os mesmos 14 459 bytes que um pedido com uma só, deixando um `GET /health` à
+    # espera 158 ms. `dict` mantém a chave na posição da **primeira** inserção, portanto colapsar
+    # antes do ciclo devolve as mesmas chaves, pela mesma ordem, com os mesmos valores.
+    for fmt in dict.fromkeys(formats):
         match fmt:
             case ExportFormat.document_json:
                 out[fmt.value] = export_document_json(doc)

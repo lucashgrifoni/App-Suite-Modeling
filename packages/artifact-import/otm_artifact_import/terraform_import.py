@@ -22,20 +22,42 @@ _RESOURCE_HEAD = re.compile(r'resource\s+"([^"]+)"\s+"([^"]+)"\s*\{')
 
 
 def _iter_resource_blocks(text: str) -> Iterator[tuple[str, str, str]]:
-    for m in _RESOURCE_HEAD.finditer(text):
-        rtype, name = m.group(1), m.group(2)
-        start = m.end()
+    """Os blocos `resource`, cada um limitado ao texto que lhe pertence.
+
+    Um bloco cujas chavetas nunca fecham termina onde o cabeçalho seguinte começa. É o que uma
+    chaveta em falta significa para quem escreveu o ficheiro, e sem esse limite a varredura de
+    **cada** cabeçalho corria até ao fim do texto: com M cabeçalhos em L bytes, O(L*M) a percorrer
+    e outro tanto a reter, porque `import_terraform_text` materializa todos os corpos de uma vez.
+    Medido, 54 KB de HCL desequilibrado custavam 2,65 s de CPU e 44 MB retidos, contra 1,2 ms para
+    54 KB equilibrados; `POST /v1/imports/terraform` aceita 2 MiB, dispensa credencial na postura
+    por omissão e corre isto sincronamente dentro de um handler `async`, pelo que o custo parava o
+    servidor inteiro e não só o pedido.
+
+    O corpo tem um único consumidor — `_public_ingress_hint` — e era aí que a ausência de limite
+    fazia o estrago silencioso: corpos que se estendiam até ao fim do ficheiro sobrepunham-se, e um
+    `0.0.0.0/0` declarado num recurso tardio caía dentro do corpo de todos os anteriores. Uma
+    chaveta em falta bastava para mover um balanceador `internal = true` para `tb_internet_facing`.
+
+    Os intervalos entre cabeçalhos consecutivos são disjuntos, por isso limitar cada varredura ao
+    cabeçalho seguinte deixa o custo total linear no ficheiro, sem perder nenhum recurso declarado.
+    Um cabeçalho encontrado dentro de outro bloco encerra-o: já hoje `finditer` o devolvia como
+    recurso próprio, e passa a sê-lo sem ficar também dentro do corpo alheio.
+    """
+    heads = list(_RESOURCE_HEAD.finditer(text))
+    for position, head in enumerate(heads):
+        start = head.end()
+        limit = heads[position + 1].start() if position + 1 < len(heads) else len(text)
         depth = 1
         i = start
-        while i < len(text) and depth > 0:
+        while i < limit and depth > 0:
             ch = text[i]
             if ch == "{":
                 depth += 1
             elif ch == "}":
                 depth -= 1
             i += 1
-        body = text[start : i - 1] if depth == 0 else text[start:]
-        yield rtype, name, body
+        body = text[start : i - 1] if depth == 0 else text[start:limit]
+        yield head.group(1), head.group(2), body
 
 
 def _helm_chart_hint(text: str) -> bool:

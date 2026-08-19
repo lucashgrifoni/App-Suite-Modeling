@@ -40,6 +40,7 @@ from __future__ import annotations
 
 import logging
 import time
+from collections import OrderedDict
 
 from limits import RateLimitItem, parse
 from limits.storage import MemoryStorage
@@ -143,6 +144,36 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self._trust_forwarded = trust_forwarded
         self._limiter = MovingWindowRateLimiter(MemoryStorage())
         self._reported_untrusted_forwarding = False
+        self._window_seconds = float(limit.get_expiry())
+        #: `chave -> instante em que a sua janela fecha`, por ordem crescente desse instante.
+        #: `MemoryStorage` tem um varredor próprio, mas corre num `threading.Timer` que não é
+        #: reagendado sem actividade, por isso quem **para** de bater fica lá: medido, 20 000
+        #: endereços distintos deixavam 20 000 entradas, e uma janela de 5/s não libertava nada
+        #: passados seis segundos. A 474 bytes por endereço são ~2,1 M endereços por GB, e o
+        #: limite está activo por omissão em staging/produção — ligar a protecção criava a
+        #: superfície.
+        self._client_windows: OrderedDict[str, float] = OrderedDict()
+
+    def _forget_clients_whose_window_closed(self, now: float) -> None:
+        """Liberta as chaves cuja janela já passou — e apenas essas.
+
+        Descartar por LRU também limitaria a memória, mas abria um desvio: bastaria inundar com
+        endereços distintos para expulsar a própria chave quente e recomeçar com o balde cheio.
+        Varrer o armazenamento inteiro a cada pedido é O(chaves) por pedido. Uma chave cuja janela
+        fechou, essa, não guarda informação nenhuma — o chamador tem direito a balde novo de
+        qualquer maneira — por isso deitá-la fora não custa segurança.
+
+        Como as janelas têm duração fixa e cada acerto reposiciona a chave no fim, o mapa está
+        sempre ordenado pelo instante de fecho: basta descartar pela frente enquanto estiver
+        vencida, o que é O(vencidas) e amortizado O(1). O relógio é monotónico porque a pergunta é
+        sobre duração decorrida, não sobre a hora do dia.
+        """
+        while self._client_windows:
+            key, closes_at = next(iter(self._client_windows.items()))
+            if closes_at > now:
+                return
+            self._client_windows.popitem(last=False)
+            self._limiter.clear(self._limit, key)
 
     def _report_untrusted_forwarding_once(self) -> None:
         """Say it in the log the first time, then stay quiet.
@@ -164,8 +195,13 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         shared_bucket = key == _UNTRUSTED_FORWARDED_CLIENT
         if shared_bucket:
             self._report_untrusted_forwarding_once()
+
+        now = time.monotonic()
+        self._forget_clients_whose_window_closed(now)
         allowed = self._limiter.hit(self._limit, key)
         stats = self._limiter.get_window_stats(self._limit, key)
+        self._client_windows[key] = now + self._window_seconds
+        self._client_windows.move_to_end(key)
 
         if not allowed:
             # Two very different operational stories, identical from the client's side: one

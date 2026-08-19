@@ -4,6 +4,9 @@ Constrói `ExplanationRecord` a partir do documento e do resultado de análise.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
+from dataclasses import dataclass
+
 from otm_core_schema import Asset, ThreatModelDocument
 from otm_explainability import (
     ExplanationCategory,
@@ -23,23 +26,50 @@ from otm_threat_engine.result import (
 )
 
 
-def _comp_label(doc: ThreatModelDocument, cid: str | None) -> str | None:
+@dataclass(frozen=True)
+class _EntityLabels:
+    """Rótulos de componentes e notas de ativos indexados por id: construídos uma vez por análise.
+
+    `_comp_label` percorria `doc.components` e `_asset_note` percorria `doc.assets` a **cada**
+    chamada, e `merge_analysis_explanations` chama ambos uma vez por ameaça heurística. O número de
+    ameaças cresce com o número de entidades, logo o par custava O(entidades * ameaças). Em perfil
+    sobre o modelo largo, `_comp_label` sozinho: 3,0 ms a 300 entidades, 12,2 ms a 600, 43,3 ms a
+    1200 — 4,1x e depois 3,5x por duplicação, a assinatura do quadrado.
+
+    O primeiro id vence, como vencia na varredura. O schema valida ids únicos por lista, portanto
+    hoje não há empates; a regra fica explícita à mesma, porque é barata e porque é comportamento
+    observável se essa validação alguma vez mudar.
+    """
+
+    components: Mapping[str, str]
+    assets: Mapping[str, str]
+
+    @classmethod
+    def of(cls, doc: ThreatModelDocument) -> _EntityLabels:
+        components: dict[str, str] = {}
+        for c in doc.components:
+            components.setdefault(c.id, f"{c.name} ({c.id})")
+        assets: dict[str, str] = {}
+        for a in doc.assets:
+            if isinstance(a, Asset):
+                assets.setdefault(a.id, f"ativo {a.name} — {a.sensitivity or 'sensibilidade não declarada'}")
+        return cls(components=components, assets=assets)
+
+
+def _comp_label(doc: ThreatModelDocument, cid: str | None, *, labels: _EntityLabels | None = None) -> str | None:
+    """O rótulo do componente `cid`. Em ciclo, passe `labels` — sem eles isto é O(componentes)."""
     if not cid:
         return None
-    for c in doc.components:
-        if c.id == cid:
-            return f"{c.name} ({c.id})"
-    return cid
+    resolved = _EntityLabels.of(doc) if labels is None else labels
+    return resolved.components.get(cid, cid)
 
 
-def _asset_note(doc: ThreatModelDocument, aid: str | None) -> str | None:
+def _asset_note(doc: ThreatModelDocument, aid: str | None, *, labels: _EntityLabels | None = None) -> str | None:
+    """A nota do ativo `aid`. Em ciclo, passe `labels` — sem eles isto é O(ativos)."""
     if not aid:
         return None
-    for a in doc.assets:
-        if isinstance(a, Asset) and a.id == aid:
-            sens = a.sensitivity or "sensibilidade não declarada"
-            return f"ativo {a.name} — {sens}"
-    return None
+    resolved = _EntityLabels.of(doc) if labels is None else labels
+    return resolved.assets.get(aid)
 
 
 def _threat_explanation(
@@ -48,11 +78,12 @@ def _threat_explanation(
     *,
     seq: int,
     xb_flows: set[str],
+    labels: _EntityLabels,
 ) -> ExplanationRecord:
     score = h.risk.score if h.risk.score is not None else float(h.risk.likelihood * h.risk.impact)
-    target = _comp_label(doc, h.target_component_id)
+    target = _comp_label(doc, h.target_component_id, labels=labels)
     flow = h.target_data_flow_id
-    asset_line = _asset_note(doc, h.target_asset_id)
+    asset_line = _asset_note(doc, h.target_asset_id, labels=labels)
     ev: list[str] = [
         f"STRIDE {h.stride.value} com score ~{score:.0f} (L={h.risk.likelihood}, I={h.risk.impact}).",
     ]
@@ -95,11 +126,12 @@ def _risk_note_for_threat(
     *,
     seq: int,
     xb_flows: set[str],
+    labels: _EntityLabels,
 ) -> ExplanationRecord | None:
     score = h.risk.score if h.risk.score is not None else float(h.risk.likelihood * h.risk.impact)
     flow = h.target_data_flow_id
     boundary_hit = flow in xb_flows if flow else False
-    asset_line = _asset_note(doc, h.target_asset_id)
+    asset_line = _asset_note(doc, h.target_asset_id, labels=labels)
 
     if score < 12:
         return None
@@ -193,12 +225,14 @@ def merge_analysis_explanations(
         seq += 1
         out.append(_trust_boundary_exp(tf, seq))
 
+    # Uma passagem por `doc.components` e `doc.assets`, não uma por ameaça: ver `_EntityLabels`.
+    labels = _EntityLabels.of(doc)
     for h in result.heuristic_threats:
         if h.skipped_as_duplicate:
             continue
         seq += 1
-        out.append(_threat_explanation(doc, h, seq=seq, xb_flows=xb))
-        rk = _risk_note_for_threat(doc, h, seq=seq + 1, xb_flows=xb)
+        out.append(_threat_explanation(doc, h, seq=seq, xb_flows=xb, labels=labels))
+        rk = _risk_note_for_threat(doc, h, seq=seq + 1, xb_flows=xb, labels=labels)
         if rk:
             seq += 1
             out.append(rk.model_copy(update={"id": explanation_id(seq, prefix="exp_rk")}))

@@ -181,15 +181,45 @@ def _parse_workloads(
             _handle_configmap(name, filename, tb_cluster, components, inf)
 
 
-def _find_ingress_spec(docs: list[Any], ing_name: str) -> dict[str, Any] | None:
+def _index_ingress_specs(docs: list[Any]) -> dict[str, dict[str, Any] | None]:
+    """`.spec` de cada Ingress indexado por nome: construído uma vez, consultado uma vez por Ingress.
+
+    `_build_ingress_flows` percorria `docs` a cada Ingress, e ambas as contagens crescem com o
+    upload — O(ingressos * documentos). Isolado do parse, o custo das consultas duplicava com o
+    quadrado (8,2 ms, 32,7 ms, 131,1 ms a 400, 800 e 1600 documentos) e passava de 8 % do pedido a
+    94 % dele aos 3200. `POST /v1/imports/kubernetes` aceita 2 MiB — cerca de 17 900 destes
+    manifests — e corre o parse sincronamente dentro de um handler `async`, pelo que o custo parava
+    o servidor inteiro.
+
+    Vale registar que ajustar um expoente entre 100 e 800 documentos devolve k~1,06 e parece linear:
+    essa gama ainda é dominada pelo parse YAML e o termo quadrático só assume depois. O expoente
+    estava medido na região errada, não medido mal.
+
+    O primeiro Ingress com um dado nome vence, e o seu `spec` é guardado mesmo quando é `None` —
+    exactamente o que a varredura fazia. Manifests repetem nomes entre namespaces, por isso a regra
+    de desempate é comportamento observável, não detalhe.
+    """
+    specs: dict[str, dict[str, Any] | None] = {}
     for d in docs:
         if str(d.get("kind")) != "Ingress":
             continue
         meta = _as_dict(d.get("metadata")) or {}
-        if str(meta.get("name") or "") == ing_name:
+        name = str(meta.get("name") or "")
+        if name not in specs:
             # Ingress rules live under `.spec.rules`, not at the document root.
-            return _as_dict(d.get("spec"))
-    return None
+            specs[name] = _as_dict(d.get("spec"))
+    return specs
+
+
+def _find_ingress_spec(
+    docs: list[Any],
+    ing_name: str,
+    *,
+    index: dict[str, dict[str, Any] | None] | None = None,
+) -> dict[str, Any] | None:
+    """O `.spec` do Ingress `ing_name`. Em ciclo, passe `index` — sem ele isto é O(documentos)."""
+    resolved = _index_ingress_specs(docs) if index is None else index
+    return resolved.get(ing_name)
 
 
 def _backend_service_name(backend: Any) -> str | None:
@@ -240,8 +270,10 @@ def _build_ingress_flows(
     unknowns: list[str],
 ) -> list[DataFlow]:
     flows: list[DataFlow] = []
+    # Uma passagem por `docs`, não uma por Ingress: ver `_index_ingress_specs`.
+    ingress_specs = _index_ingress_specs(docs)
     for ing_id, ing_name, hosts in ingresses:
-        spec = _find_ingress_spec(docs, ing_name)
+        spec = _find_ingress_spec(docs, ing_name, index=ingress_specs)
         backend_svcs = _ingress_backend_service_names(spec)
         if hosts:
             inf(
