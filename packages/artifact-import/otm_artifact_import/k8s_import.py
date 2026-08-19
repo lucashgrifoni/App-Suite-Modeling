@@ -89,7 +89,11 @@ def _handle_service(
 ) -> None:
     cid = slug_id(f"svc_{name}", prefix="svc")
     services[name] = cid
-    st = str(doc.get("spec", {}).get("type") or "ClusterIP")
+    # `_as_dict`, e não `doc.get("spec", {})`: o valor por omissão do `get` só se aplica quando a
+    # **chave** falta. Com `spec:` presente e sem corpo -- o que fica quando alguém comenta um
+    # `type: LoadBalancer` -- o YAML dá `None`, e o `.get` seguinte rebentava. Todo o resto deste
+    # ficheiro já passa por `_as_dict`; esta linha ficou de fora.
+    st = str((_as_dict(doc.get("spec")) or {}).get("type") or "ClusterIP")
     components.append(
         Component(
             id=cid,
