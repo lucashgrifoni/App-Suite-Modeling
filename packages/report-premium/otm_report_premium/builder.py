@@ -73,6 +73,17 @@ def _severity_band(t: HeuristicThreat) -> str:
     return _band_for_score(raw)
 
 
+def _overall_max_score(heuristic_max: float | None, doc: ThreatModelDocument) -> float | None:
+    """O maior risco que o relatório mostra, venha de onde vier."""
+    scores = [heuristic_max] if heuristic_max is not None else []
+    scores += [
+        float(t.risk.likelihood * t.risk.impact)
+        for t in doc.threats
+        if t.risk is not None and t.risk.likelihood is not None and t.risk.impact is not None
+    ]
+    return max(scores) if scores else None
+
+
 def _overall_status(
     max_score: float | None, b: PremiumBuilderCopy
 ) -> tuple[
@@ -635,7 +646,15 @@ def build_premium_report_payload(
     app_v = app_version or _app_version()
 
     max_score = result.summary.max_risk_score
-    status_key, status_display = _overall_status(max_score, b)
+    # O **estado geral** olha para as duas origens; o rótulo de risco continua a ser o heurístico.
+    # `summary.max_risk_score` conta só heurísticas, e a capa classificava por ele — por isso um
+    # documento cuja única ameaça crítica é declarada pelo modelador (L5xI5 = 25) saía como
+    # "Aceitável com acompanhamento", exactamente igual ao mesmo documento sem ela. O relatório
+    # já contava essa ameaça no total, que descreve como "canónicas + heurísticas activas", e no
+    # quadro de severidade: era o veredito da capa que discordava do resto da própria página.
+    # O rótulo diz `Risk (heuristic)` no HTML e continua a medir isso, senão o rótulo é que
+    # passava a mentir. Ver `tests/test_p3_premium_cover_sees_declared_threats.py`.
+    status_key, status_display = _overall_status(_overall_max_score(max_score, doc), b)
 
     comp_names = {c.id: c.name for c in doc.components}
     # Um índice para todo o pipeline: sem ele cada classificação por ameaça revarre
