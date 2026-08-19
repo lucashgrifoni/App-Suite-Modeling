@@ -180,7 +180,15 @@ def _build_distribution_counters(
         stride_counter[threat.stride.value] += 1
         if threat.risk:
             raw = threat.risk.score or float(threat.risk.likelihood * threat.risk.impact)
-            sev_counter[_band_for_score(raw)] += 1
+            band = _band_for_score(raw)
+            sev_counter[band] += 1
+            # O mapa também: este ciclo alimentava STRIDE, severidade e componente e saltava o
+            # `heatmap`, por isso o quadro STRIDE x severidade contava menos ameaças do que a
+            # tabela impressa ao lado dele, na mesma página. E o efeito era pior do que uma
+            # contagem a menos: a heurística equivalente é suprimida como duplicada quando o
+            # modelador declara a sua própria, portanto declarar a ameaça **apagava** a linha do
+            # mapa em vez de a mover de banda.
+            heatmap[threat.stride.value][band] += 1
         if threat.target_component_id:
             comp_counter[threat.target_component_id] += 1
     return sev_counter, stride_counter, comp_counter, tb_counter, heatmap
