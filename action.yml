@@ -120,7 +120,7 @@ runs:
   using: composite
   steps:
     - name: Set up Python
-      uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+      uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
       with:
         python-version: ${{ inputs.python-version }}
 
@@ -307,7 +307,7 @@ runs:
     # the gate's verdict must not decide whether findings are visible.
     - name: Upload SARIF
       if: ${{ always() && steps.analyze.outcome == 'success' && inputs.upload-sarif == 'true' && inputs.sarif-out != '' }}
-      uses: github/codeql-action/upload-sarif@8aad20d150bbac5944a9f9d289da16a4b0d87c1e # v4.36.2
+      uses: github/codeql-action/upload-sarif@d1ba80a13dd99fba24a470575428917156a28b43 # v4.37.5
       with:
         sarif_file: ${{ inputs.working-directory }}/${{ inputs.sarif-out }}
         # Configurável porque `model` é um ficheiro só: modelar três serviços é correr esta action
