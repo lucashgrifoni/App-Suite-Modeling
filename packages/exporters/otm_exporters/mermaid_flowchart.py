@@ -124,8 +124,14 @@ def _mermaid_label(raw: str) -> str:
     # Collapse line breaks/control chars to a space (prevents statement injection)
     # and neutralize the characters that terminate a label: `"` closes a quoted
     # node label and `|` closes an unquoted edge label.
-    text = _LABEL_CONTROL_RE.sub(" ", raw)
-    return text.replace('"', "'").replace("|", "/")
+    text = _LABEL_CONTROL_RE.sub(" ", raw).replace('"', "'").replace("|", "/")
+    # Uma crase **imediatamente** a seguir à aspa abre uma markdown string (`["`texto"]`) que nunca
+    # fecha, e o `.mmd` inteiro deixa de parsear — o ficheiro, não a linha. Dispara pela
+    # adjacência: verificado contra o parser real (mermaid 11.17.0, `mermaid.parse`), a crase no
+    # meio do nome e a envolvê-lo parseiam, só a inicial falha. Um espaço desfaz a adjacência sem
+    # apagar carácter nenhum; `&#96;` também parseia, mas dependeria de como cada renderizador
+    # trata entidades. Ver `tests/test_p3_mermaid_leading_backtick_label.py`.
+    return f" {text}" if text.startswith("`") else text
 
 
 def _mermaid_edge_label(raw: str) -> str:
