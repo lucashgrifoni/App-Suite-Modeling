@@ -108,22 +108,18 @@ jobs:
         # Gating it on the release event left `workflow_dispatch` able to build from any
         # branch and publish it unchecked -- exactly the path most likely to be taken in a
         # hurry, and the one where a wrong version costs a number forever.
+        #
+        # A comparação vive em `scripts/check_release_version_matches_tag.py` porque comparar
+        # strings estava errado e ninguém o via: a PEP 440 normaliza `7.10.0-rc1` para `7.10.0rc1`,
+        # e `-` nem sequer pode aparecer no campo de versão de um wheel, por ser o delimitador do
+        # nome. O tag de release candidate que `docs/VERSIONING_AND_TAGS.md` prescreve era portanto
+        # sempre recusado, com uma mensagem a culpar o `pyproject.toml`. Um shell inline não se
+        # testa; um script testa-se — ver `tests/test_p5_release_version_matches_tag.py`, que fixa
+        # tanto a aceitação das grafias equivalentes como a recusa de uma divergência genuína.
         run: |
           set -euo pipefail
-          built="$(python -c 'import pathlib; p=next(pathlib.Path("dist").glob("*.whl")); print(p.name.split("-")[1])')"
-          echo "built=${built} ref=${GITHUB_REF_NAME} ref_type=${GITHUB_REF_TYPE}"
-
-          if [ "${GITHUB_REF_TYPE}" != "tag" ]; then
-            # A dry run from a branch is legitimate; publishing from one is not.
-            echo "::notice::Ref is not a tag, so there is no version to check against. This build must not be published."
-            exit 0
-          fi
-
-          tag="${GITHUB_REF_NAME#v}"
-          if [ "${built}" != "${tag}" ]; then
-            echo "::error::Built version ${built} does not match tag ${tag}. Bump pyproject.toml or retag."
-            exit 1
-          fi
+          python -m pip install --quiet packaging
+          python scripts/check_release_version_matches_tag.py
 
       - name: Smoke-test the wheel in a clean environment
         # Proves the published artifact is actually usable: the console script runs and the

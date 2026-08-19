@@ -86,6 +86,17 @@ inputs:
     required: false
     default: "false"
 
+  sarif-category:
+    description: >-
+      Categoria de code scanning sob a qual o SARIF é publicado. **Dê um valor distinto a cada
+      modelo** se correr esta action mais do que uma vez no mesmo repositório e ref: o GitHub
+      indexa os resultados por `(ref, categoria)`, por isso duas invocações com a mesma categoria
+      escrevem no mesmo balde e a segunda substitui a primeira — os alertas dos outros modelos
+      fecham-se como "no longer detected", sem que nenhum passo falhe. Num único modelo, deixe o
+      valor por omissão: mudá-lo deixaria os alertas já publicados órfãos sob a categoria antiga.
+    required: false
+    default: "otm-threat-model"
+
   working-directory:
     description: "Directory to run in."
     required: false
@@ -99,7 +110,10 @@ outputs:
     description: "Path to the analysis JSON, empty when it was disabled."
     value: ${{ steps.analyze.outputs.analysis-file }}
   gate-outcome:
-    description: "One of `passed`, `tripped`, `not-evaluated`, or `skipped` (no baseline given)."
+    description: >-
+      One of `passed`, `tripped`, `not-evaluated` (the gate declined to judge — not a clean bill
+      of health), `error` (the CLI could not run: usage or input error, no verdict either way), or
+      `skipped` (no baseline given). Always written, so an empty value means the step never ran.
     value: ${{ steps.gate.outputs.outcome }}
 
 runs:
@@ -238,16 +252,23 @@ runs:
           echo '```'
         } >> "$GITHUB_STEP_SUMMARY"
 
+        # The report is the authority on the verdict; the exit code only says whether to fail.
+        # Reading them the other way round hid the non-verdict entirely: this check used to live
+        # inside the `0)` arm, and the CLI never exits 0 in that state -- `gate.py` returns
+        # GATE_NOT_EVALUATED_EXIT_CODE = 1 whenever it declines to judge. So the branch was dead,
+        # `not-evaluated` was unreachable through the documented output, and a legitimate
+        # non-verdict (a methodology switch between the two models) was announced to the caller as
+        # their own usage error, with `gate-outcome` left empty -- which is precisely the
+        # distinction that output exists to make.
+        if printf '%s' "${report}" | grep -q "NOT EVALUATED"; then
+          echo "outcome=not-evaluated" >> "$GITHUB_OUTPUT"
+          echo "::error::The drift gate declined to issue a verdict, so nothing was judged: a green check here would mean 'not measured', not 'no new risk'. Pin one lens with methodology on both sides to get a verdict."
+          exit 1
+        fi
+
         case "${rc}" in
           0)
-            # Exit 0 covers both a real pass and a diff the gate declined to judge (for
-            # example a methodology switch). Distinguish them, because "not evaluated" is
-            # not a clean bill of health and a reader should not mistake it for one.
-            if printf '%s' "${report}" | grep -q "NOT EVALUATED"; then
-              echo "outcome=not-evaluated" >> "$GITHUB_OUTPUT"
-            else
-              echo "outcome=passed" >> "$GITHUB_OUTPUT"
-            fi
+            echo "outcome=passed" >> "$GITHUB_OUTPUT"
             ;;
           3)
             echo "outcome=tripped" >> "$GITHUB_OUTPUT"
@@ -255,8 +276,10 @@ runs:
             exit 1
             ;;
           *)
-            # Exit 1 from the CLI is a usage error, not a policy failure. Do not let a bad
-            # path masquerade as "your model got worse".
+            # Anything else really is a usage or input error. Do not let a bad path masquerade
+            # as "your model got worse" -- but do not leave `gate-outcome` empty either, or the
+            # caller cannot tell this apart from the non-verdict handled above.
+            echo "outcome=error" >> "$GITHUB_OUTPUT"
             echo "::error::otm diff failed with exit ${rc} (usage or input error, not a gate verdict)."
             exit "${rc}"
             ;;
@@ -270,10 +293,23 @@ runs:
         METHODOLOGY: ${{ inputs.methodology }}
         PACK: ${{ inputs.pack }}
 
-    # `always()` so the findings still reach code scanning on the run where the gate tripped.
+    # `always()` so the findings still reach code scanning on the run where the gate tripped --
+    # that is the run where you most want them visible. But `always()` also covered the run where
+    # `Analyze` itself failed, and then there is no SARIF from this run at all: the step published
+    # whatever happened to sit at that path, including a file committed to the repository being
+    # scanned, labelled as this run's analysis. Whoever controls that repository controls both the
+    # contents of that file and whether the analysis fails, so a clean SARIF uploaded under the
+    # tool's category would close the real alerts as "no longer detected".
+    #
+    # `steps.analyze.outcome == 'success'` separates the two cases the single `always()` had
+    # conflated: "the gate rejected the change" (analysis ran, evidence is real, publish it) from
+    # "the analysis never ran" (nothing of ours to publish). It is deliberately not `steps.gate`:
+    # the gate's verdict must not decide whether findings are visible.
     - name: Upload SARIF
-      if: ${{ always() && inputs.upload-sarif == 'true' && inputs.sarif-out != '' }}
+      if: ${{ always() && steps.analyze.outcome == 'success' && inputs.upload-sarif == 'true' && inputs.sarif-out != '' }}
       uses: github/codeql-action/upload-sarif@8aad20d150bbac5944a9f9d289da16a4b0d87c1e # v4.36.2
       with:
         sarif_file: ${{ inputs.working-directory }}/${{ inputs.sarif-out }}
-        category: otm-threat-model
+        # Configurável porque `model` é um ficheiro só: modelar três serviços é correr esta action
+        # três vezes, e sem categorias distintas a última execução apagava os alertas das outras.
+        category: ${{ inputs.sarif-category }}

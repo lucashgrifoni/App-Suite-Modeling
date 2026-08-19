@@ -71,3 +71,32 @@ Usar tokens de API com permissão mínima; nunca commitar credenciais.
 
 - **Tag errada:** não apague tags públicas; publique `v0.1.1` com correção mínima ou marque a release como **pre-release** e documente o problema.
 - **Regressão crítica:** branch hotfix a partir da tag anterior estável, patch, nova tag semver, notas de incidente breves.
+
+### 7.1 Publicação errada no PyPI
+
+Esta é a única parte do processo que **não se desfaz**, e por isso é a que precisa de estar escrita
+antes de ser precisa. O gate de versão
+([`scripts/check_release_version_matches_tag.py`](../../../scripts/check_release_version_matches_tag.py))
+existe para que este ponto nunca seja alcançado; o que segue é o que fazer se for.
+
+- **Apagar não devolve o número.** Um ficheiro removido do PyPI não pode ser re-carregado com a
+  mesma versão. Apagar a release **não** liberta `7.9.0` para uma segunda tentativa — queima-a.
+  Portanto a resposta a "publiquei o artefacto errado" nunca é apagar e repetir.
+- **A mitigação é `yank`** (PEP 592), não apagar. Uma versão *yanked* deixa de ser escolhida por
+  resolvedores, mas continua instalável para quem a fixou explicitamente com `==`. É isso que a
+  torna a ferramenta certa: retira a versão do caminho de quem ainda não a apanhou, sem partir
+  quem já depende dela.
+  ```bash
+  # na página do projecto em pypi.org: Manage → Releases → Options → Yank
+  # (a razão fica pública; escreva-a a pensar em quem a vai ler num relatório de build)
+  ```
+- **`yank` não remove os ficheiros.** Continuam descarregáveis por URL directo e por hash. Se o
+  problema for **conteúdo indevido no artefacto** — um segredo, dados internos, um caminho pessoal —
+  então `yank` **não** é a resposta: trate como divulgação, rode o que foi exposto, e só depois
+  trate da versão. Assuma que o artefacto foi espelhado no instante em que ficou público.
+- **Sequência normal:** `yank` da versão má → corrigir → nova versão *patch* (nunca reutilizar o
+  número) → entrada no `CHANGELOG.md` a dizer o que aconteceu e qual usar → se a versão má chegou a
+  ser recomendada em qualquer lado, corrigir também esses sítios.
+- **Não corrigir só o PyPI.** A tag Git, a release do GitHub e o `CHANGELOG.md` têm de contar a
+  mesma história; uma versão *yanked* que continue a ser a mais recente nas release notes manda as
+  pessoas para o sítio errado.
