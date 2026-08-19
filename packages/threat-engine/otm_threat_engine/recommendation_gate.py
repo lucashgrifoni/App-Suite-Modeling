@@ -125,10 +125,21 @@ def filter_pack_control_hints(doc: ThreatModelDocument, hints: list[str]) -> lis
     upload_ok = _has_upload_anchor(doc)
     entitlement_ok = _has_entitlement_commercial_anchor(doc)
 
+    # `"assinatura"` à solta saiu daqui: em português é ao mesmo tempo assinatura criptográfica e
+    # subscrição comercial, e o portão lia só a segunda. O hint `Assinatura de mensagens de
+    # telemetria e relógio de confiança` do pack `transport` era apagado do seu próprio template
+    # -- o par que o `.meta.json` do template recomenda -- por não haver âncora comercial numa
+    # frota de veículos. Em todo o conteúdo distribuído a palavra aparece uma única vez, e é no
+    # sentido criptográfico: a marca solta não apanhava nenhum caso comercial verdadeiro. As
+    # formas que ficam nomeiam a subscrição sem ambiguidade.
+    # Ver `tests/test_p3_signature_is_not_subscription.py`.
     entitlement_hint_markers = (
         "entitlement",
         "subscription",
-        "assinatura",
+        "assinatura do plano",
+        "plano de assinatura",
+        "assinatura premium",
+        "assinatura paga",
         "premium",
         "benefício",
         "beneficio",
