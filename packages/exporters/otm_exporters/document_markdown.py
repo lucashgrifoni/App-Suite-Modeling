@@ -8,6 +8,7 @@ Ordem das secções e regressão: `tests/test_exporters.py` (procurar
 from __future__ import annotations
 
 from otm_core_schema import ThreatModelDocument
+from otm_core_schema.trust_membership import resolve_component_boundaries
 
 from otm_exporters.document_markdown_i18n import DocumentMarkdownMessages, document_markdown_messages
 from otm_exporters.markdown_text import md_block, md_inline
@@ -64,8 +65,14 @@ def _append_components(lines: list[str], doc: ThreatModelDocument, msgs: Documen
         return
     _append_section(lines, msgs.section_components)
     items: list[str] = []
+    # As duas formas de declarar a pertença, juntas. Ler só `Component.in_trust_boundary` fazia a
+    # linha do componente omitir a fronteira num documento que a declara do lado da fronteira, e o
+    # documento exportado é o que alguém revê. Mesma correcção que o relatório premium e o
+    # `diff_insights` receberam antes neste ramo; este exportador tinha ficado de fora.
+    membership = resolve_component_boundaries(doc)
     for c in doc.components:
-        tb = msgs.component_trust_boundary.format(boundary=c.in_trust_boundary) if c.in_trust_boundary else ""
+        boundary = membership.get(c.id)
+        tb = msgs.component_trust_boundary.format(boundary=boundary) if boundary else ""
         tech = f" — {md_inline(c.technology)}" if c.technology else ""
         items.append(f"- **{md_inline(c.name)}** (`{c.id}`) — {c.kind.value}{tech}{tb}")
     _append_bulleted(lines, items)
