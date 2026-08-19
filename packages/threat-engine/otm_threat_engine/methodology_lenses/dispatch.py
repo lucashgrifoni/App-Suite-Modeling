@@ -38,8 +38,9 @@ def _apply_stride_lens(doc: ThreatModelDocument, result: AnalysisResult) -> Anal
 
 
 def _apply_nist_lens(doc: ThreatModelDocument, result: AnalysisResult) -> AnalysisResult:
-    _ = doc
-    return apply_nist_data_centric_lens(result)
+    # O documento chega aqui e era descartado: a lente decidia "dados classificados" a partir do
+    # score das heurísticas STRIDE, nunca da classificação declarada. Ver .
+    return apply_nist_data_centric_lens(result, doc)
 
 
 def _apply_octave_lens(doc: ThreatModelDocument, result: AnalysisResult) -> AnalysisResult:
