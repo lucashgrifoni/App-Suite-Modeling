@@ -155,7 +155,7 @@ Pastas **opcionais** além das acima:
 | `docs/architecture/adr/` | Decisões importantes (ex.: schema canônico). |
 | `.github/workflows/*` | CI mínimo verde. |
 
-Recomendados em breve: `SECURITY.md` (como reportar vulnerabilidade), `CODE_OF_CONDUCT.md` (comunidade).
+Presentes na raiz: [`SECURITY.md`](../SECURITY.md) (como reportar vulnerabilidade), [`CODE_OF_CONDUCT.md`](../CODE_OF_CONDUCT.md) (comunidade) e [`CONTRIBUTING.md`](../CONTRIBUTING.md) (como contribuir).
 
 ---
 

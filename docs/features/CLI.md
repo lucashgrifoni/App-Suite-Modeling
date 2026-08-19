@@ -44,7 +44,7 @@ O executável é **`otm`** (ou `python -m otm_cli.cli`).
 | `otm report ... --analysis-json <ficheiro>` | Reutiliza `AnalysisResult` JSON. |
 | `otm report ... --baseline <ficheiro>` | Análise anterior para diff no report premium. |
 | `otm diagram <arquivo>` | Mermaid flowchart (stdout ou `-o`). |
-| `otm export <arquivo> -f yaml\|json\|md` | Modelo normalizado (default: stdout). |
+| `otm export <arquivo> -f yaml\|json\|md\|otm` | Modelo normalizado (default: stdout). `otm` e o formato de intercambio que `otm import otm` volta a ler. |
 | `otm --version` | Versão. |
 
 ## Exemplos (pipelines)
