@@ -253,7 +253,18 @@ def _service_names_from_paths(paths: Any) -> list[str]:
 
 
 def _ingress_backend_service_names(spec: dict[str, Any] | None) -> list[str]:
+    """Os serviços para onde o Ingress encaminha, pelas duas vias que o Kubernetes define.
+
+    `spec.defaultBackend` é o *catch-all* e é a forma normal de um Ingress de serviço único; ler
+    só `spec.rules[]` fazia-o perder a aresta que o liga ao Service. Medido em dois manifestos
+    equivalentes, a forma com `rules` dava dois fluxos e a forma com `defaultBackend` dava um --
+    e `unknowns` ficava vazio, por isso o rascunho parecia completo a quem o revisse. As duas vias
+    coexistem num mesmo Ingress, portanto somam-se em vez de uma anular a outra.
+    """
     backend_svcs: list[str] = []
+    default_backend = _backend_service_name(spec.get("defaultBackend")) if spec else None
+    if default_backend:
+        backend_svcs.append(default_backend)
     rules = spec.get("rules") if spec else None
     if not isinstance(rules, list):
         return backend_svcs
