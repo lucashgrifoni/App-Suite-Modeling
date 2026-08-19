@@ -9,6 +9,13 @@ def _t(en: str, pt_br: str) -> str:
     return pt_br if get_api_error_locale() == "pt-BR" else en
 
 
+def msg_threat_id_collision() -> str:
+    return _t(
+        "Two subjects in the document produce the same threat id.",
+        "Dois sujeitos do documento produzem o mesmo id de ameaça.",
+    )
+
+
 def msg_document_validation_error() -> str:
     return _t(
         "The document does not satisfy the canonical schema.",

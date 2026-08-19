@@ -7,6 +7,7 @@ from pathlib import Path
 from otm_threat_engine import AnalysisResult, analyze_document
 
 from otm_cli.application.custom_rules_io import load_custom_rules_or_raise
+from otm_cli.application.engine_refusals import engine_refusals_as_cli_errors
 from otm_cli.shared.document_loader import load_otm_document, load_pack_or_raise
 from otm_cli.shared.enums import MethodologyOption
 
@@ -34,10 +35,11 @@ def run_analyze(
         )
     ruleset = load_custom_rules_or_raise(rules)
 
-    return analyze_document(
-        doc,
-        pack=pack_def,
-        methodology=methodology.value if methodology else None,
-        auto_recommend=auto_methodology,
-        custom_rules=ruleset,
-    )
+    with engine_refusals_as_cli_errors(failed=f"analysis of `{path}`."):
+        return analyze_document(
+            doc,
+            pack=pack_def,
+            methodology=methodology.value if methodology else None,
+            auto_recommend=auto_methodology,
+            custom_rules=ruleset,
+        )

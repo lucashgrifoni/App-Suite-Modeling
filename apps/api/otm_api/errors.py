@@ -9,9 +9,10 @@ from typing import Any, cast
 from fastapi import Request, Response, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from otm_threat_engine import ThreatIdCollisionError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from otm_api.api_error_messages import msg_request_validation_error
+from otm_api.api_error_messages import msg_request_validation_error, msg_threat_id_collision
 
 # Cap a single string/bytes echo at this many characters; anything beyond is
 # replaced with a suffix that names the suppressed length. Keeps 422 responses
@@ -232,4 +233,37 @@ async def http_exception_handler(_request: Request, exc: Exception) -> Response:
         status_code=exc.status_code,
         content={"detail": exc.detail},
         headers=headers,
+    )
+
+
+async def threat_id_collision_handler(_request: Request, exc: Exception) -> Response:
+    """422, e não 500: o documento é corrigível por quem o enviou.
+
+    `assert_threat_ids_are_injective` recusa um documento em que dois sujeitos produzem o mesmo id
+    de ameaça. A recusa é deliberada, mas escapava como `ValueError`, e o handler de último recurso
+    respondia `500 INTERNAL_ERROR` com a mensagem só no log do servidor. O cliente recebia um 5xx a
+    culpar o servidor pela sua própria entrada, sem uma palavra sobre o que renomear -- e o mesmo
+    documento passa em `POST /v1/models/validate` com `200 {"valid": true}`, porque o `_unique_ids`
+    do schema corre por lista e nunca compara componentes com fluxos.
+
+    Os dois sujeitos vão em `errors[]` para que uma UI os possa realçar sem analisar a frase.
+    """
+    exc = cast(ThreatIdCollisionError, exc)
+    return SurrogateSafeJSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+        content={
+            "detail": {
+                "code": "THREAT_ID_COLLISION",
+                "message": msg_threat_id_collision(),
+                "errors": [
+                    {
+                        "type": "threat_id_collision",
+                        "loc": ["document"],
+                        "msg": str(exc),
+                        "threat_id": exc.threat_id,
+                        "subjects": [exc.first, exc.second],
+                    }
+                ],
+            }
+        },
     )

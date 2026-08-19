@@ -216,6 +216,34 @@ def _subject_of(threat: HeuristicThreat) -> str:
     return "the model as a whole"
 
 
+class ThreatIdCollisionError(ValueError):
+    """Dois sujeitos distintos reclamam o mesmo id de ameaça.
+
+    Subclasse de `ValueError` de propósito: era isso que `assert_threat_ids_are_injective` lançava,
+    e há testes e chamadores que dependem disso. O que muda é haver um tipo que a API e o CLI
+    possam apanhar **sem** apanhar todo e qualquer `ValueError` vindo do motor -- porque sem ele
+    ninguém a apanhava, e a recusa chegava ao utilizador como 500 INTERNAL_ERROR de um lado e como
+    traceback do Python do outro, apesar de a entrada ser corrigível por quem a enviou. Ver
+    `tests/test_p3_threat_id_collision_reaches_the_user.py`.
+
+    Os sujeitos ficam em atributos, e não só no texto, para que quem traduz a recusa os possa
+    nomear sem voltar a analisar a mensagem.
+    """
+
+    def __init__(self, *, threat_id: str, first: str, second: str) -> None:
+        self.threat_id = threat_id
+        self.first = first
+        self.second = second
+        super().__init__(
+            f"threat id `{threat_id}` is claimed by two different subjects: "
+            f"{first} and {second}. "
+            "Threat ids are built by joining the subject id with `_`, so these two are "
+            "indistinguishable downstream — the CI drift gate, the analysis diff and the "
+            "SARIF fingerprints would silently keep only one of them. "
+            "Rename one of the two subjects so the ids no longer collide."
+        )
+
+
 def assert_threat_ids_are_injective(heuristics: list[HeuristicThreat]) -> None:
     """Recusa um modelo em que dois sujeitos distintos reclamam o mesmo id de ameaça.
 
@@ -241,12 +269,9 @@ def assert_threat_ids_are_injective(heuristics: list[HeuristicThreat]) -> None:
     for threat in heuristics:
         previous = seen.get(threat.id)
         if previous is not None:
-            raise ValueError(
-                f"threat id `{threat.id}` is claimed by two different subjects: "
-                f"{_subject_of(previous)} and {_subject_of(threat)}. "
-                "Threat ids are built by joining the subject id with `_`, so these two are "
-                "indistinguishable downstream — the CI drift gate, the analysis diff and the "
-                "SARIF fingerprints would silently keep only one of them. "
-                "Rename one of the two subjects so the ids no longer collide."
+            raise ThreatIdCollisionError(
+                threat_id=threat.id,
+                first=_subject_of(previous),
+                second=_subject_of(threat),
             )
         seen[threat.id] = threat

@@ -10,6 +10,7 @@ from otm_threat_engine import AnalysisResult, analyze_document, build_remediatio
 from pydantic import ValidationError
 
 from otm_cli.application.analysis_match import require_analysis_matches_document
+from otm_cli.application.engine_refusals import engine_refusals_as_cli_errors
 from otm_cli.io_util import format_validation_error
 from otm_cli.shared.document_loader import load_otm_document, load_pack_or_raise
 from otm_cli.shared.enums import BacklogFormat
@@ -87,7 +88,8 @@ def run_backlog(
             validation_next_step="run `otm validate`.",
             runtime_next_step="confirm the YAML path.",
         )
-        result = analyze_document(doc, pack=pack_def)
+        with engine_refusals_as_cli_errors(failed=f"the backlog for `{path}`."):
+            result = analyze_document(doc, pack=pack_def)
     elif suf == ".json":
         result = _load_analysis_json(path)
         if document:

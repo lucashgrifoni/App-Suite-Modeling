@@ -11,11 +11,16 @@ import logging
 from fastapi import APIRouter, Depends, FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from otm_threat_engine import ThreatIdCollisionError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from otm_api.cors_settings import resolve_cors_profile
 from otm_api.document_limits import resolve_max_document_entities
-from otm_api.errors import http_exception_handler, request_validation_handler
+from otm_api.errors import (
+    http_exception_handler,
+    request_validation_handler,
+    threat_id_collision_handler,
+)
 from otm_api.middleware_api_key import OptionalApiKeyMiddleware
 from otm_api.middleware_rate_limit import RateLimitMiddleware, parse_rate_limit
 from otm_api.observability import (
@@ -69,6 +74,8 @@ app.add_exception_handler(RequestValidationError, request_validation_handler)  #
 # Substitui o handler de `HTTPException` do FastAPI: serializa os 422 sem morrer num
 # surrogate solto e põe o 400 de corpo ilegível no envelope documentado. Ver `errors.py`.
 app.add_exception_handler(StarletteHTTPException, http_exception_handler)
+# Antes do handler de último recurso: sem isto a recusa por colisão de ids saía como 500.
+app.add_exception_handler(ThreatIdCollisionError, threat_id_collision_handler)
 register_unhandled_exception_handler(app)
 
 _rate_limit_spec = resolve_rate_limit_default()

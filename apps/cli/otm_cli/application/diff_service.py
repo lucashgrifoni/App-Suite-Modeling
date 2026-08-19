@@ -13,6 +13,7 @@ from otm_threat_engine.comparison_models import AnalysisDiff
 from otm_threat_engine.threat_model_comparison import compare_threat_models
 
 from otm_cli.application.custom_rules_io import load_custom_rules_or_raise
+from otm_cli.application.engine_refusals import engine_refusals_as_cli_errors
 from otm_cli.shared.document_loader import load_otm_document, load_pack_or_raise
 from otm_cli.shared.enums import DiffFormat, MethodologyOption
 
@@ -187,12 +188,13 @@ def run_model_diff(
         # applies to the organisation rules: one ruleset, both sides, so a custom-rule threat
         # that appears only on the revised side is a real regression and not a config artefact.
         lens = methodology.value if methodology else None
-        ba = analyze_document(
-            doc_a, pack=pack_def, methodology=lens, auto_recommend=auto_methodology, custom_rules=ruleset
-        )
-        ra = analyze_document(
-            doc_b, pack=pack_def, methodology=lens, auto_recommend=auto_methodology, custom_rules=ruleset
-        )
+        with engine_refusals_as_cli_errors(failed="the diff between the two revisions."):
+            ba = analyze_document(
+                doc_a, pack=pack_def, methodology=lens, auto_recommend=auto_methodology, custom_rules=ruleset
+            )
+            ra = analyze_document(
+                doc_b, pack=pack_def, methodology=lens, auto_recommend=auto_methodology, custom_rules=ruleset
+            )
     full = compare_threat_models(doc_a, doc_b, baseline_analysis=ba, revised_analysis=ra)
 
     if with_analysis:

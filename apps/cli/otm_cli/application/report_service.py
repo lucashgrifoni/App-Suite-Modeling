@@ -22,6 +22,7 @@ from otm_cli.application.analysis_match import (
     require_analysis_matches_document,
     require_baseline_describes_same_system,
 )
+from otm_cli.application.engine_refusals import engine_refusals_as_cli_errors
 from otm_cli.reporting import export_full_report_markdown
 from otm_cli.shared.document_loader import load_otm_document, load_pack_or_raise
 from otm_cli.shared.errors import CliUserError
@@ -129,7 +130,8 @@ def run_report(
         result = load_analysis_result_from_path(analysis_json)
         require_analysis_matches_document(doc, result, flag="--analysis-json")
     else:
-        result = analyze_document(doc, pack=pack_def)
+        with engine_refusals_as_cli_errors(failed=f"the report for `{path}`."):
+            result = analyze_document(doc, pack=pack_def)
 
     if level is None:
         text = export_full_report_markdown(doc, result)
