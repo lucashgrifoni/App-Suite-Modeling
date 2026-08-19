@@ -120,6 +120,8 @@ def run_diff_analysis(
     payload = ad.model_dump(mode="json")
     if fmt == DiffFormat.json:
         return payload, None, ad
+    if fmt == DiffFormat.markdown:
+        return payload, _markdown_lines(ad), ad
     lines_a: list[str] = [
         f"Methodology: {ad.methodology_before} → {ad.methodology_after}",
         f"Max score: {ad.max_risk_before} → {ad.max_risk_after} (Δ {ad.max_risk_delta!s})",
@@ -139,3 +141,38 @@ def run_diff_analysis(
         lines_a.append("")
         lines_a.extend(ad.signature_remap_hints[:6])
     return payload, lines_a, ad
+
+
+def _markdown_lines(ad: AnalysisDiff) -> list[str]:
+    """O mesmo conteúdo do painel de texto, em Markdown.
+
+    `otm diff` — o irmão que arma a mesma política e partilha `DiffFormat` — honra `markdown` e
+    imprime-o cru para se manter *pipeable*. Aqui `markdown` caía no `else` do painel do Rich, por
+    isso quem pedisse Markdown recebia caracteres de desenho de caixa e um exit 0: uma pipeline que
+    redireccionasse a saída para um `.md` ficava com lixo sem um aviso.
+    """
+    lines = [
+        "# diff-analysis",
+        "",
+        f"- **Methodology:** {ad.methodology_before} → {ad.methodology_after}",
+        f"- **Max score:** {ad.max_risk_before} → {ad.max_risk_after} (Δ {ad.max_risk_delta!s})",
+        (
+            "- **Active heuristics:** "
+            f"+{len(ad.heuristic_threats.added)} / "
+            f"−{len(ad.heuristic_threats.removed)} / "
+            f"~{len(ad.heuristic_threats.modified)}"
+        ),
+    ]
+    for title, items, render in (
+        ("Added", ad.heuristic_threats.added, lambda h: f"`{h.threat_id}` (score {h.score_after})"),
+        ("Removed", ad.heuristic_threats.removed, lambda h: f"`{h.threat_id}`"),
+        ("Modified", ad.heuristic_threats.modified, lambda h: f"`{h.threat_id}` Δscore={h.score_delta!s}"),
+    ):
+        if not items:
+            continue
+        lines += ["", f"## {title}", ""]
+        lines += [f"- {render(item)}" for item in items[:8]]
+    if ad.signature_remap_hints:
+        lines += ["", "## Signature remap hints", ""]
+        lines += [f"- {hint}" for hint in ad.signature_remap_hints[:6]]
+    return lines

@@ -26,7 +26,7 @@ def register(app: typer.Typer) -> None:
         baseline: Annotated[Path, typer.Argument(help="AnalysisResult JSON (baseline).")],
         revised: Annotated[Path, typer.Argument(help="AnalysisResult JSON (revised).")],
         json_out: Path | None = typer.Option(None, "--json-out", help="Write AnalysisDiff to JSON."),
-        fmt: DiffFormat = typer.Option(DiffFormat.text, "--format", "-f", help="text or json."),
+        fmt: DiffFormat = typer.Option(DiffFormat.text, "--format", "-f", help="text | json | markdown"),
         fail_on: str = typer.Option(
             "none",
             "--fail-on",
@@ -70,6 +70,10 @@ def register(app: typer.Typer) -> None:
 
         if fmt == DiffFormat.json:
             print(json.dumps(payload, indent=2, ensure_ascii=False))
+        elif fmt == DiffFormat.markdown:
+            # Cru, como em `diff_cmd`: quem pede markdown vai canalizá-lo para um ficheiro, e um
+            # painel do Rich no meio faria dele lixo. Antes disto `markdown` caía no `else`.
+            print("\n".join(lines or []))
         else:
             console.print(Panel(safe("\n".join(lines or [])), title="diff-analysis", border_style="magenta"))
 
