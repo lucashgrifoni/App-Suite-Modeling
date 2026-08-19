@@ -13,6 +13,7 @@ from typing import Any, Literal
 
 from otm_core_schema import ComponentKind
 from otm_core_schema.document import ThreatModelDocument
+from otm_core_schema.trust_membership import resolve_component_boundaries
 from otm_diagram_engine import export_flowchart_mermaid
 from otm_exporters.markdown_text import md_block, md_inline
 from otm_threat_engine import build_remediation_backlog
@@ -135,11 +136,13 @@ def _boundary_name(doc: ThreatModelDocument, bid: str | None) -> str | None:
 
 
 def _trust_boundary_by_component(doc: ThreatModelDocument) -> dict[str, str]:
-    tb_by_component: dict[str, str] = {}
-    for c in doc.components:
-        if c.in_trust_boundary:
-            tb_by_component[c.id] = c.in_trust_boundary
-    return tb_by_component
+    """As duas formas de declarar a pertença, juntas — que é o que o motor já fazia.
+
+    Ler só `Component.in_trust_boundary` imprimia "Principais trust boundaries: _Nenhuma listada._"
+    para um documento cujas fronteiras estão declaradas do lado da fronteira, no mesmo relatório
+    que reportava `trust_perimeter_crossing`: uma contradição dentro da mesma página.
+    """
+    return resolve_component_boundaries(doc)
 
 
 def _build_distribution_counters(
