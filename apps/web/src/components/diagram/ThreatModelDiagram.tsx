@@ -19,7 +19,9 @@ import { sanitizeDiagramLabel } from "../../utils/diagramSanitize";
 import { removeComponents } from "../../utils/documentNormalize";
 import {
   clearDiagramLayout,
+  documentLayoutKey,
   loadDiagramLayout,
+  removeDiagramLayoutEntries,
   saveDiagramLayoutPatch,
 } from "../../utils/diagramLayoutStorage";
 import { COMPONENT_KINDS, type OtmDataFlow, type OtmDocument } from "../../types/document";
@@ -31,7 +33,7 @@ function gridPos(i: number): { x: number; y: number } {
 }
 
 function buildNodes(doc: OtmDocument, editMode: boolean): Node<OtmNodeData>[] {
-  const layout = loadDiagramLayout();
+  const layout = loadDiagramLayout(documentLayoutKey(doc));
   return doc.components.map((c, i) => ({
     id: c.id,
     type: "otm",
@@ -136,20 +138,17 @@ function ThreatModelDiagramInner({
       // Cascades to assets and trust boundaries too — pruning only components and flows
       // leaves references the canonical schema rejects.
       setDocument(removeComponents(document, [...rm]));
-      try {
-        const cur = loadDiagramLayout();
-        for (const id of rm) delete cur[id];
-        sessionStorage.setItem("otm.web.diagramLayout", JSON.stringify(cur));
-      } catch {
-        /* ignore */
-      }
+      removeDiagramLayoutEntries(documentLayoutKey(document), [...rm]);
     },
     [document, setDocument, editMode],
   );
 
-  const onNodeDragStop = useCallback((_e: unknown, node: Node) => {
-    saveDiagramLayoutPatch(node.id, node.position);
-  }, []);
+  const onNodeDragStop = useCallback(
+    (_e: unknown, node: Node) => {
+      saveDiagramLayoutPatch(documentLayoutKey(document), node.id, node.position);
+    },
+    [document],
+  );
 
   const onSelectionChange = useCallback(({ nodes: sel }: { nodes: Node[] }) => {
     setSelectedId(sel.length === 1 ? sel[0].id : null);
@@ -197,7 +196,7 @@ function ThreatModelDiagramInner({
   const addNode = useCallback(() => {
     const id = `n_${Date.now()}`;
     const pos = gridPos(document.components.length);
-    saveDiagramLayoutPatch(id, pos);
+    saveDiagramLayoutPatch(documentLayoutKey(document), id, pos);
     setDocument({
       ...document,
       components: [
@@ -215,13 +214,7 @@ function ThreatModelDiagramInner({
     if (!selectedId || !editMode) return;
     const rm = selectedId;
     setDocument(removeComponents(document, [rm]));
-    try {
-      const cur = loadDiagramLayout();
-      delete cur[rm];
-      sessionStorage.setItem("otm.web.diagramLayout", JSON.stringify(cur));
-    } catch {
-      /* ignore */
-    }
+    removeDiagramLayoutEntries(documentLayoutKey(document), [rm]);
     setSelectedId(null);
   }, [selectedId, editMode, document, setDocument]);
 
