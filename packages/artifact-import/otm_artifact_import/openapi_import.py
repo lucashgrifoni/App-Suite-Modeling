@@ -120,33 +120,44 @@ def _detect_openapi_header(data: dict[str, Any]) -> tuple[str, list[str], bool, 
 
 
 def _infer_authenticated(data: dict[str, Any], paths: dict[str, Any]) -> bool | None:
-    """Inferência de autenticação: segurança global > consenso por operação > segurança por path."""
-    any_sec: list[bool] = []
+    """Autenticação efetiva por operação: a declaração mais específica ganha.
+
+    A precedência é a que a especificação OpenAPI define, e não a inversa: `security` numa
+    operação **substitui** o do documento, e uma lista vazia remove a exigência para essa
+    operação. Consultar a raiz primeiro — o que esta função fazia, e a sua docstring declarava
+    como regra — devolvia `True` para uma spec cuja raiz exige `bearerAuth` e cujas operações
+    **todas** declaram `security: []`, isto é, uma API inteiramente aberta. Indistinguível da
+    spec em que as operações herdam o requisito, e errada na direção que esconde exposição.
+
+    `all`, e não `any`: um único caminho aberto basta para a API não ser toda autenticada.
+    Ausência de qualquer declaração continua a ser `None` — não saber não é o mesmo que saber
+    que não há, e só a renúncia explícita vale como resposta negativa.
+    """
+    root = _root_security_required(data)
+    effective: list[bool] = []
+    declared = False
+
     for item in paths.values():
         if not isinstance(item, dict):
             continue  # pragma: no cover - defensive guard
+        path_level = _operation_security_required(item)
         for method, op in item.items():
-            if (
-                isinstance(method, str)
-                and method.lower() in _HTTP_METHODS
-                and isinstance(op, dict)
-                and "security" in op
-            ):
-                any_sec.append(bool(op.get("security")))
-    auth_from_ops = all(any_sec) if any_sec else None
+            if not (isinstance(method, str) and method.lower() in _HTTP_METHODS and isinstance(op, dict)):
+                continue
+            if "security" in op:
+                declared = True
+                effective.append(bool(op.get("security")))
+            elif path_level is not None:
+                declared = True
+                effective.append(path_level)
+            else:
+                effective.append(root)
 
-    if _root_security_required(data):
-        return True
-    if auth_from_ops is not None:
-        return auth_from_ops
-    path_level_sec = [
-        x
-        for x in (_operation_security_required(item) for item in paths.values() if isinstance(item, dict))
-        if x is not None
-    ]
-    if path_level_sec:
-        return all(path_level_sec)
-    return None
+    if not effective:
+        return True if root else None
+    if not declared and not root:
+        return None
+    return all(effective)
 
 
 def import_openapi_text(text: str, *, filename: str = "openapi.yaml") -> ArtifactImportResult:
