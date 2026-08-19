@@ -366,8 +366,13 @@
         },
         {
           "framework": "nist_csf",
-          "control_id": "PR.IR-01",
-          "notes": "Resiliência de infraestruturas e recursos (NIST CSF 2.0 PR.IR)."
+          "control_id": "PR.IR-04",
+          "notes": "Capacidade de recursos para assegurar disponibilidade (NIST CSF 2.0 PR.IR-04)."
+        },
+        {
+          "framework": "nist_csf",
+          "control_id": "PR.IR-03",
+          "notes": "Mecanismos de resiliência em situação normal e adversa (NIST CSF 2.0 PR.IR-03)."
         },
         {
           "framework": "iso_27001",
@@ -681,8 +686,13 @@
         },
         {
           "framework": "nist_csf",
-          "control_id": "PR.IR-01",
-          "notes": "Resiliência de infraestruturas e recursos (NIST CSF 2.0 PR.IR)."
+          "control_id": "PR.IR-04",
+          "notes": "Capacidade de recursos para assegurar disponibilidade (NIST CSF 2.0 PR.IR-04)."
+        },
+        {
+          "framework": "nist_csf",
+          "control_id": "PR.IR-03",
+          "notes": "Mecanismos de resiliência em situação normal e adversa (NIST CSF 2.0 PR.IR-03)."
         },
         {
           "framework": "iso_27001",
@@ -931,8 +941,13 @@
         },
         {
           "framework": "nist_csf",
-          "control_id": "PR.IR-01",
-          "notes": "Resiliência de infraestruturas e recursos (NIST CSF 2.0 PR.IR)."
+          "control_id": "PR.IR-04",
+          "notes": "Capacidade de recursos para assegurar disponibilidade (NIST CSF 2.0 PR.IR-04)."
+        },
+        {
+          "framework": "nist_csf",
+          "control_id": "PR.IR-03",
+          "notes": "Mecanismos de resiliência em situação normal e adversa (NIST CSF 2.0 PR.IR-03)."
         },
         {
           "framework": "iso_27001",
@@ -1287,7 +1302,7 @@
       "capec": 20,
       "cwe": 20,
       "iso_27001": 39,
-      "nist_csf": 37,
+      "nist_csf": 40,
       "owasp_asvs": 36,
       "owasp_tm": 20
     }

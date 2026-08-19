@@ -17,7 +17,7 @@ Contagem de referências `framework:control_id` nas heurísticas (por catálogo 
 - **MITRE CAPEC** (`capec`): 20
 - **MITRE CWE** (`cwe`): 20
 - **ISO/IEC 27001 (Annex A)** (`iso_27001`): 39
-- **NIST CSF** (`nist_csf`): 37
+- **NIST CSF** (`nist_csf`): 40
 - **OWASP ASVS** (`owasp_asvs`): 36
 - **OWASP Threat Modeling** (`owasp_tm`): 20
 
@@ -98,13 +98,13 @@ Visualização priorizada por especificidade (`biz_*`) com redução de redundâ
 - **[information_disclosure] API (public_api)** (`eng_api_information_disclosure`) → alvo `api` — score 15.0  
   - Frameworks: `owasp_tm:STRIDE-I`, `capec:CAPEC-118`, `cwe:CWE-200`, `owasp_asvs:V8.3.1`, `owasp_asvs:V9.1.1`, `nist_csf:PR.DS-01`, `nist_csf:PR.DS-02`, `iso_27001:A.8.24`, … (+1)
 - **[denial_of_service] API (public_api)** (`eng_api_denial_of_service`) → alvo `api` — score 15.0  
-  - Frameworks: `owasp_tm:STRIDE-D`, `capec:CAPEC-125`, `cwe:CWE-400`, `owasp_asvs:V11.1.1`, `nist_csf:PR.IR-01`, `iso_27001:A.8.6`, `iso_27001:A.8.14`
+  - Frameworks: `owasp_tm:STRIDE-D`, `capec:CAPEC-125`, `cwe:CWE-400`, `owasp_asvs:V11.1.1`, `nist_csf:PR.IR-04`, `nist_csf:PR.IR-03`, `iso_27001:A.8.6`, `iso_27001:A.8.14`
 - **[tampering] Pedidos** (`eng_db_tampering`) → alvo `db` — score 15.0  
   - Frameworks: `owasp_tm:STRIDE-T`, `capec:CAPEC-184`, `cwe:CWE-345`, `owasp_asvs:V5.1.1`, `owasp_asvs:V14.1.1`, `nist_csf:PR.DS-01`, `nist_csf:PR.PS-01`, `iso_27001:A.8.9`, … (+1)
 - **[information_disclosure] Pedidos** (`eng_db_information_disclosure`) → alvo `db` — score 15.0  
   - Frameworks: `owasp_tm:STRIDE-I`, `capec:CAPEC-118`, `cwe:CWE-200`, `owasp_asvs:V8.3.1`, `owasp_asvs:V9.1.1`, `nist_csf:PR.DS-01`, `nist_csf:PR.DS-02`, `iso_27001:A.8.24`, … (+1)
 - **[denial_of_service] Pedidos** (`eng_db_denial_of_service`) → alvo `db` — score 15.0  
-  - Frameworks: `owasp_tm:STRIDE-D`, `capec:CAPEC-125`, `cwe:CWE-400`, `owasp_asvs:V11.1.1`, `nist_csf:PR.IR-01`, `iso_27001:A.8.6`, `iso_27001:A.8.14`
+  - Frameworks: `owasp_tm:STRIDE-D`, `capec:CAPEC-125`, `cwe:CWE-400`, `owasp_asvs:V11.1.1`, `nist_csf:PR.IR-04`, `nist_csf:PR.IR-03`, `iso_27001:A.8.6`, `iso_27001:A.8.14`
 - **[spoofing] Usuário** (`eng_user_spoofing`) → alvo `user` — score 12.0  
   - Frameworks: `owasp_tm:STRIDE-S`, `capec:CAPEC-151`, `cwe:CWE-287`, `owasp_asvs:V2.2.1`, `owasp_asvs:V3.2.1`, `nist_csf:PR.AA-01`, `nist_csf:PR.AA-05`, `iso_27001:A.8.5`, … (+1)
 - **[spoofing] Worker** (`eng_worker_spoofing`) → alvo `worker` — score 12.0  
@@ -122,7 +122,7 @@ Visualização priorizada por especificidade (`biz_*`) com redução de redundâ
 - **[information_disclosure] Worker** (`eng_worker_information_disclosure`) → alvo `worker` — score 9.0  
   - Frameworks: `owasp_tm:STRIDE-I`, `capec:CAPEC-118`, `cwe:CWE-200`, `owasp_asvs:V8.3.1`, `owasp_asvs:V9.1.1`, `nist_csf:PR.DS-01`, `nist_csf:PR.DS-02`, `iso_27001:A.8.24`, … (+1)
 - **[denial_of_service] Worker** (`eng_worker_denial_of_service`) → alvo `worker` — score 9.0  
-  - Frameworks: `owasp_tm:STRIDE-D`, `capec:CAPEC-125`, `cwe:CWE-400`, `owasp_asvs:V11.1.1`, `nist_csf:PR.IR-01`, `iso_27001:A.8.6`, `iso_27001:A.8.14`
+  - Frameworks: `owasp_tm:STRIDE-D`, `capec:CAPEC-125`, `cwe:CWE-400`, `owasp_asvs:V11.1.1`, `nist_csf:PR.IR-04`, `nist_csf:PR.IR-03`, `iso_27001:A.8.6`, `iso_27001:A.8.14`
 
 ### Explicabilidade (resumo)
 
