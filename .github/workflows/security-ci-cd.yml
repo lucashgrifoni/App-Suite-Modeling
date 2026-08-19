@@ -595,6 +595,13 @@ jobs:
             --skip-dirs "${TRIVY_SKIP_DIRS}"
 
       - name: Report dev-dependency findings
+        # `always()` de propósito: o resumo aparece mesmo quando o scan falha. Por isso mesmo tem
+        # de saber **porquê** não há ficheiro. `-s` é falso em dois estados distintos — o trivy
+        # correu e não achou nada, e o trivy não correu de todo — e escrever "sem findings" no
+        # segundo é afirmar segurança sobre uma verificação que nunca aconteceu, no artefacto que
+        # uma pessoa lê como evidência. O passo do scan já recusa `continue-on-error` por esta
+        # mesma razão; a distinção perdia-se uma linha abaixo. Ver
+        # `tests/test_p4_dev_deps_summary_distinguishes_not_run.py`.
         if: ${{ always() }}
         run: |
           {
@@ -602,7 +609,10 @@ jobs:
             echo
             echo "Não bloqueia o merge. Bloqueiam apenas as dependências de runtime, no passo acima."
             echo
-            if [ -s trivy-dev-deps.txt ]; then
+            if [ ! -e trivy-dev-deps.txt ]; then
+              echo "**O scan não correu.** O passo anterior não produziu \`trivy-dev-deps.txt\`."
+              echo "Este resumo não afirma nada sobre as dependências de desenvolvimento."
+            elif [ -s trivy-dev-deps.txt ]; then
               echo '```'
               cat trivy-dev-deps.txt
               echo '```'
