@@ -19,7 +19,7 @@ from otm_exporters.analysis_markdown_i18n import (
     risk_category_key,
     risk_category_title,
 )
-from otm_exporters.markdown_text import md_inline
+from otm_exporters.markdown_text import md_code, md_inline
 
 
 def _target_of(h) -> str:
@@ -256,7 +256,10 @@ def _format_framework_refs_compact(
 ) -> str:
     if not refs:
         return msgs.ref_none
-    parts = [f"`{r.framework}:{r.control_id}`" for r in refs[:max_items]]
+    # `md_code` e não crases à mão: o `control_id` de uma regra personalizada é texto livre do
+    # utilizador, e uma crase nele fechava o span e devolvia o controlo do Markdown ao ficheiro
+    # de regras. Este era o único sink deste ficheiro que ainda recebia o valor cru.
+    parts = [md_code(f"{r.framework}:{r.control_id}") for r in refs[:max_items]]
     if len(refs) > max_items:
         parts.append(msgs.ref_more.format(n=len(refs) - max_items))
     return ", ".join(parts)

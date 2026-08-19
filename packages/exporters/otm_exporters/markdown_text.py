@@ -37,6 +37,9 @@ import re
 #:
 #: Ficam deliberadamente de fora `-`/`*`/`+` (lista) e `1.` (lista ordenada): não criam secções
 #: nem tabelas, e aparecem com frequência em descrições legítimas.
+#: Sequências de crases no valor: a cerca do code span tem de ser mais longa do que a maior.
+_BACKTICK_RUNS = re.compile(r"`+")
+
 _LEADING_BLOCK = re.compile(r"^(?:#{1,6}(?=\s|$)|\||>|`{3,}|~{3,}|-{3,}[ \t]*$|={3,}[ \t]*$)")
 
 _LINE_BREAKS = re.compile("[\r\n\x0b\x0c\x85\u2028\u2029]+")
@@ -63,6 +66,31 @@ def md_inline(value: object) -> str:
     (`otm_report_premium._md_cell`) o escape do pipe já existe junto do achatamento.
     """
     return _CONTROL_CHARS.sub("", _LINE_BREAKS.sub(" ", str(value)))
+
+
+def md_code(value: object) -> str:
+    """Texto do modelo dentro de um *code span*.
+
+    A terceira posição, a seguir a `md_inline` (dentro de uma frase) e `md_block` (no seu próprio
+    parágrafo). Existe porque pôr o valor entre crases **parece** neutralizá-lo e não neutraliza:
+    uma crase no valor fecha o span, e o que vem a seguir volta a ser Markdown verdadeiro. Foi por
+    isso que `_format_framework_refs_compact` ficou de fora da varredura que aplicou `md_inline` aos
+    outros 34 sinks de `analysis_markdown.py` -- e é o único desses sinks que recebe texto livre do
+    utilizador, o `refs` de uma regra personalizada.
+
+    O CommonMark resolve-o pelo comprimento: um span aberto por N crases só fecha na próxima
+    sequência de **exactamente** N. Escolhe-se por isso uma cerca mais longa do que a maior
+    sequência presente no valor. Um valor que começa ou acaba em crase leva um espaço de cada lado,
+    que o CommonMark remove ao renderizar -- é o que impede a cerca de se colar à crase do conteúdo
+    e formar uma sequência maior.
+
+    Achatar continua a ser a regra: o valor não é truncado nem escapado, apenas impedido de sair
+    da sua linha e do seu span. Ver `tests/test_p3_custom_rule_refs_cannot_forge_the_report_outline.py`.
+    """
+    text = md_inline(value)
+    fence = "`" * (max((len(run) for run in _BACKTICK_RUNS.findall(text)), default=0) + 1)
+    padding = " " if text.startswith("`") or text.endswith("`") or not text.strip() else ""
+    return f"{fence}{padding}{text}{padding}{fence}"
 
 
 def md_block(value: object) -> str:
