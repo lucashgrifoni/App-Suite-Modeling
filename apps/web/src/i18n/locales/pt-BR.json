@@ -230,6 +230,9 @@
       "web_application": "Aplicação web",
       "api_backend": "API / backend",
       "mobile_application": "Mobile",
+      "desktop": "Desktop",
+      "batch_data_pipeline": "Pipeline de dados / batch",
+      "iot_system": "Sistema IoT",
       "hybrid": "Híbrido",
       "other": "Outro"
     }

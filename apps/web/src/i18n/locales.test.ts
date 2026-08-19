@@ -43,6 +43,7 @@ const INTENTIONALLY_IDENTICAL: ReadonlySet<string> = new Set([
   "diff.revisionPlaceholder",
   "document.componentKinds.gateway",
   "document.systemTypes.api_backend",
+  "document.systemTypes.desktop",
   "document.systemTypes.mobile_application",
   "export.artifactLangEn",
   "export.fmtBundle",
