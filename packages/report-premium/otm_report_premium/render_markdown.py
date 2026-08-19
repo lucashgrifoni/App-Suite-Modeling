@@ -254,7 +254,7 @@ def _md_deep_details(lines: list[str], payload: PremiumReportPayload, r: Premium
     lines.append(f"{r.md_ownership}\n")
     for ow in payload.ownership:
         role = ow.suggested_owner_role or r.md_to_define
-        lines.append(f"- **{role}:** {len(ow.backlog_item_ids)} {r.md_items} {r.md_em_dash} {ow.explanation}\n")
+        lines.append(f"- **{role}:** {ow.item_count} {r.md_items} {r.md_em_dash} {ow.explanation}\n")
 
     lines.append(f"{r.md_strategic}\n")
     for s in payload.strategic_recommendations:

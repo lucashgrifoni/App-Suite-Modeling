@@ -171,7 +171,14 @@ class OwnershipRow(BaseModel):
     scope: str
     suggested_owner_role: str | None
     explanation: str
+    #: Amostra limitada, para o payload não crescer com o backlog. NÃO é a contagem: quem quiser
+    #: saber quantos itens o responsável tem lê `item_count`.
     backlog_item_ids: list[str] = Field(default_factory=list)
+    #: Quantos itens o responsável tem de facto. Existe porque o renderizador imprimia
+    #: `len(backlog_item_ids)`, que é o tecto assim que alguém passa dele: três responsáveis com
+    #: 75, 48 e 31 itens saíam todos como "30 itens", sem marca de truncagem, e a leitura era de
+    #: carga distribuída por igual. Ver `tests/test_p3_ownership_count_is_the_real_count.py`.
+    item_count: int = 0
 
 
 class RoadmapPhase(BaseModel):

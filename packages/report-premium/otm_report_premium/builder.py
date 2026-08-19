@@ -388,6 +388,7 @@ def _build_ownership_rows(backlog: Any, b: PremiumBuilderCopy) -> list[Ownership
                 suggested_owner_role=None if role == "a_definir" else role,
                 explanation=b.ownership_explanation,
                 backlog_item_ids=ids[:30],
+                item_count=len(ids),
             )
         )
     return ownership_rows
