@@ -485,19 +485,27 @@ def _components_to_otm(components: list[Component]) -> list[dict[str, Any]]:
 
 
 def _dataflows_to_otm(flows: list[DataFlow]) -> list[dict[str, Any]]:
-    return [
-        _with_attributes(
-            {
-                "id": df.id,
-                "name": df.name or df.id,
-                "source": df.from_component,
-                "destination": df.to_component,
-                "bidirectional": False,
-            },
-            _attributes_to_otm(df, _DATAFLOW_OTM_SLOTS),
-        )
-        for df in flows
-    ]
+    out: list[dict[str, Any]] = []
+    for df in flows:
+        entry: dict[str, Any] = {
+            "id": df.id,
+            "name": df.name or df.id,
+            "source": df.from_component,
+            "destination": df.to_component,
+            "bidirectional": False,
+        }
+        # `description` está em `_DATAFLOW_OTM_SLOTS`, o que a exclui dos `attributes` por ser
+        # tratada como campo próprio — e ninguém a escrevia como campo. Caía entre os dois e o
+        # round-trip destruía-a, num formato cujo propósito é transportá-la. Os dois lados deste
+        # módulo já discordavam: `otm_to_document` lê `df.get("description")`, e
+        # `_components_to_otm` escreve a do componente exactamente assim. Só os fluxos não.
+        #
+        # Condicional, e não sempre: escrever `description: null` mudaria os bytes de todos os
+        # exemplos distribuídos sem acrescentar informação.
+        if df.description:
+            entry["description"] = df.description
+        out.append(_with_attributes(entry, _attributes_to_otm(df, _DATAFLOW_OTM_SLOTS)))
+    return out
 
 
 def _asset_risk_to_otm(asset: Asset) -> dict[str, float]:
