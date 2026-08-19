@@ -17,7 +17,7 @@ A **validação**, o **motor STRIDE** e os **mapeamentos de framework** executam
 
 1. **Início** — modelo em branco (POST `/v1/models`) ou **templates** (GET + POST instantiate).
 2. **Assistente** — 4 passos: contexto, componentes, fluxos, conclusão (validação no servidor entre passos).
-3. **Diagrama** — lista de componentes e fluxos; JSON opcional para perfis técnicos.
+3. **Diagrama** — diagrama interactivo (React Flow) alinhado a `data_flows`, com lista de componentes e fluxos; JSON opcional para perfis técnicos.
 4. **Análise** — POST `/v1/models/analyze`; filtros locais por score e framework (dados já vindos da API).
    - seletor de metodologia com `stride` default;
    - hint curto por metodologia (estático, apenas apresentação);
@@ -90,9 +90,12 @@ npm run ci:build:portable
 
 ## Extensões futuras
 
-- Diagrama visual (React Flow) alinhado a `data_flows`.
-- Autenticação e persistência multi-utilizador (API + BD).
-- Internacionalização (i18n).
+- Autenticação e persistência multi-utilizador (API + BD). Ver
+  [`KNOWN_LIMITATIONS.md`](../KNOWN_LIMITATIONS.md) — hoje não há contas nem histórico centralizado.
+
+O diagrama React Flow e a internacionalização estavam nesta lista e **já foram entregues**:
+`apps/web/src/components/diagram/` e `apps/web/src/i18n/`, com cobertura em
+`apps/web/e2e/diagram.spec.ts` e `apps/web/e2e/i18n.spec.ts`.
 
 ## Exemplos por metodologia (fluxo UI)
 

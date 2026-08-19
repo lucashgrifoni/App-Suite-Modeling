@@ -1,5 +1,15 @@
 # Plano de implementação — MVP
 
+> **Registo histórico, não o roadmap actual.** Este documento é o plano que levou o projecto ao MVP.
+> As fases 0 a 5 foram entregues; a versão corrente é a **7.9.0**, e a última alteração a este
+> ficheiro é de **2026-04-07**. As caixas por marcar descrevem o estado de então, não trabalho
+> pendente — preserva-se por valor histórico, como registo de como o produto foi construído.
+>
+> Para o que existe hoje: [`../README.md`](../README.md) e as páginas em
+> [`../README.md#features`](../README.md). Para o que **não** existe:
+> [`../KNOWN_LIMITATIONS.md`](../KNOWN_LIMITATIONS.md).
+
+
 Objetivo do MVP: **fluxo ponta a ponta** — escrever/gerar um modelo, validar, rodar análise STRIDE básica, ver diagrama e exportar relatório — com **CLI e API** utilizáveis desde o primeiro marco.
 
 ## Fase 0 — Fundação (concluída neste repositório)

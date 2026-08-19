@@ -2,13 +2,13 @@
 
 Ponto de entrada único para navegar o `/docs`. O mapa editorial (público vs interno) está em **[`DOCUMENTATION_STRUCTURE.md`](DOCUMENTATION_STRUCTURE.md)**.
 
-**Versão de produto:** `7.5.0` — fonte canónica: [`pyproject.toml`](../pyproject.toml); histórico: [`CHANGELOG.md`](../CHANGELOG.md).
+**Versão de produto:** `7.9.0` — fonte canónica: [`pyproject.toml`](../pyproject.toml); histórico: [`CHANGELOG.md`](../CHANGELOG.md).
 
 ---
 
 ## Começar aqui (*Getting started*)
 
-1. Instalação: secção [Comece aqui](#comece-aqui) abaixo (ou [`README.md`](../README.md) na raiz, em inglês).  
+1. Instalação: secção [Comece aqui](#comece-aqui-instalação-resumida) abaixo (ou [`README.md`](../README.md) na raiz, em inglês).  
 2. Primeiro modelo: `otm init` ou [`examples/minimal.otm.yaml`](../examples/minimal.otm.yaml).  
 3. Fluxo: `otm validate` → `otm analyze` → `otm report` / exports via API.  
 4. Limitações honestas: [`KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md).
@@ -52,7 +52,7 @@ Guias em **[`features/`](features/)** — superfícies e capacidades de produto.
 | [`features/CHOOSE_METHODOLOGY.md`](features/CHOOSE_METHODOLOGY.md) | Escolher metodologia |
 | [`features/MULTI_ENGINE_ARCHITECTURE.md`](features/MULTI_ENGINE_ARCHITECTURE.md) | Matriz multi-metodologia |
 | [`features/PLOT4AI_AI_SYSTEM.md`](features/PLOT4AI_AI_SYSTEM.md) | PLOT4ai / sistemas de IA |
-| [`features/ARTIFACT_IMPORT.md`](features/ARTIFACT_IMPORT.md) | Import OpenAPI, K8s, Terraform, Helm |
+| [`features/ARTIFACT_IMPORT.md`](features/ARTIFACT_IMPORT.md) | Import OpenAPI, K8s, Terraform — e os limites de cada um |
 | [`features/THREAT_MODEL_DIFF.md`](features/THREAT_MODEL_DIFF.md) | Diff semântico |
 | [`features/EXPORTERS.md`](features/EXPORTERS.md) | Formatos de export |
 | [`features/PREMIUM_REPORTS.md`](features/PREMIUM_REPORTS.md) | Relatórios premium |
@@ -63,7 +63,7 @@ Guias em **[`features/`](features/)** — superfícies e capacidades de produto.
 | [`features/SCHEMA_V1.md`](features/SCHEMA_V1.md) | Schema canónico v1 |
 | [`features/CORE_ENGINE.md`](features/CORE_ENGINE.md) | Motor de análise |
 | [`features/TEMPLATES_AND_PACKS.md`](features/TEMPLATES_AND_PACKS.md) · [`features/TEMPLATE_CATALOG.md`](features/TEMPLATE_CATALOG.md) | Templates e *packs* |
-| [`features/MVP_ROADMAP.md`](features/MVP_ROADMAP.md) | Roadmap de fases |
+| [`features/MVP_ROADMAP.md`](features/MVP_ROADMAP.md) | **Histórico**: o plano que levou ao MVP (fases entregues) |
 | [`features/PRODUCT_POSITIONING.md`](features/PRODUCT_POSITIONING.md) | Posicionamento |
 | [`features/BRANDING.md`](features/BRANDING.md) | Identidade visual |
 | [`features/SCREENSHOT_GUIDE.md`](features/SCREENSHOT_GUIDE.md) | Capturas para README/marketing |

@@ -60,7 +60,7 @@ Rebuild after changing environment variables.
 
 ### Option A — GitHub Actions (recommended)
 
-The repository includes **`.github/workflows/deploy-gitpage.yml`**, which:
+The repository includes **`.github/workflows/deploy-github-pages.yml`**, which:
 
 - runs on **every push** to `main` or `master`, and on **Run workflow** (manual) in the Actions tab;
 - runs `npm ci` and `npm run build` inside `gitpage/`;

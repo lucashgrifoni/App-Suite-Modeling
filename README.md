@@ -21,7 +21,7 @@ Define architecture once in a **versioned YAML model**, run **multi-methodology 
 - a **REST API** ([FastAPI](https://fastapi.tiangolo.com/)) for integrations,
 - and a **web UI** (React + Vite) for guided modeling and visualization.
 
-The **threat engine** validates the model and produces **suggested threats**, **structured explainability**, **remediation-style backlog hints**, and **exports** (Markdown, JSON, Mermaid, optional PDF). You can **import** drafts from real engineering artifacts (OpenAPI, Kubernetes manifests, Terraform, Helm) and **diff** two model revisions for PR-style reviews.
+The **threat engine** validates the model and produces **suggested threats**, **structured explainability**, **remediation-style backlog hints**, and **exports** (Markdown, JSON, Mermaid, optional PDF). You can **import** drafts from real engineering artifacts (OpenAPI, Kubernetes manifests, Terraform) and **diff** two model revisions for PR-style reviews.
 
 It is aimed at **AppSec**, **DevSecOps**, and **software architects** who want models that stay **close to the repo**, **reviewable in Git**, and **repeatable in CI**.
 
@@ -51,7 +51,7 @@ This project treats the threat model as **code-like data**: one schema, many sur
 | **Multi-methodology engine** | STRIDE, LINDDUN, PASTA, NIST Data-Centric, OCTAVE Allegro, CIA-DIE, **PLOT4ai** (AI/LLM systems). |
 | **Explainability** | Structured explanation records alongside heuristics—not only free-text bullets. |
 | **Semantic diff** | Compare models (and rich comparisons) for **PRs**, audits, and release gates. |
-| **Artifact import** | Seed drafts from **OpenAPI/Swagger**, **Kubernetes YAML**, **Terraform**, **Helm** (always review the result). |
+| **Artifact import** | Seed drafts from **OpenAPI/Swagger**, **Kubernetes YAML**, **Terraform** (always review the result). A `helm_release` in Terraform is flagged, but charts are not rendered. |
 | **Exports** | JSON, Markdown, Mermaid, bundles; **PDF** generation in the browser for the web UI path; premium report path via optional extras. |
 | **CI / automation** | Same operations via **CLI** or **REST** (`validate`, `analyze`, `export`, `diff`, templates, imports). |
 
@@ -66,7 +66,7 @@ Author model (.otm.yaml) → validate → analyze (methodology / auto-recommend)
     → review threats + explanations + backlog hints → export artifacts → diff versions
 ```
 
-Optional: **import** OpenAPI/K8s/Terraform/Helm to bootstrap a draft, then **incrementally** refine in the **wizard** or editor and share via **API** or **CLI**.
+Optional: **import** OpenAPI/K8s/Terraform to bootstrap a draft, then **incrementally** refine in the **wizard** or editor and share via **API** or **CLI**.
 
 ---
 
@@ -155,7 +155,19 @@ otm report examples/minimal.otm.yaml -o REPORT.md
     upload-sarif: "true"   # needs `security-events: write` on the job
 ```
 
-By default the action installs the engine from its own checkout, so the CLI is exactly the version you pinned in `uses:` — there is no skew between the action and the tool. Pass `version: 7.9.0` to install that release from PyPI instead. Outputs: `sarif-file`, `analysis-file`, and `gate-outcome` (`passed`, `tripped`, `not-evaluated`, or `skipped`). See [`action.yml`](action.yml) for every input.
+By default the action installs the engine from its own checkout, so the CLI is exactly the version you pinned in `uses:` — there is no skew between the action and the tool. Pass `version: 7.9.0` to install that release from PyPI instead. Outputs: `sarif-file`, `analysis-file`, and `gate-outcome` (`passed`, `tripped`, `not-evaluated`, `error`, or `skipped`). See [`action.yml`](action.yml) for every input.
+
+**Modelling more than one system? Give each run its own `sarif-category`.** `model` names a single file, so covering three services means running this action three times — and GitHub indexes code scanning results by `(ref, category)`. Left at the default, the last upload of the run replaces the others and their alerts close as "no longer detected", with no step failing and nothing to notice. One line per matrix entry avoids it:
+
+```yaml
+- uses: lucashgrifoni/App-Suite-Modeling@v7.9.0
+  with:
+    model: ${{ matrix.model }}
+    upload-sarif: "true"
+    sarif-category: otm-threat-model-${{ matrix.service }}
+```
+
+A single model needs nothing: keep the default, because changing the category orphans the alerts already published under the old one.
 
 **Where the baseline comes from — and why it is not a file path.** A baseline addressed as a path resolves inside the pull request's own checkout, which is written by the same author the gate exists to judge: one pull request that adds the risky component *and* copies the new model over the baseline file reports `gate-outcome: passed` and a green check. So on a `pull_request` event the action reads `baseline` from the **base branch** (`git show origin/$GITHUB_BASE_REF:<baseline>`) and ignores the copy in the checkout. On `push`, tags and schedules there is no pull request to tamper with, so the file in the tree is used.
 
@@ -296,7 +308,7 @@ Test suite (reference): **400+** Python tests in CI when installing `.[dev,cli,a
 | [docs/features/MULTI_ENGINE_ARCHITECTURE.md](docs/features/MULTI_ENGINE_ARCHITECTURE.md) | Methodology matrix |
 | [docs/features/CHOOSE_METHODOLOGY.md](docs/features/CHOOSE_METHODOLOGY.md) | Choosing a lens |
 | [docs/features/PLOT4AI_AI_SYSTEM.md](docs/features/PLOT4AI_AI_SYSTEM.md) | PLOT4ai / AI modeling |
-| [docs/features/ARTIFACT_IMPORT.md](docs/features/ARTIFACT_IMPORT.md) | Importing OpenAPI, K8s, Terraform, Helm |
+| [docs/features/ARTIFACT_IMPORT.md](docs/features/ARTIFACT_IMPORT.md) | Importing OpenAPI, K8s, Terraform — and what each one does not cover |
 | [docs/features/THREAT_MODEL_DIFF.md](docs/features/THREAT_MODEL_DIFF.md) | Model diff |
 | [docs/features/EXPORTERS.md](docs/features/EXPORTERS.md) | Export formats |
 | [docs/CI_AND_SECURITY_EVIDENCE.md](docs/CI_AND_SECURITY_EVIDENCE.md) | Security tooling & CI gates |

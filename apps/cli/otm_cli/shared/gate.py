@@ -9,7 +9,7 @@ Contrato de códigos de saída:
        `--fail-on` inválido, pack desconhecido, destino de escrita inacessível — **e** um
        gate armado que não conseguiu emitir veredito (ver `gate_exit_code`)
     2  erro de utilização levantado pelo Typer/Click: valor inválido num enum
-       (`--methodology`, `--format`, `--kind`), flag desconhecida, argumento em falta
+       (`--methodology`, `--format`, `--fail-on`), flag desconhecida, argumento em falta
     3  **gate reprovou** — há ameaças novas ou agravadas acima do limiar
 
 Um script de CI que queira distinguir "o comando estava mal escrito" de "a política

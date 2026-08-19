@@ -256,7 +256,7 @@ valor é dizer a um revisor no que confiar, é a classe de defeito a tratar como
 | **KICS** | — | **`BLOCKED`**: ausente localmente; corre no CI |
 | **DAST contra instância a correr** | — | **`NÃO TESTADO`**; exercício feito ao nível do `TestClient` |
 
-**Conclusão dentro deste limite.** No commit, componentes, ferramentas e cenários efetivamente avaliados, não permanecem findings críticos ou altos conhecidos sem tratamento. Os controlos marcados `MEDIDO` têm evidência reproduzível registada em `.claude-orchestration/orchestration-state.md`. As áreas acima marcadas `NÃO TESTADO` e `BLOCKED` não estão aprovadas — estão por fazer.
+**Conclusão dentro deste limite.** No commit, componentes, ferramentas e cenários efetivamente avaliados, não permanecem findings críticos ou altos conhecidos sem tratamento. Os controlos marcados `MEDIDO` são reproduzíveis a partir do próprio repositório: a suíte de testes (`python -m pytest`) e os scanners descritos em [`../CI_AND_SECURITY_EVIDENCE.md`](../CI_AND_SECURITY_EVIDENCE.md). As notas de trabalho da campanha que produziu estas medições são **locais e não versionadas**, por isso não servem de evidência a quem clona — o que conta é o que está aqui e o que a suíte demonstra. As áreas acima marcadas `NÃO TESTADO` e `BLOCKED` não estão aprovadas — estão por fazer.
 
 ---
 

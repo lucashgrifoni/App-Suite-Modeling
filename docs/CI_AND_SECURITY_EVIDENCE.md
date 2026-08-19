@@ -231,9 +231,9 @@ Disponíveis em `otm diff` (corre o motor nos dois `.otm.yaml`) e em `otm diff-a
 
 | Código | Significado |
 | --- | --- |
-| `0` | Sem reprovação (e sempre, quando nenhuma flag de gate é usada, ou quando o gate não é avaliável). |
-| `1` | Erro de utilização **levantado pelo CLI**: ficheiro inexistente, YAML inválido, `--fail-on` inválido, pack desconhecido, destino de escrita inacessível. |
-| `2` | Erro de utilização **levantado pelo Typer/Click**: valor inválido num enum (`--methodology`, `--format`, `--kind`), flag desconhecida, argumento obrigatório em falta. |
+| `0` | Sem reprovação. Também quando nenhuma flag de gate é usada. **Só o `0` significa "sem risco novo".** |
+| `1` | Erro de utilização **levantado pelo CLI** (ficheiro inexistente, YAML inválido, `--fail-on` inválido, pack desconhecido, destino de escrita inacessível) **ou um gate armado que não conseguiu emitir veredito** — ver abaixo. |
+| `2` | Erro de utilização **levantado pelo Typer/Click**: valor inválido num enum (`--methodology`, `--format`, `--fail-on`), flag desconhecida, argumento obrigatório em falta. |
 | `3` | **Gate reprovou.** |
 
 > Um script que precise de distinguir "comando mal escrito" de "política falhou" tem de tratar
@@ -257,8 +257,18 @@ era apanhada por política nenhuma.
 **Troca de metodologia: `NOT EVALUATED`, não `PASSED`.** Trocar de lente troca a própria régua — as
 heurísticas de uma metodologia não existem na outra, por isso *todas* as ameaças aparecem como novas
 sem que ninguém as tenha causado. Nesse caso o gate não emite veredito: imprime `THREAT MODEL GATE:
-NOT EVALUATED`, explica porquê e sai com `0`. Não diz `PASSED`, porque não avaliou nada — o mesmo
-princípio que faz `otm diff-analysis` recusar comparar entre versões do motor.
+NOT EVALUATED`, explica porquê e sai com **`1`**. Não diz `PASSED`, porque não avaliou nada — o
+mesmo princípio que faz `otm diff-analysis` recusar comparar entre versões do motor.
+
+> **Porquê `1` e não `0`.** `gate.py` di-lo por extenso: *"Sair `0` aqui seria um fail-open — e num
+> gate de CI o `0` é lido como build verde"*. Um gate que não julgou nada não pode responder o
+> código que significa "sem risco novo". Um script que trate qualquer coisa menos `0` como
+> aprovação está a tratar uma recusa como atestado de saúde.
+>
+> Esta tabela dizia `0` até esta correcção, e o erro não ficou no papel: a action composta
+> (`action.yml`) classificava o não-veredito dentro do ramo `case 0)`, que o CLI nunca alcança.
+> O resultado era `gate-outcome` vazio e um não-veredito legítimo anunciado ao utilizador como erro
+> seu. Documentação errada sobre um código de saída não fica errada sozinha.
 
 Ameaças novas sem score são reportadas como `unranked` no relatório do gate, nunca ignoradas em silêncio.
 

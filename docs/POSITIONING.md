@@ -33,7 +33,7 @@ without an export step.
 Allegro, CIA-DIE and PLOT4ai for AI systems, applied as lenses over the same model. A tool
 built around one rule set answers one question well; this answers several, less deeply.
 
-**Import from artifacts you already have.** OpenAPI, Kubernetes manifests, Terraform and Helm
+**Import from artifacts you already have.** OpenAPI, Kubernetes manifests and Terraform
 produce a reviewable draft. The draft is a starting point, not an answer — it is explicitly
 labelled as such — but it removes the blank page.
 
