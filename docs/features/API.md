@@ -67,19 +67,25 @@ profundidade, 2 MiB por upload em `/v1/imports`); a **saída** é proporcional a
 do documento, porque o motor produz da ordem de sete ameaças por componente e o `AnalysisResult`
 inteiro é serializado numa resposta construída em memória antes do primeiro byte sair.
 
-A amplificação é **linear** e praticamente constante — medida em `/v1/models/analyze`, com o corpo
-HTTP real como denominador:
+A resposta cresce **linearmente com o número de componentes**, e é por componentes que se
+dimensiona. Medido em `/v1/models/analyze`, com o corpo HTTP real dos dois lados:
 
-| Componentes | Pedido | Resposta | Razão |
-|-------------|--------|----------|-------|
-| 1 005 | 490 KB | 10,5 MB | 22,0x |
-| 2 005 | 974 KB | 21,0 MB | 22,1x |
-| 4 005 | 1 943 KB | 42,1 MB | 22,2x |
+| Componentes | Forma do documento | Pedido | Resposta | KB/componente | Razão |
+|-------------|--------------------|--------|----------|---------------|-------|
+| 1 005 | rico (descrição, tecnologia, metadados) | 385 KB | 11,0 MB | 11,3 | 29x |
+| 1 005 | esparso (só os três campos obrigatórios) | 41 KB | 10,2 MB | 10,4 | 254x |
+| 2 005 | esparso | 83 KB | 20,4 MB | 10,4 | 251x |
 
-Documentos com componentes mais ricos chegam a ~58x. Conte com **~25x, até ~60x no pior caso**, ao
-dimensionar o limite de corpo do gateway que `docs/architecture/DEPLOYMENT_INVARIANTS.md` torna
-obrigatório: é esse limite que delimita a resposta, e sem este número não há como o escolher.
-`/v1/remediation/backlog` e `/v1/exports` têm o mesmo perfil.
+Dimensione por **~11 KB de resposta por componente**, não pela razão. As duas primeiras linhas são
+o mesmo documento com os mesmos 1 005 componentes: a resposta é praticamente igual e a razão salta
+oito vezes, porque o que muda é o denominador. Um documento esparso — a forma típica do que um
+importador gera — dá **pior caso medido ~255x** (a razão sobe ligeiramente com documentos pequenos), e uma versão anterior desta página aconselhava
+`~60x`, o que subdimensionava por mais de quatro o limite de corpo do gateway que
+`docs/architecture/DEPLOYMENT_INVARIANTS.md` torna obrigatório.
+
+`tests/test_p4_documented_response_amplification.py` mede e compara com estes números, para que a
+próxima mudança no motor não os deixe a mentir em silêncio. `/v1/remediation/backlog` e
+`/v1/exports` têm o mesmo perfil.
 
 | Variável | Efeito |
 |----------|--------|
