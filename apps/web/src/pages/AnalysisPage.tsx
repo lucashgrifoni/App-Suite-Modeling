@@ -90,6 +90,15 @@ export function AnalysisPage() {
         methodology,
       });
       setAnalysis(r);
+      // O backlog é derivado de UMA execução (`fetchRemediationBacklog({ document, analysis })`),
+      // por isso não sobrevive à que o substitui: sem isto, as métricas e a lista de ameaças
+      // passavam a mostrar a execução nova enquanto o cartão do backlog continuava a render a
+      // anterior — o resumo executivo, o top 5 e os quick wins dela — sem nada no ecrã a dizer que
+      // vinham de execuções diferentes. É a parte sobre a qual alguém age.
+      //
+      // `recommendation` fica: vem de `recommendMethodology(doc)` e depende do documento, não da
+      // análise, portanto uma execução nova não o invalida.
+      setBacklog(null);
       // `r`, not the session analysis: this render still holds the pre-run value.
       const stored = appendSnapshot("analysis", r);
       toast.success(t("analysis.toastOk"));
