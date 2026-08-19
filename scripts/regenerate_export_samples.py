@@ -53,8 +53,14 @@ def main() -> int:
         before = target.read_text(encoding="utf-8") if target.is_file() else None
         # `\n` explícito: estes ficheiros são versionados e não podem mudar por causa do SO de quem
         # os regenerou.
-        target.write_text(content.rstrip("\n") + "\n", encoding="utf-8", newline="\n")
-        state = "criado" if before is None else ("inalterado" if before == content else "actualizado")
+        #
+        # O estado compara-se com `written`, e nao com `content`: para alguns exportadores a
+        # normalizacao acima muda o valor, e comparar com o de antes dela anunciava
+        # "actualizado" em todas as execucoes enquanto `git status` ficava vazio. Um alarme
+        # sempre aceso nao responde a pergunta que este script existe para responder.
+        written = content.rstrip("\n") + "\n"
+        target.write_text(written, encoding="utf-8", newline="\n")
+        state = "criado" if before is None else ("inalterado" if before == written else "actualizado")
         print(f"  {name:26} {state}")
     print(f"\nGerados a partir de {SOURCE.relative_to(ROOT).as_posix()}")
     return 0

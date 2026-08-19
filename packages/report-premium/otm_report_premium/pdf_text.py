@@ -91,11 +91,17 @@ _CYRILLIC_LOWER = {
     "я": "ya",
 }
 
+#: As maiúsculas são derivadas das minúsculas, e as explícitas vêm **depois** para vencerem o
+#: empate. A ordem importa: para um carácter sem forma maiúscula `k.upper()` devolve o próprio
+#: `k`, e a entrada derivada apagava a que estava escrita à mão -- `ĸ` (U+0138, LATIN SMALL
+#: LETTER KRA) saía como `K` maiúsculo no meio de uma palavra minúscula. Inverter a ordem trata
+#: a classe inteira, e não só este carácter: a próxima linha acrescentada à tabela não pode cair
+#: na mesma armadilha. Ver `tests/test_p4_transliteration_table_keeps_the_explicit_entry.py`.
 _TRANSLITERATIONS = {
-    **_LATIN_FALLBACKS,
     **{k.upper(): v.capitalize() for k, v in _LATIN_FALLBACKS.items()},
-    **_CYRILLIC_LOWER,
     **{k.upper(): v.capitalize() for k, v in _CYRILLIC_LOWER.items()},
+    **_LATIN_FALLBACKS,
+    **_CYRILLIC_LOWER,
 }
 
 #: What is left when a character has neither a font glyph nor a Latin reading. One per codepoint,
