@@ -16,7 +16,7 @@ from rich.panel import Panel
 from otm_cli.application.analyze_service import run_analyze
 from otm_cli.commands.bootstrap import console
 from otm_cli.commands.handle_errors import exit_on_cli_error
-from otm_cli.shared.emit import write_json_file, write_text_file
+from otm_cli.shared.emit import input_paths, write_json_file, write_text_file
 from otm_cli.shared.enums import MethodologyOption
 from otm_cli.shared.errors import CliUserError
 from otm_cli.shared.render import safe
@@ -58,10 +58,12 @@ def _prefixed(model: Path, prefix: str | None) -> PurePosixPath:
     return PurePosixPath(base) / model.as_posix()
 
 
-def _emit_json_output(result: AnalysisResult, json_out: Path, *, quiet: bool, model: Path) -> None:
+def _emit_json_output(
+    result: AnalysisResult, json_out: Path, *, quiet: bool, model: Path, rules: Path | None = None
+) -> None:
     payload = result.model_dump(mode="json")
     try:
-        write_json_file(payload=payload, output=json_out, sources=(model,))
+        write_json_file(payload=payload, output=json_out, sources=input_paths(model, rules))
     except CliUserError as e:
         exit_on_cli_error(console, e)
     if not quiet:
@@ -69,7 +71,13 @@ def _emit_json_output(result: AnalysisResult, json_out: Path, *, quiet: bool, mo
 
 
 def _emit_sarif_output(
-    result: AnalysisResult, sarif_out: Path, *, quiet: bool, model: Path, uri_prefix: str | None = None
+    result: AnalysisResult,
+    sarif_out: Path,
+    *,
+    quiet: bool,
+    model: Path,
+    uri_prefix: str | None = None,
+    rules: Path | None = None,
 ) -> None:
     """Write the SARIF run, anchored on the model the user actually named.
 
@@ -80,7 +88,7 @@ def _emit_sarif_output(
     """
     sarif = export_analysis_sarif(result, model_uri=_model_uri(model, uri_prefix))
     try:
-        write_text_file(content=sarif, output=sarif_out, sources=(model,))
+        write_text_file(content=sarif, output=sarif_out, sources=input_paths(model, rules))
     except CliUserError as e:
         exit_on_cli_error(console, e)
     if not quiet:
@@ -216,9 +224,9 @@ def register(app: typer.Typer) -> None:
             exit_on_cli_error(console, e)
 
         if json_out:
-            _emit_json_output(result, json_out, quiet=quiet, model=path)
+            _emit_json_output(result, json_out, quiet=quiet, model=path, rules=rules)
         if sarif_out:
-            _emit_sarif_output(result, sarif_out, quiet=quiet, model=path, uri_prefix=sarif_uri_prefix)
+            _emit_sarif_output(result, sarif_out, quiet=quiet, model=path, uri_prefix=sarif_uri_prefix, rules=rules)
         if quiet:
             raise typer.Exit(0)
 

@@ -13,7 +13,7 @@ from rich.panel import Panel
 from otm_cli.application.diff_service import run_model_diff
 from otm_cli.commands.bootstrap import console
 from otm_cli.commands.handle_errors import exit_on_cli_error
-from otm_cli.shared.emit import write_json_file
+from otm_cli.shared.emit import input_paths, write_json_file
 from otm_cli.shared.enums import DiffFormat, MethodologyOption
 from otm_cli.shared.errors import CliUserError
 from otm_cli.shared.gate import parse_fail_on, report_gate_verdict
@@ -183,7 +183,9 @@ def register(app: typer.Typer) -> None:
             exit_on_cli_error(console, e)
 
         if json_out:
-            _write_diff_json(out_payload, json_out, (baseline, revised))
+            # `rules` também é uma entrada: sem ela em `sources`, `--json-out` sobre o ficheiro
+            # de regras destruía a política da organização e saía 0.
+            _write_diff_json(out_payload, json_out, input_paths(baseline, revised, rules))
 
         _emit_diff(
             fmt,
