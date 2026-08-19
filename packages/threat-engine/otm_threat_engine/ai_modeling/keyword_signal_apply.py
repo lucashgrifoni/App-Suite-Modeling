@@ -60,7 +60,6 @@ _KW_VECTOR = (
     "milvus",
     "qdrant",
     "faiss",
-    "ann",
     "similarity search",
     "embeddings-index",
 )
@@ -139,7 +138,13 @@ def apply_keyword_signals(text: str, b: AiSignalBundle, add_evidence: AddEvidenc
     if has_any_token(text, ("rag",)) or has_any(text, _KW_RETRIEVAL):
         b.retrieval_grounding = True
         add_evidence(b, "retrieval_grounding", "Sinais de RAG / retrieval / grounding.")
-    if has_any(text, _KW_VECTOR):
+    # `ann` (approximate nearest neighbour) sai de `_KW_VECTOR` e passa a comparar-se por token:
+    # em subcadeia acendia com `scanner`, `planner`, `banner`, `channel`, `annual`, `manner` e
+    # `canning` — nomes banais de componentes — e o PLOT4ai emitia ameaças de RAG e de
+    # armazenamento vectorial para sistemas que não têm nenhum dos dois. `has_any_token` já existe
+    # neste ficheiro e já é usado para os outros dois termos curtos com o mesmo problema, `llm` e
+    # `rag`. Ver `tests/test_p3_plot4ai_ann_is_a_word_not_a_substring.py`.
+    if has_any(text, _KW_VECTOR) or has_any_token(text, ("ann",)):
         b.vector_embedding = True
         add_evidence(b, "vector_embedding", "Referências a embeddings ou armazenamento vectorial.")
     if has_any(text, _KW_AGENT):
