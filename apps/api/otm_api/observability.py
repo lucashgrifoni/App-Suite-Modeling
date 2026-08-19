@@ -301,11 +301,23 @@ def register_unhandled_exception_handler(app: FastAPI) -> None:
         # Starlette é o mais exterior de todos), por isso era a única resposta desta API sem
         # `X-Request-ID` — presente em 200, 401, 422, 429. Um cliente que só tenha o cabeçalho
         # para correlacionar ficava exatamente sem ele no estado em que mais precisa dele.
+        # Pela mesma razão que o `X-Request-ID` acima: o `finally` do middleware já repôs o
+        # contextvar do locale quando este handler corre, por isso o 500 era a única resposta
+        # desta API que não falava a língua do pedido — um cliente com `Accept-Language: pt-BR`
+        # recebia os 422 em português e este em inglês. Resolve-se a partir do pedido, que é o
+        # que temos à mão, em vez de depender de uma ordem que não controlamos.
+        token = set_api_error_locale_for_request(
+            resolve_api_error_locale_from_accept_language(request.headers.get("accept-language"))
+        )
+        try:
+            message = msg_internal_error()
+        finally:
+            reset_api_error_locale(token)
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={
                 "code": "INTERNAL_ERROR",
-                "message": msg_internal_error(),
+                "message": message,
                 "request_id": rid,
             },
             headers={"X-Request-ID": rid} if rid else None,
