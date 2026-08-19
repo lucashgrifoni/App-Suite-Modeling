@@ -6,6 +6,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 
 from otm_core_schema import ComponentKind, StrideCategory, ThreatModelMethodology
+from otm_core_schema.ai_context import has_any_token
 from otm_core_schema.document import ThreatModelDocument
 
 from otm_threat_engine.result import HeuristicThreat
@@ -54,7 +55,18 @@ def _ai_context(methodology: ThreatModelMethodology, threat: HeuristicThreat) ->
     if methodology == ThreatModelMethodology.PLOT4AI:
         return True
     blob = f"{threat.title} {threat.description}".lower()
-    return any(k in blob for k in ("llm", "modelo de linguagem", "prompt", "rag", "inferen"))
+    # `llm` e `rag` por token, o resto por subcadeia. `rag` está dentro de **storage**, de
+    # **fragmento** e de **drag and drop**, e esta função decide a categoria do item no backlog e
+    # com ela o dono a quem o trabalho é encaminhado: um bucket chamado "Object Storage" ia para a
+    # equipa de plataforma de ML. Terceira aparição desta classe nesta campanha, depois de `ann` e
+    # de `edge` dentro de `Ledger`.
+    #
+    # `inferên` entra ao lado de `inferen`: a forma sem acento nunca casava com a palavra
+    # portuguesa bem escrita, por isso o termo não apanhava "inferência" — o caso que ele existe
+    # para apanhar. Ver `tests/test_p3_backlog_ai_context_matches_words.py`.
+    if has_any_token(blob, ("llm", "rag")):
+        return True
+    return any(k in blob for k in ("modelo de linguagem", "prompt", "inferen", "inferên"))
 
 
 def _layer_for_kind(ck: ComponentKind | None) -> str | None:
