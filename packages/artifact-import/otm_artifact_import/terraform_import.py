@@ -18,6 +18,7 @@ from otm_artifact_import.ai_import_corpus import build_terraform_import_signals_
 from otm_artifact_import.builders import assemble_draft, slug_id
 from otm_artifact_import.types import ArtifactImportResult, InferenceRecord
 
+_BRACE = re.compile(r"[{}]")
 _RESOURCE_HEAD = re.compile(r'resource\s+"([^"]+)"\s+"([^"]+)"\s*\{')
 
 
@@ -38,26 +39,45 @@ def _iter_resource_blocks(text: str) -> Iterator[tuple[str, str, str]]:
     `0.0.0.0/0` declarado num recurso tardio caía dentro do corpo de todos os anteriores. Uma
     chaveta em falta bastava para mover um balanceador `internal = true` para `tb_internet_facing`.
 
-    Os intervalos entre cabeçalhos consecutivos são disjuntos, por isso limitar cada varredura ao
-    cabeçalho seguinte deixa o custo total linear no ficheiro, sem perder nenhum recurso declarado.
-    Um cabeçalho encontrado dentro de outro bloco encerra-o: já hoje `finditer` o devolvia como
-    recurso próprio, e passa a sê-lo sem ficar também dentro do corpo alheio.
+    O corpo vai até à chaveta que corresponde à do cabeçalho, e o limite no cabeçalho seguinte é
+    apenas o que sobra quando essa chaveta não existe. A primeira tentativa aplicava o limite
+    **sempre**, e isso partia ficheiros válidos: nem todo o texto que casa com `_RESOURCE_HEAD` é
+    um cabeçalho -- dentro de um heredoc é texto -- e o bloco que o continha era truncado aí,
+    perdendo tudo o que viesse depois. Como o único consumidor procura `0.0.0.0/0`, um `aws_lb`
+    com o CIDR declarado depois do heredoc voltava a ser classificado como interno: a mesma
+    classificação errada que este limite existe para evitar, apenas na direcção oposta.
+    Ver `tests/test_p3_terraform_heredoc_header_does_not_truncate_body.py`.
     """
     heads = list(_RESOURCE_HEAD.finditer(text))
+    closes = _closing_brace_of_each(text, {head.end() - 1 for head in heads})
     for position, head in enumerate(heads):
         start = head.end()
-        limit = heads[position + 1].start() if position + 1 < len(heads) else len(text)
-        depth = 1
-        i = start
-        while i < limit and depth > 0:
-            ch = text[i]
-            if ch == "{":
-                depth += 1
-            elif ch == "}":
-                depth -= 1
-            i += 1
-        body = text[start : i - 1] if depth == 0 else text[start:limit]
-        yield head.group(1), head.group(2), body
+        close = closes.get(start - 1)
+        if close is None:
+            close = heads[position + 1].start() if position + 1 < len(heads) else len(text)
+        yield head.group(1), head.group(2), text[start:close]
+
+
+def _closing_brace_of_each(text: str, opens: set[int]) -> dict[int, int]:
+    """Para cada chaveta em `opens`, o índice da que lhe corresponde; ausente se nunca fechar.
+
+    Uma única passagem pelas **chavetas** do texto, não pelos seus caracteres, e uma pilha limitada
+    ao número de blocos `resource` — não ao tamanho do ficheiro. O custo mantém-se linear no
+    ficheiro mesmo quando as chavetas nunca equilibram, que era o caso patológico.
+    """
+    closing: dict[int, int] = {}
+    pending: list[tuple[int, int]] = []
+    depth = 0
+    for brace in _BRACE.finditer(text):
+        if brace.group() == "{":
+            depth += 1
+            if brace.start() in opens:
+                pending.append((depth, brace.start()))
+        else:
+            if pending and pending[-1][0] == depth:
+                closing[pending.pop()[1]] = brace.start()
+            depth = max(depth - 1, 0)
+    return closing
 
 
 def _helm_chart_hint(text: str) -> bool:
