@@ -141,13 +141,11 @@ function AggregateSectionsCard({
 function DiffSummaryCard({
   summary,
   structuralLine,
-  runAnalysis,
   maxRev,
   maxBase,
 }: Readonly<{
   summary: ThreatModelComparisonResult["summary"];
   structuralLine: string;
-  runAnalysis: boolean;
   maxRev: number | null | undefined;
   maxBase: number | null | undefined;
 }>) {
@@ -170,7 +168,9 @@ function DiffSummaryCard({
         {summary.has_analysis_changes ? <Badge tone="accent">{t("diff.analysis")}</Badge> : null}
         {summary.methodology_in_model_changed ? <Badge tone="warn">{t("diff.methodologyModel")}</Badge> : null}
       </div>
-      {runAnalysis && typeof maxRev === "number" ? (
+      {/* O resultado decide, não o checkbox: `run_analysis: false` devolve estes campos a
+          `null`, por isso o próprio valor já diz se há análise. Ver DiffPage.analysisToggle.test. */}
+      {typeof maxRev === "number" ? (
         <div className="rounded-otm-md border border-otm-border bg-otm-surface-1/70 p-3">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-otm-text-subtle">{t("diff.maxLi")}</p>
           <p className="mt-1 font-display text-2xl font-semibold tabular-nums text-otm-text">{maxRev}</p>
@@ -186,17 +186,14 @@ function DiffSummaryCard({
 
 function DiffRiskDeltaCard({
   rd,
-  runAnalysis,
 }: Readonly<{
   rd: ThreatModelComparisonResult["risk_delta"];
-  runAnalysis: boolean;
 }>) {
   const { t } = useTranslation();
   const hasDelta =
-    runAnalysis &&
-    (typeof rd.analysis_max_score_delta === "number" ||
-      (rd.heuristic_increased_ids?.length ?? 0) > 0 ||
-      (rd.heuristic_decreased_ids?.length ?? 0) > 0);
+    typeof rd.analysis_max_score_delta === "number" ||
+    (rd.heuristic_increased_ids?.length ?? 0) > 0 ||
+    (rd.heuristic_decreased_ids?.length ?? 0) > 0;
   if (!hasDelta) return null;
   let deltaVal = "";
   if (typeof rd.analysis_max_score_delta === "number") {
@@ -397,10 +394,8 @@ function SemanticInsightsBlock({ meta }: Readonly<{ meta: ComparisonMeta }>) {
 
 function ComparisonResultPanel({
   result,
-  runAnalysis,
 }: Readonly<{
   result: ThreatModelComparisonResult;
-  runAnalysis: boolean;
 }>) {
   const { t } = useTranslation();
   const rd = result.risk_delta;
@@ -411,7 +406,6 @@ function ComparisonResultPanel({
       <DiffSummaryCard
         summary={result.summary}
         structuralLine={result.structural.summary_line}
-        runAnalysis={runAnalysis}
         maxRev={maxRev}
         maxBase={maxBase}
       />
@@ -441,7 +435,7 @@ function ComparisonResultPanel({
 
       <AggregateSectionsCard aggregate={result.aggregate} />
 
-      <DiffRiskDeltaCard rd={rd} runAnalysis={runAnalysis} />
+      <DiffRiskDeltaCard rd={rd} />
 
       <SemanticInsightsBlock meta={result.meta as ComparisonMeta} />
 
@@ -601,7 +595,7 @@ export function DiffPage() {
 
       {error ? <Alert variant="error">{error}</Alert> : null}
 
-      {result ? <ComparisonResultPanel result={result} runAnalysis={runAnalysis} /> : null}
+      {result ? <ComparisonResultPanel result={result} /> : null}
     </div>
   );
 }
