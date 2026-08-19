@@ -688,10 +688,14 @@ def build_premium_report_payload(
     )
     top5_titles = [t.title for t in sorted_threats[:5]]
 
-    urgency = _urgency_level(max_score or 0)
+    # As três leituras da mesma página têm de concordar. `_overall_status` já usa o máximo das duas
+    # origens; estas duas ficaram na pontuação só-heurística, e o relatório executivo saía a dizer
+    # "Requer atenção imediata", "Urgência: medium" e "critical | 1" no mesmo bloco.
+    overall_max = _overall_max_score(max_score, doc)
+    urgency = _urgency_level(overall_max or 0)
 
     readiness = [
-        b.readiness_high if severity_at_least(severity_for_score(max_score or 0), "high") else b.readiness_moderate,
+        b.readiness_high if severity_at_least(severity_for_score(overall_max or 0), "high") else b.readiness_moderate,
         b.readiness_release,
         b.readiness_compensating,
     ]
