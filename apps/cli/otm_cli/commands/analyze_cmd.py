@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Annotated
 from urllib.parse import quote
 
@@ -27,7 +27,7 @@ from otm_cli.shared.render import safe
 _URI_PATH_SAFE = "/:@!$&'()*+,;="
 
 
-def _model_uri(model: Path) -> str:
+def _model_uri(model: Path, prefix: str | None = None) -> str:
     """The model path as an `artifactLocation.uri`, which SARIF defines as a URI reference.
 
     Two conversions, both required and neither optional on Windows. `as_posix()` because a
@@ -36,7 +36,26 @@ def _model_uri(model: Path) -> str:
     macOS — the repository this ships from lives under one. Without it every result in the file
     carried a raw space and the artifact was not a valid SARIF URI reference.
     """
-    return quote(model.as_posix(), safe=_URI_PATH_SAFE)
+    return quote(_prefixed(model, prefix).as_posix(), safe=_URI_PATH_SAFE)
+
+
+def _prefixed(model: Path, prefix: str | None) -> PurePosixPath:
+    """O caminho do modelo visto da raiz que o `%SRCROOT%` do SARIF declara.
+
+    O CLI só conhece o caminho tal como foi escrito, que é relativo ao directório de trabalho. O
+    exportador, porém, marca cada resultado com `uriBaseId: "%SRCROOT%"` -- "a raiz do checkout" --
+    e é contra o repositório que o GitHub o resolve. Corrido a partir de um subdirectório, como a
+    Action faz quando lhe dão `working-directory`, o SARIF afirmava um caminho que na melhor das
+    hipóteses não existe e na pior é **outro ficheiro**: medido numa árvore com um modelo em
+    `services/api/models/` e outro em `models/`, os alertas ligavam-se ao segundo.
+
+    Só a Action sabe o prefixo, por isso é ela que o passa. `.`, `./` e vazio não são prefixo
+    nenhum -- `working-directory` tem `.` por omissão e esse caso não pode ganhar um `./` no URI.
+    """
+    base = (prefix or "").strip().strip("/")
+    if not base or base == ".":
+        return PurePosixPath(model.as_posix())
+    return PurePosixPath(base) / model.as_posix()
 
 
 def _emit_json_output(result: AnalysisResult, json_out: Path, *, quiet: bool, model: Path) -> None:
@@ -49,7 +68,9 @@ def _emit_json_output(result: AnalysisResult, json_out: Path, *, quiet: bool, mo
         console.print(f"[green]Analysis written to[/green] {safe(json_out.resolve())}")
 
 
-def _emit_sarif_output(result: AnalysisResult, sarif_out: Path, *, quiet: bool, model: Path) -> None:
+def _emit_sarif_output(
+    result: AnalysisResult, sarif_out: Path, *, quiet: bool, model: Path, uri_prefix: str | None = None
+) -> None:
     """Write the SARIF run, anchored on the model the user actually named.
 
     Without `model_uri` the exporter falls back to its canonical `threat-model.otm.yaml` — right
@@ -57,7 +78,7 @@ def _emit_sarif_output(result: AnalysisResult, sarif_out: Path, *, quiet: bool, 
     GitHub ingested pointed at a file that usually does not exist in the repository, and several
     models scanned in one run collapsed onto that same phantom path.
     """
-    sarif = export_analysis_sarif(result, model_uri=_model_uri(model))
+    sarif = export_analysis_sarif(result, model_uri=_model_uri(model, uri_prefix))
     try:
         write_text_file(content=sarif, output=sarif_out, sources=(model,))
     except CliUserError as e:
@@ -139,6 +160,15 @@ def register(app: typer.Typer) -> None:
             "--sarif-out",
             help="Write suggested threats as SARIF 2.1.0 (e.g. for GitHub code scanning).",
         ),
+        sarif_uri_prefix: str | None = typer.Option(
+            None,
+            "--sarif-uri-prefix",
+            help=(
+                "Prefix for the model path in the SARIF, so it resolves from the repository root "
+                "when the analysis runs in a subdirectory. The GitHub Action passes its "
+                "`working-directory` here."
+            ),
+        ),
         pack: str | None = typer.Option(
             None,
             "--pack",
@@ -188,7 +218,7 @@ def register(app: typer.Typer) -> None:
         if json_out:
             _emit_json_output(result, json_out, quiet=quiet, model=path)
         if sarif_out:
-            _emit_sarif_output(result, sarif_out, quiet=quiet, model=path)
+            _emit_sarif_output(result, sarif_out, quiet=quiet, model=path, uri_prefix=sarif_uri_prefix)
         if quiet:
             raise typer.Exit(0)
 

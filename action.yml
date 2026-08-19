@@ -163,7 +163,11 @@ runs:
       run: |
         set -euo pipefail
         args=("${MODEL}")
-        [ -n "${SARIF_OUT}" ] && args+=(--sarif-out "${SARIF_OUT}")
+        # O URI dentro do SARIF é marcado `%SRCROOT%`, que o GitHub resolve contra a raiz do
+        # repositório, mas o `otm` só vê o caminho relativo a ESTE directório. Sem o prefixo, um
+        # `working-directory` que não seja a raiz faz os alertas apontarem para o caminho errado —
+        # e, se lá existir um ficheiro, para o ficheiro errado.
+        [ -n "${SARIF_OUT}" ] && args+=(--sarif-out "${SARIF_OUT}" --sarif-uri-prefix "${WORKING_DIRECTORY}")
         [ -n "${ANALYSIS_OUT}" ] && args+=(--json-out "${ANALYSIS_OUT}")
         [ -n "${METHODOLOGY}" ] && args+=(--methodology "${METHODOLOGY}")
         [ -n "${PACK}" ] && args+=(--pack "${PACK}")
@@ -176,6 +180,7 @@ runs:
         ANALYSIS_OUT: ${{ inputs.analysis-out }}
         METHODOLOGY: ${{ inputs.methodology }}
         PACK: ${{ inputs.pack }}
+        WORKING_DIRECTORY: ${{ inputs.working-directory }}
 
     # The gate runs after the artifacts exist, so a failing run still leaves the evidence
     # behind — that is the run where you most want the SARIF and the diff.
