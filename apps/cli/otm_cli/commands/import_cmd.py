@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Annotated, Any
 
 import typer
+from otm_artifact_import import kubernetes_manifest_files, terraform_files
 from rich.panel import Panel
 
 from otm_cli.application import import_service as import_app
@@ -48,11 +49,19 @@ def _emit_draft(
     output: Path | None,
     explain_out: Path | None,
     source: Path,
+    extra_sources: tuple[Path, ...] = (),
 ) -> None:
-    """Escreve o draft `.otm.yaml` (ou imprime) e, opcionalmente, as inferências em JSON."""
-    _emit_text(yaml_text, output=output, label="Draft", sources=(source,))
+    """Escreve o draft `.otm.yaml` (ou imprime) e, opcionalmente, as inferências em JSON.
+
+    `extra_sources` existe para a forma-directório: o comando declarava só o directório, e o guarda
+    contra escrever por cima de uma entrada comparava a saída com ele em vez de com os manifestos
+    lá dentro. `otm import k8s dir/ -o dir/svc.yaml` substituía um manifesto que o importador
+    acabara de ler, com saída 0.
+    """
+    sources = (source, *extra_sources)
+    _emit_text(yaml_text, output=output, label="Draft", sources=sources)
     if explain_out and explain_payload:
-        _write_json_or_exit(payload=explain_payload, output=explain_out, sources=(source,))
+        _write_json_or_exit(payload=explain_payload, output=explain_out, sources=sources)
         console.print(f"[green]Inferences[/green] → {safe(explain_out.resolve())}")
 
 
@@ -158,7 +167,14 @@ def build_import_app() -> typer.Typer:
         except CliUserError as e:
             exit_on_cli_error(console, e)
 
-        _emit_draft(yaml_text, explain_payload, output=output, explain_out=explain_out, source=target)
+        _emit_draft(
+            yaml_text,
+            explain_payload,
+            output=output,
+            explain_out=explain_out,
+            source=target,
+            extra_sources=tuple(terraform_files(target)) if target.is_dir() else (),
+        )
         if inferences and output:
             # Same rule as `import openapi`: the caveats are shown only when the draft went to a
             # file, because on stdout the panel would corrupt the YAML the caller is piping.
@@ -185,7 +201,14 @@ def build_import_app() -> typer.Typer:
         except CliUserError as e:
             exit_on_cli_error(console, e)
 
-        _emit_draft(yaml_text, explain_payload, output=output, explain_out=explain_out, source=target)
+        _emit_draft(
+            yaml_text,
+            explain_payload,
+            output=output,
+            explain_out=explain_out,
+            source=target,
+            extra_sources=tuple(kubernetes_manifest_files(target)) if target.is_dir() else (),
+        )
         if inferences and output:
             # Same rule as `import openapi`: the caveats are shown only when the draft went to a
             # file, because on stdout the panel would corrupt the YAML the caller is piping.

@@ -260,10 +260,15 @@ def import_terraform_text(text: str, *, filename: str = "bundle.tf") -> Artifact
     )
 
 
+def terraform_files(path: Path) -> list[Path]:
+    """Os ficheiros que `import_terraform_path` lê de um directório. Ver `kubernetes_manifest_files`."""
+    return sorted(path.glob("*.tf"))
+
+
 def import_terraform_path(path: Path) -> ArtifactImportResult:
     if path.is_dir():
         parts: list[str] = []
-        for p in sorted(path.glob("*.tf")):
+        for p in terraform_files(path):
             parts.append(p.read_text(encoding="utf-8"))
         text = "\n\n".join(parts)
         label = f"{path.name}/"

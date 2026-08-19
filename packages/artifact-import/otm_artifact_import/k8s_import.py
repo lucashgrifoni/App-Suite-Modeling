@@ -485,10 +485,22 @@ def import_kubernetes_text(text: str, *, filename: str = "manifests.yaml") -> Ar
     )
 
 
+def kubernetes_manifest_files(path: Path) -> list[Path]:
+    """Os ficheiros que `import_kubernetes_path` lê de um directório, na mesma ordem.
+
+    Exportado para o CLI poder declará-los como entradas em `sources=`. Sem isto o comando
+    declarava só o **directório**, e `otm import k8s dir/ -o dir/svc.yaml` escrevia o rascunho por
+    cima de um manifesto que o importador acabara de ler -- 78 bytes de manifesto substituídos por
+    2 042 de rascunho, com saída 0. Um helper em vez de repetir o glob no CLI: duas cópias da mesma
+    regra derivam, e a que derivasse deixaria de proteger o ficheiro certo.
+    """
+    return sorted(path.glob("*.yml")) + sorted(path.glob("*.yaml"))
+
+
 def import_kubernetes_path(path: Path) -> ArtifactImportResult:
     if path.is_dir():
         chunks: list[str] = []
-        for p in sorted(path.glob("*.yml")) + sorted(path.glob("*.yaml")):
+        for p in kubernetes_manifest_files(path):
             chunks.append(p.read_text(encoding="utf-8"))
         text = "\n---\n".join(chunks)
         res = import_kubernetes_text(text, filename=f"{path.name}/")
