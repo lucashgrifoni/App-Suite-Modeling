@@ -54,18 +54,23 @@ def test_a_classificacao_nao_depende_de_um_codigo_de_saida_que_o_cli_nao_emite()
     """`NOT EVALUATED` chega com saída 1, nunca com 0; procurá-lo só no ramo `0)` é código morto.
 
     A asserção tem de ser sobre a inspecção **do relatório do CLI**, não sobre a string em geral:
-    o script já a contém antes do `case`, no caminho em que a baseline não se consegue ler, que é
-    outro assunto. A primeira versão deste teste passava por causa dessa ocorrência — passava pelo
-    motivo errado, que é a única coisa pior do que falhar.
+    o script já a contém no caminho em que a baseline não se consegue ler, que é outro assunto. A
+    primeira versão deste teste passava por causa dessa ocorrência — passava pelo motivo errado,
+    que é a única coisa pior do que falhar.
+
+    A invariante é **o ramo ser alcançável**, e não a verificação vir antes do `case`. A primeira
+    versão exigia o segundo, que é uma das formas de garantir o primeiro e não a única: pô-la no
+    ramo `*)`, onde a saída 1 aterra, satisfaz a invariante e fecha um buraco que estar antes do
+    `case` abria — o relatório cita o título do modelo, e antes do `case` esse título conseguia
+    reclassificar um gate reprovado. Ver `tests/test_p4_gate_verdict_is_not_model_controlled.py`.
     """
     script = _gate_script()
-    report_checks = script.count('"${report}"')
-    before_case = script[: script.index('case "${rc}" in')]
+    body = _case_body(script)
+    fallback_arm = body[body.index("*)") :]
 
-    assert report_checks, "o relatório do CLI tem de ser inspeccionado em algum lado"
-    assert 'grep -q "NOT EVALUATED"' in before_case, (
-        "a classificação do relatório tem de acontecer antes de olhar para o código de saída, "
-        "senão fica presa a um ramo que o CLI nunca alcança"
+    assert script.count('"${report}"'), "o relatório do CLI tem de ser inspeccionado em algum lado"
+    assert "NOT EVALUATED" in fallback_arm, (
+        "a deteção do não-veredito tem de viver onde a saída 1 aterra; noutro ramo é código morto"
     )
 
 

@@ -265,12 +265,6 @@ runs:
         # non-verdict (a methodology switch between the two models) was announced to the caller as
         # their own usage error, with `gate-outcome` left empty -- which is precisely the
         # distinction that output exists to make.
-        if printf '%s' "${report}" | grep -q "NOT EVALUATED"; then
-          echo "outcome=not-evaluated" >> "$GITHUB_OUTPUT"
-          echo "::error::The drift gate declined to issue a verdict, so nothing was judged: a green check here would mean 'not measured', not 'no new risk'. Pin one lens with methodology on both sides to get a verdict."
-          exit 1
-        fi
-
         case "${rc}" in
           0)
             echo "outcome=passed" >> "$GITHUB_OUTPUT"
@@ -281,6 +275,27 @@ runs:
             exit 1
             ;;
           *)
+            # `^`, and inside this arm: both matter, and each fixes a different way the verdict
+            # could be written by the person the gate exists to judge.
+            #
+            # The report quotes `metadata.title`, which is free text the schema accepts and
+            # `otm validate` passes. An unanchored `grep "NOT EVALUATED"` therefore matched a
+            # TITLE, and it ran before this `case`, so a pull request that added a HIGH threat and
+            # named its model "NOT EVALUATED" turned a real `tripped` (rc=3) into
+            # `gate-outcome=not-evaluated`, told the operator nothing had been judged, and offered
+            # remediation for a methodology switch that never happened -- in the same summary that
+            # listed the new threat. The build failed either way, so nothing got through; what was
+            # corrupted is the output other jobs read and the explanation a person acts on.
+            #
+            # `THREAT MODEL GATE: NOT EVALUATED` is written by the CLI at the start of its own
+            # line; a title only ever appears inside the summary sentence, so it cannot forge it.
+            # Living in this arm means a tripped gate is rc=3 and can no longer be reclassified at
+            # all. See `tests/test_p4_gate_verdict_is_not_model_controlled.py`.
+            if printf '%s' "${report}" | grep -q "^THREAT MODEL GATE: NOT EVALUATED"; then
+              echo "outcome=not-evaluated" >> "$GITHUB_OUTPUT"
+              echo "::error::The drift gate declined to issue a verdict, so nothing was judged: a green check here would mean 'not measured', not 'no new risk'. Pin one lens with methodology on both sides to get a verdict."
+              exit 1
+            fi
             # Anything else really is a usage or input error. Do not let a bad path masquerade
             # as "your model got worse" -- but do not leave `gate-outcome` empty either, or the
             # caller cannot tell this apart from the non-verdict handled above.
