@@ -193,7 +193,13 @@ def _check_data_classification(doc: ThreatModelDocument, classified: int) -> tup
         0,
         QualityCheckItem(
             code="data_classification",
-            passed=bool(doc.assets),
+            # `False`, e não `bool(doc.assets)`: este ramo é aquele em que **nenhum** ativo está
+            # classificado, e a mensagem diz isso. Passar por haver ativos fazia o check reportar
+            # sucesso para o estado exacto que existe para detectar -- e, como as três superfícies
+            # que mostram lacunas ao utilizador (`analysis_markdown`, relatório premium, UI)
+            # listam apenas os checks falhados, escondia-a de quem mais podia agir sobre ela: quem
+            # declarou ativos e não os classificou. O score não muda; este ramo já dava 0 pontos.
+            passed=False,
             message="Classificação de dados ausente ou só textual — NIST DC pode ser ruidoso.",
         ),
     )
