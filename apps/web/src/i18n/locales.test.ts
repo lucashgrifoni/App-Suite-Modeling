@@ -52,6 +52,7 @@ const INTENTIONALLY_IDENTICAL: ReadonlySet<string> = new Set([
   "import.kindKubernetes",
   "import.kindTerraform",
   "language.en",
+  "review.items_one",
   "language.ptBR",
   "methodologyMeta.stride.bestFor",
   "modelQuality.confHint",
