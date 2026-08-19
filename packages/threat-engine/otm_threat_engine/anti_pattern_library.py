@@ -10,6 +10,7 @@ Extensões v2: mitigadores por keywords, pré-requisitos estruturais mínimos, d
 from __future__ import annotations
 
 import importlib.resources
+import re
 from pathlib import Path
 
 import yaml
@@ -228,7 +229,7 @@ def _dfn_field_gates_pass(dfn: AntiPatternDefinition, doc: ThreatModelDocument, 
         return False  # pragma: no cover - defensive guard
     if dfn.require_flow_flag_any and not _any_flow_bool(doc, dfn.require_flow_flag_any):
         return False
-    if any(mk.lower() in corpus for mk in dfn.mitigating_keywords):
+    if any(corpus_mentions(mk, corpus) for mk in dfn.mitigating_keywords):
         return False
     return True
 
@@ -266,7 +267,7 @@ def _structural_source_tags(dfn: AntiPatternDefinition) -> list[str]:
 
 def _structural_primary_hit(dfn: AntiPatternDefinition, profile: str, corpus: str) -> AntiPatternHit | None:
     if dfn.missing_any_of:
-        missing_sp = [kw for kw in dfn.missing_any_of if kw.lower() not in corpus]
+        missing_sp = [kw for kw in dfn.missing_any_of if not corpus_mentions(kw, corpus)]
         if len(missing_sp) != len(dfn.missing_any_of):
             return None  # pragma: no cover - defensive guard
     sources = ["structural:primary", *_structural_source_tags(dfn)]
@@ -290,8 +291,34 @@ def _structural_primary_hit(dfn: AntiPatternDefinition, profile: str, corpus: st
     )
 
 
+_KEYWORD_PREFIX_CACHE: dict[str, re.Pattern[str]] = {}
+
+
+def corpus_mentions(keyword: str, corpus: str) -> bool:
+    """A palavra-chave começa numa fronteira de palavra do corpus.
+
+    Só à **esquerda**, e é uma decisão. A comparação era por subcadeia, e o corpus junta títulos,
+    nomes, ids e descrições de tudo: `rate` está dentro de **Corporate**, `card` dentro de
+    **discard** e de **wildcard**. Como `missing_any_of` dispara quando nenhuma das palavras
+    aparece, uma colisão dessas **silencia** o anti-padrão -- renomear um componente de "Partner
+    webhook endpoint" para "Corporate webhook endpoint" fazia desaparecer o achado de ingestão sem
+    limite de taxa, sem tocar em mais nada.
+
+    Fronteira dos dois lados partiria o catálogo, que usa radicais de propósito: `mascar` para
+    mascarar e mascaramento, `redac` para redacted e redação, `reauth`. Medido sobre os 38
+    templates distribuídos, esta fronteira não muda uma única resposta.
+    Ver `tests/test_p3_anti_pattern_keywords_start_at_a_word.py`.
+    """
+    key = keyword.lower()
+    rx = _KEYWORD_PREFIX_CACHE.get(key)
+    if rx is None:
+        rx = re.compile(rf"(?<![a-z0-9]){re.escape(key)}")
+        _KEYWORD_PREFIX_CACHE[key] = rx
+    return rx.search(corpus) is not None
+
+
 def _missing_corpus_hit(dfn: AntiPatternDefinition, profile: str, corpus: str) -> AntiPatternHit | None:
-    missing = [kw for kw in dfn.missing_any_of if kw.lower() not in corpus]
+    missing = [kw for kw in dfn.missing_any_of if not corpus_mentions(kw, corpus)]
     if len(missing) != len(dfn.missing_any_of):
         return None
     sources = ["corpus:missing_any_of", *_structural_source_tags(dfn)]
