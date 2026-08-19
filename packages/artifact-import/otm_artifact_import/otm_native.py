@@ -379,6 +379,22 @@ def _project_header(project: dict[str, Any], key: str) -> Any:
     return attributes.get(key) if isinstance(attributes, dict) else None
 
 
+def _metadata_from_otm(project: dict[str, Any]) -> Metadata:
+    """O `metadata` do cabeçalho, com `title`/`summary` do lugar que o OTM lhes dá.
+
+    As tags do autor vinham a ser substituídas por `["imported", "otm"]` incondicionalmente. A
+    marca continua a existir -- diz de onde veio um modelo que não trazia tags -- mas deixou de
+    apagar as que existem: exportar e reimportar um modelo `plot4ai` etiquetado `llm`/`rag` fazia
+    `looks_like_ai_context` virar False e levava cinco ameaças de IA com ele.
+    """
+    header = _canonical_fields(_project_header(project, "metadata"), Metadata, frozenset({"title", "summary"}))
+    header["title"] = str(project.get("name") or "Imported OTM model")
+    header["summary"] = project.get("description")
+    if not header.get("tags"):
+        header["tags"] = ["imported", "otm"]
+    return Metadata(**header)
+
+
 def otm_to_document(otm: dict[str, Any]) -> ThreatModelDocument:
     """Convert a parsed OTM object into a validated canonical `ThreatModelDocument`."""
     remap = _IdRemap()
@@ -400,11 +416,7 @@ def otm_to_document(otm: dict[str, Any]) -> ThreatModelDocument:
     business_context = _canonical_fields(_project_header(project, "business_context"), BusinessContext, frozenset())
     return ThreatModelDocument(
         model_info=ModelInfo(**model_info),
-        metadata=Metadata(
-            title=str(project.get("name") or "Imported OTM model"),
-            summary=project.get("description"),
-            tags=["imported", "otm"],
-        ),
+        metadata=_metadata_from_otm(project),
         business_context=BusinessContext(**business_context) if business_context else None,
         components=components,
         data_flows=flows,
@@ -437,6 +449,16 @@ def _project_to_otm(doc: ThreatModelDocument) -> dict[str, Any]:
     if metadata.summary:
         project["description"] = metadata.summary
     header: dict[str, Any] = {}
+    # `metadata` pelo mesmo caminho de `model` e `business_context`, que este ficheiro já usa.
+    # Sem ele só `title` e `summary` sobreviviam (como `name` e `description`): `owner` e
+    # `document_version` desapareciam, e as tags eram substituídas por `["imported", "otm"]` na
+    # importação. As tags alimentam a deteção de contexto de IA, por isso exportar e reimportar um
+    # modelo `plot4ai` apagava cinco ameaças -- injecção de prompt, abuso do modelo, fuga por RAG
+    # entre elas. `title` e `summary` ficam de fora do bloco: já têm lugar próprio no OTM e
+    # duplicá-los daria duas fontes para o mesmo valor.
+    metadata_header = _attributes_to_otm(metadata, frozenset({"title", "summary"}))
+    if metadata_header:
+        header["metadata"] = metadata_header
     model = _attributes_to_otm(doc.model_info, frozenset())
     if model:
         header["model"] = model
