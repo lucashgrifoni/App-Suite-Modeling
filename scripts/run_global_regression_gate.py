@@ -219,6 +219,12 @@ def main() -> int:
     # 2) Fixtures validation flow (end-to-end)
     pystep("test_apps_validation", ["scripts/run_test_app_validation.py"])
 
+    # 2.0.1) Frescura do contrato, lado Python: `contracts/openapi.json` contra o que a app
+    # FastAPI produz hoje. E um passo bloqueante do mesmo job de CI e faltava aqui, portanto uma
+    # deriva do contrato passava o gate local sem ninguem reparar. Determinista, offline,
+    # read-only -- verificado por leitura antes de ser ligado.
+    pystep("openapi_contract_fresh", ["scripts/verify_openapi_up_to_date.py"])
+
     # 2.1) A suite Python inteira, que e o que o CI corre (`python -m pytest`, job `python`).
     # Este gate corria dois ficheiros. Nao era decisao registada em lado nenhum: era heranca, e
     # escondia que 38 testes nem coleccionavam (f4df962) alem de deixar ~3480 por executar.
@@ -249,6 +255,10 @@ def main() -> int:
     # As 503 assercoes de vitest. O CI corre-as (`npm test`, job `web`), este gate nao corria —
     # a mesma assimetria que ja tinha sido corrigida neste ficheiro para o `e2e:critical`, e
     # que deixava o veredito local a afirmar mais do que tinha medido. Custa 8 s.
+    # A outra ponta da mesma cadeia: `contracts/openapi.json` contra os tipos TS gerados e
+    # versionados. Sem os dois lados, uma deriva no meio da cadeia fica invisivel — o contrato
+    # pode estar alinhado com a app e os tipos do web nao, ou o inverso.
+    step("web_contracts_check", [npm, "run", "contracts:check"], web)
     step("web_unit_tests", [npm, "test"], web)
     # Avoid npx resolution variance: call local Playwright CLI
     step(
