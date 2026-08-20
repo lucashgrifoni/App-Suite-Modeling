@@ -54,6 +54,21 @@ def test_nomes_banais_nao_armam_o_sinal_de_vector_store(names: list[str]) -> Non
     assert not _vector_signal(names), f"{names} armaram o sinal de RAG/vector store"
 
 
+def test_o_lado_do_ann_sozinho_tambem_e_apanhado() -> None:
+    """Um sinal genuíno de um lado e uma colisão banal do outro.
+
+    A primeira versão só apanhava a regressão **conjunta**: mutando apenas `rag` ou apenas `ann`, o
+    `and` protegia e o teste ficava verde. Este caso dá retrieval genuíno e `Scanner` do outro
+    lado, portanto falha se o `ann` sozinho voltar a comparar-se por subcadeia.
+
+    O lado do `rag` **não** tem um caso equivalente, e isso fica dito em vez de fingido: tudo o que
+    satisfaz a segunda condição — `vector`, `embedding`, `similarity` — arma o sinal por si só pelo
+    caminho das palavras-chave, medido. Um "Object Storage" ao lado de um "Vector database" arma
+    legitimamente, por causa do segundo. Só a colisão dupla é observável nesse lado.
+    """
+    assert not _vector_signal(["Retrieval service", "Scanner"])
+
+
 @pytest.mark.parametrize(
     "names",
     [
