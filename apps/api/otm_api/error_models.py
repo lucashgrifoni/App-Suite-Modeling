@@ -56,6 +56,6 @@ class ApiErrorEnvelope(BaseModel):
 API_ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
     422: {
         "description": "Pedido inválido: envelope (`ApiProblem`) ou domínio (`ApiErrorEnvelope`).",
-        "model": ApiProblem | ApiErrorEnvelope,  # type: ignore[operator]
+        "model": ApiProblem | ApiErrorEnvelope,
     }
 }
