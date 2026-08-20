@@ -69,3 +69,7 @@ ui-*.png
 # Never versioned — it holds build artifacts (12 wheels/tarballs), raw tool logs and
 # absolute paths from this machine, which is exactly what the campaign refuses to publish.
 .claude/
+
+# Interpretador isolado do gate local (scripts/run_global_regression_gate.py).
+.gate-venv/
+.mypy_cache-gate/
