@@ -54,6 +54,24 @@
                 }
               }
             }
+          },
+          "422": {
+            "description": "Pedido inválido: envelope (`ApiProblem`) ou domínio (`ApiErrorEnvelope`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ApiErrorEnvelope"
+                    }
+                  ],
+                  "title": "Response 422 Health Health Get"
+                }
+              }
+            }
           }
         }
       }
@@ -73,6 +91,24 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/CreateModelResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Pedido inválido: envelope (`ApiProblem`) ou domínio (`ApiErrorEnvelope`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ApiErrorEnvelope"
+                    }
+                  ],
+                  "title": "Response 422 Create Model V1 Models Post"
                 }
               }
             }
@@ -118,11 +154,19 @@
             }
           },
           "422": {
-            "description": "Validation Error",
+            "description": "Pedido inválido: envelope (`ApiProblem`) ou domínio (`ApiErrorEnvelope`).",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ApiErrorEnvelope"
+                    }
+                  ],
+                  "title": "Response 422 Validate Model V1 Models Validate Post"
                 }
               }
             }
@@ -168,11 +212,19 @@
             }
           },
           "422": {
-            "description": "Validation Error",
+            "description": "Pedido inválido: envelope (`ApiProblem`) ou domínio (`ApiErrorEnvelope`).",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ApiErrorEnvelope"
+                    }
+                  ],
+                  "title": "Response 422 Model Precheck V1 Models Precheck Post"
                 }
               }
             }
@@ -218,11 +270,19 @@
             }
           },
           "422": {
-            "description": "Validation Error",
+            "description": "Pedido inválido: envelope (`ApiProblem`) ou domínio (`ApiErrorEnvelope`).",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ApiErrorEnvelope"
+                    }
+                  ],
+                  "title": "Response 422 Diff Model Versions V1 Models Diff Post"
                 }
               }
             }
@@ -268,11 +328,19 @@
             }
           },
           "422": {
-            "description": "Validation Error",
+            "description": "Pedido inválido: envelope (`ApiProblem`) ou domínio (`ApiErrorEnvelope`).",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ApiErrorEnvelope"
+                    }
+                  ],
+                  "title": "Response 422 Compare Models V1 Models Compare Post"
                 }
               }
             }
@@ -318,11 +386,19 @@
             }
           },
           "422": {
-            "description": "Validation Error",
+            "description": "Pedido inválido: envelope (`ApiProblem`) ou domínio (`ApiErrorEnvelope`).",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ApiErrorEnvelope"
+                    }
+                  ],
+                  "title": "Response 422 Recommend Methodology For Model V1 Models Recommend Methodology Post"
                 }
               }
             }
@@ -368,11 +444,19 @@
             }
           },
           "422": {
-            "description": "Validation Error",
+            "description": "Pedido inválido: envelope (`ApiProblem`) ou domínio (`ApiErrorEnvelope`).",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ApiErrorEnvelope"
+                    }
+                  ],
+                  "title": "Response 422 Analyze Model V1 Models Analyze Post"
                 }
               }
             }
@@ -418,11 +502,19 @@
             }
           },
           "422": {
-            "description": "Validation Error",
+            "description": "Pedido inválido: envelope (`ApiProblem`) ou domínio (`ApiErrorEnvelope`).",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ApiErrorEnvelope"
+                    }
+                  ],
+                  "title": "Response 422 Diff Analysis Results Route V1 Analyses Diff Post"
                 }
               }
             }
@@ -544,11 +636,19 @@
             }
           },
           "422": {
-            "description": "Validation Error",
+            "description": "Pedido inválido: envelope (`ApiProblem`) ou domínio (`ApiErrorEnvelope`).",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ApiErrorEnvelope"
+                    }
+                  ],
+                  "title": "Response 422 Get Templates V1 Templates Get"
                 }
               }
             }
@@ -597,11 +697,19 @@
             }
           },
           "422": {
-            "description": "Validation Error",
+            "description": "Pedido inválido: envelope (`ApiProblem`) ou domínio (`ApiErrorEnvelope`).",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ApiErrorEnvelope"
+                    }
+                  ],
+                  "title": "Response 422 Get Template Detail V1 Templates  Template Id  Get"
                 }
               }
             }
@@ -650,11 +758,19 @@
             }
           },
           "422": {
-            "description": "Validation Error",
+            "description": "Pedido inválido: envelope (`ApiProblem`) ou domínio (`ApiErrorEnvelope`).",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ApiErrorEnvelope"
+                    }
+                  ],
+                  "title": "Response 422 Instantiate Template V1 Templates  Template Id  Instantiate Post"
                 }
               }
             }
@@ -692,11 +808,19 @@
             }
           },
           "422": {
-            "description": "Validation Error",
+            "description": "Pedido inválido: envelope (`ApiProblem`) ou domínio (`ApiErrorEnvelope`).",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ApiErrorEnvelope"
+                    }
+                  ],
+                  "title": "Response 422 Export Artifacts V1 Exports Post"
                 }
               }
             }
@@ -742,11 +866,19 @@
             }
           },
           "422": {
-            "description": "Validation Error",
+            "description": "Pedido inválido: envelope (`ApiProblem`) ou domínio (`ApiErrorEnvelope`).",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ApiErrorEnvelope"
+                    }
+                  ],
+                  "title": "Response 422 Import Openapi Route V1 Imports Openapi Post"
                 }
               }
             }
@@ -792,11 +924,19 @@
             }
           },
           "422": {
-            "description": "Validation Error",
+            "description": "Pedido inválido: envelope (`ApiProblem`) ou domínio (`ApiErrorEnvelope`).",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ApiErrorEnvelope"
+                    }
+                  ],
+                  "title": "Response 422 Import Terraform Route V1 Imports Terraform Post"
                 }
               }
             }
@@ -842,11 +982,19 @@
             }
           },
           "422": {
-            "description": "Validation Error",
+            "description": "Pedido inválido: envelope (`ApiProblem`) ou domínio (`ApiErrorEnvelope`).",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ApiErrorEnvelope"
+                    }
+                  ],
+                  "title": "Response 422 Import Kubernetes Route V1 Imports Kubernetes Post"
                 }
               }
             }
@@ -942,11 +1090,19 @@
             }
           },
           "422": {
-            "description": "Validation Error",
+            "description": "Pedido inválido: envelope (`ApiProblem`) ou domínio (`ApiErrorEnvelope`).",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ApiErrorEnvelope"
+                    }
+                  ],
+                  "title": "Response 422 Post Remediation Backlog V1 Remediation Backlog Post"
                 }
               }
             }
@@ -993,11 +1149,19 @@
             }
           },
           "422": {
-            "description": "Validation Error",
+            "description": "Pedido inválido: envelope (`ApiProblem`) ou domínio (`ApiErrorEnvelope`).",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ApiErrorEnvelope"
+                    }
+                  ],
+                  "title": "Response 422 Post Premium Report V1 Reports Premium Post"
                 }
               }
             }
@@ -1588,6 +1752,124 @@
         ],
         "title": "AntiPatternHit",
         "description": "Ocorrência detectada para relatório, backlog e benchmark."
+      },
+      "ApiErrorBody": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code",
+            "description": "Código estável do erro, ex.: `DOCUMENT_VALIDATION_ERROR`."
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "description": "Mensagem user-facing, localizada por `Accept-Language`."
+          },
+          "errors": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ApiErrorItem"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Errors",
+            "description": "Detalhe por campo, quando aplicável."
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "ApiErrorBody",
+        "description": "O conteúdo de `detail` num erro de **domínio**."
+      },
+      "ApiErrorEnvelope": {
+        "properties": {
+          "detail": {
+            "$ref": "#/components/schemas/ApiErrorBody"
+          }
+        },
+        "type": "object",
+        "required": [
+          "detail"
+        ],
+        "title": "ApiErrorEnvelope",
+        "description": "Erro de **domínio**: `detail` é um objecto, não um array.\n\nÉ aqui que um cliente gerado do contrato antigo partia: lia `detail[0].msg` num dicionário."
+      },
+      "ApiErrorItem": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "title": "Type",
+            "description": "Classe do erro, ex.: `value_error`, `body_unparsable`."
+          },
+          "loc": {
+            "items": {},
+            "type": "array",
+            "title": "Loc",
+            "description": "Caminho até ao campo em falta ou inválido."
+          },
+          "msg": {
+            "type": "string",
+            "title": "Msg",
+            "description": "Mensagem legível para quem enviou o pedido."
+          }
+        },
+        "type": "object",
+        "required": [
+          "type",
+          "msg"
+        ],
+        "title": "ApiErrorItem",
+        "description": "Uma entrada de `errors[]`: eco do input do cliente, com o caminho que falhou."
+      },
+      "ApiProblem": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code",
+            "description": "Código estável do erro, ex.: `REQUEST_VALIDATION_ERROR`."
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "description": "Mensagem user-facing, localizada por `Accept-Language`."
+          },
+          "status": {
+            "type": "integer",
+            "title": "Status",
+            "description": "Código HTTP repetido no corpo, para clientes que só leem o corpo."
+          },
+          "errors": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ApiErrorItem"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Errors",
+            "description": "Detalhe por campo, quando aplicável."
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "message",
+          "status"
+        ],
+        "title": "ApiProblem",
+        "description": "Erro do **envelope** do pedido, devolvido no topo do corpo (sem `detail`).\n\nProduzido por `problem_detail` — corpo ilegível, validação do envelope, rate limit, 500."
       },
       "ArtifactImportResponse": {
         "properties": {
@@ -2509,19 +2791,6 @@
           "count_after"
         ],
         "title": "FrameworkRefCountDelta"
-      },
-      "HTTPValidationError": {
-        "properties": {
-          "detail": {
-            "items": {
-              "$ref": "#/components/schemas/ValidationError"
-            },
-            "type": "array",
-            "title": "Detail"
-          }
-        },
-        "type": "object",
-        "title": "HTTPValidationError"
       },
       "HeuristicThreat": {
         "properties": {
@@ -4325,46 +4594,6 @@
           "schema_version"
         ],
         "title": "ValidateResponse"
-      },
-      "ValidationError": {
-        "properties": {
-          "loc": {
-            "items": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "integer"
-                }
-              ]
-            },
-            "type": "array",
-            "title": "Location"
-          },
-          "msg": {
-            "type": "string",
-            "title": "Message"
-          },
-          "type": {
-            "type": "string",
-            "title": "Error Type"
-          },
-          "input": {
-            "title": "Input"
-          },
-          "ctx": {
-            "type": "object",
-            "title": "Context"
-          }
-        },
-        "type": "object",
-        "required": [
-          "loc",
-          "msg",
-          "type"
-        ],
-        "title": "ValidationError"
       },
       "WizardSignalTraceEntry": {
         "properties": {

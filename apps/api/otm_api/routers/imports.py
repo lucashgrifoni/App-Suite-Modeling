@@ -16,6 +16,7 @@ from otm_api.api_error_messages import (
     msg_import_not_utf8,
     msg_import_too_large,
 )
+from otm_api.error_models import API_ERROR_RESPONSES
 from otm_api.routers._errors import error_detail
 from otm_api.schemas.bodies import ArtifactImportResponse, InferenceRecordBody
 from otm_api.services.imports import (
@@ -24,7 +25,7 @@ from otm_api.services.imports import (
     import_terraform_bytes,
 )
 
-router = APIRouter(prefix="/imports", tags=["Assisted import"])
+router = APIRouter(prefix="/imports", tags=["Assisted import"], responses=API_ERROR_RESPONSES)
 
 LOG = logging.getLogger("otm.api")
 

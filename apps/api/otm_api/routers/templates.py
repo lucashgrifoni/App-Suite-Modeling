@@ -3,6 +3,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Path, Query, status
 from pydantic import ValidationError as PydanticValidationError
 
+from otm_api.error_models import API_ERROR_RESPONSES
 from otm_api.routers._errors import raise_template_invalid, raise_template_not_found
 from otm_api.schemas.bodies import CreateModelResponse
 from otm_api.services.documents import document_from_template
@@ -13,7 +14,7 @@ from otm_api.services.templates_catalog import (
     list_templates_filtered,
 )
 
-router = APIRouter(prefix="/templates", tags=["Templates"])
+router = APIRouter(prefix="/templates", tags=["Templates"], responses=API_ERROR_RESPONSES)
 
 
 @router.get(

@@ -4,11 +4,12 @@ from fastapi import APIRouter
 from otm_threat_engine.comparison_models import AnalysisDiff
 from pydantic import ValidationError as PydanticValidationError
 
+from otm_api.error_models import API_ERROR_RESPONSES
 from otm_api.routers._errors import raise_analysis_validation_error
 from otm_api.schemas.bodies import AnalysisDiffBody
 from otm_api.services.compare import analysis_diff_from_payloads
 
-router = APIRouter(prefix="/analyses", tags=["Analyses"])
+router = APIRouter(prefix="/analyses", tags=["Analyses"], responses=API_ERROR_RESPONSES)
 
 
 @router.post(

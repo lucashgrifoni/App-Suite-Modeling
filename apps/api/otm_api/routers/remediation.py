@@ -11,6 +11,7 @@ from otm_threat_engine.remediation import RemediationBacklog
 from pydantic import ValidationError as PydanticValidationError
 
 from otm_api.api_error_messages import msg_remediation_group_by_invalid
+from otm_api.error_models import API_ERROR_RESPONSES
 from otm_api.routers._errors import (
     document_from_payload_or_422,
     ensure_analysis_matches_document,
@@ -21,7 +22,7 @@ from otm_api.routers._errors import (
 from otm_api.schemas.bodies import RemediationBacklogRequest
 from otm_api.services.remediation import build_remediation_backlog_response
 
-router = APIRouter(prefix="/remediation", tags=["Remediation"])
+router = APIRouter(prefix="/remediation", tags=["Remediation"], responses=API_ERROR_RESPONSES)
 
 # Os mesmos três valores que `docs/features/REMEDIATION_BACKLOG.md`, a descrição do parâmetro e
 # o `--group-by` da CLI aceitam.

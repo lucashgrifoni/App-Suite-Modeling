@@ -5,6 +5,7 @@ from otm_exporters.export_locale import normalize_export_locale
 from otm_threat_engine import AnalysisResult
 from pydantic import ValidationError as PydanticValidationError
 
+from otm_api.error_models import API_ERROR_RESPONSES
 from otm_api.routers._errors import (
     document_from_payload_or_422,
     ensure_analysis_matches_document,
@@ -14,7 +15,7 @@ from otm_api.routers._errors import (
 from otm_api.schemas.bodies import ExportBody, ExportResponse
 from otm_api.services.exports import build_exports
 
-router = APIRouter(prefix="/exports", tags=["Export"])
+router = APIRouter(prefix="/exports", tags=["Export"], responses=API_ERROR_RESPONSES)
 
 
 @router.post(

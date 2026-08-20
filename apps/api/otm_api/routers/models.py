@@ -9,6 +9,7 @@ from otm_threat_engine.comparison_models import ThreatModelComparisonResult
 from otm_threat_engine.methodology_completeness import assess_methodology_completeness
 from otm_threat_engine.result import AnalysisResult
 
+from otm_api.error_models import API_ERROR_RESPONSES
 from otm_api.routers._errors import (
     analysis_from_payload_or_422,
     document_from_payload_or_422,
@@ -31,7 +32,7 @@ from otm_api.services.analysis import run_analysis
 from otm_api.services.compare import comparison_from_validated_documents
 from otm_api.services.documents import create_blank_document
 
-router = APIRouter(prefix="/models", tags=["Models"])
+router = APIRouter(prefix="/models", tags=["Models"], responses=API_ERROR_RESPONSES)
 
 
 @router.post(

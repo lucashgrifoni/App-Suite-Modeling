@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-router = APIRouter(tags=["System"])
+from otm_api.error_models import API_ERROR_RESPONSES
+
+router = APIRouter(tags=["System"], responses=API_ERROR_RESPONSES)
 
 
 @router.get(

@@ -10,6 +10,7 @@ from otm_report_premium.report_i18n import premium_error_analysis_required
 from otm_threat_engine import AnalysisResult
 from pydantic import ValidationError as PydanticValidationError
 
+from otm_api.error_models import API_ERROR_RESPONSES
 from otm_api.routers._errors import (
     document_from_payload_or_422,
     ensure_analysis_matches_document,
@@ -22,7 +23,7 @@ from otm_api.schemas.bodies import PremiumReportBody
 from otm_api.services.analysis import run_analysis
 from otm_api.services.reports_premium import render_premium
 
-router = APIRouter(prefix="/reports", tags=["Reports"])
+router = APIRouter(prefix="/reports", tags=["Reports"], responses=API_ERROR_RESPONSES)
 
 
 @router.post(
