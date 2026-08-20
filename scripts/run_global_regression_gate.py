@@ -54,6 +54,21 @@ def main() -> int:
         ROOT,
     )
 
+    # 0.1) Lint e formatacao, no MESMO escopo que o CI usa (`packages apps tests`), porque este
+    # gate e o proxy local do CI e nao os corria. Onze ficheiros desta campanha falhavam
+    # `ruff format --check` -- um passo bloqueante em `github-ci-cd.yml` -- e so foram apanhados
+    # por uma verificacao manual: o gate dava verde num branch que o CI teria recusado.
+    step(
+        "ruff_lint",
+        [sys.executable, "-m", "ruff", "check", "packages", "apps", "tests"],
+        ROOT,
+    )
+    step(
+        "ruff_format_check",
+        [sys.executable, "-m", "ruff", "format", "--check", "packages", "apps", "tests"],
+        ROOT,
+    )
+
     # 1) Motor / core smoke (release-candidate)
     step(
         "pytest_smoke_release_candidate",
