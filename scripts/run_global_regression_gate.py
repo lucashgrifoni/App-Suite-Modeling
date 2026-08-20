@@ -69,6 +69,37 @@ def main() -> int:
         ROOT,
     )
 
+    # 0.2) Tipos e SAST, os outros dois passos bloqueantes do mesmo job de CI. Faltavam aqui pela
+    # mesma razao que o ruff faltava, e o mypy estava vermelho por causa de um `type: ignore` que
+    # este proprio branch acrescentou. `pip-audit` NAO esta aqui: o CI instala-o num venv proprio e
+    # ele precisa de rede, portanto correr-lo daqui daria um resultado que depende do ambiente.
+    # Fica de fora explicitamente, para nao passar por PASS o que nao foi executado.
+    step(
+        "mypy_monorepo",
+        [
+            sys.executable,
+            "-m",
+            "mypy",
+            "packages/core-schema/otm_core_schema",
+            "apps/api/otm_api",
+            "packages/explainability/otm_explainability",
+            "packages/framework-mappings/otm_framework_mappings",
+            "packages/diagram-engine/otm_diagram_engine",
+            "apps/cli/otm_cli",
+            "packages/exporters/otm_exporters",
+            "packages/artifact-import/otm_artifact_import",
+            "packages/report-premium/otm_report_premium",
+            "packages/threat-engine/otm_threat_engine",
+            "packages/industry-packs/otm_industry_packs",
+        ],
+        ROOT,
+    )
+    step(
+        "bandit_sast",
+        [sys.executable, "-m", "bandit", "-r", "packages", "apps", "-ll", "-q"],
+        ROOT,
+    )
+
     # 1) Motor / core smoke (release-candidate)
     step(
         "pytest_smoke_release_candidate",
