@@ -68,6 +68,16 @@ def recompute_summary_with_methodology(result: AnalysisResult) -> AnalysisResult
     pack_skipped = sum(1 for h in skipped if _is_pack_threat(h))
     summary = result.summary.model_copy(
         update={
+            # Os dois contadores de achados sao contados ANTES da lente e ficavam por recontar. As
+            # lentes so mexem em `structural_findings` (`common`, `linddun`, `nist_data_centric`,
+            # `pasta`, `plot4ai`, todas via `model_copy`), por isso o numero ficava no valor
+            # pre-lente e a mesma corrida do `otm analyze` escrevia "Structural warnings: 0" ao lado
+            # de um JSON com 8 entradas, e o Markdown escrevia "Avisos estruturais: 0" seguido da
+            # seccao que os lista. Seis das sete metodologias divergiam em 60 sementes de 60.
+            # `trust_boundary_findings` nao deriva hoje -- nenhuma lente lhe toca -- e e recontado
+            # aqui na mesma, para a invariante valer por construcao e nao por sorte.
+            "structural_findings": len(result.structural_findings),
+            "trust_boundary_findings": len(result.trust_boundary_findings),
             "heuristic_threats_generated": len(active) - pack_active,
             "heuristic_threats_skipped_duplicate": len(skipped) - pack_skipped,
             "pack_threats_generated": pack_active,
