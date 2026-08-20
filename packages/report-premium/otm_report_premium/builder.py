@@ -179,7 +179,15 @@ def _build_distribution_counters(
     for threat in doc.threats:
         stride_counter[threat.stride.value] += 1
         if threat.risk:
-            raw = threat.risk.score or float(threat.risk.likelihood * threat.risk.impact)
+            # `likelihood x impact` e nao `score`. A banda vem de `severity_for_score`, cujo
+            # docstring fixa o dominio: "o score L×I (1–5)", com limiares 20/12/6 nessa escala.
+            # No esquema `likelihood` e `impact` sao obrigatorios e validados em 1–5, enquanto
+            # `score` e opcional e a sua descricao admite outra escala — "Ex.: L×I ou
+            # normalizado". Um valor CVSS (0–10) escrito ali e legitimo e rebaixava a banda: uma
+            # ameaca L5×I5 com score 9.8 saia `medium` no quadro ao lado de uma capa a dizer
+            # "Requer atenção imediata", que ja lia `likelihood x impact` em `_overall_max_score`.
+            # Para as heuristicas nao muda nada: `build_risk_assessment` grava `score = L×I`.
+            raw = float(threat.risk.likelihood * threat.risk.impact)
             band = _band_for_score(raw)
             sev_counter[band] += 1
             # O mapa também: este ciclo alimentava STRIDE, severidade e componente e saltava o
