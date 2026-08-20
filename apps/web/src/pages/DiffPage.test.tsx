@@ -110,6 +110,32 @@ describe("DiffPage revised-model upload", () => {
       expect(screen.getByRole("alert")).toHaveTextContent(i18n.t("diff.readFail"));
     });
   });
+
+  it("carrega o ficheiro para a caixa de texto sem lhe tocar", async () => {
+    // O caminho de erro ja estava fixado acima; o de sucesso nao estava. E o mesmo invariante
+    // que 02834b2 quebrou no inspector do diagrama e que os testes do wizard fixam: o que
+    // entra e o que fica. Aqui o risco concreto e alguem acrescentar uma "limpeza" ao
+    // `onload` — sanitizar, normalizar, reindentar o JSON — e o utilizador comparar um
+    // documento que nao e o do ficheiro que escolheu, sem aviso nenhum.
+    //
+    // O conteudo carrega quatro coisas que uma limpeza dessas destruiria de maneiras
+    // diferentes: marcacao, espaco duplo, nao-ASCII e um U+2028, que e terminador de linha
+    // para quem parte texto mas nao para o JSON.
+    const user = userEvent.setup();
+    const text = JSON.stringify({
+      model: { schema_version: "1.0.0", system_type: "web_application" },
+      metadata: { title: "Base  de  dados <cliente>", summary: "acentuação partida", tags: [] },
+    });
+
+    render(<DiffPage />, { wrapper: Providers });
+    const input = document.querySelector<HTMLInputElement>('input[type="file"]')!;
+
+    await user.upload(input, new File([text], "revised.json", { type: "application/json" }));
+
+    const box = document.querySelector<HTMLTextAreaElement>("#revised-json")!;
+    await waitFor(() => expect(box.value).not.toBe(""));
+    expect(box.value).toBe(text);
+  });
 });
 
 const EMPTY_SECTION = { added: [], removed: [], changed: [] };
