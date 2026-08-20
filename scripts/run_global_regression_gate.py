@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import subprocess
 import sys
 import sysconfig
@@ -53,6 +54,38 @@ PYTEST_MIN_TESTS = 3300
 #: o lancam em subprocesso, onde o `pythonpath` do pytest nao chega: so o editable o torna
 #: importavel.
 _IMPORT_PROBE = "import pytest, ruff, mypy, bandit, otm_cli.main, otm_api.main"
+
+
+#: O workflow de CI e a fonte de verdade das versoes de runtime. Lidas de la, e nao copiadas para
+#: aqui, para nao passarem a mentir no dia em que o CI subir uma delas.
+CI_WORKFLOW = ROOT / ".github" / "workflows" / "github-ci-cd.yml"
+
+
+def _ci_pinned_runtimes() -> dict[str, str] | None:
+    """`{"python": "3.12", "node": "22"}` lido do workflow, ou `None` se as chaves mudaram.
+
+    Devolver `None` em vez de `{}` e deliberado: um bloco `env:` renomeado tornaria a comparacao
+    vazia, e uma comparacao vazia passa sempre. O chamador trata isso como falha, nao como acordo.
+    """
+    try:
+        text = CI_WORKFLOW.read_text(encoding="utf-8")
+    except OSError:
+        return None
+    found = {}
+    for key, name in (("PYTHON_VERSION", "python"), ("NODE_VERSION", "node")):
+        m = re.search(rf"^\s*{key}:\s*[\"']?([0-9.]+)[\"']?\s*$", text, re.MULTILINE)
+        if not m:
+            return None
+        found[name] = m.group(1)
+    return found
+
+
+def _local_node_major() -> str | None:
+    try:
+        out = subprocess.run(["node", "--version"], capture_output=True, text=True, timeout=60)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return out.stdout.strip().lstrip("v").split(".")[0] if out.returncode == 0 else None
 
 
 def _venv_python(venv: Path) -> Path:
@@ -167,6 +200,38 @@ def main() -> int:
         # ficasse marcado como bom seria reutilizado para sempre.
         GATE_STAMP.write_text(json.dumps({"key": key, "extras": GATE_EXTRAS}), encoding="utf-8")
         return py
+
+    # -1) As versoes de runtime que este gate usa contra as que o CI fixa.
+    #
+    # O gate diz de si proprio que e o proxy local do CI. Essa afirmacao e falsificavel, e ate aqui
+    # ninguem a verificava: o venv e construido do Python com que o gate for invocado, e os passos
+    # web correm com o Node que estiver no PATH. MEDIDO hoje: Python coincide (3.12 dos dois
+    # lados), Node NAO -- CI fixa 22, esta maquina tem 24, dois majors de distancia.
+    #
+    # Isto NAO e uma alegacao de que o codigo esta partido. Medi o que a evidencia dava para medir:
+    # dos 176 pacotes que declaram `engines.node` no lockfile, nenhum tem tecto que exclua o 24, e
+    # o `npm ci` nao emitiu um unico aviso de engine. O que fica por medir e o comportamento em
+    # execucao, que so se sabe correndo nas duas versoes.
+    #
+    # Por isso o passo reprova: nao porque o produto esteja mal, mas porque o veredito dos passos
+    # web nao pode ser apresentado como equivalente ao do CI enquanto os runtimes divergirem. Ha
+    # duas maneiras de o resolver, e a escolha e do dono: instalar o Node 22 (que e o LTS, e o que
+    # o CI fixa), ou subir `NODE_VERSION` no workflow se a intencao for mesmo o 24.
+    pins = _ci_pinned_runtimes()
+    local = {"python": f"{sys.version_info[0]}.{sys.version_info[1]}", "node": _local_node_major()}
+    if pins is None:
+        blocked("runtime_version_parity", f"nao encontrei PYTHON_VERSION/NODE_VERSION em {CI_WORKFLOW}")
+    else:
+        diff = {k: {"ci": v, "local": local[k]} for k, v in pins.items() if local[k] != v}
+        steps.append(
+            {
+                "name": "runtime_version_parity",
+                "ci": pins,
+                "local": local,
+                "divergentes": diff or None,
+                "exit_code": 1 if diff else 0,
+            }
+        )
 
     py = ensure_gate_venv()
 
