@@ -141,3 +141,43 @@ describe("AnalysisPage against an upstream answering 200 with nothing", () => {
     await waitFor(() => expect(localStorage.getItem(HISTORY_KEY)).not.toBeNull());
   });
 });
+
+/**
+ * `"evicted"` e `"failed"` tinham mensagem nos dois idiomas, quatro chamadores e um
+ * comentário a explicar porque existem — e nenhum teste a exigi-los. `pushHistoryEntry`
+ * é testado a devolver `"evicted"` em `analysisHistoryStorage.test.ts`, mas ninguém
+ * verificava que alguém repara nisso: apagar os quatro `else if` deixava a suíte inteira
+ * verde, e o utilizador voltava a perder snapshots antigos debaixo de um toast de sucesso
+ * sem ressalva — exactamente o defeito que o comentário no código diz já ter acontecido.
+ *
+ * O mock é em `pushHistoryEntry` e não no contexto, para que a cadeia real
+ * armazenamento -> contexto -> página -> toast seja percorrida. O que fica simulado é só a
+ * fronteira cujo comportamento próprio já tem testes: em jsdom o `localStorage` não tem
+ * quota real, portanto a pressão de espaço não pode ser provocada a sério.
+ */
+describe("AnalysisPage quando o Histórico não coube todo no browser", () => {
+  async function runWithOutcome(outcome: "evicted" | "failed") {
+    const storage = await import("../utils/analysisHistoryStorage");
+    vi.spyOn(storage, "pushHistoryEntry").mockReturnValue(outcome);
+    vi.stubGlobal("fetch", respondWith(JSON.stringify({ threats: [], metrics: {} })));
+
+    render(<AnalysisPage />, { wrapper: Providers });
+    await clickRunAnalysis();
+  }
+
+  it("avisa que snapshots antigos foram removidos para este caber", async () => {
+    await runWithOutcome("evicted");
+
+    await waitFor(() => {
+      expect(screen.getByText(/older snapshots were removed/i)).toBeInTheDocument();
+    });
+  });
+
+  it("diz que este snapshot não foi guardado, em vez de o dar por guardado", async () => {
+    await runWithOutcome("failed");
+
+    await waitFor(() => {
+      expect(screen.getByText(/was not added to History/i)).toBeInTheDocument();
+    });
+  });
+});
