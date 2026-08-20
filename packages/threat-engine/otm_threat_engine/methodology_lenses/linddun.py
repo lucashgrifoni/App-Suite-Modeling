@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from otm_core_schema import Asset, IndustrySector, StrideCategory, ThreatModelDocument, ThreatModelMethodology
+from otm_core_schema.ai_context import has_any_stem, has_any_token
 from otm_core_schema.enums import AssetKind
 
 from otm_threat_engine.methodology_lenses.common import (
@@ -172,22 +173,23 @@ def _looks_like_pii_context(doc: ThreatModelDocument) -> bool:
     ).lower()
     comp_blob = " ".join(f"{c.name or ''} {c.id or ''}" for c in doc.components).lower()
     blob = f"{text} {comp_blob}"
-    privacy_tokens = (
-        "pii",
+    # Os acrónimos exigem fronteira dos **dois** lados; os restantes são radicais e bastam-se com a
+    # esquerda. `phi` (Protected Health Information) mora dentro de **gra*phi*cs**, *sophisticated*
+    # e *morphism*: um componente chamado "Graphics Engine" ligava a lente inteira e produzia sete
+    # ameaças de privacidade num serviço de renderização, apagando de caminho a ressalva de que não
+    # há sinais de PII. `consent` fica como radical porque tem de continuar a apanhar
+    # *consentimento*. Ver `tests/test_p3_linddun_privacy_cues_match_words.py`.
+    privacy_acronyms = ("pii", "phi", "ehr", "lgpd", "gdpr", "hipaa")
+    privacy_stems = (
         _PII_LITERAL,
         "privacidade",
-        "lgpd",
-        "gdpr",
         "consent",
-        "phi",
-        "ehr",
         "clinical",
         "paciente",
-        "hipaa",
         "dados clínicos",
         "clinical record",
     )
-    if any(k in blob for k in privacy_tokens):
+    if has_any_token(blob, privacy_acronyms) or has_any_stem(blob, privacy_stems):
         return True
     if doc.model_info.industry_sector == IndustrySector.HEALTHCARE:
         return True
