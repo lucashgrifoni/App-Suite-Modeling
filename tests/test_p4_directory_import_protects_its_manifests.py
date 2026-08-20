@@ -39,9 +39,7 @@ def _run(args: list[str]) -> subprocess.CompletedProcess[str]:
     ("kind", "name", "body"),
     [("k8s", "svc.yaml", _MANIFEST), ("terraform", "main.tf", _TERRAFORM)],
 )
-def test_o_rascunho_nao_escreve_por_cima_de_um_ficheiro_lido(
-    tmp_path: Path, kind: str, name: str, body: str
-) -> None:
+def test_o_rascunho_nao_escreve_por_cima_de_um_ficheiro_lido(tmp_path: Path, kind: str, name: str, body: str) -> None:
     source = tmp_path / name
     source.write_text(body, encoding="utf-8")
 

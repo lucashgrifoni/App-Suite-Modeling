@@ -1,4 +1,4 @@
-""""Assinatura" é assinatura criptográfica **e** subscrição comercial, e o gate lia só a segunda.
+""" "Assinatura" é assinatura criptográfica **e** subscrição comercial, e o gate lia só a segunda.
 
 `entitlement_hint_markers` existe para exigir uma âncora comercial antes de sugerir controlos de
 *entitlement* — não faz sentido recomendar gestão de plano pago a um modelo que não vende nada. A
@@ -51,9 +51,7 @@ def test_um_controlo_de_subscricao_sem_ancora_comercial_continua_a_ser_removido(
     from otm_industry_packs.loader import load_template_yaml
     from otm_threat_engine.recommendation_gate import filter_pack_control_hints
 
-    document = ThreatModelDocument.model_validate(
-        yaml.safe_load(load_template_yaml("industry-transport-logistics"))
-    )
+    document = ThreatModelDocument.model_validate(yaml.safe_load(load_template_yaml("industry-transport-logistics")))
     commercial = [
         "Gerir a assinatura do plano premium e os seus benefícios",
         "Controlar entitlement por plano contratado",

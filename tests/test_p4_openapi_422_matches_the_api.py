@@ -41,7 +41,6 @@ def _client():
 
     logging.disable(logging.CRITICAL)
     from fastapi.testclient import TestClient
-
     from otm_api.main import app
 
     return TestClient(app, raise_server_exceptions=False)

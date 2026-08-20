@@ -1,4 +1,4 @@
-""""Graphics" não é informação de saúde protegida, e a lente de privacidade achava que sim.
+""" "Graphics" não é informação de saúde protegida, e a lente de privacidade achava que sim.
 
 `_looks_like_pii_context` compara os sinais de privacidade por subcadeia. `"phi"` — acrónimo de
 *Protected Health Information* — mora dentro de **gra*phi*cs**, e também de *sophisticated*,

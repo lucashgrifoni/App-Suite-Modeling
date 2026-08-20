@@ -121,9 +121,7 @@ def _apply_structural_enrichment(doc: ThreatModelDocument, b: AiSignalBundle) ->
     # `rag` e `ann` por token, o resto por subcadeia. As duas condições existem para exigir sinais
     # **independentes**, e comparadas por subcadeia um único par de nomes banais satisfazia as duas:
     # *sto`rag`e* a primeira, *sc`ann`er* a segunda. Quarto ficheiro com este par exacto.
-    if (
-        has_any_token(comp_blob, ("rag",)) or has_any(comp_blob, ("retrieval", "vector search", "chunk"))
-    ) and (
+    if (has_any_token(comp_blob, ("rag",)) or has_any(comp_blob, ("retrieval", "vector search", "chunk"))) and (
         has_any_token(comp_blob, ("ann",))
         or has_any(
             comp_blob,

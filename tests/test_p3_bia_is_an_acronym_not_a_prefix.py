@@ -1,4 +1,4 @@
-""""bias" não é uma análise de impacto no negócio, e o recomendador achava que sim.
+""" "bias" não é uma análise de impacto no negócio, e o recomendador achava que sim.
 
 `compute_methodology_ranking` dá **+30** ao OCTAVE Allegro quando encontra contexto de BIA. A lista
 de sinais compara por subcadeia e inclui o acrónimo `"bia"`, que mora dentro de **bias** — palavra

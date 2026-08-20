@@ -70,9 +70,7 @@ def test_o_par_de_modelos_difere_so_no_nome(tmp_path: Path) -> None:
     before = _model("User Account Service", tmp_path, "a.otm.yaml").read_text(encoding="utf-8")
     after = _model("User Profile Service", tmp_path, "b.otm.yaml").read_text(encoding="utf-8")
 
-    differing = [
-        (x, y) for x, y in zip(before.splitlines(), after.splitlines(), strict=True) if x != y
-    ]
+    differing = [(x, y) for x, y in zip(before.splitlines(), after.splitlines(), strict=True) if x != y]
     assert len(differing) == 1, differing
 
 
@@ -127,9 +125,7 @@ def test_o_gate_nao_reprova_por_um_rename(tmp_path: Path) -> None:
         cwd=str(_ROOT),
     )
 
-    assert result.returncode == 0, (
-        f"o gate reprovou um rename (exit {result.returncode}):\n{result.stdout[-700:]}"
-    )
+    assert result.returncode == 0, f"o gate reprovou um rename (exit {result.returncode}):\n{result.stdout[-700:]}"
 
 
 @pytest.mark.parametrize(

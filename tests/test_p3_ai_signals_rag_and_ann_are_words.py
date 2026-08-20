@@ -1,4 +1,4 @@
-""""Object Storage" e "Scanner" armavam juntos o sinal de RAG/vector store.
+""" "Object Storage" e "Scanner" armavam juntos o sinal de RAG/vector store.
 
 A condição exige dois sinais independentes — um de retrieval **e** um de vector — precisamente para
 não disparar por acaso. Comparados por subcadeia, um único par de nomes banais satisfaz os dois:
@@ -34,9 +34,7 @@ def _vector_signal(component_names: list[str]) -> bool:
         {
             "model": {"schema_version": "1.1.0"},
             "metadata": {"title": "Assistente", "summary": "Servico com um LLM.", "tags": []},
-            "components": [
-                {"id": f"c{i}", "name": name, "kind": "process"} for i, name in enumerate(component_names)
-            ],
+            "components": [{"id": f"c{i}", "name": name, "kind": "process"} for i, name in enumerate(component_names)],
         }
     )
     return bool(collect_ai_signals_from_document(document).vector_embedding)

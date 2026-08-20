@@ -69,8 +69,9 @@ def test_os_templates_distribuidos_nao_mudam_de_resposta() -> None:
     from otm_industry_packs.loader import list_template_ids, load_template_yaml
 
     catalog = yaml.safe_load(
-        (_ROOT / "packages" / "threat-engine" / "otm_threat_engine" / "data" / "anti_patterns" / "catalog.yaml")
-        .read_text(encoding="utf-8")
+        (
+            _ROOT / "packages" / "threat-engine" / "otm_threat_engine" / "data" / "anti_patterns" / "catalog.yaml"
+        ).read_text(encoding="utf-8")
     )
     keywords = {k for item in catalog["patterns"] for k in (item.get("missing_any_of") or [])}
 

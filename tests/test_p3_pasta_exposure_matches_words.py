@@ -1,4 +1,4 @@
-""""Componente exposto" não pode ser decidido por subcadeia.
+""" "Componente exposto" não pode ser decidido por subcadeia.
 
 A lente PASTA marcava um componente como caminho de ataque quando o seu nome ou tecnologia
 contivesse `api`, `gateway`, `public`, `internet` ou `edge` — em subcadeia. `Ledger` contém `edge`;

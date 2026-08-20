@@ -72,6 +72,4 @@ def test_o_contextvar_nao_fica_sujo_entre_pedidos(client) -> None:
     """Resolver a partir do pedido não pode deixar estado a escorrer para o pedido seguinte."""
     client.get("/boom", headers={"Accept-Language": "pt-BR"})
 
-    assert client.get("/boom", headers={"Accept-Language": "en"}).json()["message"] == (
-        "An unexpected error occurred."
-    )
+    assert client.get("/boom", headers={"Accept-Language": "en"}).json()["message"] == ("An unexpected error occurred.")

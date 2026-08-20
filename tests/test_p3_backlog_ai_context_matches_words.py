@@ -1,4 +1,4 @@
-""""Object Storage" não é um sistema de IA, e o backlog classificava-o como tal.
+""" "Object Storage" não é um sistema de IA, e o backlog classificava-o como tal.
 
 `_ai_context` decidia por subcadeia sobre `("llm", "modelo de linguagem", "prompt", "rag",
 "inferen")`. `rag` está dentro de **storage**, de **fragmento** e de **drag and drop**.
