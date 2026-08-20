@@ -21,8 +21,7 @@ from __future__ import annotations
 import pathlib
 
 import pytest
-
-from tests.test_cicd_pipeline_invariants import (
+from test_cicd_pipeline_invariants import (
     BASH,
     SECURITY_WF,
     _actions_env,

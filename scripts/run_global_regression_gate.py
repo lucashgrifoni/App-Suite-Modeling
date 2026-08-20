@@ -124,6 +124,10 @@ def main() -> int:
     npm = _cmd("npm")
     step("web_npm_ci", [npm, "ci"], web)
     step("web_build_portable", [npm, "run", "ci:build:portable"], web)
+    # As 503 assercoes de vitest. O CI corre-as (`npm test`, job `web`), este gate nao corria —
+    # a mesma assimetria que ja tinha sido corrigida neste ficheiro para o `e2e:critical`, e
+    # que deixava o veredito local a afirmar mais do que tinha medido. Custa 8 s.
+    step("web_unit_tests", [npm, "test"], web)
     # Avoid npx resolution variance: call local Playwright CLI
     step(
         "web_playwright_install_chromium",

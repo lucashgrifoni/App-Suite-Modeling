@@ -33,8 +33,7 @@ import sys
 
 import pytest
 import yaml
-
-from tests.test_cicd_pipeline_invariants import SECURITY_WF, _step  # noqa: F401  (reutiliza o localizador)
+from test_cicd_pipeline_invariants import SECURITY_WF, _step  # noqa: F401  (reutiliza o localizador)
 
 _ROOT = pathlib.Path(__file__).resolve().parents[1]
 _ACTION = _ROOT / "action.yml"
