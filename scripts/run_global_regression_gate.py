@@ -137,6 +137,11 @@ def main() -> int:
     # ligar um servidor em 127.0.0.1:8000, que nem toda a maquina permite, e um passo que pode
     # falhar por causa do ambiente nao pertence a um gate cujo veredito tem de significar algo.
     step("web_e2e_critical", [npm, "run", "e2e:critical"], web)
+    # E o resto dos specs. Ate aqui o CI e este gate corriam so `smoke` + `critical`, o que
+    # deixava `diagram`, `pdf`, `history`, `i18n` e `release` sem nenhum gate a executa-los —
+    # incluindo o teste que fixa o defeito HIGH de perda de dados do inspector do diagrama
+    # (02834b2). O conjunto inteiro corre em 35 s, por isso nao havia troca a fazer.
+    step("web_e2e_rest", [npm, "run", "e2e:rest"], web)
 
     (artifacts / "summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
     print(json.dumps(summary, indent=2))

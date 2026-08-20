@@ -295,6 +295,10 @@ jobs:
         working-directory: apps/web
         run: npm run e2e:critical
 
+      - name: E2E rest (diagram, pdf, history, i18n, release, wizard)
+        working-directory: apps/web
+        run: npm run e2e:rest
+
   hybrid-e2e:
     name: E2E hybrid (real API + Vite)
     needs: web
