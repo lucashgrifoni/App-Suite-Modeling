@@ -199,6 +199,15 @@ def _build_distribution_counters(
             heatmap[threat.stride.value][band] += 1
         if threat.target_component_id:
             comp_counter[threat.target_component_id] += 1
+            # E a fronteira desse componente, como no ciclo das heuristicas la em cima. Era o unico
+            # contador que este ciclo saltava, e a consequencia nao era contar a menos: a heuristica
+            # equivalente e suprimida como duplicada quando o modelador declara a sua propria, por
+            # isso declarar ameacas sobre os componentes de uma fronteira **apagava** a fronteira de
+            # `by_trust_boundary`, de `top_boundaries_ranked` e de "Principais trust boundaries" —
+            # na mesma pagina que continuava a listar esses componentes em "Principais superficies".
+            tb_id = tb_by_component.get(threat.target_component_id)
+            if tb_id:
+                tb_counter[tb_id] += 1
     return sev_counter, stride_counter, comp_counter, tb_counter, heatmap
 
 
