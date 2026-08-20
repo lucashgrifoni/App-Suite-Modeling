@@ -12,7 +12,7 @@ from datetime import date
 from typing import Any, Literal
 
 from otm_core_schema import ComponentKind
-from otm_core_schema.document import ThreatModelDocument
+from otm_core_schema.document import RiskAssessment, ThreatModelDocument
 from otm_core_schema.trust_membership import resolve_component_boundaries
 from otm_diagram_engine import export_flowchart_mermaid
 from otm_exporters.markdown_text import md_block, md_inline
@@ -71,6 +71,48 @@ def _band_for_score(raw: float) -> str:
 def _severity_band(t: HeuristicThreat) -> str:
     raw = t.risk.score if t.risk.score is not None else float(t.risk.likelihood * t.risk.impact)
     return _band_for_score(raw)
+
+
+def _declared_as_rankable(doc: ThreatModelDocument) -> tuple[list[HeuristicThreat], int]:
+    """As ameacas declaradas, na forma que o pipeline de prioridade ja sabe ler.
+
+    `composite_priority_score`, `infer_exploitability` e `build_business_impact_row` recebem
+    `HeuristicThreat`. Adaptar aqui, na fronteira do relatorio, deixa esse pipeline intacto: a
+    alternativa era alargar cada um deles a um tipo cujo `risk` e opcional, e `risk` e lido por
+    dezenas de sitios em nove ficheiros.
+
+    O `score` e normalizado para `likelihood x impact`. E a mesma decisao que
+    `_build_distribution_counters` toma, pela mesma razao: os limiares de `severity_for_score` e a
+    normalizacao `rs / 25.0` em `composite_priority_score` estao nessa escala, e o `score` do
+    esquema admite outra ("Ex.: LxI ou normalizado").
+
+    Devolve tambem quantas ameacas declaradas ficaram sem `risk`: essas nao se ordenam contra
+    scores sem lhes inventar um numero, e a exclusao e anunciada em vez de silenciosa.
+    """
+    rankable: list[HeuristicThreat] = []
+    unscored = 0
+    for t in doc.threats:
+        if t.risk is None:
+            unscored += 1
+            continue
+        rankable.append(
+            HeuristicThreat(
+                id=t.id,
+                title=t.title,
+                description=t.description or "",
+                stride=t.stride,
+                target_component_id=t.target_component_id,
+                target_data_flow_id=t.target_data_flow_id,
+                target_asset_id=t.target_asset_id,
+                risk=RiskAssessment(
+                    likelihood=t.risk.likelihood,
+                    impact=t.risk.impact,
+                    score=float(t.risk.likelihood * t.risk.impact),
+                ),
+                framework_refs=list(t.framework_refs),
+            )
+        )
+    return rankable, unscored
 
 
 def _overall_max_score(heuristic_max: float | None, doc: ThreatModelDocument) -> float | None:
@@ -698,8 +740,13 @@ def build_premium_report_payload(
     top_boundaries = [_boundary_name(doc, bid) or bid for bid, _n in tb_counter.most_common(5)]
     top_surfaces = [comp_names.get(cid, cid) for cid, _n in comp_counter.most_common(5)]
 
+    # As ameacas declaradas entram na mesma ordenacao. Ficavam de fora do "Top 10 riscos
+    # prioritarios", do "Top 5" executivo e dos perfis de exploitability, num relatorio cuja capa,
+    # urgencia, quadro de severidade, mapa e contador de fronteiras ja as contavam: um RCE declarado
+    # de severidade 25 nao aparecia em lado nenhum da tabela accionavel, abaixo de heuristicas de 12.
+    declared_rankable, declared_without_risk = _declared_as_rankable(doc)
     sorted_threats = sorted(
-        active,
+        [*active, *declared_rankable],
         key=lambda x: composite_priority_score(x, doc, meth, index=index),
         reverse=True,
     )
@@ -756,9 +803,14 @@ def build_premium_report_payload(
     explain_snippets = _build_explain_snippets(result)
     tech_appendix = _build_tech_appendix(doc, active, b, level)
 
+    disclaimer_bullets = [b.disclaimer_b1, b.disclaimer_b2]
+    if declared_without_risk:
+        # Excluir a visto, e nao em silencio: sem `risk` nao ha como ordenar a ameaca contra os
+        # scores das outras sem lhe atribuir um numero que o modelador nao escreveu.
+        disclaimer_bullets.append(b.disclaimer_declared_without_risk.format(count=declared_without_risk))
     disclaimer = InferenceDisclaimer(
         summary=b.disclaimer_summary,
-        bullets=[b.disclaimer_b1, b.disclaimer_b2],
+        bullets=disclaimer_bullets,
     )
     cover = _build_cover(doc, meth, app_v, max_score, status_key, status_display, b)
     exec_summary = _build_exec_summary(

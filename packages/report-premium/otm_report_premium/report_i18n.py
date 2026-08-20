@@ -48,6 +48,7 @@ class PremiumBuilderCopy:
     disclaimer_summary: str
     disclaimer_b1: str
     disclaimer_b2: str
+    disclaimer_declared_without_risk: str
     business_impact_summary: str
     mq_line: str
     mc_line_prefix: str
@@ -253,6 +254,10 @@ _BUILDER_PT = PremiumBuilderCopy(
     ),
     disclaimer_b1="Priorização composta (P1/P2/P3) combina score, exposição e esforço estimado.",
     disclaimer_b2="Recomendações estratégicas devem ser validadas contra políticas internas.",
+    disclaimer_declared_without_risk=(
+        "{count} ameaça(s) declarada(s) no documento não têm `risk` e por isso ficam fora da lista "
+        "priorizada: sem likelihood e impact não há como ordená-las contra as restantes."
+    ),
     business_impact_summary=(
         "Principais vectores: confidencialidade, integridade e disponibilidade — ver secção de impacto por ameaça."
     ),
@@ -312,6 +317,10 @@ _BUILDER_EN = PremiumBuilderCopy(
     ),
     disclaimer_b1="Composite prioritization (P1/P2/P3) combines score, exposure, and estimated effort.",
     disclaimer_b2="Strategic recommendations must be validated against internal policies.",
+    disclaimer_declared_without_risk=(
+        "{count} threat(s) declared in the document carry no `risk` and are therefore absent from the "
+        "prioritized list: without likelihood and impact there is no way to rank them against the rest."
+    ),
     business_impact_summary=(
         "Main vectors: confidentiality, integrity, and availability — see per-threat impact section."
     ),
