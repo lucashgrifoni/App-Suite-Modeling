@@ -15,6 +15,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from otm_core_schema import ThreatModelDocument
+from otm_core_schema.ai_context import has_any_stem
 from otm_core_schema.document import RiskAssessment
 
 from otm_threat_engine.risk_calc import build_risk_assessment
@@ -284,22 +285,25 @@ def _build_ranking_trace_entries(
 
 def _matches_admin_context(h: Any) -> bool:
     blob = f"{h.id} {h.title} {h.description}".lower()
-    return h.id.startswith("biz_") or "admin" in blob or "privileg" in blob or "auditoria" in blob
+    return h.id.startswith("biz_") or has_any_stem(blob, ("admin", "privileg", "auditoria"))
 
 
 def _matches_upload_context(h: Any) -> bool:
     blob = f"{h.id} {h.title} {h.description}".lower()
-    return "upload" in blob or "ficheiro" in blob or "file" in blob or "malware" in blob
+    # `file` mora dentro de *profile*: um componente renomeado para "User Profile Service" armava
+    # o cluster de upload, subia cinco ameaças e reprovava o gate de CI de quem consome a Action.
+    return has_any_stem(blob, ("upload", "ficheiro", "file", "malware"))
 
 
 def _matches_api_perimeter(h: Any) -> bool:
     blob = f"{h.id} {h.title} {h.description}".lower()
-    return "gateway" in blob or "api" in blob or "rate" in blob or "denial" in blob or "ddos" in blob
+    # `rate` mora dentro de *corporate* -- o mesmo par que a correcção do catálogo de anti-padrões.
+    return has_any_stem(blob, ("gateway", "api", "rate", "denial", "ddos"))
 
 
 def _matches_payment_context(h: Any) -> bool:
     blob = f"{h.id} {h.title} {h.description}".lower()
-    return "pagamento" in blob or "payment" in blob or "checkout" in blob or "psp" in blob
+    return has_any_stem(blob, ("pagamento", "payment", "checkout", "psp"))
 
 
 def _context_notes(*, admin: bool, file_r: bool, api_r: bool, ecom: bool) -> list[str]:

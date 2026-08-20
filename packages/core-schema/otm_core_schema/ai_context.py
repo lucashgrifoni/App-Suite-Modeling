@@ -74,6 +74,34 @@ def has_token(text: str, token: str) -> bool:
     return rx.search(text) is not None
 
 
+_STEM_RE_CACHE: dict[str, re.Pattern[str]] = {}
+
+
+def has_stem(text: str, stem: str) -> bool:
+    """A palavra-chave começa numa fronteira de palavra, mas pode continuar.
+
+    A terceira regra de comparação, ao lado de `in` cru e de `has_token`. Existe porque as duas
+    que havia não servem este caso: `in` casa a meio da palavra -- `file` dentro de *profile*,
+    `rate` dentro de *corpo­rate*, `rag` dentro de *storage* -- e `has_token`, que exige fronteira
+    dos dois lados, partiria os radicais que o produto usa de propósito: `admin` para
+    *administrator*, `privileg` para *privilegiado*, `ficheiro` para *ficheiros*, `api` para
+    *apigateway*.
+
+    Só à esquerda, portanto. Foi a regra escolhida para o catálogo de anti-padrões e é a mesma
+    aqui, com uma casa só, para não haver uma quarta variante amanhã.
+    """
+    key = stem.lower()
+    rx = _STEM_RE_CACHE.get(key)
+    if rx is None:
+        rx = re.compile(rf"(?<![a-z0-9]){re.escape(key)}")
+        _STEM_RE_CACHE[key] = rx
+    return rx.search(text.lower()) is not None
+
+
+def has_any_stem(text: str, stems: tuple[str, ...]) -> bool:
+    return any(has_stem(text, s) for s in stems)
+
+
 def has_any_token(text: str, tokens: tuple[str, ...]) -> bool:
     return any(has_token(text, t) for t in tokens)
 

@@ -10,11 +10,11 @@ Extensões v2: mitigadores por keywords, pré-requisitos estruturais mínimos, d
 from __future__ import annotations
 
 import importlib.resources
-import re
 from pathlib import Path
 
 import yaml
 from otm_core_schema import ThreatModelDocument
+from otm_core_schema.ai_context import has_stem
 
 # Vem de core-schema, não de `engine_support` (que importaria em círculo). Antes havia aqui uma
 # terceira cópia da regra de travessia de fronteira, e as três liam só um dos dois lados em que
@@ -291,9 +291,6 @@ def _structural_primary_hit(dfn: AntiPatternDefinition, profile: str, corpus: st
     )
 
 
-_KEYWORD_PREFIX_CACHE: dict[str, re.Pattern[str]] = {}
-
-
 def corpus_mentions(keyword: str, corpus: str) -> bool:
     """A palavra-chave começa numa fronteira de palavra do corpus.
 
@@ -309,12 +306,9 @@ def corpus_mentions(keyword: str, corpus: str) -> bool:
     templates distribuídos, esta fronteira não muda uma única resposta.
     Ver `tests/test_p3_anti_pattern_keywords_start_at_a_word.py`.
     """
-    key = keyword.lower()
-    rx = _KEYWORD_PREFIX_CACHE.get(key)
-    if rx is None:
-        rx = re.compile(rf"(?<![a-z0-9]){re.escape(key)}")
-        _KEYWORD_PREFIX_CACHE[key] = rx
-    return rx.search(corpus) is not None
+    # Delega em `has_stem`: a regra passou a ter casa única em `otm_core_schema.ai_context`, ao
+    # lado do matcher por token, para não haver duas implementações da mesma decisão a divergir.
+    return has_stem(corpus, keyword)
 
 
 def _missing_corpus_hit(dfn: AntiPatternDefinition, profile: str, corpus: str) -> AntiPatternHit | None:
