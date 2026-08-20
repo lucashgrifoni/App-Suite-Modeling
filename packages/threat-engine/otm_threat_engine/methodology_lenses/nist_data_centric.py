@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from otm_core_schema import Asset, AssetKind, StrideCategory, ThreatModelDocument, ThreatModelMethodology
+from otm_core_schema.asset_membership import resolve_component_assets
 
 from otm_threat_engine.methodology_lenses.common import (
     append_engine_lens_note,
@@ -278,7 +279,10 @@ def _components_holding_classified_data(
     classified = {a.id for a in doc.assets if _asset_is_classified(a)}
     if not classified:
         return set()
-    holders = {c.id for c in doc.components if classified.intersection(c.asset_ids or [])}
+    # As duas direcções da ligação, não só `Component.asset_ids`: um documento que a declare
+    # em `Asset.related_component_ids` é igualmente válido e produzia zero afirmações.
+    membership = resolve_component_assets(doc)
+    holders = {cid for cid, owned in membership.items() if classified.intersection(owned)}
     for comp_id, items in by_comp.items():
         if any(h.target_asset_id in classified for h in items):
             holders.add(comp_id)
