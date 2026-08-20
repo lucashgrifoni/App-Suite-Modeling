@@ -34,7 +34,23 @@ def build_business_abuse_context(doc: ThreatModelDocument) -> BusinessAbuseConte
     coupon_component = first_component_id_with(doc, "coupon", "discount")
     ledger_component = first_component_id_with(doc, "ledger", "finance", "wallet")
     billing_asset = first_asset_id_with(doc, "billing", "payment", "cobranca", "saldo", "balance")
-    entitlement_asset = first_asset_id_with(doc, "entitlement", "premium", "subscription", "assinatura")
+    # `"assinatura"` a solta saiu daqui pela mesma razao por que saiu de `recommendation_gate`:
+    # em portugues e ao mesmo tempo assinatura criptografica e subscricao comercial. Num modelo
+    # de plataforma de contratos, o ativo `Assinatura digital dos contratos` casava primeiro e a
+    # ameaca CRITICA `biz_payment_entitlement_mismatch` (L4xI5 = 20) saia apontada ao certificado
+    # de assinatura, deixando o plano pago -- o ativo que a ameaca descreve -- sem alvo.
+    # As formas que ficam nomeiam a subscricao sem ambiguidade, as mesmas que o gate ja usa.
+    # Ver `tests/test_p5_signature_asset_is_not_the_paid_plan.py`.
+    entitlement_asset = first_asset_id_with(
+        doc,
+        "entitlement",
+        "premium",
+        "subscription",
+        "assinatura do plano",
+        "plano de assinatura",
+        "assinatura premium",
+        "assinatura paga",
+    )
     sensitive_flow = first_flow_id_with(doc, "checkout", "transfer", "record", "entitlement", "webhook")
     sensitive_component = None
     if sensitive_flow and sensitive_flow in flow_by_id:
