@@ -52,6 +52,7 @@ from otm_core_schema import (
     ThreatModelDocument,
     TrustBoundary,
 )
+from otm_core_schema.ai_context import has_any_stem, has_any_token
 from otm_core_schema.enums import ComponentKind, CriticalityLevel, DataClassificationLevel
 from pydantic import BaseModel, TypeAdapter, ValidationError
 
@@ -163,15 +164,43 @@ def _kind_from_otm_type(otm_type: Any) -> ComponentKind:
         return ComponentKind(t)  # exact match — round-trips our own OTM exports
     except ValueError:
         pass
-    if any(k in t for k in ("datastore", "database", "storage", "bucket", "cache", "db", "data-store")):
+    # O modo de matching e uma decisao POR PALAVRA. Com `in` para todas, cinco palavras-chave sao
+    # fragmentos de palavras comuns e o importador tipificava mal o componente em silencio:
+    # "business"/"abuse" -> queue (`bus`), "sandbox" -> datastore (`db`), "factor" -> user
+    # (`actor`), "personalization" -> user (`person`), "automobile" -> external_entity (`mobile`).
+    # E o tipo escolhe as heuristicas: os mesmos tres componentes como process rendem 17 ameacas e
+    # como queue/queue/datastore rendem 11.
+    #
+    # `db`, `actor` e `mobile` por radical: em "sandbox", "factor" e "automobile" a palavra-chave
+    # vem precedida de letra, portanto a fronteira a esquerda basta, e `dbms`/`actors` continuam a
+    # contar. `bus` e `person` precisam de token, porque "business" e "personalization" comecam
+    # mesmo em fronteira e so a fronteira a direita os rejeita; `persons` fica listado para o
+    # plural nao se perder. `waf` e `cdn` por token por serem siglas de tres letras -- sem colisao
+    # medida, mas e o modo que a sigla pede e nenhum tipo real se perde.
+    #
+    # As restantes ficam DE PROPOSITO por subcadeia. `type` e uma string livre e as formas
+    # concatenadas sao correntes: "apigateway", "memcached", "objectstorage", "jobqueue",
+    # "superuser". Nenhuma delas tem a palavra-chave em fronteira, por isso apertar palavras
+    # inteiras que nao colidem custava esses casos sem resolver nada.
+    if has_any_stem(t, ("db",)) or any(
+        k in t for k in ("datastore", "database", "storage", "bucket", "cache", "data-store")
+    ):
         return ComponentKind.DATASTORE
-    if any(k in t for k in ("queue", "topic", "kafka", "broker", "bus", "message")):
+    if has_any_token(t, ("bus",)) or any(k in t for k in ("queue", "topic", "kafka", "broker", "message")):
         return ComponentKind.QUEUE
-    if any(k in t for k in ("gateway", "proxy", "load-balancer", "load_balancer", "waf", "ingress", "cdn")):
+    if has_any_token(t, ("waf", "cdn")) or any(
+        k in t for k in ("gateway", "proxy", "load-balancer", "load_balancer", "ingress")
+    ):
         return ComponentKind.GATEWAY
-    if any(k in t for k in ("user", "actor", "person", "customer")):
+    if (
+        has_any_token(t, ("person", "persons"))
+        or has_any_stem(t, ("actor",))
+        or any(k in t for k in ("user", "customer"))
+    ):
         return ComponentKind.USER
-    if any(k in t for k in ("external", "third-party", "third_party", "client", "browser", "mobile", "saas")):
+    if has_any_stem(t, ("mobile",)) or any(
+        k in t for k in ("external", "third-party", "third_party", "client", "browser", "saas")
+    ):
         return ComponentKind.EXTERNAL_ENTITY
     return ComponentKind.PROCESS
 
