@@ -131,6 +131,12 @@ def main() -> int:
         web,
     )
     step("web_e2e_smoke_portable", [npm, "run", "e2e:smoke:portable"], web)
+    # O conjunto critico tambem, que e o que o CI corre no job `web-e2e-critical`. Com so o
+    # smoke aqui, uma asserção de `cockpit.spec.ts` ficou a exigir o plural que 45b2994 tinha
+    # acabado de corrigir e o gate local continuou verde. `e2e:hybrid` NAO entra: precisa de
+    # ligar um servidor em 127.0.0.1:8000, que nem toda a maquina permite, e um passo que pode
+    # falhar por causa do ambiente nao pertence a um gate cujo veredito tem de significar algo.
+    step("web_e2e_critical", [npm, "run", "e2e:critical"], web)
 
     (artifacts / "summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
     print(json.dumps(summary, indent=2))
