@@ -205,7 +205,7 @@ runs:
     # `always()` so the findings still reach code scanning on the run where the gate tripped.
     - name: Upload SARIF
       if: ${{ always() && inputs.upload-sarif == 'true' && inputs.sarif-out != '' }}
-      uses: github/codeql-action/upload-sarif@d1ba80a13dd99fba24a470575428917156a28b43 # v4.37.5
+      uses: github/codeql-action/upload-sarif@db488ddef3bf6cb639b32c2e9a7c0a7ea8271d28 # v4.37.8
       with:
         sarif_file: ${{ inputs.working-directory }}/${{ inputs.sarif-out }}
         category: otm-threat-model
