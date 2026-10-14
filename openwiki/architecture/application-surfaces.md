@@ -5,7 +5,7 @@ description: "Navigate HTTP composition and the documented local-state deploymen
 tags: ["otm","api","ui"]
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-14T19:49:02.006Z
+    at: 2026-10-14T22:20:33.174Z
 sources:
   - id: openwiki-source-84a6824e7346be004be32bec
     resource: repo://apps/api/otm_api/main.py

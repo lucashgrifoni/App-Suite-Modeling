@@ -3,9 +3,6 @@ type: "concept"
 title: "Canonical model and analysis"
 description: "Trace schema validation and analysis options to their current source."
 tags: ["otm","schema","analysis"]
-verified:
-  - by: openwiki/0.7.2
-    at: 2026-10-14T19:49:02.006Z
 sources:
   - id: openwiki-source-b89ca78a5fab77cc9f5e6e65
     resource: repo://apps/cli/otm_cli/application/analyze_service.py
@@ -14,6 +11,9 @@ sources:
   - id: openwiki-source-9c184a13b61c6de486e8d25d
     resource: repo://packages/core-schema/otm_core_schema/document.py
 generated: { by: "codex", at: "2026-10-14T19:49:02.006Z" }
+verified:
+  - by: openwiki/0.7.2
+    at: 2026-10-14T22:20:33.174Z
 ---
 
 # Canonical model and analysis

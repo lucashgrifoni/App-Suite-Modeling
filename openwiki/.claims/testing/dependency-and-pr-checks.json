@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:fafd6f99d17c08e3a9e1bad402e08ed4d31ccba315a8c2478b107f2a929084ae",
+  "claims": [
+    {
+      "id": "claim_0a565bae93a242ffa7abea16f8e64b64",
+      "statement": "The web package manifest applies a DOMPurify 3.4.16 override specifically under jsPDF.",
+      "evidence": [
+        {
+          "resource": "repo://apps/web/package.json",
+          "version": "repo-file-v1:sha256:eb3ed3129f83de4c20822a69eca5fa25a2409e48d7ec3c90af82d071e8c753bd"
+        }
+      ]
+    },
+    {
+      "id": "claim_83f1663d58e44dc0b39e33ec98253f66",
+      "statement": "Security regression tests check detached subtree handlers at both after-sanitization hook sites, a removed rawtext root, ordinary sanitization and a text-only PDF result.",
+      "evidence": [
+        {
+          "resource": "repo://apps/web/src/lib/pdfDependencySecurity.test.ts",
+          "version": "repo-file-v1:sha256:e447f7cb197c1365d671a5586a4cd31eb13470ee82b5e357b796032909f2ee28"
+        }
+      ]
+    },
+    {
+      "id": "claim_ec91fa2d9bf04ec2ba6363dc9df685c3",
+      "statement": "The Git history scanner job grants contents and pull-request reads, fetches full history without persisted credentials and disables scanner comments.",
+      "evidence": [
+        {
+          "resource": "repo://.github/workflows/security-ci-cd.yml#L615-L651",
+          "version": "repo-lines-v1:sha256:a395620e52f3e17957d1d0c084b0805c0fb6de2bcdd0f2101d656311fd800679:eyJzZWxlY3RlZExpbmVDb3VudCI6MzcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjgzYTdkZDg3NDdhMWNkODhiMGZhZDY5OTI5MjMxMTg2MDQyZTdmYTJkNTc3YzkxOTMyN2ZhMWQyZWMzNmM0YmUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImI4MGUyZmYxOGJkYTE0MTJmMmFjYTg3ZjlkMzY5OWE0MTEwNDg2NTc1OTgzNzdjNTVkZDZhODYwNzkwZjk4MDQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjU2ODZmZTNiN2Q4OTRjMGNiNjMxODFjZWVmYWFlODkyM2ZhMjkzZDE2NjQ4MzEyNzkzNTMwOGFhMmRkMzI4MmIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImYyYWI4MzI0NzRjNjM3MTMwOGU4ZmJhZDM3MWVkN2UxZDQ3YzcxZTE5N2U2OTljYjNlZWJjNjkzMDdiN2I5ZGQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_e1b8bc9451e54b63bb9f714e47bef1db",
+      "statement": "A workflow regression test rejects write permissions for the Git history scanner and checks its PR read permission, full-history checkout, credential persistence and comment setting.",
+      "evidence": [
+        {
+          "resource": "repo://tests/test_security_workflow_permissions.py",
+          "version": "repo-file-v1:sha256:ed0e1c9dbb941c90a8599764cca3abfa26fc245bb85d4b87e6df5aaec61d5906"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.7.2",
+    "at": "2026-10-14T22:20:33.174Z"
+  }
+}

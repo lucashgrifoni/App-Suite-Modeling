@@ -3,15 +3,15 @@ type: "guide"
 title: "Imports and comparisons"
 description: "Review imported assumptions and interpret model-change gates within heuristic limits."
 tags: ["otm","import","diff"]
-verified:
-  - by: openwiki/0.7.2
-    at: 2026-10-14T19:49:02.006Z
 sources:
   - id: openwiki-source-67791dadb9dd9fb70bc12bc1
     resource: repo://apps/cli/otm_cli/application/import_service.py
   - id: openwiki-source-b5beb2865989135504312c43
     resource: repo://docs/KNOWN_LIMITATIONS.md
 generated: { by: "codex", at: "2026-10-14T19:49:02.006Z" }
+verified:
+  - by: openwiki/0.7.2
+    at: 2026-10-14T22:20:33.174Z
 ---
 
 # Imports and comparisons

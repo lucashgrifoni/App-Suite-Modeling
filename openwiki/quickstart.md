@@ -3,15 +3,15 @@ type: "guide"
 title: "App Suite Modeling quickstart"
 description: "Use the canonical model through the CLI before moving to HTTP or browser workflows."
 tags: ["otm","quickstart"]
-verified:
-  - by: openwiki/0.7.2
-    at: 2026-10-14T19:49:02.006Z
 sources:
   - id: openwiki-source-599772ae4c23227bb62f171f
     resource: repo://apps/cli/otm_cli/cli.py
   - id: openwiki-source-05ccef8d4cf1698187f20464
     resource: repo://pyproject.toml
-generated: { by: "codex", at: "2026-10-14T19:49:02.006Z" }
+generated: { by: "codex", at: "2026-10-14T22:20:33.174Z" }
+verified:
+  - by: openwiki/0.7.2
+    at: 2026-10-14T22:20:33.174Z
 ---
 
 # App Suite Modeling quickstart
@@ -36,6 +36,7 @@ Review the model and suggested threats before exporting them or using a gate res
 - [Canonical model and analysis](concepts/model-and-analysis.md)
 - [Imports and comparisons](guides/imports-and-comparisons.md)
 - [HTTP and browser surfaces](architecture/application-surfaces.md)
+- [Dependency and PR checks](testing/dependency-and-pr-checks.md)
 - [OpenWiki setup](../docs/openwiki.md)
 
 Sources: [package metadata](../pyproject.toml#L5-L24), [CLI registration](../apps/cli/otm_cli/cli.py#L30-L65), [analysis options](../apps/cli/otm_cli/commands/analyze_cmd.py#L96-L109).
