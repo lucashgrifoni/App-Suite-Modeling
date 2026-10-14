@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:ba19f803a9a38e8f33af8a0e1611b64d437913ca5f0c45744fe9f544bbaa9a0b",
+  "claims": [
+    {
+      "id": "claim_90f6a3a109e94e29b35ed9c2d7aa44fe",
+      "statement": "The FastAPI root links to documentation, OpenAPI and health and composes versioned application routers under /v1.",
+      "evidence": [
+        {
+          "resource": "repo://apps/api/otm_api/main.py#L81-L109",
+          "version": "repo-lines-v1:sha256:0cb4e746e8835d4d934de1bbb85d59993482048e86a52301c7af98594167bb47:eyJzZWxlY3RlZExpbmVDb3VudCI6MjksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjdiZjExOTRhZmFhZjJjMjA1ZTBkMDc3NTk1ZmFmZTYzMjY3YzBhYzJlMGRkOTQwZjE5NTBiNjE0MTMyYmNiMTUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ1NzQ2OTdjN2JmNTBmOWIyZTllNzJjMjhjNjQ5MDg3NTNlZDY4MWY5MDM1NTk1ZjQ4NjAwM2M2MTk0YjRlZGUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhlNmNkMjRmMmVjMWVmNGJkMzhiYzBkZjAxYjhkNThjMjE2ZGI2MDYzOTlhZTNkMGJhNDQ4NDkzNGQ0MTE2YzIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_dbdfbab5bbe04493820e6e8a6ab6c4f0",
+      "statement": "API middleware includes observability, optional API key, configured CORS and conditional rate limiting.",
+      "evidence": [
+        {
+          "resource": "repo://apps/api/otm_api/main.py#L61-L78",
+          "version": "repo-lines-v1:sha256:ab0253c24cc4c9833046a491159049057e4f1553b39fa12aaf5c39527f9be9f6:eyJzZWxlY3RlZExpbmVDb3VudCI6MTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijc5YWU2N2RmNTBmYWQ2YjM2NTA1MTQ0OTdmOTY4NDZiZDJjODFmMGRmZjhlYzQ0ZGU2NDk1NTFmMTMyZjA5OTgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjliMzllMDIyZTBkODU0MTIwMDAzZDc5MGMyOGI3NTk2MmVkZDMwMzc1NmQ1MTMzM2RmNzQ1Y2ZiODZlYTExY2UiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImNmZGU3OTA2YjcxNTEzNDhhYjcwNDEwZjkzMjExYzY3NzA4NjhiZjkwMjFmODE5OTMwNmFiMGI5OTdhODViMmYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjI4YzI4YjNkMmM0ZDY5YWFmMDQ3OWVjZDBkYzRiYWZiZjkwMzc2Yzg0ZTM5MTZiODc5ZDIxYTRmZjY5ZjU2OGIifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_4f3c3c5ceee5483f8dfcb94087cab616",
+      "statement": "The project documents sessionStorage drafts without centralized accounts, teams or history and API-key protection as optional.",
+      "evidence": [
+        {
+          "resource": "repo://docs/KNOWN_LIMITATIONS.md#L5-L9",
+          "version": "repo-lines-v1:sha256:1870e145e1bf2b0394bc84cf9ca589a78a4140a1f53a05870419da55b6e95f03:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMmIzNWZlMDNlYmJjZmQwMjFjNWIwMjFkNjA4YjRiZDU5ZDA3ZGQ5ODUwNTAxNDIwMTkzZjkwMzMzZmVlYTYwOCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOWY1ZWRlMzk2YWUxMDY3YTQxODdmYzFiY2M3ZmVlNjhjZDI0ODQ4MjlkOTdiZTk1NDA2ZTE1Y2JmYTY1MTk2MiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZjFjZDE1MWYxZjQwOTU1NmVmMDkyZDhkNzMzNWE3ZDI1ZTY4MTMwYWU4MTdlMWIwZDNjM2VmMWViZWNiNDE3ZSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZjAxMDY5OThiMjdhNjg1OTI1MTM1NGUzMTdjNTU2YTQ0OTE2NzNmNTRkMjMzN2NkYzk3NzExNDI1NWZjMmNiMyJ9"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.7.2",
+    "at": "2026-10-14T19:49:02.006Z"
+  }
+}

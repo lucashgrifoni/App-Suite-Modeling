@@ -323,3 +323,7 @@ The package version lives in [`pyproject.toml`](pyproject.toml) and is kept alig
 ## Trademarks
 
 *App Suite Modeling* is the project name. STRIDE, LINDDUN, PASTA, NIST, PLOT4ai, and other methodology names belong to their respective owners and are cited here to describe **supported lenses**, not affiliation.
+
+## Repository wiki
+
+[Source-linked repository guide](openwiki/quickstart.md) · [OpenWiki setup and maintenance](docs/openwiki.md).

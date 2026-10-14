@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:bb255951ff1e9817791b9284894be2da7b33849cf6d1b43ce8df5d6d3a27d7d3",
+  "claims": [
+    {
+      "id": "claim_5ef0f3c8e5d84e55a979ed10f977398e",
+      "statement": "OpenAPI, Terraform and Kubernetes import services serialize canonical YAML and retain inference, unknown and assumption records.",
+      "evidence": [
+        {
+          "resource": "repo://apps/cli/otm_cli/application/import_service.py#L20-L81",
+          "version": "repo-lines-v1:sha256:3518ebf757d9cfd8be9b8b4dee25ea5ee22f01b776e90dd05185fffd7410d720:eyJzZWxlY3RlZExpbmVDb3VudCI6NjIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY0ODRiNzNjYjk2YzY4YjcyMjk1Njk4NzFjZjY4NjgwOTg1ZGI2ODVhYmUxYjc3OTI5MGE3ZTMxYzI3MzBmNGYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRhNzJjMmIyZjEzZDcyZGI5MGMzOGJhMDM1N2Q2ODAzNzZjZTVjNTI2Yjc4OWRhYjcyNGZjODhiNWY0MDgxMzQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjM2ZjgxYmZkNzhlMGM4Mjg2YzBjOGRiMzU3N2NlMzU0NDRjYTM3Y2QzNDMwNmIzZDM3NmQxMGQ0MWMwMzI2YjQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjRlYTFkZTU5NjQ2NDE4ZDBhZDUzODBjZmUxOWQ4YWEwOWI2ZDI4YjkyYWY1YjMyMGY2MGE0NzFjMmZjMzMyYmEifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_9eabbb551afd4b8a82a786e929990173",
+      "statement": "The documented diff limits distinguish renamed-entity noise, engine-version constraints and heuristic gate meaning.",
+      "evidence": [
+        {
+          "resource": "repo://docs/KNOWN_LIMITATIONS.md#L17-L26",
+          "version": "repo-lines-v1:sha256:87c135ade7d9d2491a845a8b0d2de330f775907159b5968664a0ea9a69d72653:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjhkZWI3Yjg0NWM2NTE2OGE1N2QxOWNjNDQ5YzRhNDkyZDU2Mzc2ZWZjNmRjNTQ3ODM1MmNiZmFlZDc2NmIyMWUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjUwNjA2OWUwNWE0NmJiZTgyZWQyNzM1ZDA0YjlhOTQyM2Q0NTMzYTAxNzVjNmZiZjNhZTZhMzRjYmJlNTMzY2EiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImYxMGZmZmYxMTA5MTUyODM2MmU1NWM2MjJjNmZhZDVhMTVhYmNjMjdkZjE3NzEzNjFjZWI5ZWU3NjQxMGFiMmYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijc1MTMwODliNGRkM2Y5ZmRhZDNhNTIzZmI2YzNlY2Q4MWI4Y2M0ZDJiNzk1ZTQyNDdiYTg3MDM0MjY5ZmM1ZDgifQ"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.7.2",
+    "at": "2026-10-14T19:49:02.006Z"
+  }
+}

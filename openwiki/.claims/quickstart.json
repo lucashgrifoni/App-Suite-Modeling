@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:cbfa3e26a0667cf96d46aafb6f736ba96169e13b22e5beeb5249452e64a9ad6c",
+  "claims": [
+    {
+      "id": "claim_3dc21bf4ecd84d60872cdbe4a9d7d719",
+      "statement": "The Python distribution is open-threat-model and requires Python>=3.11.",
+      "evidence": [
+        {
+          "resource": "repo://pyproject.toml#L5-L24",
+          "version": "repo-lines-v1:sha256:34ee7524c81e0e6160ff23c8e2b7270eae6ca38c8dd8f218169d226ef4c91e8e:eyJzZWxlY3RlZExpbmVDb3VudCI6MjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI1OTdkOTczZDQ5OGFjMThiMGY0YTdhZmQwNDdkYjRkMDJmMDYyYTYzOTNlMzhhM2I5MTZmYmUwOGM3MThhNjkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZkM2I2YzViOTQ0MjJhN2MwNGYwMDkzMzgxYmY4ZDE3MDdlNmVjY2E2Zjc4NzMyMWE2Nzk0ZWEzZGYxNjQ1MmQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjgwODlmMzg3OWM3OTk2YjRmNThiMmQ0YjkwMjllMDUzNzgxMDM0ZWQ4MTdmZDg0MDZjYzRkMDlmZThjNWUzYTIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImU4ZTM0ZjA2YzgxMDRlNGQ4MDZjOGE2NGUyMDYzNmRiN2FjNjQxZDY0YTEyNGI5ZGZhMzYzNDRmMzVlYjYzYmMifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_aaa5d3a287e84ceaa76a65dc1f6ee05f",
+      "statement": "The Typer bootstrap registers CLI commands and keeps business orchestration in the application layer.",
+      "evidence": [
+        {
+          "resource": "repo://apps/cli/otm_cli/cli.py#L1-L5",
+          "version": "repo-lines-v1:sha256:200984d0476f3f33bcda32514ce06de4b94518afcdcfac1a1115a33800d06aae:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNDc1ZDQ1ODllOTFjYzhjYjk3NDg4OWRhYjAxZGUxNWRiMTU3NGNhMTBlZWM3MjkwYTEwOWJmNTg4Yzk0ZTAxYiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDc1ZDQ1ODllOTFjYzhjYjk3NDg4OWRhYjAxZGUxNWRiMTU3NGNhMTBlZWM3MjkwYTEwOWJmNTg4Yzk0ZTAxYiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMzQzMGEwOGY5OWU3M2M5NTA2MTQxZTJjYjBkZjZjZGQ5MzY1ZWRkYTlmNDBjYjBlZTBjYjNhN2NkZGFhMWEyMiJ9"
+        },
+        {
+          "resource": "repo://apps/cli/otm_cli/cli.py#L45-L65",
+          "version": "repo-lines-v1:sha256:3f807f30a59f16712e26f515cf24ce19e237f6509c3be4826e0492c353ee9c7b:eyJzZWxlY3RlZExpbmVDb3VudCI6MjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA5YzRhZWFmNTdmODJhYmExNjE2M2IwMDcyM2I1ODEwODEyOWYxM2I4M2Y0YWI3YzBiNzhkOWRiZTVjNGRlZTkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM3MGYyZDMxZGQ5YjUwNzQ4YjdlNzdmYzZkMjBjZjQwMTNlZWQyMDIxZTU0MWVlZjgzYzRkMGYzODA0MDkwMzIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImYzMGMwYjE2NTEyMGEyNzc3MWU4YzA5ODA2YmE4ZDY3NTZkNzYzZTYzYWQ4YjM0NDY2YzU0NGFjZTNlNmRkNjgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImU5ZjdmN2FhMTYzMDU2N2MxYjVlNjY0NGUyMWNiZWM4M2E0MzkzM2RjNWIwZGEwZDkwY2Q1M2JhNDhlOTEwZDIifQ"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.7.2",
+    "at": "2026-10-14T19:49:02.006Z"
+  }
+}

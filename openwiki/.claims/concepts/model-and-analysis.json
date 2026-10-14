@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:266d44f6b9adfc4c0059e8fcb96137d9ce0e28396db2e1d0b9cbee0425eaeed5",
+  "claims": [
+    {
+      "id": "claim_04d181872f3d4ad5b12fc7a5bbc7f651",
+      "statement": "Schema helpers reject duplicate IDs and unresolved references to components, assets, flows and boundaries.",
+      "evidence": [
+        {
+          "resource": "repo://packages/core-schema/otm_core_schema/document.py#L27-L84",
+          "version": "repo-lines-v1:sha256:ee2c67f64c35f8ba3f5689328834498c6fc8735dca6125af70416c60324010ef:eyJzZWxlY3RlZExpbmVDb3VudCI6NTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY0OTk3ZmQ0MDI5MGRlMWVlN2I2Nzc5YTFiOTA4MDVhZTBkNTY5YTI5MmQ2YWY2NDRlZGFhYTM5Njc2YTI2M2QiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjlhYTViNGUzNWQxOTM1ZjZjMjdkYmJmNjYzYWNkZjRhNmE4MWVkZGE5N2NhNTZmMjc4ZjU0ZDM5YzFhNWJkOTIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhlZTRjMzVkNTg3M2UxNzc5YTM3ODdjMjU4ZGNiYTE2MzNjY2M1YWFiYjljODU0MGZiM2Y4ZWFjNDUyNDZmMjMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImZkNDdlMDAwZjkwY2ViNWE1OGI2MDJjNWU4NmUzMWYwYTZkM2RlMTk1YWNhMGZmNmUxNzU5YTY4MTgyY2UyOGQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_0712884cc0664ee3bb0a2d61aa056545",
+      "statement": "The analysis use case loads the document and optional pack/custom rules before invoking analyze_document with methodology settings.",
+      "evidence": [
+        {
+          "resource": "repo://apps/cli/otm_cli/application/analyze_service.py#L15-L55",
+          "version": "repo-lines-v1:sha256:601d30d941e5bd901c48335f3e5e0623777eb973015fddb42239e4b2c8815ed2:eyJzZWxlY3RlZExpbmVDb3VudCI6NDEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ3OTkwOTI0NWIxZjE1ZmRmZjZhYzNjMTE2N2YyOTY2YTBiY2Y1Mzk3MjA4M2I3NTVkODMzMmRkZjE5YTg1OTYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM5MjIwNGM2NWY1MDJkYzE2NDU0YjYyNDA4NTZhOWFiN2FkZTAwM2E4ZTlmODYzMzNlYzBiN2M5ZTQwOTQ5MWQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijk4OGFhNjNkYTM5NjE3YWI1ZWI3ZWUyZDNmYmE5YWZhN2QyZjExMjZmZGQ0ZWE1ZDQxNTRmMDBhZDg4ODU5MzgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_f0a2fa684667473796ef3c11cae937e3",
+      "statement": "Analysis supports JSON output, suggested-threat SARIF, methodology selection and an explanation summary.",
+      "evidence": [
+        {
+          "resource": "repo://apps/cli/otm_cli/commands/analyze_cmd.py#L96-L137",
+          "version": "repo-lines-v1:sha256:9b8e728e3ee09ce7d0a1aea72cb44e53fd3d4ec030233195ee8df5927b67ac8c:eyJzZWxlY3RlZExpbmVDb3VudCI6NDIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFkNzcyMDg3MWU0YzY2NDkxNTFiNGE0NmNmMDJjMmJiODkyM2E3MjBlMmRjNGFkNDc1MjJhNTE4ZWVkZTAyZTkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjViNDMwZTNmODYzNTExOTI0ZDY0MWRjNjE2OTM2NGZmODdkOWY3OWVhY2QxMmExNzNjMDg4MTNjYWM1YzA4YzgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjNlOTNkMTNmOTExNDkxODIwOTQwMjBkM2EwYzI3MDU4MzAxZjNkYzQ3YzA4YzRiOWE1NGVjODE2YzE2ZDIyYzYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijc3YmFiYzJmYTkzNTEwNDY5MDFkYTYzMjBjY2JlYzBjNzNhNzI4MjlkOWZlYzQzNzkwYTExNjNmN2U0NmU5YmUifQ"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.7.2",
+    "at": "2026-10-14T19:49:02.006Z"
+  }
+}
