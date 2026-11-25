@@ -8,6 +8,15 @@ This project follows **Keep a Changelog** and **Semantic Versioning**.
 
 ## [Unreleased]
 
+## [7.10.0] — 2026-11-25
+
+### Changed
+
+- Updated the web workspace for modeling, analysis, risk decisions, and export.
+- Made the unified risk report the default in the CLI, API, and web workspace. The cover shows total recorded threats. Markdown and PDF include treatment decisions, rationale, and review details for accepted risks.
+- Linked SARIF results to the target entity's source line when the analysis starts from a YAML file.
+- Updated dependencies and hardened PDF rendering, input handling, and CI gates.
+
 ### Security
 - **O fold de fontes do PDF recriava markup que o escape já tinha neutralizado.** O renderer
   premium escapa cada string do modelo com `html.escape(quote=True)` e, no fim, corre
@@ -119,6 +128,9 @@ This project follows **Keep a Changelog** and **Semantic Versioning**.
   discriminar: com a guarda neutralizada e as constantes intactas, **11 falham**.
 
 ### Added
+- Preview OpenAPI revisions against the active model and apply compatible changes after reviewing conflicts.
+- Use organization rules for analysis and drift checks in the GitHub Action. Pull request checks load the policy from the base revision.
+- Added an OpenWiki quickstart and reference pages linked to the source.
 - **Custom rules can match assets.** `match: { asset: { data_classification: [confidential, restricted], owner: null } }` — a rule now targets a component, a flow **or an asset**, and emits a threat carrying `target_asset_id`. This was shipped as a documented gap and it was the wrong one to leave open: a great deal of organisation policy is about the data rather than the component that happens to hold it. "Anything classified confidential has a named accountable owner" is a statement about the asset. Matchable: `asset_kind`, `sensitivity`, `data_classification`, `data_nature`, `business_criticality`, `regulatory_relevance`, `owner`, `location`, and the component/flow link fields. Same semantics as the other subjects — scalar is equality, list is any-of, unknown field names are an error.
 - **Route table coverage in the web app.** The suite had 68 tests and none touched the router; the `react-router` v8 migration rewrote imports in 15 files and stayed green throughout, proving nothing. The contents of `BrowserRouter` moved into an exported `AppRoutes` (behaviour identical) so tests can mount the app at a chosen URL, and 15 tests now assert that every declared path resolves to itself and that four kinds of unknown URL redirect home rather than leaving a blank screen. Web suite: 68 → 83.
 

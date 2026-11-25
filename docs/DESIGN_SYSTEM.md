@@ -1,6 +1,6 @@
 # OTM Design System
 
-**Version:** 1.1.0 · **Derived from:** App Suite Modeling `v7.9.0`
+**Version:** 1.1.0 · **Derived from:** App Suite Modeling `v7.10.0`
 **Source of truth:** `apps/web/src/index.css` (CSS custom properties), `apps/web/tailwind.config.js` (Tailwind bindings), `apps/web/src/design-system/tokens.ts` (TS mirror)
 **Accessibility floor:** WCAG 2.2 level AA
 **Status:** tokens and primitives documented from shipped code; contrast ratios computed, not asserted. The seven AA failures found in the 1.0.0 audit are **resolved** — see [§9](#9-accessibility-audit--resolved). Verification re-parses `index.css` and checks 80 token pairs; current result is 0 failures.
