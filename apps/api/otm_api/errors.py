@@ -2,19 +2,33 @@
 
 from __future__ import annotations
 
+import json
+import math
 from typing import Any, cast
 
-from fastapi import Request, status
+from fastapi import Request, Response, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from otm_threat_engine import ThreatIdCollisionError
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from otm_api.api_error_messages import msg_request_validation_error
+from otm_api.api_error_messages import msg_request_validation_error, msg_threat_id_collision
 
 # Cap a single string/bytes echo at this many characters; anything beyond is
 # replaced with a suffix that names the suppressed length. Keeps 422 responses
 # bounded even when a client sends MB-sized fields, while preserving enough
 # context for the user to identify the offending input.
 _MAX_INPUT_CHARS = 256
+
+# Cap the *number* of `errors[]` entries, the way `_truncate` already caps the number of items
+# inside one of them. Without it the per-value caps bounded each entry but nothing bounded the
+# array, so the response grew linearly with the number of invalid items while each one cost a
+# constant ~330 bytes of enum text: a 1 MB request of repeated enum violations produced a 66 MB
+# response in 1.4 s of server CPU, unauthenticated and unthrottled on the default posture. The
+# same 50 as the list/dict caps in `_truncate`, for one reason: a caller cannot act on the 51st
+# message before fixing the first fifty, and the marker entry says how many were withheld so the
+# count is never misread as "these are all the problems".
+_MAX_ERROR_ITEMS = 50
 
 
 def problem_detail(
@@ -34,6 +48,15 @@ def problem_detail(
     return body
 
 
+def _non_finite_text(value: float) -> str:
+    """Nome JSON-ish do float não finito, para o cliente reconhecer o que enviou."""
+    if math.isnan(value):
+        return "NaN"
+    if value > 0:
+        return "Infinity"
+    return "-Infinity"
+
+
 def _truncate(value: Any, *, depth: int = 0) -> Any:
     if depth > 4:
         return "…[deep value suppressed]"
@@ -48,12 +71,13 @@ def _truncate(value: Any, *, depth: int = 0) -> Any:
         decoded_head = value[:_MAX_INPUT_CHARS].decode("utf-8", "replace")
         suppressed = len(value) - _MAX_INPUT_CHARS
         return f"{decoded_head}…[{suppressed} bytes suppressed]"
-    if isinstance(value, list):
-        if len(value) > 50:
-            list_head: list[Any] = [_truncate(v, depth=depth + 1) for v in value[:50]]
-            list_head.append(f"…[{len(value) - 50} items suppressed]")
+    if isinstance(value, (list, tuple)):
+        seq = list(value)
+        if len(seq) > 50:
+            list_head: list[Any] = [_truncate(v, depth=depth + 1) for v in seq[:50]]
+            list_head.append(f"…[{len(seq) - 50} items suppressed]")
             return list_head
-        return [_truncate(v, depth=depth + 1) for v in value]
+        return [_truncate(v, depth=depth + 1) for v in seq]
     if isinstance(value, dict):
         if len(value) > 50:
             dict_head_items = list(value.items())[:50]
@@ -61,26 +85,84 @@ def _truncate(value: Any, *, depth: int = 0) -> Any:
             out["__suppressed__"] = f"{len(value) - 50} keys suppressed"
             return out
         return {str(k): _truncate(v, depth=depth + 1) for k, v in value.items()}
-    return value
+    # `NaN`/`Infinity` não são JSON (RFC 8259) e o `JSONResponse` serializa com
+    # `allow_nan=False`. O `json.dumps` da stdlib emite estes literais por omissão, por isso
+    # um cliente Python com um float NaN nos dados envia-os sem fazer nada de exótico: deixá-los
+    # passar rebentava *dentro* deste handler de 422 e o cliente recebia um 500 opaco.
+    if isinstance(value, float) and not math.isfinite(value):
+        return _non_finite_text(value)
+    # JSON scalars pass through untouched (`bool` is a subclass of `int`).
+    if isinstance(value, (int, float, type(None))):
+        return value
+    # Tudo o resto vira texto. A armadilha: para um validador customizado
+    # (`raise ValueError(...)` num `@model_validator`), o Pydantic guarda o objeto
+    # `Exception` em `ctx['error']`. Se ele chegasse ao `JSONResponse`, o `json.dumps`
+    # rebentaria *dentro* deste handler de 422 e o cliente receberia um 500 genérico,
+    # perdendo a mensagem do validador. Nunca deixar sair daqui um valor não-serializável.
+    return _truncate(str(value), depth=depth)
+
+
+def _suppressed_errors_marker(total: int) -> dict[str, Any]:
+    """The entry that tells the caller the list was cut, and by how much.
+
+    A silent slice would be worse than the amplification it fixes: "3 errors" would read as
+    "three problems in my document" when the document has three thousand, and the caller would
+    fix three and resubmit. Shaped like every other entry (`type`/`loc`/`msg`) so a client that
+    iterates `errors[]` does not need a special case.
+    """
+    return {
+        "type": "too_many_errors",
+        "loc": ["body"],
+        "msg": f"…[{total - _MAX_ERROR_ITEMS} further errors suppressed; {total} in total]",
+    }
 
 
 def _truncated_errors(errors: list[dict[str, Any]]) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
-    for err in errors:
+    for err in errors[:_MAX_ERROR_ITEMS]:
         new_err = dict(err)
         if "input" in new_err:
             new_err["input"] = _truncate(new_err["input"])
         if "ctx" in new_err and isinstance(new_err["ctx"], dict):
             new_err["ctx"] = _truncate(new_err["ctx"])
         out.append(new_err)
+    if len(errors) > _MAX_ERROR_ITEMS:
+        out.append(_suppressed_errors_marker(len(errors)))
     return out
+
+
+class SurrogateSafeJSONResponse(JSONResponse):
+    """
+    `JSONResponse` que sobrevive a um surrogate UTF-16 solto vindo do cliente.
+
+    `{"title": "\\ud800"}` é JSON sintaticamente válido — `json.loads` aceita-o, e
+    `JSON.stringify` de um browser emite exatamente isto para uma string com meio par
+    substituto. O Pydantic rejeita-o corretamente (`string_unicode`) e a rota levantava o 422
+    documentado; era a **serialização** desse 422 que rebentava, porque o valor ofensivo é
+    ecoado de volta em `errors[].input` (e pode aparecer em `errors[].loc`, quando o surrogate
+    está numa *chave*) e `.encode("utf-8")` recusa surrogates soltos. O cliente recebia um 500
+    `INTERNAL_ERROR` opaco em vez do 422 que o produto já tinha calculado.
+
+    `backslashreplace` reescreve o carater como a sequência de escape JSON `\\ud800`: continua a
+    ser o mesmo code point para quem faça `JSON.parse`/`json.loads`, portanto o utilizador vê
+    o valor que enviou, e nenhum outro carater é afetado (UTF-8 codifica tudo o resto).
+    """
+
+    def render(self, content: Any) -> bytes:
+        return json.dumps(
+            content,
+            ensure_ascii=False,
+            allow_nan=False,
+            indent=None,
+            separators=(",", ":"),
+        ).encode("utf-8", "backslashreplace")
 
 
 def request_validation_handler(
     _request: Request,
     exc: RequestValidationError,
 ) -> JSONResponse:
-    return JSONResponse(
+    return SurrogateSafeJSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
         content=problem_detail(
             code="REQUEST_VALIDATION_ERROR",
@@ -88,4 +170,100 @@ def request_validation_handler(
             status_code=422,
             errors=_truncated_errors(cast(list[dict[str, Any]], exc.errors())),
         ),
+    )
+
+
+def _body_is_allowed(status_code: int) -> bool:
+    """Estados em que o HTTP proíbe corpo (RFC 9110), tal como o handler do FastAPI trata."""
+    return status_code >= 200 and status_code not in (204, 205, 304)
+
+
+def _unparsable_body_response() -> JSONResponse:
+    """
+    O `400` genérico do FastAPI para um corpo ilegível, no envelope documentado.
+
+    `fastapi/routing.py` levanta `HTTPException(400, "There was an error parsing the body")`
+    para qualquer falha de leitura do corpo que não seja `JSONDecodeError` — por exemplo o
+    `RecursionError` de um JSON com 10 000 níveis de aninhamento. `detail` saía como string
+    solta: uma **terceira** forma de erro, que `docs/features/API.md` exclui ("Não há exceções
+    ao envelope nestas rotas"), e que rebenta com `TypeError: string indices must be integers`
+    num cliente escrito contra o contrato — o mesmo defeito já corrigido uma vez no 413.
+
+    A resposta é a do irmão imediato: um corpo que não é JSON válido (`JSONDecodeError`, o
+    ramo logo acima no FastAPI) já produz este envelope `REQUEST_VALIDATION_ERROR`/422. As
+    duas falhas são a mesma — "o corpo do pedido não se consegue ler" — por isso passam a ser
+    indistinguíveis, em vez de diferirem no estado *e* na forma consoante o motivo interno.
+    """
+    return SurrogateSafeJSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+        content=problem_detail(
+            code="REQUEST_VALIDATION_ERROR",
+            message=msg_request_validation_error(),
+            status_code=422,
+            errors=[
+                {
+                    "type": "body_unparsable",
+                    "loc": ["body"],
+                    "msg": "Request body could not be parsed",
+                }
+            ],
+        ),
+    )
+
+
+async def http_exception_handler(_request: Request, exc: Exception) -> Response:
+    """
+    Substitui o handler de `HTTPException` do FastAPI por dois motivos concretos.
+
+    1. Serializa com `SurrogateSafeJSONResponse`: os 422 das rotas transportam o input do
+       cliente em `errors[]`, e o handler do FastAPI morria a codificá-lo (ver essa classe).
+    2. Converte o `400` de corpo ilegível para o envelope documentado (ver
+       `_unparsable_body_response`).
+
+    Tudo o resto passa igual, incluindo o `404`/`405` do router do Starlette para caminhos
+    fora da tabela de rotas documentada, que não é o contrato que esta API publica.
+    """
+    exc = cast(StarletteHTTPException, exc)
+    headers = getattr(exc, "headers", None)
+    if not _body_is_allowed(exc.status_code):
+        return Response(status_code=exc.status_code, headers=headers)
+    if exc.status_code == status.HTTP_400_BAD_REQUEST and isinstance(exc.detail, str):
+        return _unparsable_body_response()
+    return SurrogateSafeJSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail},
+        headers=headers,
+    )
+
+
+async def threat_id_collision_handler(_request: Request, exc: Exception) -> Response:
+    """422, e não 500: o documento é corrigível por quem o enviou.
+
+    `assert_threat_ids_are_injective` recusa um documento em que dois sujeitos produzem o mesmo id
+    de ameaça. A recusa é deliberada, mas escapava como `ValueError`, e o handler de último recurso
+    respondia `500 INTERNAL_ERROR` com a mensagem só no log do servidor. O cliente recebia um 5xx a
+    culpar o servidor pela sua própria entrada, sem uma palavra sobre o que renomear -- e o mesmo
+    documento passa em `POST /v1/models/validate` com `200 {"valid": true}`, porque o `_unique_ids`
+    do schema corre por lista e nunca compara componentes com fluxos.
+
+    Os dois sujeitos vão em `errors[]` para que uma UI os possa realçar sem analisar a frase.
+    """
+    collision = cast(ThreatIdCollisionError, exc)
+    return SurrogateSafeJSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+        content={
+            "detail": {
+                "code": "THREAT_ID_COLLISION",
+                "message": msg_threat_id_collision(),
+                "errors": [
+                    {
+                        "type": "threat_id_collision",
+                        "loc": ["document"],
+                        "msg": str(collision),
+                        "threat_id": collision.threat_id,
+                        "subjects": [collision.first, collision.second],
+                    }
+                ],
+            }
+        },
     )

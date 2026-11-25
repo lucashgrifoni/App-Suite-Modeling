@@ -13,7 +13,8 @@ from otm_industry_packs.template_query import (
 
 def test_load_all_template_infos() -> None:
     infos = load_all_template_infos()
-    assert infos and all(i.id for i in infos)
+    assert infos
+    assert all(i.id for i in infos)
 
 
 def test_get_template_info_known_and_unknown() -> None:

@@ -136,8 +136,16 @@ by_stride:
       control_id: V11.1.1
       notes: "Lógica de negócio e quotas — ASVS V11 Business Logic."
     - framework: nist_csf
-      control_id: PR.IR-01
-      notes: "Resiliência de infraestruturas e recursos (NIST CSF 2.0 PR.IR)."
+      # PR.IR-01 estava aqui e é controlo de acesso lógico: "Networks and environments are
+      # protected from unauthorized logical access and usage" (NIST CSWP 29, 2024-02-26, p. 21).
+      # A nota descrevia a categoria (PR.IR = Technology Infrastructure Resilience) e citava a
+      # subcategoria errada. Estas duas são as de disponibilidade, e espelham as irmãs ISO desta
+      # mesma entrada: A.8.6 capacidade, A.8.14 redundância.
+      control_id: PR.IR-04
+      notes: "Capacidade de recursos para assegurar disponibilidade (NIST CSF 2.0 PR.IR-04)."
+    - framework: nist_csf
+      control_id: PR.IR-03
+      notes: "Mecanismos de resiliência em situação normal e adversa (NIST CSF 2.0 PR.IR-03)."
     - framework: iso_27001
       control_id: A.8.6
       notes: "Gestão de capacidade (A.8.6)."

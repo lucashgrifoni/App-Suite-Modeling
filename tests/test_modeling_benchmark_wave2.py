@@ -73,4 +73,5 @@ def test_finance_pack_no_payment_leakage_on_admin_portal() -> None:
     doc = _doc("admin-portal")
     r = analyze_document(doc, pack=load_pack("finance"), methodology="stride")
     joined = " ".join(r.pack_control_hints).lower()
-    assert "pagamento" not in joined and "payment" not in joined
+    assert "pagamento" not in joined
+    assert "payment" not in joined

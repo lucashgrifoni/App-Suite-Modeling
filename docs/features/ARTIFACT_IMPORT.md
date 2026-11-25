@@ -36,6 +36,16 @@ otm import repo ./meu-servico --json-out scan.json --draft-out draft.otm.yaml
 
 Sem `--output`, o YAML é escrito para **stdout**.
 
+### Comparar contratos antes de reimportar
+
+```bash
+otm import openapi-diff ./spec-anterior.yaml ./spec-revisada.yaml
+```
+
+A prévia em JSON lista operações adicionadas, removidas e alteradas por método e caminho. Mudanças em seções compartilhadas, como segurança e componentes, ficam visíveis para revisão. O modelo canônico segue como fonte das decisões do analista. Para comparar contratos que usam referências em itens de caminho, forneça as declarações correspondentes nos dois arquivos.
+
+Na interface local, abra um modelo criado a partir de OpenAPI e acesse **Importar → Atualizar modelo com OpenAPI**. Envie o contrato usado na última importação e o contrato revisado. A prévia mostra as operações afetadas, os campos que podem ser atualizados e os conflitos com edições do modelo. **Aplicar alterações sem conflito** atualiza a sessão após a revisão. As decisões de tratamento, os vínculos existentes e as fronteiras revisadas permanecem no modelo. Remoções de entidades e mudanças de identidade exigem revisão manual. Exporte o modelo para salvar a nova versão.
+
 ### `otm import repo` — scan pragmático de repositório
 
 `otm import repo` é um varredor heurístico **leve** sobre fontes Node/Express (`routes`, `upload`, `session`, `external fetch`, `eval`). A saída principal é o JSON de **inferências** (`--json-out`); use `--draft-out` para também emitir um `.otm.yaml` *semente* derivado dessas inferências (componentes-fronteira, ativos placeholder e fluxos a partir de rotas detectadas). O *draft* é deliberadamente mínimo — encadeia diretamente em `otm validate` / `otm analyze`, mas existe para ser editado por um humano, não como "modelo pronto".
@@ -43,6 +53,7 @@ Sem `--output`, o YAML é escrito para **stdout**.
 ## API (`/v1/imports`)
 
 - `POST /v1/imports/openapi` — `multipart/form-data`, campo `file`.
+- `POST /v1/imports/openapi/reimport-preview` — `multipart/form-data`, arquivos `previous` e `revised` (OpenAPI/Swagger) e `document` (modelo atual em JSON). Retorna a comparação de contratos, as alterações, os conflitos e o modelo proposto. A rota não grava o modelo.
 - `POST /v1/imports/terraform` — um único `.tf`.
 - `POST /v1/imports/kubernetes` — YAML multi-documento.
 

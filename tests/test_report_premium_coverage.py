@@ -9,10 +9,9 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-import pytest as _pytest
 from otm_core_schema import load_document_from_yaml_path
 
-_pytest.importorskip("fastapi")
+pytest.importorskip("fastapi")
 from otm_api.services.reports_premium import render_premium  # noqa: E402
 from otm_report_premium.enums import ReportFormat, ReportLevel  # noqa: E402
 from otm_threat_engine import analyze_document  # noqa: E402
@@ -47,7 +46,8 @@ def test_render_markdown_all_levels_locales(model: Path, level: ReportLevel, loc
     doc = load_document_from_yaml_path(model)
     analysis = _analysis(model)
     md, pdf = render_premium(doc, analysis, level=level, output_format=ReportFormat.MARKDOWN, locale=locale)
-    assert md and isinstance(md, str)
+    assert md
+    assert isinstance(md, str)
     assert pdf is None
 
 
@@ -81,7 +81,8 @@ def test_deep_pdf_with_audit_sections() -> None:
     )
     analysis = analyze_document(doc)
     _, pdf = render_premium(doc, analysis, level=ReportLevel.DEEP, output_format=ReportFormat.PDF, locale="en")
-    assert pdf and len(pdf) > 100
+    assert pdf
+    assert len(pdf) > 100
 
 
 @pytest.mark.parametrize("locale", ["pt-BR", "en"])
@@ -95,7 +96,8 @@ def test_deep_report_with_audit_sections(locale: str) -> None:
     )
     analysis = analyze_document(doc)
     md, _ = render_premium(doc, analysis, level=ReportLevel.DEEP, output_format=ReportFormat.MARKDOWN, locale=locale)
-    assert md and "##" in md
+    assert md
+    assert "##" in md
 
 
 def test_report_logo_data_uri_branches(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -108,7 +110,8 @@ def test_report_logo_data_uri_branches(tmp_path: Path, monkeypatch: pytest.Monke
     # env var → valid small file returns a data URI
     monkeypatch.setenv("OTM_PREMIUM_LOGO_PATH", str(png))
     uri = report_logo_data_uri()
-    assert uri is not None and uri.startswith("data:image/png;base64,")
+    assert uri is not None
+    assert uri.startswith("data:image/png;base64,")
 
     # too-large file is skipped (falls back to packaged asset or None)
     res_small_limit = report_logo_data_uri(max_bytes=1)
@@ -130,7 +133,8 @@ def test_methodology_voice_lines_all_methodologies_both_locales() -> None:
     for m in ThreatModelMethodology:
         for loc in ("en", "pt-BR"):
             lines = methodology_voice_lines(m, loc)  # type: ignore[arg-type]
-            assert lines and all(isinstance(x, str) for x in lines)
+            assert lines
+            assert all(isinstance(x, str) for x in lines)
 
 
 @pytest.mark.skipif(not _HAS_PDF, reason="xhtml2pdf extra not installed")
@@ -139,4 +143,6 @@ def test_render_pdf_all_levels(level: ReportLevel) -> None:
     doc = load_document_from_yaml_path(_RICH)
     analysis = _analysis(_RICH)
     md, pdf = render_premium(doc, analysis, level=level, output_format=ReportFormat.PDF, locale="en")
-    assert pdf is not None and isinstance(pdf, (bytes, bytearray)) and len(pdf) > 100
+    assert pdf is not None
+    assert isinstance(pdf, (bytes, bytearray))
+    assert len(pdf) > 100

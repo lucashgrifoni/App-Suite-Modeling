@@ -3,6 +3,50 @@ Copyright (c) Open Threat Model contributors
 Licensed under the MIT License. See LICENSE.
 
 ================================================================================
+Third-party software licences
+================================================================================
+
+This distribution is MIT. Its optional extras also resolve dependencies under
+the copyleft licences listed below.
+
+THE COPYLEFT DEPENDENCIES, AND WHAT PULLS EACH ONE IN
+
+  svglib          LGPL-3.0-or-later
+  python-bidi     LGPL (declared by classifier, no SPDX expression published)
+    `svglib` arrives through `xhtml2pdf` in the `[report]` and `[dev]` extras.
+    `xhtml2pdf` versions before 0.2.24 also depend on `python-bidi`.
+
+  certifi         MPL-2.0
+  pathspec        MPL-2.0
+    Ordinary transitive dependencies of the HTTP and tooling stacks.
+
+WHAT THIS DOES AND DOES NOT MEAN
+
+  These are installed by pip as separate, independently replaceable packages.
+  Nothing here is vendored, bundled, statically linked, or redistributed inside
+  this project's own artifacts; the wheel and sdist on PyPI contain none of
+  their code. MPL-2.0 is file-level copyleft on the upstream files themselves.
+
+  That is a statement of the facts, not a legal opinion, and this project offers
+  none. Whether the arrangement is acceptable for a particular use -- especially
+  vendoring, bundling into a single-file executable, or redistributing a
+  container image to a customer, where the analysis is different -- is a
+  decision for the reader and their counsel.
+
+  No licence check runs in CI today, because the release SBOM currently records
+  no Python components at all, so nothing automated would notice a new copyleft
+  dependency arriving. `tests/test_p3_supply_third_party_licences.py` covers the
+  gap in the meantime: it reads the installed distributions and fails if one
+  declares a copyleft licence and is not named above.
+
+UNCLASSIFIABLE LICENCE STRING (web UI dependency tree)
+
+  The npm package `rgbcolor` declares "MIT OR SEE LICENSE IN FEEL-FREE.md",
+  which is not a valid SPDX expression, so automated tooling cannot classify it
+  and reports it as UNKNOWN. Recorded here as a known exception rather than left
+  to surface as an unexplained scanner result.
+
+================================================================================
 Third-party frameworks, taxonomies and standards
 ================================================================================
 

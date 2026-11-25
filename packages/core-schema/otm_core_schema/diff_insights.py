@@ -9,6 +9,7 @@ from __future__ import annotations
 from otm_core_schema.diff import ThreatModelDiff
 from otm_core_schema.document import Component, DataFlow, ThreatModelDocument
 from otm_core_schema.enums import ComponentKind
+from otm_core_schema.trust_membership import resolve_component_boundaries
 
 
 def _comp_by_id(doc: ThreatModelDocument) -> dict[str, Component]:
@@ -43,6 +44,7 @@ def _flow_added_insights(
     r_flow: dict[str, DataFlow],
     r_comp: dict[str, Component],
     r_bn: dict[str, str],
+    r_tb: dict[str, str],
 ) -> list[str]:
     out: list[str] = []
     for tid in d.data_flows.added:
@@ -51,8 +53,11 @@ def _flow_added_insights(
             continue  # pragma: no cover - defensive guard
         fc = r_comp.get(fl.from_component)
         tc = r_comp.get(fl.to_component)
-        fb = fc.in_trust_boundary if fc else None
-        tb = tc.in_trust_boundary if tc else None
+        # `r_tb`, e não `fc.in_trust_boundary`: o schema deixa declarar a associação dos dois
+        # lados e `resolve_component_boundaries` junta-os. Ler só o campo do componente fazia este
+        # achado desaparecer por inteiro num documento que declara a pertença do lado da fronteira.
+        fb = r_tb.get(fl.from_component) if fc else None
+        tb = r_tb.get(fl.to_component) if tc else None
         if fb and tb and fb != tb:
             out.append(
                 f"Novo fluxo `{tid}` cruza fronteiras ({r_bn.get(fb, fb)} → {r_bn.get(tb, tb)}); "
@@ -66,15 +71,16 @@ def _flow_added_insights(
     return out
 
 
-def _component_added_insights(d: ThreatModelDiff, r_comp: dict[str, Component]) -> list[str]:
+def _component_added_insights(d: ThreatModelDiff, r_comp: dict[str, Component], r_tb: dict[str, str]) -> list[str]:
     out: list[str] = []
     for cid in d.components.added:
         c = r_comp.get(cid)
         if not c:
             continue  # pragma: no cover - defensive guard
-        if c.kind == ComponentKind.USER and c.in_trust_boundary:
+        boundary = r_tb.get(cid)
+        if c.kind == ComponentKind.USER and boundary:
             out.append(
-                f"Novo componente utilizador `{cid}` na fronteira `{c.in_trust_boundary}`; "
+                f"Novo componente utilizador `{cid}` na fronteira `{boundary}`; "
                 "ver autenticação e superfície exposta à Internet."
             )
         if c.kind == ComponentKind.EXTERNAL_ENTITY:
@@ -130,12 +136,13 @@ def structural_key_insights(
     r_comp = _comp_by_id(revised)
     r_flow = _flow_by_id(revised)
     r_bn = _boundary_names(revised)
+    r_tb = resolve_component_boundaries(revised)
     b_bn = _boundary_names(baseline)
 
     insights: list[str] = []
     insights.extend(_model_info_insights(d))
-    insights.extend(_flow_added_insights(d, r_flow, r_comp, r_bn))
-    insights.extend(_component_added_insights(d, r_comp))
+    insights.extend(_flow_added_insights(d, r_flow, r_comp, r_bn, r_tb))
+    insights.extend(_component_added_insights(d, r_comp, r_tb))
     insights.extend(_boundary_insights(d, r_bn, b_bn))
     insights.extend(_asset_threat_insights(d))
     insights.extend(_mitigation_change_insights(d))

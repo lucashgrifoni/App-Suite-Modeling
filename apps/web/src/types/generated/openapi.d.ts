@@ -304,6 +304,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/imports/openapi/reimport-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview changes to an existing model from two OpenAPI contracts
+         * @description Read-only comparison. Conflicting fields and removed entities are retained in the proposed model.
+         */
+        post: operations["preview_openapi_reimport_route_v1_imports_openapi_reimport_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/imports/terraform": {
         parameters: {
             query?: never;
@@ -364,6 +384,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Risk report (Markdown or PDF)
+         * @description Builds the risk report. Requires a document and either analysis or run_analysis=true.
+         */
+        post: operations["post_risk_report_v1_reports_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/reports/premium": {
         parameters: {
             query?: never;
@@ -374,8 +414,9 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Premium report (Markdown or PDF)
-         * @description Builds the consolidated premium report from analysis, backlog, diff, and explainability. Requires `document` and either `analysis` or `run_analysis: true`.
+         * Legacy report (Markdown or PDF)
+         * @deprecated
+         * @description Compatibility route for existing integrations and explicit report levels.
          */
         post: operations["post_premium_report_v1_reports_premium_post"];
         delete?: never;
@@ -668,6 +709,85 @@ export interface components {
             detection_sources?: string[];
         };
         /**
+         * ApiErrorBody
+         * @description O conteúdo de `detail` num erro de **domínio**.
+         */
+        ApiErrorBody: {
+            /**
+             * Code
+             * @description Código estável do erro, ex.: `DOCUMENT_VALIDATION_ERROR`.
+             */
+            code: string;
+            /**
+             * Message
+             * @description Mensagem user-facing, localizada por `Accept-Language`.
+             */
+            message: string;
+            /**
+             * Errors
+             * @description Detalhe por campo, quando aplicável.
+             */
+            errors?: components["schemas"]["ApiErrorItem"][] | null;
+        };
+        /**
+         * ApiErrorEnvelope
+         * @description Erro de **domínio**: `detail` é um objecto, não um array.
+         *
+         *     É aqui que um cliente gerado do contrato antigo partia: lia `detail[0].msg` num dicionário.
+         */
+        ApiErrorEnvelope: {
+            detail: components["schemas"]["ApiErrorBody"];
+        };
+        /**
+         * ApiErrorItem
+         * @description Uma entrada de `errors[]`: eco do input do cliente, com o caminho que falhou.
+         */
+        ApiErrorItem: {
+            /**
+             * Type
+             * @description Classe do erro, ex.: `value_error`, `body_unparsable`.
+             */
+            type: string;
+            /**
+             * Loc
+             * @description Caminho até ao campo em falta ou inválido.
+             */
+            loc?: unknown[];
+            /**
+             * Msg
+             * @description Mensagem legível para quem enviou o pedido.
+             */
+            msg: string;
+        };
+        /**
+         * ApiProblem
+         * @description Erro do **envelope** do pedido, devolvido no topo do corpo (sem `detail`).
+         *
+         *     Produzido por `problem_detail` — corpo ilegível, validação do envelope, rate limit, 500.
+         */
+        ApiProblem: {
+            /**
+             * Code
+             * @description Código estável do erro, ex.: `REQUEST_VALIDATION_ERROR`.
+             */
+            code: string;
+            /**
+             * Message
+             * @description Mensagem user-facing, localizada por `Accept-Language`.
+             */
+            message: string;
+            /**
+             * Status
+             * @description Código HTTP repetido no corpo, para clientes que só leem o corpo.
+             */
+            status: number;
+            /**
+             * Errors
+             * @description Detalhe por campo, quando aplicável.
+             */
+            errors?: components["schemas"]["ApiErrorItem"][] | null;
+        };
+        /**
          * ArtifactImportResponse
          * @description Rascunho canónico + lista estruturada de inferências (não é `AnalysisResult`).
          */
@@ -826,6 +946,15 @@ export interface components {
         Body_import_terraform_route_v1_imports_terraform_post: {
             /** File */
             file: string;
+        };
+        /** Body_preview_openapi_reimport_route_v1_imports_openapi_reimport_preview_post */
+        Body_preview_openapi_reimport_route_v1_imports_openapi_reimport_preview_post: {
+            /** Previous */
+            previous: string;
+            /** Revised */
+            revised: string;
+            /** Document */
+            document: string;
         };
         /**
          * CompareBody
@@ -1150,11 +1279,6 @@ export interface components {
             /** Count After */
             count_after: number;
         };
-        /** HTTPValidationError */
-        HTTPValidationError: {
-            /** Detail */
-            detail?: components["schemas"]["ValidationError"][];
-        };
         /**
          * HeuristicThreat
          * @description Ameaça sugerida pelo motor (heurística STRIDE).
@@ -1424,6 +1548,21 @@ export interface components {
             /** Changes */
             changes?: components["schemas"]["FieldChange"][];
         };
+        /** OpenApiReimportPreview */
+        OpenApiReimportPreview: {
+            /** Document */
+            document: {
+                [key: string]: unknown;
+            };
+            /** Operations */
+            operations: {
+                [key: string]: string[];
+            };
+            /** Changes */
+            changes: components["schemas"]["FieldChange"][];
+            /** Conflicts */
+            conflicts: components["schemas"]["FieldChange"][];
+        };
         /** PackHintsDelta */
         PackHintsDelta: {
             /** Added */
@@ -1448,7 +1587,7 @@ export interface components {
         };
         /**
          * PremiumReportBody
-         * @description Report premium — mesmo padrão de análise que `/remediation/backlog`.
+         * @description Legacy report request with a selectable level.
          */
         PremiumReportBody: {
             /**
@@ -1490,13 +1629,6 @@ export interface components {
              */
             auto_recommend_methodology: boolean;
             /**
-             * Level
-             * @description Profundidade do relatório.
-             * @default standard
-             * @enum {string}
-             */
-            level: "executive" | "standard" | "deep";
-            /**
              * Output Format
              * @description markdown = texto; pdf = binário application/pdf.
              * @default markdown
@@ -1508,6 +1640,13 @@ export interface components {
              * @description Idioma dos textos estruturais do relatório (pt-BR | en). Omitido = pt-BR.
              */
             locale?: string | null;
+            /**
+             * Level
+             * @description Profundidade do relatório.
+             * @default standard
+             * @enum {string}
+             */
+            level: "executive" | "standard" | "deep";
         };
         /**
          * QualityCheckItem
@@ -1694,6 +1833,62 @@ export interface components {
              * @default false
              */
             document_residual_aggregate_changed: boolean;
+        };
+        /**
+         * RiskReportBody
+         * @description Risk report for a document and its analysis.
+         */
+        RiskReportBody: {
+            /**
+             * Document
+             * @description Raiz compatível com `ThreatModelDocument` (aliases YAML respeitados).
+             */
+            document: {
+                [key: string]: unknown;
+            };
+            /**
+             * Analysis
+             * @description `AnalysisResult` em JSON; obrigatório se `run_analysis` é false.
+             */
+            analysis?: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Baseline Analysis
+             * @description Análise anterior para secção baseline/diff (opcional).
+             */
+            baseline_analysis?: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Run Analysis
+             * @description Se true e `analysis` ausente, executa o motor no documento.
+             * @default false
+             */
+            run_analysis: boolean;
+            /**
+             * Pack Id
+             * @description Pack quando `run_analysis` é usado.
+             */
+            pack_id?: string | null;
+            methodology?: components["schemas"]["ThreatModelMethodology"] | null;
+            /**
+             * Auto Recommend Methodology
+             * @default false
+             */
+            auto_recommend_methodology: boolean;
+            /**
+             * Output Format
+             * @description markdown = texto; pdf = binário application/pdf.
+             * @default markdown
+             * @enum {string}
+             */
+            output_format: "markdown" | "pdf";
+            /**
+             * Locale
+             * @description Idioma dos textos estruturais do relatório (pt-BR | en). Omitido = pt-BR.
+             */
+            locale?: string | null;
         };
         /** SemanticDiffSectionsModel */
         SemanticDiffSectionsModel: {
@@ -1990,19 +2185,6 @@ export interface components {
              */
             threat_count: number;
         };
-        /** ValidationError */
-        ValidationError: {
-            /** Location */
-            loc: (string | number)[];
-            /** Message */
-            msg: string;
-            /** Error Type */
-            type: string;
-            /** Input */
-            input?: unknown;
-            /** Context */
-            ctx?: Record<string, never>;
-        };
         /**
          * WizardSignalTraceEntry
          * @description Uma linha auditável: o que foi declarado, efeito e onde se reflecte.
@@ -2093,6 +2275,15 @@ export interface operations {
                     };
                 };
             };
+            /** @description Pedido inválido: envelope (`ApiProblem`) ou domínio (`ApiErrorEnvelope`). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiProblem"] | components["schemas"]["ApiErrorEnvelope"];
+                };
+            };
         };
     };
     create_model_v1_models_post: {
@@ -2111,6 +2302,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CreateModelResponse"];
+                };
+            };
+            /** @description Pedido inválido: envelope (`ApiProblem`) ou domínio (`ApiErrorEnvelope`). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiProblem"] | components["schemas"]["ApiErrorEnvelope"];
                 };
             };
         };
@@ -2137,13 +2337,13 @@ export interface operations {
                     "application/json": components["schemas"]["ValidateResponse"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Pedido inválido: envelope (`ApiProblem`) ou domínio (`ApiErrorEnvelope`). */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["ApiProblem"] | components["schemas"]["ApiErrorEnvelope"];
                 };
             };
         };
@@ -2170,13 +2370,13 @@ export interface operations {
                     "application/json": components["schemas"]["ModelPrecheckResponse"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Pedido inválido: envelope (`ApiProblem`) ou domínio (`ApiErrorEnvelope`). */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["ApiProblem"] | components["schemas"]["ApiErrorEnvelope"];
                 };
             };
         };
@@ -2203,13 +2403,13 @@ export interface operations {
                     "application/json": components["schemas"]["ThreatModelDiff"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Pedido inválido: envelope (`ApiProblem`) ou domínio (`ApiErrorEnvelope`). */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["ApiProblem"] | components["schemas"]["ApiErrorEnvelope"];
                 };
             };
         };
@@ -2236,13 +2436,13 @@ export interface operations {
                     "application/json": components["schemas"]["ThreatModelComparisonResult"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Pedido inválido: envelope (`ApiProblem`) ou domínio (`ApiErrorEnvelope`). */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["ApiProblem"] | components["schemas"]["ApiErrorEnvelope"];
                 };
             };
         };
@@ -2269,13 +2469,13 @@ export interface operations {
                     "application/json": components["schemas"]["RecommendMethodologyResponse"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Pedido inválido: envelope (`ApiProblem`) ou domínio (`ApiErrorEnvelope`). */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["ApiProblem"] | components["schemas"]["ApiErrorEnvelope"];
                 };
             };
         };
@@ -2302,13 +2502,13 @@ export interface operations {
                     "application/json": components["schemas"]["AnalysisResult"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Pedido inválido: envelope (`ApiProblem`) ou domínio (`ApiErrorEnvelope`). */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["ApiProblem"] | components["schemas"]["ApiErrorEnvelope"];
                 };
             };
         };
@@ -2335,13 +2535,13 @@ export interface operations {
                     "application/json": components["schemas"]["AnalysisDiff"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Pedido inválido: envelope (`ApiProblem`) ou domínio (`ApiErrorEnvelope`). */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["ApiProblem"] | components["schemas"]["ApiErrorEnvelope"];
                 };
             };
         };
@@ -2373,13 +2573,13 @@ export interface operations {
                     "application/json": components["schemas"]["TemplateListItem"][];
                 };
             };
-            /** @description Validation Error */
+            /** @description Pedido inválido: envelope (`ApiProblem`) ou domínio (`ApiErrorEnvelope`). */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["ApiProblem"] | components["schemas"]["ApiErrorEnvelope"];
                 };
             };
         };
@@ -2405,13 +2605,13 @@ export interface operations {
                     "application/json": components["schemas"]["TemplateListItem"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Pedido inválido: envelope (`ApiProblem`) ou domínio (`ApiErrorEnvelope`). */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["ApiProblem"] | components["schemas"]["ApiErrorEnvelope"];
                 };
             };
         };
@@ -2437,13 +2637,13 @@ export interface operations {
                     "application/json": components["schemas"]["CreateModelResponse"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Pedido inválido: envelope (`ApiProblem`) ou domínio (`ApiErrorEnvelope`). */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["ApiProblem"] | components["schemas"]["ApiErrorEnvelope"];
                 };
             };
         };
@@ -2470,13 +2670,13 @@ export interface operations {
                     "application/json": components["schemas"]["ExportResponse"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Pedido inválido: envelope (`ApiProblem`) ou domínio (`ApiErrorEnvelope`). */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["ApiProblem"] | components["schemas"]["ApiErrorEnvelope"];
                 };
             };
         };
@@ -2503,13 +2703,46 @@ export interface operations {
                     "application/json": components["schemas"]["ArtifactImportResponse"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Pedido inválido: envelope (`ApiProblem`) ou domínio (`ApiErrorEnvelope`). */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["ApiProblem"] | components["schemas"]["ApiErrorEnvelope"];
+                };
+            };
+        };
+    };
+    preview_openapi_reimport_route_v1_imports_openapi_reimport_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_preview_openapi_reimport_route_v1_imports_openapi_reimport_preview_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OpenApiReimportPreview"];
+                };
+            };
+            /** @description Pedido inválido: envelope (`ApiProblem`) ou domínio (`ApiErrorEnvelope`). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiProblem"] | components["schemas"]["ApiErrorEnvelope"];
                 };
             };
         };
@@ -2536,13 +2769,13 @@ export interface operations {
                     "application/json": components["schemas"]["ArtifactImportResponse"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Pedido inválido: envelope (`ApiProblem`) ou domínio (`ApiErrorEnvelope`). */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["ApiProblem"] | components["schemas"]["ApiErrorEnvelope"];
                 };
             };
         };
@@ -2569,13 +2802,13 @@ export interface operations {
                     "application/json": components["schemas"]["ArtifactImportResponse"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Pedido inválido: envelope (`ApiProblem`) ou domínio (`ApiErrorEnvelope`). */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["ApiProblem"] | components["schemas"]["ApiErrorEnvelope"];
                 };
             };
         };
@@ -2613,13 +2846,48 @@ export interface operations {
                     "text/markdown": string;
                 };
             };
-            /** @description Validation Error */
+            /** @description Pedido inválido: envelope (`ApiProblem`) ou domínio (`ApiErrorEnvelope`). */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["ApiProblem"] | components["schemas"]["ApiErrorEnvelope"];
+                };
+            };
+        };
+    };
+    post_risk_report_v1_reports_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RiskReportBody"];
+            };
+        };
+        responses: {
+            /** @description Markdown report or binary PDF. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                    "text/markdown": string;
+                    "application/pdf": string;
+                };
+            };
+            /** @description Pedido inválido: envelope (`ApiProblem`) ou domínio (`ApiErrorEnvelope`). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiProblem"] | components["schemas"]["ApiErrorEnvelope"];
                 };
             };
         };
@@ -2637,7 +2905,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Corpo = Markdown (`output_format=markdown`) ou PDF binário (`output_format=pdf`). */
+            /** @description Markdown report or binary PDF. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -2648,13 +2916,13 @@ export interface operations {
                     "application/pdf": string;
                 };
             };
-            /** @description Validation Error */
+            /** @description Pedido inválido: envelope (`ApiProblem`) ou domínio (`ApiErrorEnvelope`). */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["ApiProblem"] | components["schemas"]["ApiErrorEnvelope"];
                 };
             };
         };

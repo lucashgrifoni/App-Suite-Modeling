@@ -17,7 +17,7 @@ Exemplos concretos, para que ninguém precise de descobrir por tentativa:
   ritmo. A API tem hoje autenticação por chave (`OTM_API_KEY`) e *rate limiting*.
 - Auditorias anteriores a **v7.9.0** descrevem o pipeline como não tendo SAST, ou dizem que
   Snyk, Trivy, Checkbox/KICS e Semgrep estão "não configurados". Todos correm hoje em
-  `security-ci-cd.yml`, e o repositório é público com CodeQL ativo.
+  `security-ci-cd.yml`. As etapas de code scanning só correm quando o repositório é **público** ou tem GitHub Advanced Security — o `preflight` desse workflow calcula-o e salta-as caso contrário, por isso a visibilidade não se afirma aqui: lê-se do repositório.
 - Os relatórios que apontam para `.github/workflows/ci.yml` referem-se a um ficheiro que foi
   substituído por `github-ci-cd.yml` e `security-ci-cd.yml`.
 

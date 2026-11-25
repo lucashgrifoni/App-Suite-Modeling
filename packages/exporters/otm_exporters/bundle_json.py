@@ -27,7 +27,7 @@ def export_bundle_json(
         "document": document,
         "analysis": analysis,
     }
-    return json.dumps(payload, indent=indent, ensure_ascii=False)
+    return json.dumps(payload, indent=indent, ensure_ascii=False, allow_nan=False)
 
 
 def export_threat_model_bundle_obj(
@@ -52,4 +52,5 @@ def export_threat_model_bundle_json(
         export_threat_model_bundle_obj(doc, result),
         indent=indent,
         ensure_ascii=False,
+        allow_nan=False,
     )

@@ -7,6 +7,9 @@ Documento objetivo para utilizadores e mantenedores. Complementa o [congelamento
 - **Sem persistência server-side:** a UI usa rascunho local (`sessionStorage`). Não há contas, equipas nem histórico centralizado.
 - **Autenticação na API (opcional):** pode activar-se **`OTM_API_KEY`** para proteger `/v1/*`; sem esta variável, a API permanece aberta na rede onde correr. A UI não gere contas; implantação pública requer reverso/gateway conforme `architecture/DEPLOYMENT_INVARIANTS.md`.
 - **MVP de diagramação:** canvas avançado não é o fluxo principal; exportação textual e Mermaid cobrem o núcleo.
+- **Sem tecto de tamanho de corpo nas rotas JSON:** o único limite de upload são os **2 MiB** de `/v1/imports/*`, e aplica-se apenas ao ficheiro carregado. `/v1/models/*`, `/v1/exports`, `/v1/reports/premium`, `/v1/analyses/diff` e `/v1/remediation/backlog` aceitam o corpo que o cliente enviar. O tecto de entidades (`OTM_MAX_DOCUMENT_ENTITIES`) está **desligado por omissão**. Um corpo maior compra trabalho proporcional; medido, `/v1/models/analyze` custa ~21 ms num modelo de 5 KB. Coerente com a postura declarada em [`architecture/THREAT_MODEL.md`](architecture/THREAT_MODEL.md) — ferramenta local-first, exposição pública exige gateway — mas quem expuser a API deve impor o limite no reverso.
+- **Sem timeout de pedido nem limite de concorrência:** a aplicação não aborta um pedido lento nem limita quantos corre em paralelo; ambos são responsabilidade do reverso ou do supervisor de processos. Os handlers de importação correm o parse de forma síncrona, pelo que um pedido caro atrasa os outros do mesmo worker.
+- **O rate limit é por processo:** o contador vive em memória no worker. Com `N` workers uvicorn o limite efectivo é `N × OTM_RATE_LIMIT`, e reiniciar um worker zera o seu contador. Para um limite verdadeiramente global, aplique-o no gateway.
 
 ## Heurísticas e metodologias
 

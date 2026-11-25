@@ -25,7 +25,8 @@ eval('0');
         encoding="utf-8",
     )
     out = scan_node_express_repo(tmp_path)
-    assert "modeling_hints" in out and isinstance(out["modeling_hints"], list)
+    assert "modeling_hints" in out
+    assert isinstance(out["modeling_hints"], list)
     assert "import_signals_corpus_snippets" in out
     kinds = {x["kind"] for x in out["inferences"]}
     assert "route" in kinds

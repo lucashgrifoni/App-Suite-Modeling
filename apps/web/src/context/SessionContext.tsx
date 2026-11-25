@@ -3,15 +3,19 @@ import {
   useCallback,
   useContext,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
 import type { AnalysisResult } from "../types/api";
 import type { OtmDocument } from "../types/document";
+import { hashDocument } from "../utils/documentIdentity";
 import { applyKnownComponentIdTypoFixes } from "../utils/documentNormalize";
 
 const DOC_KEY = "otm.web.document";
 const ANALYSIS_KEY = "otm.web.analysis";
+/** Fingerprint of the document the cached analysis was computed from. */
+const ANALYSIS_DOC_KEY = "otm.web.analysis.doc";
 
 /** Garante campos obrigatórios do contrato API para análises antigas em sessionStorage. */
 function normalizeAnalysis(raw: unknown): AnalysisResult | null {
@@ -26,6 +30,16 @@ function normalizeAnalysis(raw: unknown): AnalysisResult | null {
     trust_boundary_findings: a.trust_boundary_findings ?? [],
     heuristic_threats: a.heuristic_threats ?? [],
   };
+}
+
+/**
+ * Exported because a fingerprint only matches if both sides hash the SAME document. The
+ * session stores the normalised form, so anything that wants to key data to "the document
+ * in session" — the import review, for one — has to normalise first or its key will miss
+ * on every reload. Idempotent: normalising an already-normalised document changes nothing.
+ */
+export function normalizeSessionDocument(raw: unknown): OtmDocument | null {
+  return normalizeDoc(raw);
 }
 
 function normalizeDoc(raw: unknown): OtmDocument | null {
@@ -57,12 +71,47 @@ function persistDocument(doc: OtmDocument | null) {
   }
 }
 
-function persistAnalysis(a: AnalysisResult | null) {
+function storageRemove(key: string) {
   try {
-    if (a) sessionStorage.setItem(ANALYSIS_KEY, JSON.stringify(a));
-    else sessionStorage.removeItem(ANALYSIS_KEY);
+    sessionStorage.removeItem(key);
   } catch {
-    /* ignore */
+    /* private mode */
+  }
+}
+
+/** `true` when the value is now in sessionStorage; `false` when the browser refused it. */
+function storageWrite(key: string, value: string): boolean {
+  try {
+    sessionStorage.setItem(key, value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * The analysis and the fingerprint of the document it was computed from are one fact, so
+ * they are written as one: either both land, or neither is left behind.
+ *
+ * Writing them independently is what turned a full quota into a correctness failure. A large
+ * model's analysis (megabytes) is refused by the browser while the fingerprint (8 chars)
+ * always fits, so storage kept the PREVIOUS model's analysis stamped with the CURRENT
+ * model's fingerprint. After a reload the pairing guard below compared those two and
+ * concluded they matched, and the new document was shown — and exported, and put in a
+ * History snapshot, and printed into a client-side PDF the server never sees — carrying
+ * another system's threat list. Dropping the cache is the only honest outcome here: the
+ * analysis is still on screen for this page load, and a reload simply asks the user to run
+ * the engine again.
+ */
+function persistAnalysisPair(a: AnalysisResult | null, key: string | null) {
+  if (!a || !key) {
+    storageRemove(ANALYSIS_KEY);
+    storageRemove(ANALYSIS_DOC_KEY);
+    return;
+  }
+  if (!storageWrite(ANALYSIS_KEY, JSON.stringify(a)) || !storageWrite(ANALYSIS_DOC_KEY, key)) {
+    storageRemove(ANALYSIS_KEY);
+    storageRemove(ANALYSIS_DOC_KEY);
   }
 }
 
@@ -70,7 +119,7 @@ interface SessionState {
   document: OtmDocument | null;
   analysis: AnalysisResult | null;
   setDocument: (d: OtmDocument | null) => void;
-  setAnalysis: (a: AnalysisResult | null) => void;
+  setAnalysis: (a: AnalysisResult | null, source?: OtmDocument) => boolean;
   reset: () => void;
 }
 
@@ -94,38 +143,67 @@ export function SessionProvider({ children }: Readonly<{ children: ReactNode }>)
     }
   });
 
+  const [analysisDocKey, setAnalysisDocKey] = useState<string | null>(() => {
+    try {
+      return sessionStorage.getItem(ANALYSIS_DOC_KEY);
+    } catch {
+      return null;
+    }
+  });
+
+  // `setAnalysis` must stamp the analysis with the document it was computed from, but
+  // React state is not readable synchronously right after `setDocument`. A ref updated
+  // inside `setDocumentValue` is, which is what lets history restore call
+  // `setDocument(doc)` then `setAnalysis(analysis)` and still produce a matching pair.
+  const documentRef = useRef<OtmDocument | null>(document);
+
   const setDocumentValue = useCallback((d: OtmDocument | null) => {
     const normalized = d ? normalizeDoc(d) : null;
+    documentRef.current = normalized;
     setDocument(normalized);
     persistDocument(normalized);
     if (!d) {
       setAnalysis(null);
-      persistAnalysis(null);
+      setAnalysisDocKey(null);
+      persistAnalysisPair(null, null);
     }
   }, []);
 
-  const setAnalysisValue = useCallback((a: AnalysisResult | null) => {
+  const setAnalysisValue = useCallback((a: AnalysisResult | null, source?: OtmDocument) => {
+    // A decision can edit the model while the previous analysis request is still in flight.
+    if (source && hashDocument(source) !== hashDocument(documentRef.current)) return false;
     const n = a ? normalizeAnalysis(a) : null;
     setAnalysis(n);
-    persistAnalysis(n);
+    const key = n ? hashDocument(documentRef.current) : null;
+    setAnalysisDocKey(key);
+    persistAnalysisPair(n, key);
+    return true;
   }, []);
 
   const reset = useCallback(() => {
+    documentRef.current = null;
     setDocument(null);
     setAnalysis(null);
+    setAnalysisDocKey(null);
     persistDocument(null);
-    persistAnalysis(null);
+    persistAnalysisPair(null, null);
   }, []);
+
+  // An analysis computed from a different document is not this model's analysis. Hiding
+  // it here — rather than at each consumer — means the analysis screen, the exports, the
+  // premium report and the history snapshot cannot disagree about which model they describe.
+  const currentDocKey = useMemo(() => hashDocument(document), [document]);
+  const analysisForCurrentDocument = analysisDocKey === currentDocKey ? analysis : null;
 
   const value = useMemo(
     () => ({
       document,
-      analysis,
+      analysis: analysisForCurrentDocument,
       setDocument: setDocumentValue,
       setAnalysis: setAnalysisValue,
       reset,
     }),
-    [document, analysis, setDocumentValue, setAnalysisValue, reset],
+    [document, analysisForCurrentDocument, setDocumentValue, setAnalysisValue, reset],
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

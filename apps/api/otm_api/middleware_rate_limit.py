@@ -1,0 +1,237 @@
+"""Global per-IP rate limit for every HTTP route.
+
+This replaces `slowapi.middleware.SlowAPIMiddleware`, which silently enforced
+nothing on this app. That middleware resolves the matching route by scanning
+`app.routes` for an object carrying an `endpoint` attribute; when it finds none
+it treats the request as exempt. Since FastAPI 0.141 an `app.include_router(...)`
+call leaves an opaque `_IncludedRouter` wrapper in `app.routes` instead of the
+flattened `APIRoute` objects, so every route registered that way — which here is
+all of `/health` and all of `/v1/*` — resolved to `None` and skipped the limit
+entirely. Only `/`, declared with a bare `@app.get`, was ever limited.
+
+The failure was silent, produced no warning, and depended on the internal route
+representation of two libraries at once. This module therefore does the one
+thing the app actually needs — a global per-IP limit on every request — against
+the public API of `limits` (the library slowapi itself builds on), so no route
+introspection is involved and nothing can quietly opt a route out.
+
+Scope: the counter lives in process memory, so with multiple workers the
+effective limit is per worker, exactly as the previous in-memory configuration
+behaved. It is an abuse-mitigation control, not a quota system; a shared
+backend would be required for the latter.
+
+Caller identity: see `client_key`. The short version is that by the time this
+middleware runs, `request.client` may already have been rewritten from a
+client-controlled header by uvicorn, so it is not trusted unless the operator
+says a proxy is in front — `OTM_TRUSTED_PROXY`, documented in
+`docs/architecture/DEPLOYMENT_INVARIANTS.md`.
+
+Availability: distrusting a forwarded address costs the per-caller bucket, and
+behind the proxy that `DEPLOYMENT_INVARIANTS.md` makes mandatory *every* request
+is forwarded — so "120 per caller" silently became "120 for the whole service",
+which one busy client exhausts for everyone. That trade is real and it is not
+this module's to make quietly: `perimeter_settings.resolve_trusted_proxy` now
+refuses to start a staging/production process that has a limit configured and no
+declaration either way, and a 429 served from the shared bucket is logged under
+its own event name so the operator can tell the two cases apart.
+"""
+
+from __future__ import annotations
+
+import logging
+import time
+from collections import OrderedDict
+
+from limits import RateLimitItem, parse
+from limits.storage import MemoryStorage
+from limits.strategies import MovingWindowRateLimiter
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
+from starlette.responses import JSONResponse, Response
+
+logger = logging.getLogger("otm.api")
+
+_UNKNOWN_CLIENT = "unknown"
+
+# One shared bucket for every request whose apparent client address may have been
+# derived from a forwarding header we were not told to trust. Deliberately not a
+# valid host, so it can never collide with a real peer address.
+_UNTRUSTED_FORWARDED_CLIENT = "<forwarded>"
+
+
+def parse_rate_limit(spec: str) -> RateLimitItem:
+    """Parse a rate-limit spec such as ``120/minute``.
+
+    Raises `ValueError` on a malformed spec, and on a spec that parses but
+    allows nothing (``0/minute``). Failing fast at startup is deliberate: a typo
+    in `OTM_RATE_LIMIT` must not silently degrade into "no limit at all", which
+    is the exact failure mode this module exists to fix — and `0` (the value
+    many tools read as "unlimited", and what ``${LIMIT}/minute`` produces when
+    `LIMIT` is unset) must not silently degrade into "no requests at all",
+    which 429s even `/health` and turns a deploy into a restart loop.
+    """
+    item = parse(spec)
+    if item.amount < 1:
+        raise ValueError(
+            f"OTM_RATE_LIMIT={spec!r} allows no requests at all: every caller, including the "
+            "/health probe, would receive 429. To turn the limit off, set OTM_RATE_LIMIT_DISABLED=1."
+        )
+    return item
+
+
+def _forwarded_for(request: Request) -> str:
+    """Every ``X-Forwarded-For`` value, joined exactly as uvicorn joins them.
+
+    Reading only the first header would miss the split form (`X-Forwarded-For: a`
+    plus `X-Forwarded-For: b`), which uvicorn concatenates before choosing the
+    client address — and a check that misses it is a check an attacker can walk
+    around by sending the header twice.
+    """
+    return ", ".join(request.headers.getlist("x-forwarded-for"))
+
+
+def client_key(request: Request, *, trust_forwarded: bool = False) -> str:
+    """Identify the caller, refusing to let a header mint a fresh bucket.
+
+    `request.client` is not necessarily the TCP peer. uvicorn 0.52 runs
+    `ProxyHeadersMiddleware` **by default** (`proxy_headers=True`,
+    `forwarded_allow_ips="127.0.0.1"`), outside this app, and it rewrites
+    `scope["client"]` from `X-Forwarded-For` whenever the peer is loopback —
+    which is every request in the same-host reverse-proxy deployment that
+    `DEPLOYMENT_INVARIANTS.md` mandates. By the time this function runs the real
+    peer is gone, so "just read the real IP" is not available to us.
+
+    Hence an explicit trust decision, defaulting to distrust:
+
+    - `trust_forwarded` (operator sets `OTM_TRUSTED_PROXY`): the address uvicorn
+      resolved from the proxy chain is the caller. Correct only when a proxy the
+      operator controls is actually in front — see `DEPLOYMENT_INVARIANTS.md`
+      for the required uvicorn flags.
+    - otherwise: a request carrying a forwarding header that could have produced
+      the address we see is counted in one shared bucket. It still bounds abuse,
+      and unlike a per-caller bucket it cannot be reset by rotating a header — a
+      per-IP limit any caller can reset is worse than an honest global one. The
+      price is that the limit stops being per caller, which is why reaching this
+      branch in staging/production requires the operator to have declared
+      `OTM_TRUSTED_PROXY=0` (see `perimeter_settings.resolve_trusted_proxy`).
+      Falling back to the peer address instead is not available here: uvicorn
+      overwrote `scope["client"]` before any app code ran, so "the peer" is the
+      forwarded address — reading it back would be the bypass, not a fallback.
+    - a request with no forwarding header keeps its own per-peer bucket, which
+      is the common direct-exposure case.
+
+    The containment test cannot produce a false negative: uvicorn derives the
+    address it installs by slicing one entry of this same header, so a rewritten
+    address is always a substring of it. A false positive only costs a direct
+    caller its own bucket, which fails closed.
+    """
+    client = request.client
+    host = client.host if client and client.host else _UNKNOWN_CLIENT
+    if trust_forwarded:
+        return host
+    forwarded = _forwarded_for(request)
+    if forwarded and host in forwarded:
+        return _UNTRUSTED_FORWARDED_CLIENT
+    return host
+
+
+class RateLimitMiddleware(BaseHTTPMiddleware):
+    """Applies one global limit to every request, keyed by client address."""
+
+    def __init__(self, app, *, limit: RateLimitItem, trust_forwarded: bool = False) -> None:
+        super().__init__(app)
+        self._limit = limit
+        self._trust_forwarded = trust_forwarded
+        self._limiter = MovingWindowRateLimiter(MemoryStorage())
+        self._reported_untrusted_forwarding = False
+        self._window_seconds = float(limit.get_expiry())
+        #: `chave -> instante em que a sua janela fecha`, por ordem crescente desse instante.
+        #: `MemoryStorage` tem um varredor próprio, mas corre num `threading.Timer` que não é
+        #: reagendado sem actividade, por isso quem **para** de bater fica lá: medido, 20 000
+        #: endereços distintos deixavam 20 000 entradas, e uma janela de 5/s não libertava nada
+        #: passados seis segundos. A 474 bytes por endereço são ~2,1 M endereços por GB, e o
+        #: limite está activo por omissão em staging/produção — ligar a protecção criava a
+        #: superfície.
+        self._client_windows: OrderedDict[str, float] = OrderedDict()
+
+    def _forget_clients_whose_window_closed(self, now: float) -> None:
+        """Liberta as chaves cuja janela já passou — e apenas essas.
+
+        Descartar por LRU também limitaria a memória, mas abria um desvio: bastaria inundar com
+        endereços distintos para expulsar a própria chave quente e recomeçar com o balde cheio.
+        Varrer o armazenamento inteiro a cada pedido é O(chaves) por pedido. Uma chave cuja janela
+        fechou, essa, não guarda informação nenhuma — o chamador tem direito a balde novo de
+        qualquer maneira — por isso deitá-la fora não custa segurança.
+
+        Como as janelas têm duração fixa e cada acerto reposiciona a chave no fim, o mapa está
+        sempre ordenado pelo instante de fecho: basta descartar pela frente enquanto estiver
+        vencida, o que é O(vencidas) e amortizado O(1). O relógio é monotónico porque a pergunta é
+        sobre duração decorrida, não sobre a hora do dia.
+        """
+        while self._client_windows:
+            key, closes_at = next(iter(self._client_windows.items()))
+            if closes_at > now:
+                return
+            self._client_windows.popitem(last=False)
+            self._limiter.clear(self._limit, key)
+
+    def _report_untrusted_forwarding_once(self) -> None:
+        """Say it in the log the first time, then stay quiet.
+
+        Sharing one bucket is the safe answer, but it is also indistinguishable
+        from "the limit is far too strict" unless the log says why. Once per
+        process: a per-request line would be an attacker-controlled log flood.
+        """
+        if self._reported_untrusted_forwarding:
+            return
+        self._reported_untrusted_forwarding = True
+        logger.warning(
+            "rate_limit_forwarded_client_untrusted",
+            extra={"event_name": "rate_limit_forwarded_client_untrusted"},
+        )
+
+    async def dispatch(self, request: Request, call_next) -> Response:
+        key = client_key(request, trust_forwarded=self._trust_forwarded)
+        shared_bucket = key == _UNTRUSTED_FORWARDED_CLIENT
+        if shared_bucket:
+            self._report_untrusted_forwarding_once()
+
+        now = time.monotonic()
+        self._forget_clients_whose_window_closed(now)
+        allowed = self._limiter.hit(self._limit, key)
+        stats = self._limiter.get_window_stats(self._limit, key)
+        self._client_windows[key] = now + self._window_seconds
+        self._client_windows.move_to_end(key)
+
+        if not allowed:
+            # Two very different operational stories, identical from the client's side: one
+            # caller spent its own budget, or the whole service spent a single shared one. The
+            # event name is the only place the difference is recorded, and without it "everyone
+            # is getting 429" has no answer in the logs.
+            event_name = "rate_limit_exceeded_shared_bucket" if shared_bucket else "rate_limit_exceeded"
+            logger.warning(
+                event_name,
+                extra={"event_name": event_name, "path": request.url.path},
+            )
+            response: Response = JSONResponse(
+                status_code=429,
+                content={
+                    "code": "RATE_LIMITED",
+                    "message": f"Rate limit exceeded: {self._limit}. Retry later.",
+                },
+            )
+        else:
+            response = await call_next(request)
+
+        _apply_headers(response, limit=self._limit, remaining=stats.remaining, reset_time=stats.reset_time)
+        return response
+
+
+def _apply_headers(response: Response, *, limit: RateLimitItem, remaining: int, reset_time: float) -> None:
+    response.headers["X-RateLimit-Limit"] = str(limit.amount)
+    response.headers["X-RateLimit-Remaining"] = str(max(0, remaining))
+    response.headers["X-RateLimit-Reset"] = str(int(reset_time))
+    if response.status_code == 429:
+        # Seconds, per RFC 9110 - never negative, and never 0 (which reads as
+        # "retry immediately" and would encourage a hot loop).
+        response.headers["Retry-After"] = str(max(1, int(reset_time - time.time())))

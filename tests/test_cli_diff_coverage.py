@@ -18,7 +18,7 @@ _A = str(_ROOT / "examples" / "minimal.otm.yaml")
 _B = str(_ROOT / "examples" / "saas-ordering-v1.otm.yaml")
 
 
-@pytest.fixture()
+@pytest.fixture
 def runner() -> CliRunner:
     return CliRunner()
 

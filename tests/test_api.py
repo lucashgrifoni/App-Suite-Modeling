@@ -17,7 +17,7 @@ _ROOT = Path(__file__).resolve().parents[1]
 _MINIMAL = _ROOT / "examples" / "minimal.otm.yaml"
 
 
-@pytest.fixture()
+@pytest.fixture
 def client() -> TestClient:
     return TestClient(app)
 
@@ -38,7 +38,8 @@ def test_x_request_id_generated(client: TestClient) -> None:
     r = client.get("/health")
     assert r.status_code == 200
     rid = r.headers.get("x-request-id")
-    assert rid and len(rid) >= 8
+    assert rid
+    assert len(rid) >= 8
 
 
 def test_openapi_available(client: TestClient) -> None:
@@ -262,7 +263,8 @@ def test_validate_missing_body_field_uses_request_validation_handler(client: Tes
     assert body["code"] == "REQUEST_VALIDATION_ERROR"
     assert body["message"]
     assert body["status"] == 422
-    assert isinstance(body["errors"], list) and body["errors"]
+    assert isinstance(body["errors"], list)
+    assert body["errors"]
     assert "invalid" in body["message"].lower()
 
 
@@ -444,7 +446,8 @@ def test_export_bundle_runs_analysis(client: TestClient) -> None:
     )
     assert r.status_code == 200
     bundle = json.loads(r.json()["artifacts"]["bundle_json"])
-    assert bundle["document"] and bundle["analysis"]
+    assert bundle["document"]
+    assert bundle["analysis"]
 
 
 def test_analyze_unknown_pack_detail_shape(client: TestClient) -> None:
@@ -459,7 +462,8 @@ def test_analyze_unknown_pack_detail_shape(client: TestClient) -> None:
     assert r.status_code == 404
     detail = r.json()["detail"]
     assert detail["code"] == "PACK_NOT_FOUND"
-    assert isinstance(detail["message"], str) and detail["message"]
+    assert isinstance(detail["message"], str)
+    assert detail["message"]
     assert set(detail.keys()) == {"code", "message"}
 
 
@@ -476,7 +480,8 @@ def test_export_unknown_pack_detail_shape(client: TestClient) -> None:
     assert r.status_code == 404
     detail = r.json()["detail"]
     assert detail["code"] == "PACK_NOT_FOUND"
-    assert isinstance(detail["message"], str) and detail["message"]
+    assert isinstance(detail["message"], str)
+    assert detail["message"]
     assert set(detail.keys()) == {"code", "message"}
 
 
@@ -493,8 +498,10 @@ def test_export_invalid_analysis_detail_shape(client: TestClient) -> None:
     assert r.status_code == 422
     detail = r.json()["detail"]
     assert detail["code"] == "ANALYSIS_VALIDATION_ERROR"
-    assert isinstance(detail["message"], str) and detail["message"]
-    assert isinstance(detail["errors"], list) and detail["errors"]
+    assert isinstance(detail["message"], str)
+    assert detail["message"]
+    assert isinstance(detail["errors"], list)
+    assert detail["errors"]
     assert set(detail.keys()) == {"code", "message", "errors"}
 
 
@@ -558,7 +565,8 @@ def test_analyze_methodology_outputs_keep_contract(client: TestClient) -> None:
         out = r.json()
         assert out["methodology"] == m
         assert isinstance(out["heuristic_threats"], list)
-        assert "summary" in out and "max_risk_score" in out["summary"]
+        assert "summary" in out
+        assert "max_risk_score" in out["summary"]
 
 
 def test_analyze_plot4ai_contains_specialized_insights(client: TestClient) -> None:
@@ -622,7 +630,99 @@ def test_import_openapi_accepts_small_spec(client: TestClient) -> None:
     )
     assert r.status_code == 200
     body = r.json()
-    assert "document" in body and "inferences" in body
+    assert "document" in body
+    assert "inferences" in body
+
+
+def test_reimport_openapi_previews_conflicts_and_preserves_decisions(client: TestClient) -> None:
+    before = """openapi: 3.0.0
+info: {title: Orders, version: '1'}
+paths:
+  /orders:
+    get: {operationId: listOrders}
+  /old:
+    get: {operationId: legacy}
+"""
+    after = """openapi: 3.0.0
+info: {title: Orders, version: '2'}
+paths:
+  /orders:
+    get: {operationId: listOrders, summary: List active orders}
+    post: {operationId: createOrder}
+  /orders/latest:
+    get: {operationId: latest}
+"""
+    initial = client.post("/v1/imports/openapi", files={"file": ("first.yaml", before)})
+    assert initial.status_code == 200, initial.text
+    document = initial.json()["document"]
+    api = document["components"][1]
+    api["description"] = "Scope reviewed with the owner."
+    document["trust_boundaries"][1]["name"] = "Reviewed service boundary"
+    document["threats"] = [
+        {
+            "id": "threat_accepted",
+            "title": "Order exposure",
+            "target_component_id": api["id"],
+            "stride": "information_disclosure",
+            "treatment_status": "accepted_risk",
+            "treatment_notes": "Compensating control reviewed.",
+            "assignee": "Orders team",
+            "metadata": {"risk_review_date": "2026-12-01"},
+        }
+    ]
+
+    result = client.post(
+        "/v1/imports/openapi/reimport-preview",
+        files={
+            "previous": ("first.yaml", before),
+            "revised": ("second.yaml", after),
+            "document": ("model.json", json.dumps(document), "application/json"),
+        },
+    )
+
+    assert result.status_code == 200, result.text
+    preview = result.json()
+    assert preview["operations"] == {
+        "added": ["GET /orders/latest", "POST /orders"],
+        "removed": ["GET /old"],
+        "changed": ["GET /orders"],
+        "shared_sections_changed": [],
+    }
+    assert [(change["field"], change["before"]) for change in preview["conflicts"]] == [
+        (f"components.{api['id']}.description", api["description"]),
+    ]
+    merged = preview["document"]
+    assert merged["components"][1]["description"] == api["description"]
+    assert merged["data_flows"][0]["metadata"]["openapi_operations_count"] == 3
+    assert merged["trust_boundaries"] == document["trust_boundaries"]
+    assert {key: merged["threats"][0][key] for key in document["threats"][0]} == document["threats"][0]
+    assert client.post("/v1/models/validate", json={"document": merged}).status_code == 200
+
+
+def test_reimport_openapi_preserves_entities_when_the_last_operation_is_removed(client: TestClient) -> None:
+    base = "openapi: 3.0.0\ninfo: {title: Orders, version: '1'}\n"
+    before = base + "paths: {/orders: {get: {operationId: listOrders}}}\n"
+    after = base + "paths: {}\n"
+    document = client.post("/v1/imports/openapi", files={"file": ("first.yaml", before)}).json()["document"]
+
+    result = client.post(
+        "/v1/imports/openapi/reimport-preview",
+        files={
+            "previous": ("first.yaml", before),
+            "revised": ("second.yaml", after),
+            "document": ("model.json", json.dumps(document), "application/json"),
+        },
+    )
+
+    assert result.status_code == 200, result.text
+    preview = result.json()
+    assert preview["operations"]["removed"] == ["GET /orders"]
+    assert {field["field"] for field in preview["conflicts"]} == {
+        "data_flows.flow_clients_to_api",
+        "assets.asset_api_payloads",
+    }
+    assert preview["document"]["data_flows"] == document["data_flows"]
+    assert preview["document"]["assets"] == document["assets"]
 
 
 def test_import_openapi_rejects_oversized_artifact(client: TestClient) -> None:
@@ -633,7 +733,9 @@ def test_import_openapi_rejects_oversized_artifact(client: TestClient) -> None:
         files={"file": ("big.json", oversized, "application/json")},
     )
     assert r.status_code == 413
-    assert "2 MiB" in r.json()["detail"]
+    # `detail` is the documented `{code, message}` envelope, like every sibling error on this
+    # route; reading it as a bare string was what held the envelope fix back.
+    assert "2 MiB" in r.json()["detail"]["message"]
 
 
 def test_import_openapi_accepts_artifact_at_limit(client: TestClient) -> None:

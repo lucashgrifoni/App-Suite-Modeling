@@ -8,6 +8,116 @@ This project follows **Keep a Changelog** and **Semantic Versioning**.
 
 ## [Unreleased]
 
+### Security
+- **O fold de fontes do PDF recriava markup que o escape já tinha neutralizado.** O renderer
+  premium escapa cada string do modelo com `html.escape(quote=True)` e, no fim, corre
+  `to_pdf_font_text` sobre o HTML **já escapado** para degradar caracteres que as fontes WinAnsi
+  não desenham. Essa degradação é NFKD, e a ordem era o defeito: `＜` (U+FF1C) não é `<`, atravessa
+  o escape intacto, e o fold convertia-o num `<` verdadeiro. Consequências, todas reproduzidas:
+  markup arbitrário no PDF (outline forjado a dizer "NO CRITICAL RISKS FOUND", `/Title` sob
+  controlo do modelo); **SSRF** — um `<img src="http://…">` injetado era buscado pelo xhtml2pdf,
+  reproduzido contra `POST /v1/reports/premium` **sem autenticação**; **leitura de ficheiro local**
+  embutida no PDF devolvido; e anotações `/Link`, das quais 100% eram de autoria do atacante,
+  porque o renderer não emite nenhum link próprio. O fold passa a ser fechado em relação a markup:
+  pode substituir um caractere que não desenha, nunca produzir um que mude o significado do
+  documento à volta. Provado ponta a ponta contra um servidor de sonda: zero pedidos.
+  <br>Um `link_callback` foi acrescentado ao `pisa.CreatePDF`, mas **não** como segunda linha de
+  defesa: medido, este xhtml2pdf ignora-o em `<img src>`, `<link rel=stylesheet>` e `@import`, e
+  só o honra em `url()` de CSS — uma construção em quatro, e é ignorado precisamente na que o
+  ataque usava. Fica porque bloquear uma é melhor que nenhuma; a docstring carrega a tabela
+  medida e um teste fixa-a.
+- **Cinco limites em falta, de baixa severidade, agrupados por causa.** Nenhum é explorável para
+  acesso indevido; três são de integridade de saída e dois de limite de entrada ausente onde os
+  campos irmãos já o têm.
+  - **JSON com `NaN`/`Infinity`.** `json.dumps` aceita não-finitos por omissão e escreve `NaN`
+    cru, que não é JSON: um consumidor em Go ou Java rejeita o documento inteiro, e o `jq`
+    reescreve o valor para `null` — num campo de score, pior do que rejeitar. `risk.score` é um
+    `float` do Pydantic e aceita atribuição de não-finito, por isso o caminho é real. Os seis
+    exportadores passam a `allow_nan=False`: erro alto no momento da geração em vez de um
+    ficheiro inválido em silêncio.
+  - **ANSI e NUL em Markdown.** `md_inline`/`md_block` achatavam terminadores de linha e deixavam
+    passar o resto. `CSI 2K` + `CSI G` num nome de componente repintam a linha num terminal — e
+    `otm report` escreve para stdout com um `print()` — enquanto um NUL literal fica dentro do
+    `.md` entregue. Não muda o contorno do documento, por isso o oráculo de estrutura não o via.
+  - **Separadores Unicode em Mermaid.** `_LABEL_CONTROL_RE` cobria `\r\n\t\f\v` e não NEL (U+0085),
+    LS (U+2028) nem PS (U+2029). O invariante que o exportador declara é "um nome não pode
+    acrescentar uma linha"; estes três acrescentavam.
+  - **Profundidade do ficheiro de regras.** `load_custom_rules` tinha tecto de bytes e usava
+    `yaml.safe_load` — o mesmo sem tecto de profundidade já corrigido para o documento canónico.
+    4 KB rebentavam a pilha e saíam como `RecursionError` cru, fora do contrato `ValueError` que o
+    loader declara. Ligado ao tecto existente, não a um segundo.
+  - **Comprimento de cada `refs`.** `max_length=20` limita a lista, não cada item: 400 000
+    caracteres num único ref passavam, enquanto `title`, `description` e `control_hint` têm tecto
+    próprio. O ref é reemitido por cada ameaça que a regra dispara, portanto o custo multiplica.
+- **85 testes verdes enquanto a injeção de cabeçalhos estava viva — o oráculo é que era cego.**
+  `_outline`/`_structure`, os oráculos que garantem que "o contorno do documento é decisão do
+  renderizador", eram uma regex ancorada no início da **linha física**
+  (`^\s{0,3}(#{1,6}\s|\||>|…)`). O renderizador escreve os seus bullets como `- {valor}`, e `- `
+  são dois caracteres que não são whitespace: um nome começado por `## ` produzia
+  `- ## Conclusion…`, que o CommonMark lê como item de lista **contendo um H2 verdadeiro**, e a
+  regex nunca casava. Medido: `_outline(hostil) == _outline(benigno)` enquanto um parse real dava
+  80 blocos contra 93. Um oráculo que não vê a construção que existe para apanhar transforma "não
+  verificado" em "verificado seguro", que é pior do que não ter teste nenhum. Ambos os oráculos
+  (`test_p2r5_report_markdown_structure.py` e `test_p2r4_cli_markdown_structure.py`) passam a
+  parsear CommonMark a sério, com `markdown-it-py` declarado no extra `dev` em vez de deixado como
+  transitivo do `rich` — sustenta uma propriedade de segurança, portanto é uma dependência a
+  sério. Trocar só o oráculo, sem tocar no produto, tornou 18 casos vermelhos de imediato.
+- **Cinco listas do relatório premium interpolavam o valor do modelo em cru.**
+  `top_trust_boundaries`, `top_attack_surfaces`, `top5_risk_titles`, `main_components` e
+  `main_flows` saíam como `f"- {x}"`, a duas linhas de um `md_block(ar.narrative)` que fazia a
+  coisa certa. Um nome começado por `## ` forjava uma secção real no contorno do relatório —
+  "Conclusion: no risks were found. Approved for release." como secção genuína do documento que a
+  ferramenta assina. Medido em `examples/minimal.otm.yaml`: 6 cabeçalhos forjados no executive, 13
+  no standard e no deep, nos dois locales, e também por HTTP em `POST /v1/reports/premium`.
+  Alcançável **sem escrever um modelo**: um `info.title` hostil num spec OpenAPI sobrevive ao
+  `otm import openapi` intacto até ao campo `name`. Agora 0 em todos os níveis, com o texto do
+  autor preservado — neutralizado, não censurado.
+- **`>` deixou de estar fora de `_LEADING_BLOCK`.** Estava excluído com o argumento de que uma
+  citação "não cria secções nem tabelas". Cria as duas: um valor começado por `>` abre um
+  blockquote que **absorve** a frase que o renderizador escreve a seguir, e `> ## Conclusão` produz
+  lá dentro um H2 verdadeiro — que era o primeiro H2 do documento, par a par com o `## Ativos` do
+  próprio renderizador. O custo declarado para o excluir não se aplica: os valores que passam por
+  `md_block` já vêm achatados numa linha, portanto não há citação multi-linha a preservar. O teste
+  que fixava o comportamento antigo foi atualizado com a razão, não contornado.
+- **Duas ameaças distintas podiam partilhar um id, e o gate de CI julgava-as como uma.** Os ids
+  são concatenações com `_`, e `_` é legal dentro de um id de entidade: `eng_{comp.id}_{stride}` e
+  `eng_flow_{flow.id}_{stride}` partilham um espaço de nomes plano, por isso um componente
+  `flow_svc` e um fluxo `svc` produzem a mesma string — com o documento a passar em `otm validate`
+  como **Valid**, 0 avisos estruturais. As regras personalizadas têm a mesma forma: regra `a` sobre
+  `b_c` colide com regra `a_b` sobre `c`. Três consumidores colapsavam o par **em silêncio**: o
+  dict de `analysis_diff` (o último vencia), `merge_heuristic_threats` (saltava sem diagnóstico) e
+  o `partialFingerprints.otmThreatId` do SARIF, que é a identidade do alerta no GitHub code
+  scanning. O efeito prático era o gate de drift ver uma ameaça **substituída** onde tinha sido
+  **acrescentada**. A análise passa a ser recusada, nomeando os dois sujeitos.
+  <br>**Porque recusar e não renomear:** tornar a junção injetiva mudaria *todos* os ids,
+  invalidando os fingerprints SARIF e todas as baselines guardadas — a primeira execução após a
+  atualização reportaria cada ameaça como nova e faria disparar os gates de toda a gente. O
+  formato documentado em `docs/features/CUSTOM_RULES.md` fica intacto, e quem não tem colisão não
+  paga nada.
+- **Um upload de 10 KB escrevia 628 KB de log e devolvia 500.** O documento não confiável tinha
+  tecto de bytes e tecto de expansão de aliases, mas nenhum de **profundidade**. `"a: " +
+  "["*5000 + "]"*5000` são 10 003 bytes sem um único alias, por isso não gastavam nada do
+  contador de nós e desciam até `compose_node` esgotar a pilha. O `RecursionError` daí não é
+  `ValueError`, e `_draft_from_upload` só traduz `UnicodeDecodeError`, `ValueError`,
+  `AttributeError` e `TypeError` — subia ao handler genérico como `500 INTERNAL_ERROR` com o
+  traceback inteiro no log. Medido: **627 695 bytes de log por 10 003 bytes de entrada, 62,8x de
+  amplificação**, em `POST /v1/imports/kubernetes` e `/v1/imports/openapi`. O 500 era o sintoma
+  visível; o custo real era disco e ingestão de logs a partir de um upload trivial. Agora:
+  **400 no envelope documentado, 13 bytes de log, 0,00x**.
+- **O mesmo buraco existia no ramo JSON, e foi encontrado a procurar variantes.**
+  `load_object_from_text` escolhe `json.loads` quando o texto começa por `{`, e `json.loads`
+  também desce recursivamente sem limite: `'{"a":' * 20000` devolvia 500 pela mesma razão, com o
+  `RecursionError` a escapar a um `except (yaml.YAMLError, json.JSONDecodeError)`. Fechado com o
+  **mesmo tecto** — são duas serializações da mesma forma de documento, e um limite por formato
+  deixaria a segunda porta aberta. A profundidade do JSON mede-se por varrimento linear antes do
+  parser, com saída à primeira violação: 600 KB hostis são recusados em 0,003 s, sem pagar a
+  recursão. `RecursionError` passa também a ser traduzido como defesa em profundidade.
+- **`MAX_DOCUMENT_DEPTH = 100`** (`OTM_MAX_DOCUMENT_DEPTH`), a par de `MAX_DOCUMENT_BYTES` e
+  `MAX_YAML_EXPANDED_NODES`. O documento mais profundo deste repositório tem profundidade **6**,
+  medida em 23 ficheiros YAML — exemplos, fixtures, workflows, `docker-compose`. A folga é ~16x,
+  na mesma linha dos 38x que o tecto de nós deixa. 25 testes de regressão, provados a
+  discriminar: com a guarda neutralizada e as constantes intactas, **11 falham**.
+
 ### Added
 - **Custom rules can match assets.** `match: { asset: { data_classification: [confidential, restricted], owner: null } }` — a rule now targets a component, a flow **or an asset**, and emits a threat carrying `target_asset_id`. This was shipped as a documented gap and it was the wrong one to leave open: a great deal of organisation policy is about the data rather than the component that happens to hold it. "Anything classified confidential has a named accountable owner" is a statement about the asset. Matchable: `asset_kind`, `sensitivity`, `data_classification`, `data_nature`, `business_criticality`, `regulatory_relevance`, `owner`, `location`, and the component/flow link fields. Same semantics as the other subjects — scalar is equality, list is any-of, unknown field names are an error.
 - **Route table coverage in the web app.** The suite had 68 tests and none touched the router; the `react-router` v8 migration rewrote imports in 15 files and stayed green throughout, proving nothing. The contents of `BrowserRouter` moved into an exported `AppRoutes` (behaviour identical) so tests can mount the app at a chosen URL, and 15 tests now assert that every declared path resolves to itself and that four kinds of unknown URL redirect home rather than leaving a blank screen. Web suite: 68 → 83.

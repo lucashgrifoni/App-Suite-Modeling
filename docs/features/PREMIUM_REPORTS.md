@@ -1,76 +1,59 @@
-# Reports premium (Executive / Standard / Deep)
+# Relatório de riscos
 
-O App Suite Modeling gera relatórios consolidados a partir do **mesmo pipeline** usado pelo motor (`AnalysisResult`), backlog de remediação, explainability e, opcionalmente, **diff entre análises** — sem duplicar regras de negócio no frontend.
+O App Suite Modeling gera PDF e Markdown a partir da análise do motor e das decisões registradas no modelo. A leitura começa pelo resumo executivo e pelo ranking. O relatório mostra a prioridade calculada, o estado de tratamento e a justificativa registrada para as ameaças declaradas, inclusive para as que ficam sem pontuação. As sugestões ainda sem tratamento aparecem como **Sem decisão**.
 
-## Níveis
+A capa destaca o total de ameaças do relatório. O resumo de tratamento mostra os estados registrados e inclui as sugestões que aguardam triagem no grupo a triar ou tratar.
 
-| Nível | Público | Conteúdo principal |
-|-------|---------|-------------------|
-| **executive** | Gestão | Capa, executive summary, top riscos, roadmap, diff (se houver baseline) |
-| **standard** | Gestão + AppSec | Acima + arquitetura, distribuições, causas raiz, exploitability (amostra), quick wins, ownership, explainability |
-| **deep** | Engenharia | Acima + apêndice técnico (listagem de ameaças), diagrama Mermaid no payload, voz metodológica |
+## Exposição e prioridade
 
-## Priorização (P1 / P2 / P3)
+O total da capa inclui as ameaças declaradas, os registros históricos e as sugestões deduplicadas. A exposição ativa inclui as ameaças que ainda representam risco e as sugestões pendentes de triagem. A distribuição por severidade usa as ameaças ativas com pontuação.
 
-A prioridade **não** é só severidade STRIDE: combina score de risco, exposição heurística, impacto de negócio sugerido e esforço de remediação estimado. Os tiers são **tercis** dentro do conjunto analisado. Tudo é **heurístico** — ver avisos no relatório.
+- Ameaças novas, triadas e em andamento entram no ranking quando têm pontuação. Decisões sem pontuação aparecem na seção de tratamento.
+- Riscos aceitos continuam na exposição ativa e têm uma fila própria de revisão. A fila mostra responsável, data de revisão e justificativa. Dados ausentes ficam sinalizados.
+- Riscos sem correção prevista continuam na exposição e no fluxo de ação para revisão da decisão.
+- Mitigações ainda por verificar, riscos residuais e falsos positivos aguardando confirmação continuam na exposição. Os encerramentos registrados permanecem no histórico e no total da capa.
 
-## Baseline / diff
+O ranking do relatório unificado usa a classificação dos ativos como sinal adicional. Ameaças de modificação, divulgação ou elevação de privilégio relacionadas a dados restritos recebem um acréscimo de 0,04 na pontuação composta. A severidade de origem permanece igual. No resultado estruturado, os grupos de causa raiz mantêm os IDs das ações de remediação e as referências aos achados que as originaram.
 
-Passe uma análise anterior (`baseline`) para preencher riscos novos/removidos/modificados e narrativa de evolução. O matching segue o motor (`diff_analysis_results`).
+No modelo YAML ou JSON, registre o responsável em `assignee`, a justificativa em `treatment_notes` e a data de revisão em `metadata.risk_review_date`, no formato `AAAA-MM-DD`. Para registrar a verificação, use `metadata.treatment_verification` na ameaça específica:
 
-## CLI
+| Estado | Registro para sair da exposição |
+|---|---|
+| `mitigated` | `outcome: risk_closed`, `reference` com a evidência de verificação e uma mitigação `verified` vinculada à ameaça em `threat_ids`. |
+| `false_positive` | `outcome: false_positive_confirmed`, `reference` com a evidência da triagem e justificativa em `treatment_notes`. |
 
-Relatório **legado** (modelo + análise em Markdown), inalterado:
+O relatório aplica a classificação aos registros do modelo. O revisor pode consultar a referência indicada para avaliar a evidência.
+
+O PDF organiza o conteúdo em cinco seções: resumo executivo com gráfico de severidade, tabela de prioridades, cartões de decisões, diagrama de arquitetura e próxima revisão. Os fluxos e as fronteiras vêm do modelo. Justificativas longas continuam nas páginas seguintes. As prioridades e as ações sugeridas são heurísticas. Confirmar os controles exige evidência do ambiente.
+
+## Interface
+
+Em **Exportar**, escolha o idioma e baixe o **Relatório de riscos** em PDF ou Markdown. Os artefatos técnicos, como o modelo em JSON e o diagrama Mermaid, têm controles próprios. No **Histórico**, os dois formatos usam o modelo e a análise da revisão selecionada. Quando a revisão salva contém somente o modelo, o serviço executa uma análise na exportação e o relatório identifica essa origem.
+
+Em **Análise**, selecione **Risco aceito** ao registrar ou editar a decisão. O responsável e a data de revisão ficam no modelo exportado e aparecem na fila de revisão do relatório.
+
+Em **Mitigado** e **Falso positivo**, registre uma referência e confirme o resultado após consultar a evidência. Você pode salvar a referência antes da confirmação. O relatório só encerra o risco quando os critérios da tabela de exposição são atendidos.
+
+A geração pelo navegador usa o serviço local. O PDF requer a dependência opcional instalada no serviço. Markdown fica disponível pelo mesmo fluxo.
+
+## Linha de comando
 
 ```bash
-otm report modelo.otm.yaml
+otm report modelo.otm.yaml -o relatorio.md
+otm report modelo.otm.yaml --format pdf --locale pt-BR -o relatorio.pdf
+otm report modelo.otm.yaml --analysis-json analise.json --baseline analise-anterior.json
 ```
 
-Report **premium**:
-
-```bash
-otm report modelo.otm.yaml --level standard --format markdown
-otm report modelo.otm.yaml --level executive --format pdf -o relatorio.pdf
-otm report modelo.otm.yaml --level deep --format markdown --analysis-json analise.json
-otm report modelo.otm.yaml --level standard --baseline analise_anterior.json
-```
-
-- `--analysis-json`: evita reexecutar o motor.
-- `--baseline`: JSON de `AnalysisResult` anterior para a secção de diff.
-- `--locale`: `pt-BR` (omissão) ou `en` — textos estruturais do relatório **Markdown**. O **PDF** premium usa sempre `en` na construção do payload (layout executivo e cópia estável em inglês).
-
-**PDF:** requer `pip install -e ".[report]"` (ou `xhtml2pdf`). O HTML intermédio usa hierarquia tipográfica, tabelas com `word-wrap`, cores P1–P4, resumo executivo em bullets, logo embutido em base64. Logo: ficheiro `assets/report_logo.png` no pacote `otm_report_premium`, ou variável de ambiente `OTM_PREMIUM_LOGO_PATH` (PNG recomendado, até ~2&nbsp;MB).
+- `--format` aceita `markdown` (padrão) ou `pdf`.
+- `--locale` aceita `pt-BR` (padrão) ou `en`. O idioma seleciona os rótulos do relatório, e os dados e justificativas do modelo seguem o idioma de origem.
+- `--analysis-json` permite usar uma análise existente da mesma revisão. `--baseline` inclui a comparação com uma análise anterior do mesmo sistema.
+- O PDF exige `pip install "open-threat-model[report]"` e as dependências nativas aplicáveis. `OTM_PREMIUM_LOGO_PATH` aceita uma imagem PNG personalizada de até 2 MB.
+- Sem `-o`, o Markdown vai para a saída padrão e o PDF é gravado em `report-premium.pdf` no diretório atual. Use `-o` para escolher o destino.
 
 ## API
 
-`POST /v1/reports/premium`
+`POST /v1/reports` recebe `document` e `analysis`, ou `document` e `run_analysis: true`. Aceita também `baseline_analysis`, `locale` e `output_format`. A resposta tem tipo `text/markdown` ou `application/pdf`.
 
-Corpo (resumo):
+## Migração
 
-- `document` — canónico (obrigatório).
-- `analysis` — `AnalysisResult` opcional se `run_analysis: true`.
-- `baseline_analysis` — opcional.
-- `level`: `executive` | `standard` | `deep`.
-- `output_format`: `markdown` | `pdf`.
-- `locale` (opcional): `pt-BR` | `en` — textos estruturais no **Markdown**; omitido = `pt-BR` (retrocompat); valor inválido → `en`. Para **`output_format: pdf`**, o payload é gerado em **`en`** (relatório PDF executivo em inglês).
-
-Resposta: `text/markdown` ou `application/pdf`.
-
-## UI
-
-Na página **Exportar**, secção **Report premium (API)** — escolha o nível e descarregue Markdown ou PDF (API em execução). O idioma do relatório premium segue o mesmo controlo **Idioma do artefacto** usado para exports Markdown/PDF da sessão. O PDF rápido no browser (jsPDF) permanece como pré-visualização leve.
-
-## Internacionalização (pt-BR / en)
-
-Rótulos de secções, disclaimers, tabelas, roadmap e mensagens de template do payload são gerados em **pt-BR** ou **en** conforme `locale`. Conteúdo dinâmico do motor (títulos de ameaças, `next_step` do backlog, etc.) não é traduzido automaticamente. Ver [`I18N.md`](I18N.md).
-
-## Limitações atuais
-
-- Ownership e impacto de negócio são **sugestões** inferidas; não substituem governança interna.
-- Heatmaps e rankings são derivados dos dados do modelo e das heurísticas — não são pentest.
-- PDF HTML usa `xhtml2pdf`; layouts muito complexos podem exigir ajustes futuros de CSS.
-
-## Próxima rodada (sugestão)
-
-- Diagramas raster embutidos no PDF (opcional).
-- Mais métricas por metodologia quando o motor expuser campos adicionais por lente.
+A opção `--level standard` funciona como o comando sem nível. Os níveis explícitos `executive` e `deep` da linha de comando e a rota `POST /v1/reports/premium` continuam disponíveis para integrações existentes, com a apresentação anterior. Os PDFs desses caminhos de compatibilidade têm rótulos em inglês. Para novos consumidores, use `otm report` ou `POST /v1/reports`.

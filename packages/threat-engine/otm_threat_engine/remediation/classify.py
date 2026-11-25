@@ -2,26 +2,71 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
+from dataclasses import dataclass
+
 from otm_core_schema import ComponentKind, StrideCategory, ThreatModelMethodology
+from otm_core_schema.ai_context import has_any_token
 from otm_core_schema.document import ThreatModelDocument
 
 from otm_threat_engine.result import HeuristicThreat
 
 
-def component_kind_for_id(doc: ThreatModelDocument | None, cid: str | None) -> ComponentKind | None:
-    if not doc or not cid:
+@dataclass(frozen=True)
+class ComponentIndex:
+    """`doc.components` indexado por id: construído uma vez, consultado uma vez por ameaça.
+
+    `component_kind_for_id` percorria `doc.components` a cada chamada, e todo o pipeline de
+    backlog e de relatório premium chama-o uma vez por ameaça — o `sorted` do relatório
+    chama-o O(n log n) vezes. Com N componentes e N fluxos o número de ameaças cresce com N,
+    logo o custo era O(n²): medido em perfil, 45 000 chamadas e 0,6 s só nesta função num
+    modelo de 1500 entidades, dentro de um pedido que demorava 63 s a 3200 entidades.
+
+    O mapa de nomes viaja no mesmo objecto porque tinha exactamente o mesmo defeito, uma linha
+    ao lado: `_item_from_threat` reconstruía `{c.id: c.name}` para **cada** item de backlog.
+    """
+
+    kinds: Mapping[str, ComponentKind]
+    names: Mapping[str, str]
+
+    @classmethod
+    def of(cls, doc: ThreatModelDocument | None) -> ComponentIndex:
+        components = doc.components if doc is not None else ()
+        return cls(
+            kinds={c.id: c.kind for c in components},
+            names={c.id: c.name for c in components},
+        )
+
+
+def component_kind_for_id(
+    doc: ThreatModelDocument | None,
+    cid: str | None,
+    *,
+    index: ComponentIndex | None = None,
+) -> ComponentKind | None:
+    """O tipo do componente `cid`. Em ciclo, passe `index` — sem ele isto é O(componentes)."""
+    if not cid:
         return None
-    for c in doc.components:
-        if c.id == cid:
-            return c.kind
-    return None
+    resolved = ComponentIndex.of(doc) if index is None else index
+    return resolved.kinds.get(cid)
 
 
 def _ai_context(methodology: ThreatModelMethodology, threat: HeuristicThreat) -> bool:
     if methodology == ThreatModelMethodology.PLOT4AI:
         return True
     blob = f"{threat.title} {threat.description}".lower()
-    return any(k in blob for k in ("llm", "modelo de linguagem", "prompt", "rag", "inferen"))
+    # `llm` e `rag` por token, o resto por subcadeia. `rag` está dentro de **storage**, de
+    # **fragmento** e de **drag and drop**, e esta função decide a categoria do item no backlog e
+    # com ela o dono a quem o trabalho é encaminhado: um bucket chamado "Object Storage" ia para a
+    # equipa de plataforma de ML. Terceira aparição desta classe nesta campanha, depois de `ann` e
+    # de `edge` dentro de `Ledger`.
+    #
+    # `inferên` entra ao lado de `inferen`: a forma sem acento nunca casava com a palavra
+    # portuguesa bem escrita, por isso o termo não apanhava "inferência" — o caso que ele existe
+    # para apanhar. Ver `tests/test_p3_backlog_ai_context_matches_words.py`.
+    if has_any_token(blob, ("llm", "rag")):
+        return True
+    return any(k in blob for k in ("modelo de linguagem", "prompt", "inferen", "inferên"))
 
 
 def _layer_for_kind(ck: ComponentKind | None) -> str | None:
@@ -71,12 +116,14 @@ def classify_threat(
     threat: HeuristicThreat,
     doc: ThreatModelDocument | None,
     methodology: ThreatModelMethodology,
+    *,
+    index: ComponentIndex | None = None,
 ) -> tuple[str, str, str, str | None]:
     """
     Devolve:
     (grouped_root_cause, suggested_control_type, control_category, architecture_layer)
     """
-    ck = component_kind_for_id(doc, threat.target_component_id)
+    ck = component_kind_for_id(doc, threat.target_component_id, index=index)
     layer = _layer_for_kind(ck)
     root, ctrl, cat = _root_control_cat_for_stride(threat.stride, ck)
 

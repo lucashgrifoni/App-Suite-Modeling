@@ -54,6 +54,24 @@
                 }
               }
             }
+          },
+          "422": {
+            "description": "Pedido inválido: envelope (`ApiProblem`) ou domínio (`ApiErrorEnvelope`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ApiErrorEnvelope"
+                    }
+                  ],
+                  "title": "Response 422 Health Health Get"
+                }
+              }
+            }
           }
         }
       }
@@ -76,8 +94,34 @@
                 }
               }
             }
+          },
+          "422": {
+            "description": "Pedido inválido: envelope (`ApiProblem`) ou domínio (`ApiErrorEnvelope`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ApiErrorEnvelope"
+                    }
+                  ],
+                  "title": "Response 422 Create Model V1 Models Post"
+                }
+              }
+            }
           }
-        }
+        },
+        "security": [
+          {
+            "ApiKeyHeader": []
+          },
+          {
+            "BearerToken": []
+          }
+        ]
       }
     },
     "/v1/models/validate": {
@@ -110,16 +154,32 @@
             }
           },
           "422": {
-            "description": "Validation Error",
+            "description": "Pedido inválido: envelope (`ApiProblem`) ou domínio (`ApiErrorEnvelope`).",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ApiErrorEnvelope"
+                    }
+                  ],
+                  "title": "Response 422 Validate Model V1 Models Validate Post"
                 }
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "ApiKeyHeader": []
+          },
+          {
+            "BearerToken": []
+          }
+        ]
       }
     },
     "/v1/models/precheck": {
@@ -152,16 +212,32 @@
             }
           },
           "422": {
-            "description": "Validation Error",
+            "description": "Pedido inválido: envelope (`ApiProblem`) ou domínio (`ApiErrorEnvelope`).",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ApiErrorEnvelope"
+                    }
+                  ],
+                  "title": "Response 422 Model Precheck V1 Models Precheck Post"
                 }
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "ApiKeyHeader": []
+          },
+          {
+            "BearerToken": []
+          }
+        ]
       }
     },
     "/v1/models/diff": {
@@ -194,16 +270,32 @@
             }
           },
           "422": {
-            "description": "Validation Error",
+            "description": "Pedido inválido: envelope (`ApiProblem`) ou domínio (`ApiErrorEnvelope`).",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ApiErrorEnvelope"
+                    }
+                  ],
+                  "title": "Response 422 Diff Model Versions V1 Models Diff Post"
                 }
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "ApiKeyHeader": []
+          },
+          {
+            "BearerToken": []
+          }
+        ]
       }
     },
     "/v1/models/compare": {
@@ -236,16 +328,32 @@
             }
           },
           "422": {
-            "description": "Validation Error",
+            "description": "Pedido inválido: envelope (`ApiProblem`) ou domínio (`ApiErrorEnvelope`).",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ApiErrorEnvelope"
+                    }
+                  ],
+                  "title": "Response 422 Compare Models V1 Models Compare Post"
                 }
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "ApiKeyHeader": []
+          },
+          {
+            "BearerToken": []
+          }
+        ]
       }
     },
     "/v1/models/recommend-methodology": {
@@ -278,16 +386,32 @@
             }
           },
           "422": {
-            "description": "Validation Error",
+            "description": "Pedido inválido: envelope (`ApiProblem`) ou domínio (`ApiErrorEnvelope`).",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ApiErrorEnvelope"
+                    }
+                  ],
+                  "title": "Response 422 Recommend Methodology For Model V1 Models Recommend Methodology Post"
                 }
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "ApiKeyHeader": []
+          },
+          {
+            "BearerToken": []
+          }
+        ]
       }
     },
     "/v1/models/analyze": {
@@ -320,16 +444,32 @@
             }
           },
           "422": {
-            "description": "Validation Error",
+            "description": "Pedido inválido: envelope (`ApiProblem`) ou domínio (`ApiErrorEnvelope`).",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ApiErrorEnvelope"
+                    }
+                  ],
+                  "title": "Response 422 Analyze Model V1 Models Analyze Post"
                 }
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "ApiKeyHeader": []
+          },
+          {
+            "BearerToken": []
+          }
+        ]
       }
     },
     "/v1/analyses/diff": {
@@ -362,16 +502,32 @@
             }
           },
           "422": {
-            "description": "Validation Error",
+            "description": "Pedido inválido: envelope (`ApiProblem`) ou domínio (`ApiErrorEnvelope`).",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ApiErrorEnvelope"
+                    }
+                  ],
+                  "title": "Response 422 Diff Analysis Results Route V1 Analyses Diff Post"
                 }
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "ApiKeyHeader": []
+          },
+          {
+            "BearerToken": []
+          }
+        ]
       }
     },
     "/v1/templates": {
@@ -382,6 +538,14 @@
         "summary": "List templates",
         "description": "Built-in templates from `otm_industry_packs` (IDs used with `otm init -t`). Optional query filters combine with AND semantics.",
         "operationId": "get_templates_v1_templates_get",
+        "security": [
+          {
+            "ApiKeyHeader": []
+          },
+          {
+            "BearerToken": []
+          }
+        ],
         "parameters": [
           {
             "name": "category",
@@ -472,11 +636,19 @@
             }
           },
           "422": {
-            "description": "Validation Error",
+            "description": "Pedido inválido: envelope (`ApiProblem`) ou domínio (`ApiErrorEnvelope`).",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ApiErrorEnvelope"
+                    }
+                  ],
+                  "title": "Response 422 Get Templates V1 Templates Get"
                 }
               }
             }
@@ -492,6 +664,14 @@
         "summary": "Get template metadata",
         "description": "Detalhe de um template embutido (metadados do manifest).",
         "operationId": "get_template_detail_v1_templates__template_id__get",
+        "security": [
+          {
+            "ApiKeyHeader": []
+          },
+          {
+            "BearerToken": []
+          }
+        ],
         "parameters": [
           {
             "name": "template_id",
@@ -517,11 +697,19 @@
             }
           },
           "422": {
-            "description": "Validation Error",
+            "description": "Pedido inválido: envelope (`ApiProblem`) ou domínio (`ApiErrorEnvelope`).",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ApiErrorEnvelope"
+                    }
+                  ],
+                  "title": "Response 422 Get Template Detail V1 Templates  Template Id  Get"
                 }
               }
             }
@@ -537,6 +725,14 @@
         "summary": "Instantiate model from template",
         "description": "Loads template YAML and returns the validated canonical document.",
         "operationId": "instantiate_template_v1_templates__template_id__instantiate_post",
+        "security": [
+          {
+            "ApiKeyHeader": []
+          },
+          {
+            "BearerToken": []
+          }
+        ],
         "parameters": [
           {
             "name": "template_id",
@@ -562,11 +758,19 @@
             }
           },
           "422": {
-            "description": "Validation Error",
+            "description": "Pedido inválido: envelope (`ApiProblem`) ou domínio (`ApiErrorEnvelope`).",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ApiErrorEnvelope"
+                    }
+                  ],
+                  "title": "Response 422 Instantiate Template V1 Templates  Template Id  Instantiate Post"
                 }
               }
             }
@@ -604,16 +808,32 @@
             }
           },
           "422": {
-            "description": "Validation Error",
+            "description": "Pedido inválido: envelope (`ApiProblem`) ou domínio (`ApiErrorEnvelope`).",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ApiErrorEnvelope"
+                    }
+                  ],
+                  "title": "Response 422 Export Artifacts V1 Exports Post"
                 }
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "ApiKeyHeader": []
+          },
+          {
+            "BearerToken": []
+          }
+        ]
       }
     },
     "/v1/imports/openapi": {
@@ -646,16 +866,90 @@
             }
           },
           "422": {
-            "description": "Validation Error",
+            "description": "Pedido inválido: envelope (`ApiProblem`) ou domínio (`ApiErrorEnvelope`).",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ApiErrorEnvelope"
+                    }
+                  ],
+                  "title": "Response 422 Import Openapi Route V1 Imports Openapi Post"
                 }
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "ApiKeyHeader": []
+          },
+          {
+            "BearerToken": []
+          }
+        ]
+      }
+    },
+    "/v1/imports/openapi/reimport-preview": {
+      "post": {
+        "tags": [
+          "Assisted import"
+        ],
+        "summary": "Preview changes to an existing model from two OpenAPI contracts",
+        "description": "Read-only comparison. Conflicting fields and removed entities are retained in the proposed model.",
+        "operationId": "preview_openapi_reimport_route_v1_imports_openapi_reimport_preview_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_preview_openapi_reimport_route_v1_imports_openapi_reimport_preview_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpenApiReimportPreview"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Pedido inválido: envelope (`ApiProblem`) ou domínio (`ApiErrorEnvelope`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ApiErrorEnvelope"
+                    }
+                  ],
+                  "title": "Response 422 Preview Openapi Reimport Route V1 Imports Openapi Reimport Preview Post"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyHeader": []
+          },
+          {
+            "BearerToken": []
+          }
+        ]
       }
     },
     "/v1/imports/terraform": {
@@ -688,16 +982,32 @@
             }
           },
           "422": {
-            "description": "Validation Error",
+            "description": "Pedido inválido: envelope (`ApiProblem`) ou domínio (`ApiErrorEnvelope`).",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ApiErrorEnvelope"
+                    }
+                  ],
+                  "title": "Response 422 Import Terraform Route V1 Imports Terraform Post"
                 }
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "ApiKeyHeader": []
+          },
+          {
+            "BearerToken": []
+          }
+        ]
       }
     },
     "/v1/imports/kubernetes": {
@@ -730,16 +1040,32 @@
             }
           },
           "422": {
-            "description": "Validation Error",
+            "description": "Pedido inválido: envelope (`ApiProblem`) ou domínio (`ApiErrorEnvelope`).",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ApiErrorEnvelope"
+                    }
+                  ],
+                  "title": "Response 422 Import Kubernetes Route V1 Imports Kubernetes Post"
                 }
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "ApiKeyHeader": []
+          },
+          {
+            "BearerToken": []
+          }
+        ]
       }
     },
     "/v1/remediation/backlog": {
@@ -750,6 +1076,14 @@
         "summary": "Generate remediation backlog",
         "description": "Body: canonical `document`; optional `analysis` (`AnalysisResult`). If `analysis` is omitted, set `run_analysis: true` to run the engine.",
         "operationId": "post_remediation_backlog_v1_remediation_backlog_post",
+        "security": [
+          {
+            "ApiKeyHeader": []
+          },
+          {
+            "BearerToken": []
+          }
+        ],
         "parameters": [
           {
             "name": "format",
@@ -814,11 +1148,19 @@
             }
           },
           "422": {
-            "description": "Validation Error",
+            "description": "Pedido inválido: envelope (`ApiProblem`) ou domínio (`ApiErrorEnvelope`).",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ApiErrorEnvelope"
+                    }
+                  ],
+                  "title": "Response 422 Post Remediation Backlog V1 Remediation Backlog Post"
                 }
               }
             }
@@ -826,19 +1168,19 @@
         }
       }
     },
-    "/v1/reports/premium": {
+    "/v1/reports": {
       "post": {
         "tags": [
           "Reports"
         ],
-        "summary": "Premium report (Markdown or PDF)",
-        "description": "Builds the consolidated premium report from analysis, backlog, diff, and explainability. Requires `document` and either `analysis` or `run_analysis: true`.",
-        "operationId": "post_premium_report_v1_reports_premium_post",
+        "summary": "Risk report (Markdown or PDF)",
+        "description": "Builds the risk report. Requires a document and either analysis or run_analysis=true.",
+        "operationId": "post_risk_report_v1_reports_post",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/PremiumReportBody"
+                "$ref": "#/components/schemas/RiskReportBody"
               }
             }
           },
@@ -846,7 +1188,7 @@
         },
         "responses": {
           "200": {
-            "description": "Corpo = Markdown (`output_format=markdown`) ou PDF binário (`output_format=pdf`).",
+            "description": "Markdown report or binary PDF.",
             "content": {
               "application/json": {
                 "schema": {}
@@ -865,16 +1207,100 @@
             }
           },
           "422": {
-            "description": "Validation Error",
+            "description": "Pedido inválido: envelope (`ApiProblem`) ou domínio (`ApiErrorEnvelope`).",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ApiErrorEnvelope"
+                    }
+                  ],
+                  "title": "Response 422 Post Risk Report V1 Reports Post"
                 }
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "ApiKeyHeader": []
+          },
+          {
+            "BearerToken": []
+          }
+        ]
+      }
+    },
+    "/v1/reports/premium": {
+      "post": {
+        "tags": [
+          "Reports"
+        ],
+        "summary": "Legacy report (Markdown or PDF)",
+        "description": "Compatibility route for existing integrations and explicit report levels.",
+        "operationId": "post_premium_report_v1_reports_premium_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PremiumReportBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Markdown report or binary PDF.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              },
+              "text/markdown": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/pdf": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Pedido inválido: envelope (`ApiProblem`) ou domínio (`ApiErrorEnvelope`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ApiErrorEnvelope"
+                    }
+                  ],
+                  "title": "Response 422 Post Premium Report V1 Reports Premium Post"
+                }
+              }
+            }
+          }
+        },
+        "deprecated": true,
+        "security": [
+          {
+            "ApiKeyHeader": []
+          },
+          {
+            "BearerToken": []
+          }
+        ]
       }
     }
   },
@@ -1108,6 +1534,7 @@
             "title": "Revised Analysis"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "baseline_analysis",
@@ -1388,6 +1815,7 @@
             "default": false
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "document"
@@ -1450,6 +1878,124 @@
         ],
         "title": "AntiPatternHit",
         "description": "Ocorrência detectada para relatório, backlog e benchmark."
+      },
+      "ApiErrorBody": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code",
+            "description": "Código estável do erro, ex.: `DOCUMENT_VALIDATION_ERROR`."
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "description": "Mensagem user-facing, localizada por `Accept-Language`."
+          },
+          "errors": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ApiErrorItem"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Errors",
+            "description": "Detalhe por campo, quando aplicável."
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "ApiErrorBody",
+        "description": "O conteúdo de `detail` num erro de **domínio**."
+      },
+      "ApiErrorEnvelope": {
+        "properties": {
+          "detail": {
+            "$ref": "#/components/schemas/ApiErrorBody"
+          }
+        },
+        "type": "object",
+        "required": [
+          "detail"
+        ],
+        "title": "ApiErrorEnvelope",
+        "description": "Erro de **domínio**: `detail` é um objecto, não um array.\n\nÉ aqui que um cliente gerado do contrato antigo partia: lia `detail[0].msg` num dicionário."
+      },
+      "ApiErrorItem": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "title": "Type",
+            "description": "Classe do erro, ex.: `value_error`, `body_unparsable`."
+          },
+          "loc": {
+            "items": {},
+            "type": "array",
+            "title": "Loc",
+            "description": "Caminho até ao campo em falta ou inválido."
+          },
+          "msg": {
+            "type": "string",
+            "title": "Msg",
+            "description": "Mensagem legível para quem enviou o pedido."
+          }
+        },
+        "type": "object",
+        "required": [
+          "type",
+          "msg"
+        ],
+        "title": "ApiErrorItem",
+        "description": "Uma entrada de `errors[]`: eco do input do cliente, com o caminho que falhou."
+      },
+      "ApiProblem": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code",
+            "description": "Código estável do erro, ex.: `REQUEST_VALIDATION_ERROR`."
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "description": "Mensagem user-facing, localizada por `Accept-Language`."
+          },
+          "status": {
+            "type": "integer",
+            "title": "Status",
+            "description": "Código HTTP repetido no corpo, para clientes que só leem o corpo."
+          },
+          "errors": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ApiErrorItem"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Errors",
+            "description": "Detalhe por campo, quando aplicável."
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "message",
+          "status"
+        ],
+        "title": "ApiProblem",
+        "description": "Erro do **envelope** do pedido, devolvido no topo do corpo (sem `detail`).\n\nProduzido por `problem_detail` — corpo ilegível, validação do envelope, rate limit, 500."
       },
       "ArtifactImportResponse": {
         "properties": {
@@ -1748,6 +2294,32 @@
         ],
         "title": "Body_import_terraform_route_v1_imports_terraform_post"
       },
+      "Body_preview_openapi_reimport_route_v1_imports_openapi_reimport_preview_post": {
+        "properties": {
+          "previous": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "Previous"
+          },
+          "revised": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "Revised"
+          },
+          "document": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "Document"
+          }
+        },
+        "type": "object",
+        "required": [
+          "previous",
+          "revised",
+          "document"
+        ],
+        "title": "Body_preview_openapi_reimport_route_v1_imports_openapi_reimport_preview_post"
+      },
       "CompareBody": {
         "properties": {
           "baseline": {
@@ -1807,6 +2379,7 @@
             "description": "Pack opcional quando `run_analysis` é true."
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "baseline",
@@ -2030,6 +2603,7 @@
             "description": "Versão nova (revisão)."
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "baseline",
@@ -2047,6 +2621,7 @@
             "description": "Raiz compatível com `ThreatModelDocument` (aliases YAML respeitados)."
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "document"
@@ -2219,6 +2794,7 @@
             "description": "Idioma para texto user-facing em Markdown (pt-BR | en). Omitido = pt-BR (retrocompatível)."
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "document"
@@ -2336,6 +2912,7 @@
             "title": "Notes"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "framework",
@@ -2366,19 +2943,6 @@
           "count_after"
         ],
         "title": "FrameworkRefCountDelta"
-      },
-      "HTTPValidationError": {
-        "properties": {
-          "detail": {
-            "items": {
-              "$ref": "#/components/schemas/ValidationError"
-            },
-            "type": "array",
-            "title": "Detail"
-          }
-        },
-        "type": "object",
-        "title": "HTTPValidationError"
       },
       "HeuristicThreat": {
         "properties": {
@@ -2967,6 +3531,47 @@
         ],
         "title": "ModifiedEntity"
       },
+      "OpenApiReimportPreview": {
+        "properties": {
+          "document": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Document"
+          },
+          "operations": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Operations"
+          },
+          "changes": {
+            "items": {
+              "$ref": "#/components/schemas/FieldChange"
+            },
+            "type": "array",
+            "title": "Changes"
+          },
+          "conflicts": {
+            "items": {
+              "$ref": "#/components/schemas/FieldChange"
+            },
+            "type": "array",
+            "title": "Conflicts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "document",
+          "operations",
+          "changes",
+          "conflicts"
+        ],
+        "title": "OpenApiReimportPreview"
+      },
       "PackHintsDelta": {
         "properties": {
           "added": {
@@ -3007,6 +3612,7 @@
             "description": "Metodologia para `methodology_completeness`; default = `document.model.methodology`."
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "document"
@@ -3081,17 +3687,6 @@
             "title": "Auto Recommend Methodology",
             "default": false
           },
-          "level": {
-            "type": "string",
-            "enum": [
-              "executive",
-              "standard",
-              "deep"
-            ],
-            "title": "Level",
-            "description": "Profundidade do relatório.",
-            "default": "standard"
-          },
           "output_format": {
             "type": "string",
             "enum": [
@@ -3113,14 +3708,26 @@
             ],
             "title": "Locale",
             "description": "Idioma dos textos estruturais do relatório (pt-BR | en). Omitido = pt-BR."
+          },
+          "level": {
+            "type": "string",
+            "enum": [
+              "executive",
+              "standard",
+              "deep"
+            ],
+            "title": "Level",
+            "description": "Profundidade do relatório.",
+            "default": "standard"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "document"
         ],
         "title": "PremiumReportBody",
-        "description": "Report premium — mesmo padrão de análise que `/remediation/backlog`."
+        "description": "Legacy report request with a selectable level."
       },
       "QualityCheckItem": {
         "properties": {
@@ -3470,6 +4077,7 @@
             "default": false
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "document"
@@ -3504,6 +4112,7 @@
             "description": "Ex.: L×I ou normalizado; pode ser preenchido pelo motor."
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "likelihood",
@@ -3569,6 +4178,104 @@
         },
         "type": "object",
         "title": "RiskDeltaSummary"
+      },
+      "RiskReportBody": {
+        "properties": {
+          "document": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Document",
+            "description": "Raiz compatível com `ThreatModelDocument` (aliases YAML respeitados)."
+          },
+          "analysis": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Analysis",
+            "description": "`AnalysisResult` em JSON; obrigatório se `run_analysis` é false."
+          },
+          "baseline_analysis": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline Analysis",
+            "description": "Análise anterior para secção baseline/diff (opcional)."
+          },
+          "run_analysis": {
+            "type": "boolean",
+            "title": "Run Analysis",
+            "description": "Se true e `analysis` ausente, executa o motor no documento.",
+            "default": false
+          },
+          "pack_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pack Id",
+            "description": "Pack quando `run_analysis` é usado."
+          },
+          "methodology": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ThreatModelMethodology"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "auto_recommend_methodology": {
+            "type": "boolean",
+            "title": "Auto Recommend Methodology",
+            "default": false
+          },
+          "output_format": {
+            "type": "string",
+            "enum": [
+              "markdown",
+              "pdf"
+            ],
+            "title": "Output Format",
+            "description": "markdown = texto; pdf = binário application/pdf.",
+            "default": "markdown"
+          },
+          "locale": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Locale",
+            "description": "Idioma dos textos estruturais do relatório (pt-BR | en). Omitido = pt-BR."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "document"
+        ],
+        "title": "RiskReportBody",
+        "description": "Risk report for a document and its analysis."
       },
       "SemanticDiffSectionsModel": {
         "properties": {
@@ -4179,46 +4886,6 @@
         ],
         "title": "ValidateResponse"
       },
-      "ValidationError": {
-        "properties": {
-          "loc": {
-            "items": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "integer"
-                }
-              ]
-            },
-            "type": "array",
-            "title": "Location"
-          },
-          "msg": {
-            "type": "string",
-            "title": "Message"
-          },
-          "type": {
-            "type": "string",
-            "title": "Error Type"
-          },
-          "input": {
-            "title": "Input"
-          },
-          "ctx": {
-            "type": "object",
-            "title": "Context"
-          }
-        },
-        "type": "object",
-        "required": [
-          "loc",
-          "msg",
-          "type"
-        ],
-        "title": "ValidationError"
-      },
       "WizardSignalTraceEntry": {
         "properties": {
           "source_tag": {
@@ -4278,6 +4945,19 @@
         "title": "WizardSignalTraceEntry",
         "description": "Uma linha auditável: o que foi declarado, efeito e onde se reflecte."
       }
+    },
+    "securitySchemes": {
+      "ApiKeyHeader": {
+        "type": "apiKey",
+        "description": "API key for every `/v1` operation. Required when the server sets `OTM_API_KEY`; ignored when it does not. See `docs/features/API.md` and `docs/architecture/DEPLOYMENT_INVARIANTS.md`.",
+        "in": "header",
+        "name": "X-OTM-API-Key"
+      },
+      "BearerToken": {
+        "type": "http",
+        "description": "The same `OTM_API_KEY` secret sent as a bearer token. Required when the server sets `OTM_API_KEY`; ignored when it does not. See `docs/features/API.md` and `docs/architecture/DEPLOYMENT_INVARIANTS.md`.",
+        "scheme": "bearer"
+      }
     }
   },
   "tags": [
@@ -4311,7 +4991,7 @@
     },
     {
       "name": "Reports",
-      "description": "Premium executive/standard/deep reports (Markdown and PDF)."
+      "description": "Risk reports in Markdown and PDF."
     }
   ]
 }

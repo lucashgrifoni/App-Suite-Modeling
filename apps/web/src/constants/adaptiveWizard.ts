@@ -95,7 +95,13 @@ export function methodologyFocusHint(methodology: MethodologyId | undefined): st
 export function promptsForProfile(templateSemanticProfile: string | undefined): AdaptivePrompt[] {
   if (!templateSemanticProfile) return [];
   const key = templateSemanticProfile.trim().toLowerCase();
-  return BY_PROFILE[key] ?? [];
+  // `Object.hasOwn` e não `?? []`: o perfil é texto livre digitado pelo utilizador e
+  // `BY_PROFILE` é um literal, logo herda `Object.prototype`. Escrever `constructor` no
+  // campo devolvia a função `Object` — que não é nulo, portanto `??` não a apanhava, e cujo
+  // `.length` é 1, portanto passava o guarda `length > 0` do assistente antes de rebentar
+  // no `.map` durante o render. O documento envenenado já está em sessionStorage nessa
+  // altura, por isso recarregar não ajuda.
+  return Object.hasOwn(BY_PROFILE, key) ? BY_PROFILE[key] : [];
 }
 
 const TAG_PREFIX = "wz:";

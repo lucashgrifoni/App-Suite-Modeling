@@ -7,7 +7,7 @@ from otm_cli.cli import app
 from typer.testing import CliRunner
 
 
-@pytest.fixture()
+@pytest.fixture
 def runner() -> CliRunner:
     return CliRunner()
 

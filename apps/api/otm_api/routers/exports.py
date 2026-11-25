@@ -5,15 +5,17 @@ from otm_exporters.export_locale import normalize_export_locale
 from otm_threat_engine import AnalysisResult
 from pydantic import ValidationError as PydanticValidationError
 
+from otm_api.error_models import API_ERROR_RESPONSES
 from otm_api.routers._errors import (
     document_from_payload_or_422,
+    ensure_analysis_matches_document,
     raise_analysis_validation_error,
     raise_pack_not_found,
 )
 from otm_api.schemas.bodies import ExportBody, ExportResponse
 from otm_api.services.exports import build_exports
 
-router = APIRouter(prefix="/exports", tags=["Export"])
+router = APIRouter(prefix="/exports", tags=["Export"], responses=API_ERROR_RESPONSES)
 
 
 @router.post(
@@ -23,7 +25,6 @@ router = APIRouter(prefix="/exports", tags=["Export"])
         "Produces one or more artifacts (JSON, Markdown, Mermaid, bundle). "
         "If a format requires analysis and `analysis` is omitted, the engine runs automatically."
     ),
-    response_model=ExportResponse,
 )
 def export_artifacts(body: ExportBody) -> ExportResponse:
     doc = document_from_payload_or_422(body.document)
@@ -34,6 +35,7 @@ def export_artifacts(body: ExportBody) -> ExportResponse:
             analysis = AnalysisResult.model_validate(body.analysis)
         except PydanticValidationError as e:
             raise raise_analysis_validation_error(e) from e
+        ensure_analysis_matches_document(doc, analysis)
 
     try:
         artifacts = build_exports(
@@ -44,6 +46,6 @@ def export_artifacts(body: ExportBody) -> ExportResponse:
             locale=normalize_export_locale(body.locale),
         )
     except FileNotFoundError as e:
-        raise raise_pack_not_found(e) from e
+        raise raise_pack_not_found(body.pack_id) from e
 
     return ExportResponse(artifacts=artifacts)

@@ -12,8 +12,10 @@ from otm_threat_engine import AnalysisResult, analyze_document
 from otm_threat_engine.comparison_models import AnalysisDiff
 from otm_threat_engine.threat_model_comparison import compare_threat_models
 
+from otm_cli.application.custom_rules_io import load_custom_rules_or_raise
+from otm_cli.application.engine_refusals import engine_refusals_as_cli_errors
 from otm_cli.shared.document_loader import load_otm_document, load_pack_or_raise
-from otm_cli.shared.enums import DiffFormat
+from otm_cli.shared.enums import DiffFormat, MethodologyOption
 
 
 def _diff_header_lines(full: Any, with_analysis: bool) -> list[str]:
@@ -145,6 +147,9 @@ def run_model_diff(
     pack: str | None,
     fmt: DiffFormat,
     summary_only: bool,
+    methodology: MethodologyOption | None = None,
+    auto_methodology: bool = False,
+    rules: Path | None = None,
 ) -> tuple[dict, str | None, str | None, str | None, AnalysisDiff | None]:
     """
     Return (out_payload, json_body_to_print, markdown_body, text_panel_body, analysis_diff).
@@ -173,11 +178,23 @@ def run_model_diff(
             failed=f"loading pack `{pack}`.",
             next_step="run `otm packs`.",
         )
+    ruleset = load_custom_rules_or_raise(rules)
     ba: AnalysisResult | None = None
     ra: AnalysisResult | None = None
     if with_analysis:
-        ba = analyze_document(doc_a, pack=pack_def)
-        ra = analyze_document(doc_b, pack=pack_def)
+        # Both sides must run under the SAME lens, and it must be the lens the caller asked
+        # for: the gate compares these two analyses, so judging them under a different
+        # methodology than the one configured is a silent pass or a spurious failure. The same
+        # applies to the organisation rules: one ruleset, both sides, so a custom-rule threat
+        # that appears only on the revised side is a real regression and not a config artefact.
+        lens = methodology.value if methodology else None
+        with engine_refusals_as_cli_errors(failed="the diff between the two revisions."):
+            ba = analyze_document(
+                doc_a, pack=pack_def, methodology=lens, auto_recommend=auto_methodology, custom_rules=ruleset
+            )
+            ra = analyze_document(
+                doc_b, pack=pack_def, methodology=lens, auto_recommend=auto_methodology, custom_rules=ruleset
+            )
     full = compare_threat_models(doc_a, doc_b, baseline_analysis=ba, revised_analysis=ra)
 
     if with_analysis:

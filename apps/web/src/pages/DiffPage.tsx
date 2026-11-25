@@ -2,7 +2,7 @@ import { useCallback, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { Navigate } from "react-router";
 import { compareThreatModels } from "../api/otmApi";
-import { ApiError } from "../api/client";
+import { apiErrorMessage } from "../api/apiErrorMessage";
 import { Alert } from "../components/ui/Alert";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
@@ -11,14 +11,15 @@ import { Checkbox } from "../components/ui/Checkbox";
 import { Input } from "../components/ui/Input";
 import { Label } from "../components/ui/Label";
 import { PageHeader } from "../components/patterns/PageHeader";
-import { WorkflowGuide } from "../components/onboarding/WorkflowGuide";
-import { HelpCallout } from "../components/onboarding/HelpCallout";
+import { WorkspaceStat } from "../components/patterns/ModelSummary";
 import { RiskScoreBar } from "../components/analytics/RiskScoreBar";
 import { StatusPill } from "../components/ui/StatusPill";
 import { useSession } from "../context/SessionContext";
 import { useToast } from "../context/ToastContext";
 import i18n from "../i18n/i18n";
 import type { ComparisonMeta, DiffAggregateSection, ThreatModelComparisonResult } from "../types/api";
+import { boundaryFor } from "../utils/diagramTopology";
+import { Select } from "../components/ui/Select";
 import type { OtmDocument } from "../types/document";
 
 function parseRevisedJson(raw: string): OtmDocument {
@@ -54,14 +55,18 @@ function AggregateBlock({
   const added = section?.added ?? [];
   const removed = section?.removed ?? [];
   const changed = section?.changed ?? [];
-  if (added.length === 0 && removed.length === 0 && changed.length === 0) return null;
+  // Same predicate the parent card filters on, so the two can never disagree about
+  // whether a section is empty.
+  if (!sectionHasChanges(section)) return null;
   const total = added.length + removed.length + changed.length;
   return (
     <div className="rounded-otm-lg border border-otm-border bg-gradient-to-br from-otm-surface-1/95 to-otm-surface-2/80 p-4 text-xs text-otm-text shadow-otm-sm">
       <div className="flex items-center justify-between gap-2 border-b border-otm-border/80 pb-2 font-display text-sm font-semibold text-otm-text">
         {title}
+        {/* Count-aware, like the `+n added` / `−n removed` pills right below it. The
+            hand-concatenated `{total} {t("diff.changes")}` printed "1 CHANGES". */}
         <span className="text-[10px] font-normal uppercase tracking-wide text-otm-text-subtle">
-          {total} {t("diff.changes")}
+          {t("diff.changesCount", { count: total })}
         </span>
       </div>
       <div className="mt-3 space-y-2.5">
@@ -94,16 +99,54 @@ function AggregateBlock({
   );
 }
 
+function sectionHasChanges(section: DiffAggregateSection | undefined): boolean {
+  if (!section) return false;
+  return [section.added, section.removed, section.changed].some((ids) => (ids?.length ?? 0) > 0);
+}
+
+/**
+ * "Changes by section (IDs)" delegated to six `AggregateBlock`s, each of which renders
+ * nothing when its section is untouched. Comparing a model against an identical revision
+ * therefore produced a card with a heading and a completely empty body — indistinguishable,
+ * to the reader, from a section that failed to load.
+ */
+function AggregateSectionsCard({
+  aggregate,
+}: Readonly<{ aggregate: ThreatModelComparisonResult["aggregate"] }>) {
+  const { t } = useTranslation();
+  const sections: { key: string; title: string; section: DiffAggregateSection | undefined }[] = [
+    { key: "components", title: t("diff.aggComponents"), section: aggregate.components },
+    { key: "assets", title: t("diff.aggAssets"), section: aggregate.assets },
+    { key: "data_flows", title: t("diff.aggFlows"), section: aggregate.data_flows },
+    { key: "trust_boundaries", title: t("diff.aggTrust"), section: aggregate.trust_boundaries },
+    { key: "threats", title: t("diff.aggThreats"), section: aggregate.threats },
+    { key: "mitigations", title: t("diff.aggMitigations"), section: aggregate.mitigations },
+  ];
+  const changed = sections.filter((s) => sectionHasChanges(s.section));
+  return (
+    <Card className="space-y-3 p-5" variant="glass">
+      <h2 className="font-display text-sm font-semibold text-otm-text">{t("diff.changesBySection")}</h2>
+      {changed.length === 0 ? (
+        <p className="text-sm text-otm-text-muted">{t("diff.noSectionChanges")}</p>
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2">
+          {changed.map((s) => (
+            <AggregateBlock key={s.key} title={s.title} section={s.section} />
+          ))}
+        </div>
+      )}
+    </Card>
+  );
+}
+
 function DiffSummaryCard({
   summary,
   structuralLine,
-  runAnalysis,
   maxRev,
   maxBase,
 }: Readonly<{
   summary: ThreatModelComparisonResult["summary"];
   structuralLine: string;
-  runAnalysis: boolean;
   maxRev: number | null | undefined;
   maxBase: number | null | undefined;
 }>) {
@@ -112,13 +155,23 @@ function DiffSummaryCard({
     <Card className="space-y-4 p-5" variant="glass">
       <h2 className="font-display text-sm font-semibold text-otm-text">{t("diff.summary")}</h2>
       <p className="text-base font-medium leading-relaxed text-otm-text">{summary.headline}</p>
-      <p className="text-sm text-otm-text-muted">{structuralLine}</p>
+      {/*
+        `summary.headline` and `structural.summary_line` are separate fields that the server
+        very often fills with the same sentence, which printed the identical line twice — once
+        bold, once muted — in both the no-change and the with-change case. Show the second
+        only when it says something the first did not.
+      */}
+      {structuralLine && structuralLine !== summary.headline ? (
+        <p className="text-sm text-otm-text-muted">{structuralLine}</p>
+      ) : null}
       <div className="flex flex-wrap gap-2">
         {summary.has_structural_changes ? <Badge tone="accent">{t("diff.structural")}</Badge> : null}
         {summary.has_analysis_changes ? <Badge tone="accent">{t("diff.analysis")}</Badge> : null}
         {summary.methodology_in_model_changed ? <Badge tone="warn">{t("diff.methodologyModel")}</Badge> : null}
       </div>
-      {runAnalysis && typeof maxRev === "number" ? (
+      {/* O resultado decide, não o checkbox: `run_analysis: false` devolve estes campos a
+          `null`, por isso o próprio valor já diz se há análise. Ver DiffPage.analysisToggle.test. */}
+      {typeof maxRev === "number" ? (
         <div className="rounded-otm-md border border-otm-border bg-otm-surface-1/70 p-3">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-otm-text-subtle">{t("diff.maxLi")}</p>
           <p className="mt-1 font-display text-2xl font-semibold tabular-nums text-otm-text">{maxRev}</p>
@@ -134,17 +187,14 @@ function DiffSummaryCard({
 
 function DiffRiskDeltaCard({
   rd,
-  runAnalysis,
 }: Readonly<{
   rd: ThreatModelComparisonResult["risk_delta"];
-  runAnalysis: boolean;
 }>) {
   const { t } = useTranslation();
   const hasDelta =
-    runAnalysis &&
-    (typeof rd.analysis_max_score_delta === "number" ||
-      (rd.heuristic_increased_ids?.length ?? 0) > 0 ||
-      (rd.heuristic_decreased_ids?.length ?? 0) > 0);
+    typeof rd.analysis_max_score_delta === "number" ||
+    (rd.heuristic_increased_ids?.length ?? 0) > 0 ||
+    (rd.heuristic_decreased_ids?.length ?? 0) > 0;
   if (!hasDelta) return null;
   let deltaVal = "";
   if (typeof rd.analysis_max_score_delta === "number") {
@@ -343,23 +393,91 @@ function SemanticInsightsBlock({ meta }: Readonly<{ meta: ComparisonMeta }>) {
   );
 }
 
-function ComparisonResultPanel({
-  result,
-  runAnalysis,
-}: Readonly<{
+type ModelComparison = {
   result: ThreatModelComparisonResult;
-  runAnalysis: boolean;
-}>) {
+  baseline: OtmDocument;
+  revision: OtmDocument;
+};
+
+function ComparisonResultPanel({ result, baseline, revision }: Readonly<ModelComparison>) {
   const { t } = useTranslation();
+  const [componentId, setComponentId] = useState("");
+  const changes = result.aggregate.components;
+  const changedIds = [
+    ...(changes?.added ?? []),
+    ...(changes?.changed ?? []),
+    ...(changes?.removed ?? []),
+  ];
+  const id = changedIds.includes(componentId) ? componentId : changedIds[0];
+  const source = changes?.removed?.includes(id) ? baseline : revision;
+  const component = source.components?.find((c) => c.id === id);
   const rd = result.risk_delta;
   const maxRev = rd.analysis_max_score_revised;
   const maxBase = rd.analysis_max_score_baseline;
   return (
     <div className="space-y-4">
+      <section className="work-stats diff-stats">
+        <WorkspaceStat
+          icon="box"
+          label={t("work.addedComponents")}
+          value={result.structural.components?.added?.length ?? 0}
+        />
+        <WorkspaceStat
+          icon="target"
+          label={t("work.addedSuggestions")}
+          value={result.analysis ? (result.threat_delta?.heuristic?.added?.length ?? 0) : "—"}
+        />
+        <WorkspaceStat
+          icon="flag"
+          label={t("metrics.maxLi")}
+          value={maxBase == null || maxRev == null ? "—" : `${maxBase} → ${maxRev}`}
+        />
+      </section>
+      <div className={component ? "work-split" : undefined}>
+        <AggregateSectionsCard aggregate={result.aggregate} />
+        {component && (
+          <Card title={t("work.changedComponent")}>
+            {changedIds.length > 1 && (
+              <>
+                <Label htmlFor="diff-component">{t("work.selectChange")}</Label>
+                <Select id="diff-component" value={id} onChange={(e) => setComponentId(e.target.value)}>
+                  {changedIds.map((value) => (
+                    <option value={value} key={value}>
+                      {value}
+                    </option>
+                  ))}
+                </Select>
+              </>
+            )}
+            <h3 className="work-detail-title">{component.name}</h3>
+            <dl className="work-facts">
+              <div>
+                <dt>{t("work.identifier")}</dt>
+                <dd>
+                  <code>{component.id}</code>
+                </dd>
+              </div>
+              <div>
+                <dt>{t("diagram.kind")}</dt>
+                <dd>
+                  {t(`document.componentKinds.${component.kind}`, { defaultValue: component.kind })}
+                </dd>
+              </div>
+              <div>
+                <dt>{t("work.trustBoundary")}</dt>
+                <dd>
+                  {(source.trust_boundaries &&
+                    boundaryFor(source, id, component.in_trust_boundary)?.name) ||
+                    "—"}
+                </dd>
+              </div>
+            </dl>
+          </Card>
+        )}
+      </div>
       <DiffSummaryCard
         summary={result.summary}
         structuralLine={result.structural.summary_line}
-        runAnalysis={runAnalysis}
         maxRev={maxRev}
         maxBase={maxBase}
       />
@@ -387,19 +505,7 @@ function ComparisonResultPanel({
         </details>
       ) : null}
 
-      <Card className="space-y-3 p-5" variant="glass">
-        <h2 className="font-display text-sm font-semibold text-otm-text">{t("diff.changesBySection")}</h2>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <AggregateBlock title={t("diff.aggComponents")} section={result.aggregate.components} />
-          <AggregateBlock title={t("diff.aggAssets")} section={result.aggregate.assets} />
-          <AggregateBlock title={t("diff.aggFlows")} section={result.aggregate.data_flows} />
-          <AggregateBlock title={t("diff.aggTrust")} section={result.aggregate.trust_boundaries} />
-          <AggregateBlock title={t("diff.aggThreats")} section={result.aggregate.threats} />
-          <AggregateBlock title={t("diff.aggMitigations")} section={result.aggregate.mitigations} />
-        </div>
-      </Card>
-
-      <DiffRiskDeltaCard rd={rd} runAnalysis={runAnalysis} />
+      <DiffRiskDeltaCard rd={rd} />
 
       <SemanticInsightsBlock meta={result.meta as ComparisonMeta} />
 
@@ -421,23 +527,36 @@ export function DiffPage() {
   const { t } = useTranslation();
   const { document: baseline } = useSession();
   const toast = useToast();
+  const [editing, setEditing] = useState(false);
   const [revisedText, setRevisedText] = useState("");
   const [runAnalysis, setRunAnalysis] = useState(false);
   const [packId, setPackId] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<ThreatModelComparisonResult | null>(null);
+  const [comparison, setComparison] = useState<ModelComparison | null>(null);
+  const result = comparison?.result;
 
-  const onFile = useCallback((file: File | null) => {
-    if (!file) return;
-    const r = new FileReader();
-    r.onload = () => {
-      setRevisedText(typeof r.result === "string" ? r.result : "");
-      setResult(null);
-      setError(null);
-    };
-    r.readAsText(file, "UTF-8");
-  }, []);
+  const onFile = useCallback(
+    (file: File | null) => {
+      if (!file) return;
+      const r = new FileReader();
+      r.onload = () => {
+        setRevisedText(typeof r.result === "string" ? r.result : "");
+        setComparison(null);
+        setError(null);
+      };
+      // Sem `onerror` uma leitura falhada (ficheiro removido, permissões, disco) não dizia
+      // nada: a área de texto ficava vazia e o utilizador não sabia se tinha escolhido mal
+      // o ficheiro ou se a página estava avariada.
+      r.onerror = () => {
+        const msg = t("diff.readFail");
+        setError(msg);
+        toast.error(msg);
+      };
+      r.readAsText(file, "UTF-8");
+    },
+    [t, toast],
+  );
 
   if (!baseline) return <Navigate to="/" replace />;
 
@@ -445,7 +564,7 @@ export function DiffPage() {
     const base = baseline;
     if (!base) return;
     setError(null);
-    setResult(null);
+    setComparison(null);
     let revised: OtmDocument;
     try {
       revised = parseRevisedJson(revisedText.trim() || "{}");
@@ -461,10 +580,11 @@ export function DiffPage() {
         runAnalysis,
         packId: packId.trim() || null,
       });
-      setResult(d);
+      setComparison({ result: d, baseline: base, revision: revised });
+      setEditing(false);
       toast.success(t("diff.toastOk"));
     } catch (e) {
-      const msg = e instanceof ApiError ? e.message : t("diff.toastFail");
+      const msg = apiErrorMessage(e, t, "diff.toastFail");
       setError(msg);
       toast.error(msg);
     } finally {
@@ -473,76 +593,85 @@ export function DiffPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="work-page">
       <PageHeader
         eyebrow={t("diff.eyebrow")}
         title={t("diff.title")}
-        description={
-          <Trans
-            i18nKey="diff.description"
-            components={{
-              strong: <strong className="text-otm-text" />,
-              0: <code className="rounded bg-otm-surface-3 px-1 text-xs text-otm-accent" />,
-            }}
-          />
+        description={t("work.diffHint")}
+        actions={
+          result && (
+            <Button variant="secondary" aria-expanded={editing} onClick={() => setEditing(!editing)}>
+              {t("work.comparisonInputs")}
+            </Button>
+          )
         }
       />
-
-      <div className="space-y-3 rounded-otm-lg border border-otm-border/80 bg-otm-surface-1/50 px-4 py-3">
-        <WorkflowGuide variant="compact" />
-        <HelpCallout title={t("diff.helpTitle")}>
-          <Trans
-            i18nKey="diff.helpBody"
-            components={{ strong: <strong className="text-otm-text" /> }}
-          />
-        </HelpCallout>
-      </div>
-
-      <Card className="space-y-3 p-4" variant="elevated">
-        <div>
-          <Label htmlFor="revised-json">{t("diff.revisionJson")}</Label>
-          <textarea
-            id="revised-json"
-            className="mt-1 min-h-[180px] w-full rounded-otm-md border border-otm-border bg-otm-surface-1 px-3 py-2 font-mono text-xs text-otm-text placeholder:text-otm-text-subtle focus:border-otm-mint-400/50 focus:outline-none focus:ring-2 focus:ring-[color:var(--otm-ring)]"
-            value={revisedText}
-            onChange={(ev) => setRevisedText(ev.target.value)}
-            placeholder={t("diff.revisionPlaceholder")}
-          />
+      {result && (
+        <div className="work-half">
+          <Card title={t("work.baseline")}>
+            <strong>{result.structural.baseline_title}</strong>
+          </Card>
+          <Card title={t("work.revision")}>
+            <strong>{result.structural.revised_title}</strong>
+          </Card>
         </div>
-        <div className="flex flex-wrap items-center gap-4">
-          <label className="flex cursor-pointer items-center gap-2 text-sm text-otm-text-muted">
-            <Checkbox checked={runAnalysis} onChange={(e) => setRunAnalysis(e.target.checked)} />
-            {t("diff.includeAnalysis")}
-          </label>
-        </div>
-        {runAnalysis ? (
+      )}
+      {(!result || editing) && (
+        <Card className="space-y-3 p-4" variant="elevated">
           <div>
-            <Label htmlFor="pack-id">{t("diff.packOptional")}</Label>
-            <Input
-              id="pack-id"
-              className="mt-1 max-w-md font-mono text-sm"
-              value={packId}
-              onChange={(e) => setPackId(e.target.value)}
-              placeholder={t("diff.packPlaceholder")}
+            <Label htmlFor="revised-json">{t("diff.revisionJson")}</Label>
+            <textarea
+              id="revised-json"
+              className="mt-1 min-h-[180px] w-full rounded-otm-md border border-otm-border-control bg-otm-surface-1 px-3 py-2 font-mono text-xs text-otm-text placeholder:text-otm-text-subtle focus:border-otm-mint-400/50 focus:outline-none focus:ring-2 focus:ring-[color:var(--otm-ring)]"
+              value={revisedText}
+              onChange={(ev) => setRevisedText(ev.target.value)}
+              placeholder={t("diff.revisionPlaceholder")}
             />
           </div>
-        ) : null}
-        <div className="flex flex-wrap items-center gap-2">
-          <input
-            type="file"
-            accept=".json,application/json"
-            className="text-sm text-otm-text-muted file:mr-2"
-            onChange={(ev) => onFile(ev.target.files?.[0] ?? null)}
-          />
-          <Button type="button" onClick={() => void runDiff()} disabled={loading || !revisedText.trim()}>
-            {loading ? t("diff.comparing") : t("diff.compare")}
-          </Button>
-        </div>
-      </Card>
-
+          <div className="flex flex-wrap items-center gap-4">
+            <label className="flex cursor-pointer items-center gap-2 text-sm text-otm-text-muted">
+              <Checkbox checked={runAnalysis} onChange={(e) => setRunAnalysis(e.target.checked)} />
+              {t("diff.includeAnalysis")}
+            </label>
+          </div>
+          {runAnalysis ? (
+            <div>
+              <Label htmlFor="pack-id">{t("diff.packOptional")}</Label>
+              <Input
+                id="pack-id"
+                className="mt-1 max-w-md font-mono text-sm"
+                value={packId}
+                onChange={(e) => setPackId(e.target.value)}
+                placeholder={t("diff.packPlaceholder")}
+              />
+            </div>
+          ) : null}
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Rótulo sr-only como em ImportPage: sem ele o leitor de ecrã anuncia um botão
+              sem nome num dos dois caminhos para fornecer o modelo revisto. */}
+            <Label htmlFor="revised-file" className="sr-only">
+              {t("diff.revisionFileLabel")}
+            </Label>
+            <input
+              id="revised-file"
+              type="file"
+              accept=".json,application/json"
+              className="text-sm text-otm-text-muted file:mr-2"
+              onChange={(ev) => onFile(ev.target.files?.[0] ?? null)}
+            />
+            <Button
+              type="button"
+              onClick={() => void runDiff()}
+              disabled={loading || !revisedText.trim()}
+            >
+              {loading ? t("diff.comparing") : t("diff.compare")}
+            </Button>
+          </div>
+        </Card>
+      )}
       {error ? <Alert variant="error">{error}</Alert> : null}
 
-      {result ? <ComparisonResultPanel result={result} runAnalysis={runAnalysis} /> : null}
+      {comparison && <ComparisonResultPanel {...comparison} />}
     </div>
   );
 }

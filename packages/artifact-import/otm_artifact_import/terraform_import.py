@@ -18,24 +18,66 @@ from otm_artifact_import.ai_import_corpus import build_terraform_import_signals_
 from otm_artifact_import.builders import assemble_draft, slug_id
 from otm_artifact_import.types import ArtifactImportResult, InferenceRecord
 
+_BRACE = re.compile(r"[{}]")
 _RESOURCE_HEAD = re.compile(r'resource\s+"([^"]+)"\s+"([^"]+)"\s*\{')
 
 
 def _iter_resource_blocks(text: str) -> Iterator[tuple[str, str, str]]:
-    for m in _RESOURCE_HEAD.finditer(text):
-        rtype, name = m.group(1), m.group(2)
-        start = m.end()
-        depth = 1
-        i = start
-        while i < len(text) and depth > 0:
-            ch = text[i]
-            if ch == "{":
-                depth += 1
-            elif ch == "}":
-                depth -= 1
-            i += 1
-        body = text[start : i - 1] if depth == 0 else text[start:]
-        yield rtype, name, body
+    """Os blocos `resource`, cada um limitado ao texto que lhe pertence.
+
+    Um bloco cujas chavetas nunca fecham termina onde o cabeçalho seguinte começa. É o que uma
+    chaveta em falta significa para quem escreveu o ficheiro, e sem esse limite a varredura de
+    **cada** cabeçalho corria até ao fim do texto: com M cabeçalhos em L bytes, O(L*M) a percorrer
+    e outro tanto a reter, porque `import_terraform_text` materializa todos os corpos de uma vez.
+    Medido, 54 KB de HCL desequilibrado custavam 2,65 s de CPU e 44 MB retidos, contra 1,2 ms para
+    54 KB equilibrados; `POST /v1/imports/terraform` aceita 2 MiB, dispensa credencial na postura
+    por omissão e corre isto sincronamente dentro de um handler `async`, pelo que o custo parava o
+    servidor inteiro e não só o pedido.
+
+    O corpo tem um único consumidor — `_public_ingress_hint` — e era aí que a ausência de limite
+    fazia o estrago silencioso: corpos que se estendiam até ao fim do ficheiro sobrepunham-se, e um
+    `0.0.0.0/0` declarado num recurso tardio caía dentro do corpo de todos os anteriores. Uma
+    chaveta em falta bastava para mover um balanceador `internal = true` para `tb_internet_facing`.
+
+    O corpo vai até à chaveta que corresponde à do cabeçalho, e o limite no cabeçalho seguinte é
+    apenas o que sobra quando essa chaveta não existe. A primeira tentativa aplicava o limite
+    **sempre**, e isso partia ficheiros válidos: nem todo o texto que casa com `_RESOURCE_HEAD` é
+    um cabeçalho -- dentro de um heredoc é texto -- e o bloco que o continha era truncado aí,
+    perdendo tudo o que viesse depois. Como o único consumidor procura `0.0.0.0/0`, um `aws_lb`
+    com o CIDR declarado depois do heredoc voltava a ser classificado como interno: a mesma
+    classificação errada que este limite existe para evitar, apenas na direcção oposta.
+    Ver `tests/test_p3_terraform_heredoc_header_does_not_truncate_body.py`.
+    """
+    heads = list(_RESOURCE_HEAD.finditer(text))
+    closes = _closing_brace_of_each(text, {head.end() - 1 for head in heads})
+    for position, head in enumerate(heads):
+        start = head.end()
+        close = closes.get(start - 1)
+        if close is None:
+            close = heads[position + 1].start() if position + 1 < len(heads) else len(text)
+        yield head.group(1), head.group(2), text[start:close]
+
+
+def _closing_brace_of_each(text: str, opens: set[int]) -> dict[int, int]:
+    """Para cada chaveta em `opens`, o índice da que lhe corresponde; ausente se nunca fechar.
+
+    Uma única passagem pelas **chavetas** do texto, não pelos seus caracteres, e uma pilha limitada
+    ao número de blocos `resource` — não ao tamanho do ficheiro. O custo mantém-se linear no
+    ficheiro mesmo quando as chavetas nunca equilibram, que era o caso patológico.
+    """
+    closing: dict[int, int] = {}
+    pending: list[tuple[int, int]] = []
+    depth = 0
+    for brace in _BRACE.finditer(text):
+        if brace.group() == "{":
+            depth += 1
+            if brace.start() in opens:
+                pending.append((depth, brace.start()))
+        else:
+            if pending and pending[-1][0] == depth:
+                closing[pending.pop()[1]] = brace.start()
+            depth = max(depth - 1, 0)
+    return closing
 
 
 def _helm_chart_hint(text: str) -> bool:
@@ -218,10 +260,15 @@ def import_terraform_text(text: str, *, filename: str = "bundle.tf") -> Artifact
     )
 
 
+def terraform_files(path: Path) -> list[Path]:
+    """Os ficheiros que `import_terraform_path` lê de um directório. Ver `kubernetes_manifest_files`."""
+    return sorted(path.glob("*.tf"))
+
+
 def import_terraform_path(path: Path) -> ArtifactImportResult:
     if path.is_dir():
         parts: list[str] = []
-        for p in sorted(path.glob("*.tf")):
+        for p in terraform_files(path):
             parts.append(p.read_text(encoding="utf-8"))
         text = "\n\n".join(parts)
         label = f"{path.name}/"

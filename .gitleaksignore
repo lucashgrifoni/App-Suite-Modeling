@@ -1,7 +1,24 @@
-# Excluir dependências e ambientes virtuais de scans `gitleaks detect --no-git`.
-# O histórico Git continua coberto pelo modo default (sem --no-git).
-.venv/
-**/node_modules/
-dist/
-build/
-*.egg-info/
+# Fingerprints de achados já triados como falsos positivos.
+#
+# Formato: `commit:ficheiro:regra:linha`. **Só isto.** Caminhos e globs não são aceites aqui —
+# ver `.gitleaks.toml`, que é onde a exclusão de dependências e artefactos vive desde
+# 2026-08-13. Antes dessa data este ficheiro continha cinco globs, todos rejeitados em
+# silêncio, e não excluía nada.
+#
+# Cada entrada abaixo fixa um commit concreto do histórico. São imutáveis: os commits estão
+# assinados e não vão ser reescritos, por isso o fingerprint continua válido para sempre. Os
+# valores em causa já foram substituídos no worktree por `not-a-real-key`, que o gitleaks não
+# assinala — verificado contra a regra real, não assumido. Estas duas linhas cobrem apenas a
+# aparição histórica; não há aqui nenhuma exclusão que afecte código actual ou futuro.
+
+# Nota: os valores em causa **não** são reproduzidos aqui. Citá-los neste ficheiro criava dois
+# achados novos — no próprio ficheiro que os declara falsos positivos. Consultar os commits.
+
+# Chave sintética no cabeçalho `X-OTM-API-Key` de um teste de contrato da API, usada para provar
+# que um cliente não-browser continua a autenticar. Nunca foi um segredo real: `OTM_API_KEY` é
+# definido pelo próprio teste, na mesma função.
+896bdcf8cbef4a0232e4c1c84a5dec618cda2bf4:tests/test_p2r2_api_contract_gaps.py:generic-api-key:106
+
+# Constante local `_KEY` do teste de diagnóstico de autenticação, injectada via
+# `monkeypatch.setenv("OTM_API_KEY", _KEY)` no próprio ficheiro.
+aa7fdaf7d0c6ca02655048448ab882a6e9b4af08:tests/test_p2_api_auth_diagnostics.py:generic-api-key:24

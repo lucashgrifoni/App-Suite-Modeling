@@ -6,9 +6,22 @@ from otm_core_schema import ThreatModelMethodology
 from otm_core_schema.model_quality_precheck import ModelQualityPrecheck
 from otm_explainability import ExplanationRecord
 from otm_threat_engine.result import MethodologyCompletenessInfo
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from otm_api.domain.export_formats import ExportFormat
+
+# Corpos de pedido recusam chaves desconhecidas. Uma chave mal escrita (`pack` em vez de
+# `pack_id`, `format` em vez de `formats`) seria ignorada em silêncio pelo default do
+# Pydantic e devolveria 200 com menos ameaças ou outro artefacto — o pior modo de falha
+# num produto cuja saída é uma afirmação de cobertura. Um valor errado já falha com 404;
+# a chave errada passa agora a falhar com 422 nomeando o campo.
+#
+# Aplica-se só ao envelope: `document` / `baseline` / `revised` são `dict[str, Any]` e
+# continuam a ser validados um nível abaixo por `ThreatModelDocument`.
+#
+# As subclasses (`PrecheckBody`, `AnalyzeBody`, `ExportBody`, `PremiumReportBody`)
+# herdam esta config.
+_FORBID_UNKNOWN_FIELDS = ConfigDict(extra="forbid")
 
 
 class ModelPrecheckResponse(BaseModel):
@@ -21,6 +34,8 @@ class ModelPrecheckResponse(BaseModel):
 class DocumentBody(BaseModel):
     """Corpo com documento canónico serializado como objeto JSON."""
 
+    model_config = _FORBID_UNKNOWN_FIELDS
+
     document: dict[str, Any] = Field(
         ...,
         description="Raiz compatível com `ThreatModelDocument` (aliases YAML respeitados).",
@@ -29,6 +44,8 @@ class DocumentBody(BaseModel):
 
 class DiffBody(BaseModel):
     """Duas raízes `ThreatModelDocument` para comparação estruturada (sem persistência)."""
+
+    model_config = _FORBID_UNKNOWN_FIELDS
 
     baseline: dict[str, Any] = Field(
         ...,
@@ -41,6 +58,8 @@ class CompareBody(BaseModel):
     """
     Comparação completa: estrutura + opcional análise (payload explícito ou `run_analysis`).
     """
+
+    model_config = _FORBID_UNKNOWN_FIELDS
 
     baseline: dict[str, Any] = Field(..., description="Documento canónico baseline.")
     revised: dict[str, Any] = Field(..., description="Documento canónico revisão.")
@@ -65,6 +84,8 @@ class CompareBody(BaseModel):
 
 class AnalysisDiffBody(BaseModel):
     """Dois `AnalysisResult` serializados (ex.: ficheiros gerados por `otm analyze --json-out`)."""
+
+    model_config = _FORBID_UNKNOWN_FIELDS
 
     baseline_analysis: dict[str, Any]
     revised_analysis: dict[str, Any]
@@ -158,6 +179,8 @@ class InferenceRecordBody(BaseModel):
 class RemediationBacklogRequest(BaseModel):
     """Entrada para gerar backlog: sempre `document`; `analysis` opcional se `run_analysis`."""
 
+    model_config = _FORBID_UNKNOWN_FIELDS
+
     document: dict[str, Any] = Field(..., description="Raiz `ThreatModelDocument`.")
     analysis: dict[str, Any] | None = Field(
         default=None,
@@ -182,8 +205,8 @@ class ArtifactImportResponse(BaseModel):
     explanations: list[ExplanationRecord] = Field(default_factory=list)
 
 
-class PremiumReportBody(DocumentBody):
-    """Report premium — mesmo padrão de análise que `/remediation/backlog`."""
+class RiskReportBody(DocumentBody):
+    """Risk report for a document and its analysis."""
 
     analysis: dict[str, Any] | None = Field(
         default=None,
@@ -200,10 +223,6 @@ class PremiumReportBody(DocumentBody):
     pack_id: str | None = Field(default=None, description="Pack quando `run_analysis` é usado.")
     methodology: ThreatModelMethodology | None = Field(default=None)
     auto_recommend_methodology: bool = Field(default=False)
-    level: Literal["executive", "standard", "deep"] = Field(
-        default="standard",
-        description="Profundidade do relatório.",
-    )
     output_format: Literal["markdown", "pdf"] = Field(
         default="markdown",
         description="markdown = texto; pdf = binário application/pdf.",
@@ -211,4 +230,13 @@ class PremiumReportBody(DocumentBody):
     locale: str | None = Field(
         default=None,
         description="Idioma dos textos estruturais do relatório (pt-BR | en). Omitido = pt-BR.",
+    )
+
+
+class PremiumReportBody(RiskReportBody):
+    """Legacy report request with a selectable level."""
+
+    level: Literal["executive", "standard", "deep"] = Field(
+        default="standard",
+        description="Profundidade do relatório.",
     )

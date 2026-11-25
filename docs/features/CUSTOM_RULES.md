@@ -1,5 +1,12 @@
 # Custom rules — organisation heuristics without forking the engine
 
+The repository's composite action accepts `rules: path/to/rules.yaml` relative to
+`working-directory`. On a pull request or merge queue it reads that file from
+the exact base commit. On other events it reads the checkout. Analysis and the
+optional drift gate share the resulting snapshot. Missing policy on the base
+commit stops the run. Use a tool version that supports `--rules` in both commands
+if you override the action's installed version.
+
 Every organisation has threat-modelling rules the generic engine cannot know: an internal
 standard, a control your platform team mandates, a lesson from an incident. Custom rules let
 you add those as **data**, alongside the engine, in your own repository.
@@ -125,6 +132,14 @@ id:    custom_<ruleset-id>_<rule-id>_<target-id>
 title: [rules:<ruleset-id>] <your title>
 ```
 
+Because the three parts are joined with `_`, and `_` is legal inside a rule id and inside an
+entity id, two different pairs can produce the same string: rule `a` on component `b_c` and rule
+`a_b` on component `c` both give `custom_rs_a_b_c`. The engine **refuses the analysis** when that
+happens, naming both subjects, instead of letting one silently overwrite the other — a collided
+id would be indistinguishable to the CI drift gate, to `otm diff`, and to the SARIF fingerprint
+GitHub uses as an alert's identity. Rename one of the two and the analysis runs. The same applies
+to the engine's own ids: a component `flow_x` collides with a data flow `x`.
+
 **Your `refs` are kept and labelled `custom`.** They appear alongside the CAPEC/CWE/ASVS
 references the engine attaches, but under their own catalogue — because they are your labels,
 not a verified mapping to a published standard. `framework_ref_counts_by_catalog` keeps them
@@ -135,19 +150,22 @@ threat that was never raised tells the reader there is a problem where the engin
 
 ## In CI
 
-Rules flow into everything downstream, including the drift gate — so a pull request that
-introduces a component violating an organisation rule can fail the build:
+Pin a published commit whose `action.yml` declares `rules` and `baseline-ref`. This example
+uses one rules file for the analysis and the drift gate:
 
 ```yaml
-- uses: lucashgrifoni/App-Suite-Modeling@v7.9.0
+- uses: lucashgrifoni/App-Suite-Modeling@<commit-sha>
   with:
     model: threat-model.otm.yaml
     baseline: baseline/threat-model.otm.yaml
     fail-on: high
+    rules: policy/threat-model-rules.yaml
 ```
 
-The composite action does not yet expose `--rules` directly; run `otm analyze --rules` as a
-step, or pin the CLI and call it. See [CI_AND_SECURITY_EVIDENCE.md](../CI_AND_SECURITY_EVIDENCE.md) §8.
+For pull requests and merge queues, commit the rules file to the base branch before enabling
+this step. The action reads the file from the event's base commit. On `v7.9.0`, run
+`otm analyze --rules` directly. To apply rules in drift checks, use a revision whose CLI supports
+`otm diff --rules`. See [CI_AND_SECURITY_EVIDENCE.md](../CI_AND_SECURITY_EVIDENCE.md) §8.
 
 ## Limits, stated plainly
 

@@ -204,3 +204,74 @@ class AnalysisResult(BaseModel):
         default=None,
         description="Resumo executivo de postura e próximos passos.",
     )
+
+
+def _subject_of(threat: HeuristicThreat) -> str:
+    if threat.target_component_id is not None:
+        return f"component `{threat.target_component_id}`"
+    if threat.target_data_flow_id is not None:
+        return f"data flow `{threat.target_data_flow_id}`"
+    if threat.target_asset_id is not None:
+        return f"asset `{threat.target_asset_id}`"
+    return "the model as a whole"
+
+
+class ThreatIdCollisionError(ValueError):
+    """Dois sujeitos distintos reclamam o mesmo id de ameaça.
+
+    Subclasse de `ValueError` de propósito: era isso que `assert_threat_ids_are_injective` lançava,
+    e há testes e chamadores que dependem disso. O que muda é haver um tipo que a API e o CLI
+    possam apanhar **sem** apanhar todo e qualquer `ValueError` vindo do motor -- porque sem ele
+    ninguém a apanhava, e a recusa chegava ao utilizador como 500 INTERNAL_ERROR de um lado e como
+    traceback do Python do outro, apesar de a entrada ser corrigível por quem a enviou. Ver
+    `tests/test_p3_threat_id_collision_reaches_the_user.py`.
+
+    Os sujeitos ficam em atributos, e não só no texto, para que quem traduz a recusa os possa
+    nomear sem voltar a analisar a mensagem.
+    """
+
+    def __init__(self, *, threat_id: str, first: str, second: str) -> None:
+        self.threat_id = threat_id
+        self.first = first
+        self.second = second
+        super().__init__(
+            f"threat id `{threat_id}` is claimed by two different subjects: "
+            f"{first} and {second}. "
+            "Threat ids are built by joining the subject id with `_`, so these two are "
+            "indistinguishable downstream — the CI drift gate, the analysis diff and the "
+            "SARIF fingerprints would silently keep only one of them. "
+            "Rename one of the two subjects so the ids no longer collide."
+        )
+
+
+def assert_threat_ids_are_injective(heuristics: list[HeuristicThreat]) -> None:
+    """Recusa um modelo em que dois sujeitos distintos reclamam o mesmo id de ameaça.
+
+    Os ids são construídos por concatenação com `_`, e `_` é legal dentro de um id de entidade:
+    `eng_{comp.id}_{stride}` e `eng_flow_{flow.id}_{stride}` partilham um espaço de nomes plano,
+    por isso um componente `flow_svc` e um fluxo `svc` produzem a mesma string. O validador
+    `_unique_ids` do schema corre por lista e nunca compara componentes com fluxos, portanto o
+    documento é **válido** — a ambiguidade nasce aqui, no esquema de ids, e é aqui que se recusa.
+    `custom_rules` tem a mesma forma: regra `a` sobre `b_c` colide com regra `a_b` sobre `c`.
+
+    Três consumidores colapsavam o par **em silêncio**: `analysis_diff` constrói `{h.id: h}` e o
+    último vencia; `merge_heuristic_threats` saltava o segundo sem diagnóstico; e o SARIF usa o id
+    como `partialFingerprints.otmThreatId`, a identidade do alerta no GitHub code scanning. O
+    efeito prático era o gate de drift julgar uma ameaça **substituída** em vez de acrescentada.
+
+    Recusar em vez de renomear é deliberado. Tornar a junção injetiva mudaria **todos** os ids,
+    invalidando os fingerprints SARIF e todas as baselines guardadas — a primeira execução após a
+    atualização reportaria cada ameaça como nova e faria disparar os gates de toda a gente. Quem
+    não tem colisão não paga nada por esta correção; quem tem, tem um modelo genuinamente ambíguo
+    e recebe os dois sujeitos por escrito.
+    """
+    seen: dict[str, HeuristicThreat] = {}
+    for threat in heuristics:
+        previous = seen.get(threat.id)
+        if previous is not None:
+            raise ThreatIdCollisionError(
+                threat_id=threat.id,
+                first=_subject_of(previous),
+                second=_subject_of(threat),
+            )
+        seen[threat.id] = threat

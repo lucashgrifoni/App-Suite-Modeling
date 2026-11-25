@@ -7,6 +7,7 @@ from otm_threat_engine.methodology_lenses.common import (
     append_heuristics_from_entries,
     append_methodology_insights,
     boost_impact,
+    has_any_token,
 )
 from otm_threat_engine.result import AnalysisResult, StructuralFinding
 
@@ -88,7 +89,13 @@ def _append_pasta_native_heuristics(
     append_heuristics_from_entries(out, existing, entries)
     for comp in doc.components:
         text = f"{comp.name} {(comp.technology or '')}".lower()
-        if any(x in text for x in ("api", "gateway", "public", "internet", "edge")):
+        # Por token, e não por subcadeia: `Ledger` contém `edge`, `terapia` e `rapidez` contêm
+        # `api`, e um livro-razão interno era anunciado como "componente exposto ... pivô para
+        # movimento lateral", com elevação de privilégio. Os plurais entram explicitamente porque
+        # trocar às cegas para token trocaria este erro por outro -- `apis internas` e `gateways`
+        # deixariam de casar. Medido nos 38 templates distribuídos: a troca retira exactamente
+        # duas correspondências, ambas `Ledger`. Ver `tests/test_p3_pasta_exposure_matches_words.py`.
+        if has_any_token(text, ("api", "apis", "gateway", "gateways", "public", "internet", "edge")):
             append_heuristics_from_entries(
                 out,
                 existing,

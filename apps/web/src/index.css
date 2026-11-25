@@ -20,6 +20,10 @@
   --otm-primary-active: #269466;
   --otm-primary-subtle: rgba(48, 178, 127, 0.14);
   --otm-primary-muted: rgba(48, 178, 127, 0.08);
+  /* Brand usada como *foreground* (ícone, traço de gráfico, borda significativa).
+     --otm-primary é um token de preenchimento: sobre fundo claro cai a 2.69:1 e
+     não serve como frente. Aqui no escuro o próprio primary chega a 6.20:1. */
+  --otm-primary-ink: var(--otm-primary);
 
   --otm-mint-400: #6ae899;
   --otm-accent: #56ff95;
@@ -49,6 +53,10 @@
 
   --otm-border: rgba(125, 250, 190, 0.1);
   --otm-border-strong: rgba(125, 250, 190, 0.18);
+  /* Fronteira de controlo de formulário. WCAG 1.4.11 exige 3:1 para identificar
+     um componente; --otm-border (1.27:1) e --otm-border-strong (1.61:1) são
+     decorativos e não servem aqui. A 0.40 o pior caso é 3.19:1. */
+  --otm-border-control: rgba(125, 250, 190, 0.4);
   --otm-ring: rgba(86, 255, 149, 0.45);
   --otm-glow: 0 0 24px rgba(86, 255, 149, 0.12);
 
@@ -99,7 +107,10 @@
 
   --otm-text: #0b1220;
   --otm-text-muted: #475569;
-  --otm-text-subtle: #64748b;
+  /* #64748b falhava AA nas superfícies claras mais escuras (4.41:1 na base,
+     4.27:1 na surface-3). #5a6a7d dá 4.97:1 no pior caso e mantém a hierarquia
+     abaixo de --otm-text-muted (6.80:1). */
+  --otm-text-subtle: #5a6a7d;
 
   --otm-surface-base: #f4f7f5;
   --otm-surface-1: #ffffff;
@@ -109,7 +120,11 @@
 
   --otm-border: rgba(15, 60, 40, 0.12);
   --otm-border-strong: rgba(15, 60, 40, 0.2);
-  --otm-ring: rgba(48, 178, 127, 0.45);
+  /* A 0.20 a fronteira ficaria a 1.44:1; a 0.60 chega a 3.58:1 no pior caso. */
+  --otm-border-control: rgba(15, 60, 40, 0.6);
+  /* rgba(48,178,127,.45) sobre branco dá 1.55:1 — o indicador de foco era
+     praticamente invisível (WCAG 1.4.11 e 2.4.11 exigem 3:1). Sólido: 4.91:1. */
+  --otm-ring: #0f766e;
   --otm-glow: 0 0 20px rgba(48, 178, 127, 0.15);
 
   --otm-primary-subtle: rgba(48, 178, 127, 0.12);
@@ -118,6 +133,13 @@
   /* Links e realces em fundo claro: o néon do tema escuro falha WCAG em branco/menta */
   --otm-accent: #0f766e;
   --otm-success: #047857;
+  --otm-primary-ink: #0f766e;
+
+  /* Sem estes overrides o tema claro herdava os néons do escuro: #fbbf24 dava
+     1.67:1, #f87171 2.77:1 e #38bdf8 2.14:1 sobre branco. */
+  --otm-warning: #b45309;
+  --otm-danger: #b91c1c;
+  --otm-info: #0369a1;
 
   --otm-gradient-hero: radial-gradient(
       100% 80% at 15% 0%,

@@ -4,7 +4,7 @@
 - Metodologia: `stride`
 - Avisos estruturais: 0
 - Achados de fronteira: 1
-- Heurísticas base novas: 21
+- Heurísticas base novas: 20
 - Heurísticas base já cobertas: 0
 - Ameaças do pack (novas): 0
 - Ameaças do pack (já cobertas): 0
@@ -14,17 +14,17 @@
 
 Contagem de referências `framework:control_id` nas heurísticas (por catálogo canónico):
 
-- **MITRE CAPEC** (`capec`): 21
-- **MITRE CWE** (`cwe`): 21
-- **ISO/IEC 27001 (Annex A)** (`iso_27001`): 41
-- **NIST CSF** (`nist_csf`): 39
-- **OWASP ASVS** (`owasp_asvs`): 38
-- **OWASP Threat Modeling** (`owasp_tm`): 21
+- **MITRE CAPEC** (`capec`): 20
+- **MITRE CWE** (`cwe`): 20
+- **ISO/IEC 27001 (Annex A)** (`iso_27001`): 39
+- **NIST CSF** (`nist_csf`): 40
+- **OWASP ASVS** (`owasp_asvs`): 36
+- **OWASP Threat Modeling** (`owasp_tm`): 20
 
 ### Consolidação de risco e cockpit executivo
 
-- **Ameaças activas:** 21 · **Score total:** 290.0 · **Média / máx:** 13.81 / 20.0
-- **Distribuição por severidade:** `{'high': 14, 'medium': 4, 'critical': 3}`
+- **Ameaças activas:** 20 · **Score total:** 278.0 · **Média / máx:** 13.9 / 20.0
+- **Distribuição por severidade:** high: 13, medium: 4, critical: 3
 - **Top ameaças (score):**
   - `eng_api_spoofing` — [spoofing] API (public_api) (score 20.0)
   - `eng_api_elevation_of_privilege` — [elevation_of_privilege] API (public_api) (score 20.0)
@@ -33,7 +33,7 @@ Contagem de referências `framework:control_id` nas heurísticas (por catálogo 
   - `eng_flow_to_db_information_disclosure` — [information_disclosure] Canal do fluxo to_db (score 16.0)
 - **Componentes mais críticos:** `api` (85.0), `worker` (51.0), `db` (45.0), `user` (21.0)
 - **Fluxos mais críticos:** `to_db` (32.0), `to_worker` (24.0), `http_in` (20.0)
-- **Temas dominantes:** eng: 20; biz: 1
+- **Temas dominantes:** eng: 20
 - **Mitigação inicial:**
   - Priorizar `eng_api_spoofing` em `api` (score 20.0).
   - Priorizar `eng_api_elevation_of_privilege` em `api` (score 20.0).
@@ -41,7 +41,7 @@ Contagem de referências `framework:control_id` nas heurísticas (por catálogo 
   - Priorizar `eng_flow_to_db_tampering` em `to_db` (score 16.0).
   - Priorizar `eng_flow_to_db_information_disclosure` em `to_db` (score 16.0).
 - **Postura:** `elevated` — Postura crítica agregada — tratamento prioritário recomendado.
-  - 21 achados heurísticos activos; soma de scores ≈ 290.0.
+  - 20 achados heurísticos activos; soma de scores ≈ 278.0.
   - Ordenar backlog pelos `top_threats` e validar com donos de sistema.
   - *Rever:* Rever controlos nas fronteiras com fluxos de maior risco acumulado.
   - *Rever:* Confirmar classificação e retenção nos ativos mais expostos.
@@ -63,7 +63,7 @@ Contagem de referências `framework:control_id` nas heurísticas (por catálogo 
 
 ### Resumo executivo
 
-- Total de ameaças ativas: **21** · Maior score: **20.0**
+- Total de ameaças ativas: **20** · Maior score: **20.0**
 - Metodologia aplicada: **stride**
 - Prioridade imediata:
   - [spoofing] API (public_api) (score 20.0) em `api`
@@ -73,10 +73,6 @@ Contagem de referências `framework:control_id` nas heurísticas (por catálogo 
 ### Categorias de risco (top)
 
 Bloco curto para leitura humana; a lista completa permanece abaixo (com rastreabilidade no JSON).
-
-#### Abuso de processo / lógica de negócio
-
-- [business_abuse] Autorizacao tecnica sem contexto de negocio (`biz_authorization_without_business_context`) em `—` — score 12.0
 
 #### Técnico clássico (STRIDE)
 
@@ -102,15 +98,13 @@ Visualização priorizada por especificidade (`biz_*`) com redução de redundâ
 - **[information_disclosure] API (public_api)** (`eng_api_information_disclosure`) → alvo `api` — score 15.0  
   - Frameworks: `owasp_tm:STRIDE-I`, `capec:CAPEC-118`, `cwe:CWE-200`, `owasp_asvs:V8.3.1`, `owasp_asvs:V9.1.1`, `nist_csf:PR.DS-01`, `nist_csf:PR.DS-02`, `iso_27001:A.8.24`, … (+1)
 - **[denial_of_service] API (public_api)** (`eng_api_denial_of_service`) → alvo `api` — score 15.0  
-  - Frameworks: `owasp_tm:STRIDE-D`, `capec:CAPEC-125`, `cwe:CWE-400`, `owasp_asvs:V11.1.1`, `nist_csf:PR.IR-01`, `iso_27001:A.8.6`, `iso_27001:A.8.14`
+  - Frameworks: `owasp_tm:STRIDE-D`, `capec:CAPEC-125`, `cwe:CWE-400`, `owasp_asvs:V11.1.1`, `nist_csf:PR.IR-04`, `nist_csf:PR.IR-03`, `iso_27001:A.8.6`, `iso_27001:A.8.14`
 - **[tampering] Pedidos** (`eng_db_tampering`) → alvo `db` — score 15.0  
   - Frameworks: `owasp_tm:STRIDE-T`, `capec:CAPEC-184`, `cwe:CWE-345`, `owasp_asvs:V5.1.1`, `owasp_asvs:V14.1.1`, `nist_csf:PR.DS-01`, `nist_csf:PR.PS-01`, `iso_27001:A.8.9`, … (+1)
 - **[information_disclosure] Pedidos** (`eng_db_information_disclosure`) → alvo `db` — score 15.0  
   - Frameworks: `owasp_tm:STRIDE-I`, `capec:CAPEC-118`, `cwe:CWE-200`, `owasp_asvs:V8.3.1`, `owasp_asvs:V9.1.1`, `nist_csf:PR.DS-01`, `nist_csf:PR.DS-02`, `iso_27001:A.8.24`, … (+1)
 - **[denial_of_service] Pedidos** (`eng_db_denial_of_service`) → alvo `db` — score 15.0  
-  - Frameworks: `owasp_tm:STRIDE-D`, `capec:CAPEC-125`, `cwe:CWE-400`, `owasp_asvs:V11.1.1`, `nist_csf:PR.IR-01`, `iso_27001:A.8.6`, `iso_27001:A.8.14`
-- **[business_abuse] Autorizacao tecnica sem contexto de negocio** (`biz_authorization_without_business_context`) → alvo `—` — score 12.0  
-  - Frameworks: `owasp_tm:STRIDE-E`, `capec:CAPEC-233`, `cwe:CWE-269`, `owasp_asvs:V4.1.1`, `owasp_asvs:V4.2.1`, `nist_csf:PR.AA-01`, `nist_csf:PR.AA-05`, `iso_27001:A.8.2`, … (+1)
+  - Frameworks: `owasp_tm:STRIDE-D`, `capec:CAPEC-125`, `cwe:CWE-400`, `owasp_asvs:V11.1.1`, `nist_csf:PR.IR-04`, `nist_csf:PR.IR-03`, `iso_27001:A.8.6`, `iso_27001:A.8.14`
 - **[spoofing] Usuário** (`eng_user_spoofing`) → alvo `user` — score 12.0  
   - Frameworks: `owasp_tm:STRIDE-S`, `capec:CAPEC-151`, `cwe:CWE-287`, `owasp_asvs:V2.2.1`, `owasp_asvs:V3.2.1`, `nist_csf:PR.AA-01`, `nist_csf:PR.AA-05`, `iso_27001:A.8.5`, … (+1)
 - **[spoofing] Worker** (`eng_worker_spoofing`) → alvo `worker` — score 12.0  
@@ -128,7 +122,7 @@ Visualização priorizada por especificidade (`biz_*`) com redução de redundâ
 - **[information_disclosure] Worker** (`eng_worker_information_disclosure`) → alvo `worker` — score 9.0  
   - Frameworks: `owasp_tm:STRIDE-I`, `capec:CAPEC-118`, `cwe:CWE-200`, `owasp_asvs:V8.3.1`, `owasp_asvs:V9.1.1`, `nist_csf:PR.DS-01`, `nist_csf:PR.DS-02`, `iso_27001:A.8.24`, … (+1)
 - **[denial_of_service] Worker** (`eng_worker_denial_of_service`) → alvo `worker` — score 9.0  
-  - Frameworks: `owasp_tm:STRIDE-D`, `capec:CAPEC-125`, `cwe:CWE-400`, `owasp_asvs:V11.1.1`, `nist_csf:PR.IR-01`, `iso_27001:A.8.6`, `iso_27001:A.8.14`
+  - Frameworks: `owasp_tm:STRIDE-D`, `capec:CAPEC-125`, `cwe:CWE-400`, `owasp_asvs:V11.1.1`, `nist_csf:PR.IR-04`, `nist_csf:PR.IR-03`, `iso_27001:A.8.6`, `iso_27001:A.8.14`
 
 ### Explicabilidade (resumo)
 
@@ -147,7 +141,7 @@ Motivos estruturados gerados pelo motor (metodologia, achados, risco). Detalhe c
 - **[threat_heuristic/threat]** [spoofing] Worker — Heurística identificou spoofing em Worker (worker) com base no desenho e no motor STRIDE.
 - **[threat_heuristic/threat]** [tampering] Worker — Heurística identificou tampering em Worker (worker) com base no desenho e no motor STRIDE.
 
-… e mais 13 entradas no JSON.
+… e mais 12 entradas no JSON.
 
 ### Próximos passos sugeridos
 

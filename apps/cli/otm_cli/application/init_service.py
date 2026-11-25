@@ -8,7 +8,7 @@ from pathlib import Path
 from otm_core_schema import BLANK_DOCUMENT_YAML
 from otm_industry_packs.loader import load_template_info, load_template_yaml
 
-from otm_cli.shared.emit import write_text_file
+from otm_cli.shared.emit import directory_destination_error, write_text_file
 from otm_cli.shared.errors import CliUserError
 
 INIT_TEMPLATE = BLANK_DOCUMENT_YAML
@@ -29,6 +29,10 @@ def run_init(
     force: bool,
     template: str | None,
 ) -> InitResult:
+    if path.is_dir():
+        # `otm init adir` reported "file already exists" for something that is not a file, and
+        # `--force` would then have "overwritten" it — sending the user to a flag that cannot help.
+        raise directory_destination_error(path)
     if path.exists() and not force:
         raise CliUserError(
             exit_code=1,

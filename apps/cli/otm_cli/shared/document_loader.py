@@ -19,9 +19,10 @@ def load_otm_document(
     failed: str,
     validation_next_step: str,
     runtime_next_step: str,
+    source_lines: dict[tuple[str, str], int] | None = None,
 ) -> ThreatModelDocument:
     try:
-        return load_doc(path)
+        return load_doc(path) if source_lines is None else load_doc(path, source_lines=source_lines)
     except ValidationError as e:
         raise CliUserError(
             exit_code=1,

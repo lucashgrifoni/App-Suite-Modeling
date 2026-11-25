@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from otm_core_schema import IndustrySector, StrideCategory, ThreatModelDocument, ThreatModelMethodology
+from otm_core_schema import Asset, IndustrySector, StrideCategory, ThreatModelDocument, ThreatModelMethodology
+from otm_core_schema.ai_context import has_any_stem, has_any_token
+from otm_core_schema.enums import AssetKind
 
 from otm_threat_engine.methodology_lenses.common import (
     append_engine_lens_note,
@@ -171,26 +173,52 @@ def _looks_like_pii_context(doc: ThreatModelDocument) -> bool:
     ).lower()
     comp_blob = " ".join(f"{c.name or ''} {c.id or ''}" for c in doc.components).lower()
     blob = f"{text} {comp_blob}"
-    privacy_tokens = (
-        "pii",
+    # Os acrónimos exigem fronteira dos **dois** lados; os restantes são radicais e bastam-se com a
+    # esquerda. `phi` (Protected Health Information) mora dentro de **gra*phi*cs**, *sophisticated*
+    # e *morphism*: um componente chamado "Graphics Engine" ligava a lente inteira e produzia sete
+    # ameaças de privacidade num serviço de renderização, apagando de caminho a ressalva de que não
+    # há sinais de PII. `consent` fica como radical porque tem de continuar a apanhar
+    # *consentimento*. Ver `tests/test_p3_linddun_privacy_cues_match_words.py`.
+    privacy_acronyms = ("pii", "phi", "ehr", "lgpd", "gdpr", "hipaa")
+    privacy_stems = (
         _PII_LITERAL,
         "privacidade",
-        "lgpd",
-        "gdpr",
         "consent",
-        "phi",
-        "ehr",
         "clinical",
         "paciente",
-        "hipaa",
         "dados clínicos",
         "clinical record",
     )
-    if any(k in blob for k in privacy_tokens):
+    if has_any_token(blob, privacy_acronyms) or has_any_stem(blob, privacy_stems):
         return True
     if doc.model_info.industry_sector == IndustrySector.HEALTHCARE:
         return True
-    return any(
-        a.asset_kind.value == "data" and (a.sensitivity or "").lower() in {"confidential", "restricted"}
-        for a in doc.assets
-    )
+    return any(_asset_declares_personal_data(a) for a in doc.assets)
+
+
+_SENSITIVE_LEVELS = {"confidential", "restricted"}
+
+
+def _asset_declares_personal_data(asset: Asset) -> bool:
+    """As três formas de o dizer no schema, e não só a legada.
+
+    A versão anterior exigia `asset_kind == "data"` **e** o campo `sensitivity`, que o próprio
+    `document.py` descreve como "texto livre legado". O schema tem dois campos mais precisos para
+    a mesma coisa, e nenhum deles contava: `AssetKind.PII`, o valor dedicado a dados pessoais que
+    `docs/features/MODELING_QUALITY.md` oferece ao modelador, e `data_classification`, descrito
+    como "classificação explícita". O efeito era invertido em relação à intenção -- quanto mais
+    precisamente alguém declarasse dados pessoais, menos a lente de privacidade via -- e o motor
+    continuava a recomendar LINDDUN com confiança alta, a anunciar "Lente LINDDUN aplicada" e a
+    escrever na evidência que não havia sinais de PII nos ativos.
+
+    `PII` dispensa nível: declarar um ativo como dados pessoais **é** o sinal, e um nível baixo
+    nesse ativo diz respeito ao impacto, não a deixar de ser pessoal. Para os restantes tipos
+    continua a ser preciso um nível sensível, senão qualquer modelo com um ativo `data` passava a
+    receber ameaças de privacidade que não pediu.
+    """
+    if asset.asset_kind == AssetKind.PII:
+        return True
+    if asset.asset_kind != AssetKind.DATA:
+        return False
+    declared = asset.data_classification.value if asset.data_classification else ""
+    return declared in _SENSITIVE_LEVELS or (asset.sensitivity or "").lower() in _SENSITIVE_LEVELS

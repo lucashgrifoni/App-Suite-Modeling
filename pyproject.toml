@@ -14,11 +14,35 @@ authors = [{ name = "Open Threat Model contributors" }]
 # `pip install open-threat-model` must produce a console script that runs. Keeping Typer in an
 # extra shipped an entry point that died on `ModuleNotFoundError: typer` for anyone who followed
 # the advertised install line.
-# click>=8.2: Typer subclasses click.Choice as generic; older Click raises "Choice is not subscriptable".
+#
+# Every floor below is the lowest release MEASURED to install and run, not the lowest release the
+# changelogs suggest. A floor is a promise that the CLI works there, and two of these were false:
+#
+#   click>=8.2   Typer subclasses click.Choice as generic; older Click raises
+#                "Choice is not subscriptable". Correct, and it is what forces the Typer floor.
+#   typer>=0.16  `typer>=0.12.3` with `click>=8.2` was not satisfiable by anything that runs.
+#                Measured against the built 7.9.0 wheel, one fresh venv per constraint, `pip`
+#                exiting 0 with no warning every time: 0.12.3 -> `RuntimeError: Type not yet
+#                supported: str | None` (PEP-604 annotations in the command signatures);
+#                0.12.5 through 0.15.3 -> `TypeError: Parameter.make_metavar() missing 1 required
+#                positional argument: 'ctx'` (Click 8.2 changed that signature); 0.15.4 is a hard
+#                ResolutionImpossible because it caps `click<8.2`; 0.16.0 is the first release
+#                where `otm --help`, `otm validate` and `otm analyze` all exit 0. A resolver
+#                landing anywhere in [0.12.3, 0.15.3] — common, since Typer is a widespread
+#                transitive dependency — got a dead console script from the advertised install
+#                line, from `action.yml`'s pinned install and from the pre-commit hook.
+#   pyyaml>=6.0.1  PyYAML 6.0 publishes no wheel for CPython 3.11 or 3.12, and building it from
+#                source fails on modern Cython (`'build_ext' object has no attribute
+#                'cython_sources'`), so the declared floor could not be installed on any Python
+#                this project supports (`requires-python = ">=3.11"`). 6.0.1 installs and runs.
+#
+# No upper bounds: this is a library, and an upper cap would propagate into every consumer's
+# resolution. The floors are re-verified by tests/test_p3_supply_dependency_floors.py, which fails
+# if one moves without the measurement being redone.
 dependencies = [
   "pydantic>=2.5",
-  "pyyaml>=6.0",
-  "typer>=0.12.3",
+  "pyyaml>=6.0.1",
+  "typer>=0.16",
   "rich>=13.7",
   "click>=8.2",
 ]
@@ -28,15 +52,18 @@ api = [
   "fastapi>=0.115",
   "python-multipart>=0.0.18",
   "uvicorn[standard]>=0.27",
-  "slowapi>=0.1.9",
-  # Reservado para persistência pós-MVP (multi-utilizador / histórico); a API atual não importa SQLAlchemy.
-  "sqlalchemy>=2.0",
+  # Rate limiting is implemented directly on `limits` (see
+  # apps/api/otm_api/middleware_rate_limit.py). slowapi used to provide this, but its
+  # middleware resolves routes by scanning `app.routes` for an `endpoint` attribute, which
+  # FastAPI 0.141 no longer exposes for `include_router` routes — so it silently enforced
+  # nothing. `limits` was already the transitive engine underneath it; it is now direct.
+  "limits>=4.0",
 ]
 # Kept as a no-op alias: the CLI dependencies moved to the base install (see above), but
 # `pip install "open-threat-model[cli]"` and `pip install -e ".[dev,cli,api]"` stay valid.
 cli = []
 # PDF premium (xhtml2pdf); instalar com: pip install -e ".[report]"
-report = ["xhtml2pdf>=0.2.15"]
+report = ["xhtml2pdf>=0.2.15", "reportlab>=4.0.4,<5"]
 dev = [
   "pytest>=7.4",
   "pytest-cov>=4.0",
@@ -46,9 +73,23 @@ dev = [
   "types-PyYAML>=6.0.12",
   "xhtml2pdf>=0.2.15",
   "bandit>=1.7",
-  # Tests import the CLI; align with [cli] Typer/Click constraints.
-  "typer>=0.12.3",
+  # Tests import the CLI; align with the base Typer/Click floors (see the note above — these two
+  # drifted apart once already, and the copy here is what kept the broken pairing alive).
+  "typer>=0.16",
   "click>=8.2",
+  # O oráculo de estrutura dos relatórios Markdown parseia CommonMark a sério em vez de casar
+  # uma regex por linha. Está declarado aqui, e não deixado como transitivo do `rich`, porque
+  # sustenta uma propriedade de segurança: a versão anterior era uma regex ancorada no início da
+  # linha física, cega a qualquer bloco dentro de um item de lista, e por isso 85 testes ficaram
+  # verdes enquanto a injeção de cabeçalhos estava viva.
+  "markdown-it-py>=3.0",
+  # Same pin as the `artifact_import_ast` extra below. The suite does not treat the AST walker as
+  # optional — `tests/test_cov_pkg_repo_ast_optional.py::test_a_literal_route_is_reported` asserts
+  # a real parse result and fails (not skips) without it, and `tests/test_repo_scan.py` carries an
+  # `importorskip`. CI installs exactly `.[dev,cli,api]`, which did not include esprima, so the
+  # environment the suite is green in locally was not the environment CI builds — one of the three
+  # packages measured as drifting between them.
+  "esprima>=4.0.0,<5",
 ]
 # AST leve opcional para `scan_node_express_repo` (env `OTM_REPO_ESPRIMA=1`). Sem isto, mantém-se só heurística regex.
 artifact_import_ast = ["esprima>=4.0.0,<5"]
@@ -71,11 +112,27 @@ where = [
   "apps/api",
 ]
 
+# Named extensions, never a bare `**/*`. An unfiltered glob does not describe the artifact, it
+# describes the builder's disk at the moment `python -m build` ran: the locally built 7.8.0 wheel
+# and sdist both carry `otm_threat_engine/data/__pycache__/__init__.cpython-312.pyc`, put there by
+# a test run that imported those data packages before the build. Two builds of identical source
+# then differ (319 entries / 821839 bytes vs 321 / 822762, different sha256), which is what stops
+# an independent rebuild from being usable as a tamper check against the provenance attestation.
+# The publish workflow builds on a clean checkout and never runs tests first, so what PyPI holds
+# today is clean — by ordering, not by construction. This makes it construction.
+#
+# The cost of naming extensions is that a new data file with a new extension silently would not
+# ship; tests/test_p3_supply_package_data.py turns that silence into a failing test.
 [tool.setuptools.package-data]
-otm_industry_packs = ["data/**/*"]
-otm_framework_mappings = ["data/**/*"]
-otm_threat_engine = ["data/**/*"]
-otm_report_premium = ["assets/*"]
+otm_industry_packs = ["data/**/*.yaml", "data/**/*.json"]
+otm_framework_mappings = ["data/**/*.yaml"]
+otm_threat_engine = ["data/**/*.yaml"]
+otm_report_premium = ["assets/*.png"]
+
+# Belt and braces for the same problem: even a future include pattern that is too broad cannot
+# drag bytecode or an editor backup into the distribution.
+[tool.setuptools.exclude-package-data]
+"*" = ["**/__pycache__/*", "*.pyc", "*.pyo", "*.bak", "*.tmp", ".env*"]
 
 [tool.coverage.run]
 relative_files = true

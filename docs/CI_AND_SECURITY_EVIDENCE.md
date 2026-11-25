@@ -1,7 +1,7 @@
 # Evidência consolidada — CI, tipagem, SCA, CLI, observabilidade e perímetro da API
 
 Documento único que substitui relatórios de execução dispersos (rodada de higiene docs, 2026-04).  
-**Índice:** [Ruff + Bandit](#0-ruff-lint--formato) · [Mypy](#1-mypy-no-ci-monorepo) · [SCA](#2-sca-supply-chain) · [CLI modular](#3-refatoração-da-cli) · [Observabilidade](#4-observabilidade-da-api) · [Perímetro / CORS](#5-endurecimento-de-perímetro-da-api) · [Semgrep](#6-semgrep) · [Trivy](#7-trivy-imagem-api)
+**Índice:** [Ruff + Bandit](#0-ruff-lint--formato) · [Mypy](#1-mypy-no-ci-monorepo) · [SCA](#2-sca-supply-chain) · [CLI modular](#3-refatoração-da-cli) · [Observabilidade](#4-observabilidade-da-api) · [Perímetro / CORS](#5-endurecimento-de-perímetro-da-api) · [Semgrep](#6-semgrep) · [Trivy](#7-trivy-dependências)
 
 ---
 
@@ -30,6 +30,14 @@ ruff format packages apps tests
 
 - Job `python`: `python -m bandit -r packages apps -ll -q` (severidade **medium** e acima; `-q` reduz ruído).
 - Dependência: `bandit>=1.7` no extra `[dev]` do `pyproject.toml` (instalado com `pip install -e ".[dev,cli,api]"` no CI).
+
+> **Este passo foi implementado, não descrito.** Até 2026-08, esta secção afirmava o comando
+> acima como gate do job `python` e **nenhum workflow o executava** — `bandit` estava declarado
+> como dependência de desenvolvimento e nunca era invocado. O passo existe agora em
+> `.github/workflows/github-ci-cd.yml`; a alternativa (apagar a afirmação) foi rejeitada porque
+> o comando passa limpo hoje, de modo que tornar a afirmação verdadeira não custava nada.
+> `tests/test_cicd_pipeline_invariants.py` liga as duas pontas: cada comando que este documento
+> atribui a um job tem de aparecer nesse job, e vice-versa.
 
 ---
 
@@ -73,8 +81,19 @@ O comando no `.github/workflows/github-ci-cd.yml` (job `python`) inclui **todos*
 
 ### Thresholds
 
-- **Python:** `python -m pip_audit --desc on -S .` — gate estrito (qualquer vulnerabilidade conhecida falha o CI na árvore resolvida).
-- **Node:** `npm audit --audit-level=critical` e **`npm audit --audit-level=moderate`** (job `web`; após upgrade Vite 6 / Vitest 3 a árvore `apps/web` ficou sem CVEs reportados na resolução actual).
+- **Python:** `python -m pip_audit --desc on -S .` — gate estrito (qualquer vulnerabilidade conhecida falha o CI na árvore resolvida). `pip-audit` é fixado em `pip-audit==2.10.1` e instalado num **virtualenv próprio**, para que as suas dependências não se resolvam contra as do projecto nos passos que correm a seguir.
+- **Node:** **`npm audit --audit-level=moderate`** (job `web`, em `apps/web`, depois de `npm ci`).
+
+> **Estes dois gates foram implementados, não descritos.** Esta secção afirmava-os como gates
+> bloqueantes do CI e **nenhum workflow os executava**: `grep -rniE 'pip.audit|npm audit' .github/`
+> não devolvia nada. Ambos passam limpos hoje (`pip-audit`: *No known vulnerabilities found*;
+> `npm audit --audit-level=moderate`: *found 0 vulnerabilities*), pelo que o custo de tornar a
+> afirmação verdadeira era zero e o de a apagar era perder cobertura real — o achado que motivou
+> a verificação (nanoid, HIGH, hoje corrigido em 3.3.18) estava **abaixo** de `critical`, que é a
+> razão de o limiar Node ser `moderate` e de o antigo `--audit-level=critical` não voltar.
+> Consequência aceite e explícita: qualquer um destes gates pode ficar vermelho por um aviso novo
+> publicado a montante, sem que nada neste repositório tenha mudado. É o comportamento pretendido
+> de um gate de SCA; a política de exceção abaixo é o que o mantém honesto.
 
 ### Política de exceção
 
@@ -155,16 +174,40 @@ API keys/OAuth2/mTLS + testes de autorização + OpenAPI/UI alinhados ao fluxo c
 
 ## 6. Semgrep
 
-- Job `semgrep` no CI: imagem `semgrep/semgrep`, configs **`p/python`**, **`p/typescript`**, **`p/javascript`**, **`p/react`** sobre `packages` e `apps/web/src`.
+- Job `sast-semgrep` em `security-ci-cd.yml`: `semgrep==1.163.0` instalado via pip (fixado), configs `p/security-audit`, `p/github-actions` e `rules/semgrep/appsec-runtime-footguns.yml`, sobre a raiz do repositório.
+- Severidades carregadas: `WARNING` **e** `ERROR` — `--severity` é um filtro repetível, e um único `--severity WARNING` deixaria cair todas as regras de severidade alta.
 - Exclusões: **`.semgrepignore`** na raiz (artefactos, `node_modules`, `.venv`, etc.).
 - Política de triagem, `nosemgrep` e evolução: **[`SEMGREP_POLICY.md`](architecture/SEMGREP_POLICY.md)**.
 
+> **Correção de cobertura declarada.** Esta secção descrevia um job que corria a imagem
+> `semgrep/semgrep` com os packs `p/python`, `p/typescript`, `p/javascript` e `p/react` sobre
+> `packages` e `apps/web/src`. O job real nunca correu esses packs. Ao contrário dos gates acima,
+> aqui não havia controlo em falta — havia cobertura descrita a mais — por isso o documento foi
+> corrigido para os configs efectivamente carregados, em vez de se acrescentarem quatro packs que
+> ninguém tinha decidido adoptar. `tests/test_cicd_pipeline_invariants.py` compara agora esta
+> lista com as flags `--config` do workflow e falha se divergirem.
+
 ---
 
-## 7. Trivy (imagem API)
+## 7. Trivy (dependências)
 
-- Job `trivy-image`: `docker build -f apps/api/Dockerfile -t otm-api:ci .` seguido de `aquasecurity/trivy-action@0.35.0` com `severity: CRITICAL,HIGH` e `exit-code: 1`.
-- Complementa pip-audit (Python na host) com visão de **imagem** (OS + dependências instaladas na layer).
+- Job `sca-trivy`, `scan-type: fs` sobre o repositório, `ignore-unfixed: true`.
+- **Bloqueia** em dependências de **runtime**, ao nível `MEDIUM,HIGH,CRITICAL`.
+- **Reporta e não bloqueia** as **dev-dependencies**, num passo separado com `--include-dev-deps`,
+  cujo resultado vai para o Step Summary. A separação é deliberada: o que corre na máquina de quem
+  desenvolve e no runner é risco real de cadeia de suprimentos, mas não é o mesmo risco de um
+  pacote entregue no `dist/`, e um limiar único trocaria um ponto cego por um gate que grita.
+
+> **Não existe gate de imagem.** Esta secção descrevia um job `trivy-image` que fazia
+> `docker build -f apps/api/Dockerfile` e falhava em CRITICAL/HIGH. Esse job **não existe em
+> nenhum workflow** — foi removido e o documento não acompanhou, de modo que o próprio artefacto
+> de evidência de segurança do projecto afirmava um controlo bloqueante inexistente.
+>
+> Não foi reposto, e a razão é medível: das 24 CVE CRITICAL/HIGH de pacotes de SO na imagem,
+> **nenhuma tem correção a montante**. Um gate assim ficaria permanentemente vermelho sem que
+> houvesse nada a fazer — que é o modo de falha oposto e igualmente inútil. A imagem é analisada
+> localmente quando alguém a constrói; se voltar a haver um gate, terá de vir com uma política de
+> `--ignore-unfixed` e um dono para as exceções.
 
 ---
 
@@ -188,9 +231,9 @@ Disponíveis em `otm diff` (corre o motor nos dois `.otm.yaml`) e em `otm diff-a
 
 | Código | Significado |
 | --- | --- |
-| `0` | Sem reprovação (e sempre, quando nenhuma flag de gate é usada, ou quando o gate não é avaliável). |
-| `1` | Erro de utilização **levantado pelo CLI**: ficheiro inexistente, YAML inválido, `--fail-on` inválido, pack desconhecido, destino de escrita inacessível. |
-| `2` | Erro de utilização **levantado pelo Typer/Click**: valor inválido num enum (`--methodology`, `--format`, `--kind`), flag desconhecida, argumento obrigatório em falta. |
+| `0` | Sem reprovação. Também quando nenhuma flag de gate é usada. **Só o `0` significa "sem risco novo".** |
+| `1` | Erro de utilização **levantado pelo CLI** (ficheiro inexistente, YAML inválido, `--fail-on` inválido, pack desconhecido, destino de escrita inacessível) **ou um gate armado que não conseguiu emitir veredito** — ver abaixo. |
+| `2` | Erro de utilização **levantado pelo Typer/Click**: valor inválido num enum (`--methodology`, `--format`, `--fail-on`), flag desconhecida, argumento obrigatório em falta. |
 | `3` | **Gate reprovou.** |
 
 > Um script que precise de distinguir "comando mal escrito" de "política falhou" tem de tratar
@@ -214,8 +257,18 @@ era apanhada por política nenhuma.
 **Troca de metodologia: `NOT EVALUATED`, não `PASSED`.** Trocar de lente troca a própria régua — as
 heurísticas de uma metodologia não existem na outra, por isso *todas* as ameaças aparecem como novas
 sem que ninguém as tenha causado. Nesse caso o gate não emite veredito: imprime `THREAT MODEL GATE:
-NOT EVALUATED`, explica porquê e sai com `0`. Não diz `PASSED`, porque não avaliou nada — o mesmo
-princípio que faz `otm diff-analysis` recusar comparar entre versões do motor.
+NOT EVALUATED`, explica porquê e sai com **`1`**. Não diz `PASSED`, porque não avaliou nada — o
+mesmo princípio que faz `otm diff-analysis` recusar comparar entre versões do motor.
+
+> **Porquê `1` e não `0`.** `gate.py` di-lo por extenso: *"Sair `0` aqui seria um fail-open — e num
+> gate de CI o `0` é lido como build verde"*. Um gate que não julgou nada não pode responder o
+> código que significa "sem risco novo". Um script que trate qualquer coisa menos `0` como
+> aprovação está a tratar uma recusa como atestado de saúde.
+>
+> Esta tabela dizia `0` até esta correcção, e o erro não ficou no papel: a action composta
+> (`action.yml`) classificava o não-veredito dentro do ramo `case 0)`, que o CLI nunca alcança.
+> O resultado era `gate-outcome` vazio e um não-veredito legítimo anunciado ao utilizador como erro
+> seu. Documentação errada sobre um código de saída não fica errada sozinha.
 
 Ameaças novas sem score são reportadas como `unranked` no relatório do gate, nunca ignoradas em silêncio.
 

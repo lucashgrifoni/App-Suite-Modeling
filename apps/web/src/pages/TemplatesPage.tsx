@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 import { instantiateTemplate, listTemplates } from "../api/otmApi";
 import type { TemplateListQuery } from "../api/otmApi";
-import { ApiError } from "../api/client";
+import { apiErrorMessage } from "../api/apiErrorMessage";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { Alert } from "../components/ui/Alert";
@@ -15,6 +15,8 @@ import { EmptyState } from "../components/patterns/EmptyState";
 import { Skeleton } from "../components/patterns/Skeleton";
 import { useSession } from "../context/SessionContext";
 import { useToast } from "../context/ToastContext";
+import { useConfirmReplaceModel } from "../hooks/useConfirmReplaceModel";
+import { clearWizardStep } from "../utils/wizardStepStorage";
 import type { TemplateListItem } from "../types/api";
 
 export function TemplatesPage() {
@@ -22,6 +24,7 @@ export function TemplatesPage() {
   const navigate = useNavigate();
   const { setDocument } = useSession();
   const toast = useToast();
+  const confirmReplaceModel = useConfirmReplaceModel();
   const [items, setItems] = useState<TemplateListItem[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loadingId, setLoadingId] = useState<string | null>(null);
@@ -30,6 +33,8 @@ export function TemplatesPage() {
   const [queryDebounced, setQueryDebounced] = useState("");
   const [category, setCategory] = useState("");
   const [complexity, setComplexity] = useState("");
+  const [page, setPage] = useState(0);
+  const [selectedId, setSelectedId] = useState("");
   const [tag, setTag] = useState("");
 
   const categoryOptions = useMemo(
@@ -76,10 +81,23 @@ export function TemplatesPage() {
         const list = await listTemplates(
           Object.keys(params).length ? params : undefined,
         );
-        if (!cancelled) setItems(list);
+        if (!cancelled) {
+          setItems(list);
+          setPage(0);
+          setSelectedId("");
+          // Sem isto o banner de erro era só de escrita: um 5xx transitório enquanto o
+          // utilizador escrevia deixava-o fixo por cima de uma página a funcionar até
+          // recarregar o separador.
+          setError(null);
+        }
       } catch (e) {
-        if (!cancelled)
-          setError(e instanceof ApiError ? e.message : t("templates.listFail"));
+        if (!cancelled) {
+          setError(apiErrorMessage(e, t, "templates.listFail"));
+          // As linhas que ficavam no ecrã respondiam à consulta ANTERIOR, mas apareciam por
+          // baixo do texto de pesquisa novo, sem indicação de que estavam desactualizadas —
+          // o utilizador podia escolher um template julgando que correspondia ao filtro.
+          setItems([]);
+        }
       } finally {
         if (!cancelled) setLoadingList(false);
       }
@@ -90,15 +108,19 @@ export function TemplatesPage() {
   }, [category, complexity, tag, queryDebounced]);
 
   async function pick(id: string) {
+    if (!confirmReplaceModel()) return;
     setError(null);
     setLoadingId(id);
     try {
       const { document } = await instantiateTemplate(id);
       setDocument(document);
+      // A template the user has never seen opens at step 1, not wherever the previous
+      // model was left. See utils/wizardStepStorage.
+      clearWizardStep();
       toast.success(t("templates.toastOk"));
       navigate("/wizard");
     } catch (e) {
-      const msg = e instanceof ApiError ? e.message : t("templates.toastFail");
+      const msg = apiErrorMessage(e, t, "templates.toastFail");
       setError(msg);
       toast.error(msg);
     } finally {
@@ -106,11 +128,19 @@ export function TemplatesPage() {
     }
   }
 
-  return (
-    <div className="space-y-8">
-      <PageHeader eyebrow={t("templates.eyebrow")} title={t("templates.title")} description={t("templates.description")} />
+  const lastPage = Math.max(0, Math.ceil(items.length / 8) - 1);
+  const rows = items.slice(page * 8, page * 8 + 8);
+  const selected = rows.find((item) => item.id === selectedId) ?? rows[0];
 
-      <div className="grid max-w-4xl gap-3 sm:grid-cols-2 lg:grid-cols-4">
+  return (
+    <div className="work-page">
+      <PageHeader
+        eyebrow={t("templates.eyebrow")}
+        title={t("templates.title")}
+        description={t("templates.description")}
+      />
+
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         <div className="sm:col-span-2">
           <Label htmlFor="tpl-search">{t("templates.search")}</Label>
           <Input
@@ -151,7 +181,7 @@ export function TemplatesPage() {
             ))}
           </select>
         </div>
-        <div className="sm:col-span-2 lg:col-span-4">
+        <div className="lg:col-span-1">
           <Label htmlFor="tpl-tag">{t("templates.tag")}</Label>
           <Input
             id="tpl-tag"
@@ -171,49 +201,71 @@ export function TemplatesPage() {
           <Skeleton className="h-28 w-full rounded-otm-xl" />
         </div>
       ) : (
-        <ul className="space-y-3">
-          {items.map((item) => (
-            <li key={item.id} data-testid={`tpl-row-${item.id}`}>
-              <Card variant="elevated" className="otm-card-stable-hover">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-display font-semibold text-otm-text">{item.title}</span>
-                      <Badge tone="neutral">{item.id}</Badge>
-                      {item.complexity && (
-                        <Badge tone="neutral">{t("templates.complexityBadge", { value: item.complexity })}</Badge>
-                      )}
-                      <Badge tone="neutral">{item.category_label}</Badge>
-                      {item.suggested_pack && (
-                        <Badge tone="accent">
-                          {t("templates.packBadge")} {item.suggested_pack}
-                        </Badge>
-                      )}
-                      {item.suggested_methodology && (
-                        <Badge tone="neutral">{item.suggested_methodology}</Badge>
-                      )}
-                    </div>
-                    {item.description && (
-                      <p className="mt-1 text-sm text-otm-text-muted">{item.description}</p>
-                    )}
-                    {item.best_for && (
-                      <p className="mt-1 text-xs text-otm-text-muted">
-                        <span className="font-medium text-otm-text">{t("templates.idealFor")}</span> {item.best_for}
-                      </p>
-                    )}
-                  </div>
-                  <Button
-                    disabled={loadingId !== null}
-                    onClick={() => pick(item.id)}
-                    className="shrink-0"
-                  >
-                    {loadingId === item.id ? t("templates.loading") : t("templates.useTemplate")}
-                  </Button>
+        selected && (
+          <div className="work-split">
+            <Card title={t("work.catalog")} subtitle={t("work.templateCount", { count: items.length })}>
+              <div className="work-list-head grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)_auto]">
+                <span>{t("quickStart.templateTitle")}</span>
+                <span>{t("templates.category")}</span>
+                <span>{t("templates.complexity")}</span>
+              </div>
+              <ul>
+                {rows.map((item) => (
+                  <li data-testid={`tpl-row-${item.id}`} key={item.id}>
+                    <button
+                      type="button"
+                      className="work-select-row grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)_auto]"
+                      aria-pressed={selected.id === item.id}
+                      onClick={() => setSelectedId(item.id)}
+                    >
+                      <span>
+                        <b>{item.title}</b>
+                        <small>{item.id}</small>
+                      </span>
+                      <span>
+                        {categoryOptions.find((option) => option.value === item.category)?.label ??
+                          item.category_label}
+                      </span>
+                      <small>
+                        {complexityOptions.find((option) => option.value === item.complexity)?.label ??
+                          item.complexity}
+                      </small>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              {lastPage > 0 && (
+                <div className="work-pager">
+                  <button type="button" disabled={page === 0} onClick={() => setPage(page - 1)}>
+                    {t("work.previous")}
+                  </button>
+                  {page + 1} / {lastPage + 1}
+                  <button type="button" disabled={page >= lastPage} onClick={() => setPage(page + 1)}>
+                    {t("work.next")}
+                  </button>
                 </div>
-              </Card>
-            </li>
-          ))}
-        </ul>
+              )}
+            </Card>
+            <Card title={selected.title} subtitle={selected.best_for ?? undefined}>
+              <p className="work-muted">{selected.description}</p>
+              <div className="my-3 flex flex-wrap gap-2">
+                <Badge tone="neutral">
+                  {categoryOptions.find((option) => option.value === selected.category)?.label ??
+                    selected.category_label}
+                </Badge>
+                {selected.suggested_pack && (
+                  <Badge tone="accent">
+                    {t("templates.packBadge")} {selected.suggested_pack}
+                  </Badge>
+                )}
+                {selected.suggested_methodology && <Badge>{selected.suggested_methodology}</Badge>}
+              </div>
+              <Button disabled={loadingId !== null} onClick={() => void pick(selected.id)}>
+                {t(loadingId === selected.id ? "templates.loading" : "templates.useTemplate")}
+              </Button>
+            </Card>
+          </div>
+        )
       )}
 
       {!loadingList && items.length === 0 && !error && (

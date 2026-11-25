@@ -17,7 +17,11 @@ from otm_threat_engine.comparison_models import (
     StructuralFindingDelta,
     TrustBoundaryFindingDelta,
 )
-from otm_threat_engine.result import AnalysisResult, HeuristicThreat
+from otm_threat_engine.result import (
+    AnalysisResult,
+    HeuristicThreat,
+    assert_threat_ids_are_injective,
+)
 
 
 def _json_key(v: Any) -> str:
@@ -39,7 +43,21 @@ def _heuristic_signature(h: HeuristicThreat) -> tuple[Any, ...]:
 
 
 def _active_heuristics(result: AnalysisResult) -> dict[str, HeuristicThreat]:
-    return {h.id: h for h in result.heuristic_threats if not h.skipped_as_duplicate}
+    """Índice por id — e por isso o sítio onde um id repetido custava uma ameaça inteira.
+
+    Este dict é o amplificador do defeito de injetividade: com dois ids iguais, o último vencia e
+    a outra ameaça desaparecia **antes** de o diff sequer correr, pelo que o gate de drift julgava
+    uma ameaça substituída em vez de acrescentada.
+
+    O motor já recusa produzir ids colididos (`assert_threat_ids_are_injective`, chamado em
+    `engine.analyze_document`), mas o diff não recebe só análises acabadas de gerar: `otm diff
+    --with-analysis` aceita uma baseline em JSON, que pode ter sido escrita por uma versão
+    anterior a essa correção, ou à mão. Verificar aqui cobre esse caminho, e o custo é uma
+    passagem sobre uma lista que já se ia percorrer.
+    """
+    active = [h for h in result.heuristic_threats if not h.skipped_as_duplicate]
+    assert_threat_ids_are_injective(active)
+    return {h.id: h for h in active}
 
 
 def _field_changes_heuristic(before: HeuristicThreat, after: HeuristicThreat) -> list[FieldChange]:

@@ -15,12 +15,12 @@ _ROOT = Path(__file__).resolve().parents[1]
 _MINIMAL = _ROOT / "examples" / "minimal.otm.yaml"
 
 
-@pytest.fixture()
+@pytest.fixture
 def runner() -> CliRunner:
     return CliRunner()
 
 
-@pytest.fixture()
+@pytest.fixture
 def client() -> TestClient:
     return TestClient(api_app)
 

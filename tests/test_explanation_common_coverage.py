@@ -32,7 +32,8 @@ def test_asset_note_variants() -> None:
     assert _asset_note(doc, "ghost_asset") is None  # not found -> None
     if doc.assets:
         note = _asset_note(doc, doc.assets[0].id)
-        assert note and "ativo" in note
+        assert note
+        assert "ativo" in note
 
 
 def test_has_token_empty() -> None:

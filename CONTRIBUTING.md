@@ -15,6 +15,16 @@ python -m venv .venv
 pip install -e ".[dev,cli,api]"
 ```
 
+**Em Linux**, o extra `dev` puxa `xhtml2pdf` -> `svglib` -> `pycairo`, que nao tem wheel manylinux e
+precisa dos headers do Cairo. Sem eles a instalacao falha a compilar `pycairo`:
+
+```bash
+sudo apt-get update && sudo apt-get install -y libcairo2-dev pkg-config
+```
+
+E exactamente o que o CI instala antes do `pip install` (ver `.github/workflows/github-ci-cd.yml`).
+O `README.md` remete para esta seccao; macOS e Windows nao precisam do passo.
+
 ## Comandos úteis
 
 ```bash

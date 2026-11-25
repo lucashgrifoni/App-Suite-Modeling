@@ -9,6 +9,7 @@ from typing import Any
 
 import pytest
 from otm_core_schema import ThreatModelDocument, load_document_from_yaml_path
+from pydantic import ValidationError
 
 _ROOT = Path(__file__).resolve().parents[1]
 _MINIMAL = _ROOT / "examples" / "minimal.otm.yaml"
@@ -90,11 +91,36 @@ def _mutators() -> dict[str, Callable[[dict[str, Any]], None]]:
     }
 
 
+# The message each mutation must produce. Asserting only "something raised" would pass even
+# if an unrelated field blew up first, so every case pins the reference the validator names.
+_EXPECTED_MESSAGE = {
+    "dup_component": r"duplicate id in components",
+    "bad_component_boundary": r"component 'user' references unknown trust boundary 'ghost_tb'",
+    "bad_component_asset": r"component 'user' references unknown asset 'ghost_asset'",
+    "bad_asset_component": r"asset 'a_x' references unknown component 'ghost_comp'",
+    "bad_asset_flow": r"asset 'a_y' references unknown data_flow 'ghost_flow'",
+    "bad_tb_member": r"trust_boundary 'internet' references unknown component 'ghost_comp'",
+    "bad_tb_crossing": r"trust_boundary 'internet' references unknown data_flow 'ghost_flow'",
+    "bad_tb_outside": r"trust_boundary 'internet' references unknown outside component 'ghost_comp'",
+    "bad_threat_target": r"threat 't_x' target_component_id unknown",
+    "bad_threat_flow": r"threat 't_f' target_data_flow_id unknown",
+    "bad_threat_asset": r"threat 't_a' target_asset_id unknown",
+    "bad_threat_evidence": r"threat 't_e' references unknown evidence_suggestion 'ghost_ev'",
+    "bad_mitigation_threat": r"mitigation 'm_x' references unknown threat 'ghost_threat'",
+    "bad_evidence_threat": r"evidence_suggestion 'e_x' references unknown threat 'ghost_threat'",
+}
+
+
+def test_every_mutator_has_an_expected_message() -> None:
+    """A new mutation must not slip in with only a 'something raised' assertion."""
+    assert set(_mutators()) == set(_EXPECTED_MESSAGE)
+
+
 @pytest.mark.parametrize("name", list(_mutators().keys()))
 def test_dangling_reference_raises(name: str) -> None:
     d = _base()
     _mutators()[name](d)
-    with pytest.raises(Exception):
+    with pytest.raises(ValidationError, match=_EXPECTED_MESSAGE[name]):
         ThreatModelDocument.model_validate(d)
 
 

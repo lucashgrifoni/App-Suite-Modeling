@@ -288,9 +288,17 @@ def _score_octave(mega: str) -> tuple[float, list[str]]:
             "asset inventory",
             "octave",
             "business impact",
-            "bia",
         ),
-    ):
+    ) or has_any_token(mega, ("bia",)):
+        # `bia` sai da lista de subcadeias e passa a exigir fronteira dos dois lados. É acrónimo de
+        # Business Impact Analysis, e mora dentro de **bias** — palavra banal em qualquer modelo de
+        # ameaças de IA, que é o vocabulário da própria lente PLOT4ai deste produto. Um resumo com
+        # "avaliamos bias do modelo" levava OCTAVE de 2.0 a 32.0 pontos e mudava a metodologia
+        # recomendada de STRIDE para OCTAVE Allegro — e a metodologia decide que lente corre.
+        #
+        # `has_any_token`, e não a regra de radical usada para `admin`/*administrator*: "bias"
+        # começa por "bia", por isso a fronteira à esquerda não bastaria.
+        # Ver `tests/test_p3_bia_is_an_acronym_not_a_prefix.py`.
         octave += 30
         pos.append("contexto OCTAVE/BIA/inventário explícito")
     if has_any(mega, ("crown jewel", "ativos críticos", "critical asset")):

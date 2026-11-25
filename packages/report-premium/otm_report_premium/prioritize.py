@@ -2,14 +2,48 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Literal
 
-from otm_core_schema import StrideCategory, ThreatModelMethodology
+from otm_core_schema import DataClassificationLevel, StrideCategory, ThreatModelMethodology
 from otm_core_schema.document import ThreatModelDocument
-from otm_threat_engine.remediation.classify import classify_threat, effort_for_threat
+from otm_threat_engine.remediation.classify import ComponentIndex, classify_threat, effort_for_threat
 from otm_threat_engine.result import HeuristicThreat
 
 from .risk_context import infer_exploitability
+
+
+@dataclass(frozen=True)
+class RestrictedAssetTargets:
+    assets: set[str]
+    components: set[str]
+    flows: set[str]
+
+    @classmethod
+    def of(cls, doc: ThreatModelDocument) -> RestrictedAssetTargets:
+        restricted = [
+            asset
+            for asset in doc.assets
+            if (asset.data_classification or (asset.sensitivity or "").strip().lower())
+            == DataClassificationLevel.RESTRICTED
+        ]
+        components = {component for asset in restricted for component in asset.related_component_ids}
+        flows = {flow for asset in restricted for flow in asset.related_data_flow_ids}
+        flows.update(
+            flow.id for flow in doc.data_flows if flow.from_component in components or flow.to_component in components
+        )
+        return cls({asset.id for asset in restricted}, components, flows)
+
+    def matches(self, threat: HeuristicThreat) -> bool:
+        return threat.stride in (
+            StrideCategory.INFORMATION_DISCLOSURE,
+            StrideCategory.ELEVATION_OF_PRIVILEGE,
+            StrideCategory.TAMPERING,
+        ) and (
+            threat.target_asset_id in self.assets
+            or threat.target_component_id in self.components
+            or threat.target_data_flow_id in self.flows
+        )
 
 
 def _risk_score(t: HeuristicThreat) -> float:
@@ -31,16 +65,22 @@ def composite_priority_score(
     threat: HeuristicThreat,
     doc: ThreatModelDocument | None,
     methodology: ThreatModelMethodology,
+    *,
+    index: ComponentIndex | None = None,
+    restricted_targets: RestrictedAssetTargets | None = None,
 ) -> float:
     """
     Score contínuo para ordenação; não é CVSS.
+
+    Chamada uma vez por ameaça e O(n log n) vezes dentro do `sorted` do relatório, por isso
+    `index` não é uma micro-optimização: sem ele cada chamada varre `doc.components`.
     """
     rs = _risk_score(threat)
-    root, _ctrl, _cat, _layer = classify_threat(threat, doc, methodology)
+    root, _ctrl, _cat, _layer = classify_threat(threat, doc, methodology, index=index)
     effort = effort_for_threat(threat, root)
     ew = _exploit_weight(rs / 25.0)
 
-    ex = infer_exploitability(threat, doc)
+    ex = infer_exploitability(threat, doc, index=index)
     remote_boost = 0.15 if ex.attack_locality in ("remote", "hybrid") else 0.0
     edge_boost = 0.1 if ex.requires_external_access else 0.0
 
@@ -54,6 +94,8 @@ def composite_priority_score(
     remed_inv = 1.0 - _effort_weight(effort)
 
     score = 0.35 * r_norm + 0.22 * ew + 0.18 * biz + 0.15 * remed_inv + 0.07 * (remote_boost + edge_boost)
+    if restricted_targets is not None and restricted_targets.matches(threat):
+        score += 0.04
     return round(score, 4)
 
 

@@ -25,12 +25,77 @@ Contrato exportado, gate anti-stale, goldens HTTP e E2E híbrido: ver **`docs/ar
 
 | Variável | Efeito |
 |----------|--------|
-| `OTM_API_KEY` | Se definida (não vazia), todos os pedidos a **`/v1/*`** exigem **`X-OTM-API-Key: <valor>`** ou **`Authorization: Bearer <valor>`**. Rotas como `/health`, `/docs`, `/openapi.json` permanecem sem chave. |
-| `OTM_RATE_LIMIT` | Expressão [SlowAPI](https://github.com/laurents/slowapi) (ex.: `120/minute`). Se definida, aplica-se como limite global por IP (em conjunto com o middleware SlowAPI). |
+| `OTM_API_KEY` | Se definida (não vazia), todos os pedidos a **`/v1/*`** exigem **`X-OTM-API-Key: <valor>`** ou **`Authorization: Bearer <valor>`**. Rotas como `/health`, `/docs`, `/openapi.json` permanecem sem chave. O rate limit é aplicado **antes** da verificação da chave, por isso um 401 gasta orçamento como qualquer outro pedido — ver `OTM_RATE_LIMIT`. O perímetro cobre `/v1` **como o router o resolve**, ou seja também num deployment em sub-caminho (`uvicorn --root-path /api`, `FastAPI(root_path=...)`, proxy que corta o prefixo). |
+| `OTM_RATE_LIMIT` | Expressão no formato [`limits`](https://limits.readthedocs.io/) (ex.: `120/minute`). Se definida, aplica-se como limite global a **todas** as rotas, incluindo `/health` e `/v1/*`, e a **todos** os pedidos, autenticados ou não: o limitador corre por fora da verificação de chave de API, por isso um 401 (`API_KEY_REQUIRED`) conta para o orçamento tal como um 200, e uma vez esgotado o orçamento a resposta é 429 sem sequer se avaliar a chave. Contado por chamador (ver `OTM_TRUSTED_PROXY`). Uma expressão malformada — ou `0/...`, que não aceitaria pedido nenhum — faz a app falhar no arranque, em vez de desactivar (ou trancar) o controlo em silêncio. O contador é em memória do processo: com vários workers o limite é por worker. |
 | `OTM_RATE_LIMIT_DISABLED` | `1` / `true` — desativa o rate limit mesmo em staging/produção. |
+| `OTM_TRUSTED_PROXY` | Declaração obrigatória em `staging`/`production` quando o limite está ativo: sem ela a app **não arranca**. `1`/`true` — a API está atrás de um reverse proxy do operador, e o endereço resolvido de `X-Forwarded-For` conta como identidade do chamador (o limite é por chamador; **requer flags específicas do uvicorn**). `0`/`false` — não há tal proxy, e todos os pedidos com esse cabeçalho partilham **um** balde, ou seja o limite passa a ser o orçamento de todos eles juntos e um cliente ocupado devolve 429 aos outros. Em qualquer dos casos, rodar o cabeçalho não cria um balde novo. Ver `docs/architecture/DEPLOYMENT_INVARIANTS.md`. |
 | (sem `OTM_RATE_LIMIT` e sem `OTM_RATE_LIMIT_DISABLED`) | Em **`development`** (defeito de `OTM_ENV`): sem limite. Em **staging** / **production**: limite por defeito **`120/minute`**. |
 
 Sem `OTM_API_KEY`, o comportamento permanece o de API aberta na rede onde estiver exposta — ver **`docs/architecture/DEPLOYMENT_INVARIANTS.md`**.
+
+**O valor de `OTM_API_KEY` é um segredo, não um interruptor.** `false`, `off`, `0`, `1`, `true`,
+`none`, `null`, `disabled`, `changeme` e companhia **abortam o arranque** com um erro nomeado: lidas
+à letra, cada uma passaria a ser o segredo partilhado de `/v1` — adivinhado à primeira ou segunda
+tentativa — enquanto a linha de arranque continuaria a dizer `api_key=enforced`. Para **desligar** o
+perímetro, remova a variável (defini-la vazia mantém o perímetro ligado e sem credencial possível,
+`API_KEY_MISCONFIGURED`); para o **ligar**, use pelo menos **16** carateres de uma fonte aleatória —
+`python -c "import secrets; print(secrets.token_urlsafe(32))"`. Um segredo mais curto é aceite (há
+instalações a correr com um) mas o arranque passa a escrever uma linha `api_key_weak` a dizê-lo, para
+que `api_key=enforced` deixe de ser indistinguível entre 32 bytes aleatórios e a letra `x`.
+
+O contrato declara o perímetro: `components.securitySchemes` traz `ApiKeyHeader`
+(`X-OTM-API-Key`) e `BearerToken`, e cada operação `/v1` lista os dois como alternativas. É
+**documentação** — a aplicação continua a ser feita pelo middleware, e os esquemas não recusam nada
+por si —, mas é o que faz aparecer o botão **Authorize** em `/docs` e o que dá credencial aos
+clientes gerados a partir de `contracts/openapi.json`.
+
+Em `staging`/`production`, os cabeçalhos aceites em CORS são explícitos e incluem `X-OTM-API-Key`, para que um cliente de browser possa autenticar-se com o mecanismo que esta API documenta.
+
+`OTM_CORS_ORIGINS` é validada no arranque: cada entrada tem de ser uma origem serializada,
+`esquema://host[:porta]` e mais nada — sem barra final, sem caminho, sem query, sem espaços. O
+esquema é livre (`https`, mas também `chrome-extension`, `capacitor`, `tauri`), o literal IPv6 é
+aceite (`https://[::1]:8080`) e `null` também. Um valor que nenhum browser possa igualar aborta o
+arranque com um erro que o nomeia, em vez de servir 200 sem `Access-Control-Allow-Origin` e 400
+no preflight enquanto a linha de perímetro continua a dizer `cors_origins=1`. Uma entrada
+malformada recusa a lista inteira: descartar só a má repunha o servidor meio-partido que a
+verificação existe para tornar visível.
+
+## Tamanho da resposta e tecto de entidades
+
+A entrada desta API é limitada em vários eixos (bytes do documento, nós YAML expandidos,
+profundidade, 2 MiB por upload em `/v1/imports`); a **saída** é proporcional ao número de entidades
+do documento, porque o motor produz da ordem de sete ameaças por componente e o `AnalysisResult`
+inteiro é serializado numa resposta construída em memória antes do primeiro byte sair.
+
+A resposta cresce **linearmente com o número de componentes**, e é por componentes que se
+dimensiona. Medido em `/v1/models/analyze`, com o corpo HTTP real dos dois lados:
+
+| Componentes | Forma do documento | Pedido | Resposta | KB/componente | Razão |
+|-------------|--------------------|--------|----------|---------------|-------|
+| 1 005 | rico (descrição, tecnologia, metadados) | 385 KB | 11,0 MB | 11,3 | 29x |
+| 1 005 | esparso (só os três campos obrigatórios) | 41 KB | 10,2 MB | 10,4 | 254x |
+| 2 005 | esparso | 83 KB | 20,4 MB | 10,4 | 251x |
+
+Dimensione por **~11 KB de resposta por componente**, não pela razão. As duas primeiras linhas são
+o mesmo documento com os mesmos 1 005 componentes: a resposta é praticamente igual e a razão salta
+oito vezes, porque o que muda é o denominador. Um documento esparso — a forma típica do que um
+importador gera — dá **pior caso medido ~255x** (a razão sobe ligeiramente com documentos pequenos), e uma versão anterior desta página aconselhava
+`~60x`, o que subdimensionava por mais de quatro o limite de corpo do gateway que
+`docs/architecture/DEPLOYMENT_INVARIANTS.md` torna obrigatório.
+
+`tests/test_p4_documented_response_amplification.py` mede e compara com estes números, para que a
+próxima mudança no motor não os deixe a mentir em silêncio. `/v1/remediation/backlog` e
+`/v1/exports` têm o mesmo perfil.
+
+| Variável | Efeito |
+|----------|--------|
+| `OTM_MAX_DOCUMENT_ENTITIES` | Tecto de entidades (`components` + `data_flows` + `assets`) por documento submetido. Acima do tecto, **413** `DOCUMENT_TOO_LARGE` antes de o motor correr. Aplica-se a todas as rotas que recebem `document` (`/v1/models/*`, `/v1/exports`, `/v1/remediation/backlog`, `/v1/reports`, `/v1/reports/premium`) e **não** às rotas `/v1/imports/*`. Por definir = sem tecto. Um valor que não seja um inteiro positivo aborta o arranque. |
+
+Não há tecto por omissão, e é uma decisão: um tecto útil teria de estar na ordem dos milhares, e é
+exatamente aí que recusaria trabalho legítimo — um `.tf` de 1,64 MiB, aceite pelo limite de 2 MiB da
+própria rota `/v1/imports/terraform`, produz um rascunho com **30 001 componentes**, e `analyze`
+responde hoje a 4 005 componentes em 3,6 s. Quem precisa do tecto escolhe o número para a sua
+capacidade; quando está ligado, o arranque escreve `document_entity_ceiling`.
 
 ## Endpoints (MVP)
 
@@ -50,10 +115,12 @@ Sem `OTM_API_KEY`, o comportamento permanece o de API aberta na rede onde estive
 | `POST` | `/v1/templates/{template_id}/instantiate` | Gera documento a partir do template. |
 | `POST` | `/v1/exports` | Gera artefactos (`formats[]`, opcional `analysis`, `pack_id`). |
 | `POST` | `/v1/imports/openapi` | `multipart/form-data` campo `file` (OpenAPI/Swagger YAML/JSON). Resposta: rascunho canónico + `inferences` / `unknowns` / `assumptions` (não é análise). |
+| `POST` | `/v1/imports/openapi/reimport-preview` | `multipart/form-data` com os arquivos `previous`, `revised` e `document` (modelo atual em JSON). Resposta: `operations`, `changes`, `conflicts` e `document` proposto. Limite de 2 MiB por arquivo. |
 | `POST` | `/v1/imports/terraform` | Um ficheiro `.tf`. |
 | `POST` | `/v1/imports/kubernetes` | YAML multi-manifests. |
 | `POST` | `/v1/remediation/backlog` | Corpo: `document` + `analysis` **ou** `run_analysis: true`. Query: `format` = json (default) ou markdown; `group_by` opcional. Ver `docs/features/REMEDIATION_BACKLOG.md`. |
-| `POST` | `/v1/reports/premium` | Report premium: `document`, `analysis` ou `run_analysis`, opcional `baseline_analysis`, `level` (executive/standard/deep), `output_format` (markdown/pdf). Ver `docs/features/PREMIUM_REPORTS.md`. |
+| `POST` | `/v1/reports` | Relatório de riscos em PDF ou Markdown. Recebe `document` e `analysis`, ou `document` e `run_analysis: true`. Opções `baseline_analysis`, `locale` e `output_format`. [Guia do relatório](PREMIUM_REPORTS.md) |
+| `POST` | `/v1/reports/premium` | Rota de compatibilidade com os níveis `executive`, `standard` e `deep`. |
 
 Ver também `docs/features/ARTIFACT_IMPORT.md`.
 
@@ -154,9 +221,38 @@ Códigos estáveis usados nas rotas (sempre dentro de `detail`):
 |--------|------|----------|
 | `DOCUMENT_VALIDATION_ERROR` | 422 | `document` inválido para o schema canónico. |
 | `ANALYSIS_VALIDATION_ERROR` | 422 | Campo `analysis` não é um `AnalysisResult` válido. |
+| `ANALYSIS_DOCUMENT_MISMATCH` | 422 | A análise enviada não foi produzida para o documento enviado ao lado dela. Em `/v1/models/compare` aplica-se a cada par (`baseline`+`baseline_analysis`, `revised`+`revised_analysis`), e o `loc` de cada erro nomeia o campo em falta. Exceção deliberada: `baseline_analysis` nas rotas de relatório, que é de outra versão por definição — está isento desta guarda de *mesma revisão*, mas não de `BASELINE_SYSTEM_MISMATCH`. |
+| `BASELINE_SYSTEM_MISMATCH` | 422 | O `baseline_analysis` das rotas de relatório não descreve o mesmo sistema que a análise actual, por isso a secção `## Baseline / diff` seria inventada. Relação deliberadamente mais fraca do que `ANALYSIS_DOCUMENT_MISMATCH`: um baseline é outra revisão por definição, e renomear o modelo ou acrescentar componentes continua a ser aceite. Mesmo critério que `otm report --baseline` e `otm diff-analysis` aplicam na CLI. |
+| `REMEDIATION_GROUP_BY_INVALID` | 422 | `group_by` fora de `root-cause` \| `control` \| `category`. Antes, um valor desconhecido devolvia 200 com o agrupamento por defeito. |
+| `REMEDIATION_INPUT` | 400 | Nem `analysis` nem `run_analysis: true` em `/v1/remediation/backlog`. |
+| `IMPORT_EMPTY_ARTIFACT` | 400 | Upload **sem conteúdo** em `/v1/imports/*`: zero bytes, só espaço em branco (`
+`, ` `, `
+
+`, tabulações) ou só um BOM UTF-8. As três rotas respondem o mesmo para o mesmo ficheiro em branco. Conteúdo presente mas não reconhecido (um comentário, HTML) **não** é este erro: continua a produzir rascunho + `unknowns[]`. |
+| `IMPORT_TOO_LARGE` | 413 | Upload acima do limite de 2 MiB em `/v1/imports/*`. |
+| `DOCUMENT_TOO_LARGE` | 413 | O `document` submetido tem mais entidades do que `OTM_MAX_DOCUMENT_ENTITIES` permite neste deployment. A mensagem nomeia o número enviado, o tecto e a variável, porque o tecto é uma escolha de capacidade do servidor e não um limite do produto. Sem a variável definida não há tecto. |
+| `IMPORT_NOT_UTF8` | 400 | O artefacto não é texto UTF-8. |
+| `IMPORT_ARTIFACT_INVALID` | 400 | O artefacto é texto mas não tem a forma esperada. Inclui o artefacto que faz *parse* e cujos nós não têm o tipo previsto (ex.: `{"openapi":"3.0.0","info":[1]}`, com `info` como lista), que antes escapava como 500. |
 | `TEMPLATE_INVALID` | 422 | Template existe mas o YAML não valida como documento canónico. |
 | `PACK_NOT_FOUND` | 404 | `pack_id` desconhecido. |
 | `TEMPLATE_NOT_FOUND` | 404 | `template_id` desconhecido. |
+
+Não há exceções ao envelope nestas rotas. O **413** de upload acima do limite em `/v1/imports/*`
+devolvia `detail` como string solta, sem código estável, e passou a usar o envelope como os
+irmãos (`IMPORT_TOO_LARGE`); um cliente que leia `detail["code"]` já não precisa de tratar o 413
+pelo status.
+
+Respostas emitidas por middleware **não** passam por `detail`: trazem `{code, message}` na raiz,
+como a validação de envelope do pedido. São o **401** (`API_KEY_REQUIRED`,
+`API_KEY_MISCONFIGURED`), o **429** (`RATE_LIMITED`) e o **500** (`INTERNAL_ERROR`, com
+`request_id`).
+
+O array `errors[]` é **limitado**, nos dois envelopes. Cada valor ecoado já era truncado (256
+carateres por string, 50 itens por lista, 50 chaves por objeto), mas o número de entradas não era:
+um pedido de 1 MB com muitos itens a violar o mesmo enum produzia uma resposta de 66 MB. São
+devolvidas no máximo **50** entradas, seguidas de uma entrada `{"type": "too_many_errors"}` que diz
+quantas ficaram de fora e qual é o total — a contagem nunca se lê como "estes são todos os
+problemas".
 
 Implementação: `apps/api/otm_api/routers/_errors.py` e `apps/api/otm_api/errors.py`.
 
@@ -166,5 +262,16 @@ Implementação: `apps/api/otm_api/routers/_errors.py` e `apps/api/otm_api/error
 pip install -e ".[api]"
 uvicorn otm_api.main:app --reload --port 8000
 ```
+
+O stdout é **inteiramente** JSON, uma linha por evento, incluindo o que o uvicorn escreve: os
+loggers `uvicorn`, `uvicorn.error` e `uvicorn.asgi` são encaminhados para o mesmo formatter, e
+`uvicorn.access` é desligado por duplicar o registo que o `ObservabilityMiddleware` já emite — com
+`request_id`, com o endereço do cliente em `client`, e com o caminho sem query string. Um stack
+trace vai como valor da chave `traceback`, por isso continua a caber numa linha.
+
+`OTM_LOG_LEVEL` aceita `DEBUG`, `INFO`, `WARNING`/`WARN`, `ERROR`, `CRITICAL`/`FATAL` (sem
+distinguir maiúsculas) ou o número correspondente (`10`, `20`, `30`, `40`, `50`); em branco ou por
+definir significa `INFO`. Qualquer outro valor — incluindo `NOTSET`, que no logger raiz significa
+"emite tudo" — recusa o arranque com um erro nomeado, em vez de cair em `INFO` sem aviso.
 
 Docker: ver `apps/api/Dockerfile`.

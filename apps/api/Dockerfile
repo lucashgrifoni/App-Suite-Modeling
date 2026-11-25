@@ -1,5 +1,17 @@
 # bookworm = Debian 12 (suporte de segurança previsível); evita trixie/sid com CVEs ainda sem backport.
-FROM python:3.12-slim-bookworm
+#
+# Fixada por digest, não por tag: `python:3.12-slim-bookworm` é uma etiqueta móvel, por isso dois
+# `docker build` em dias diferentes produziam imagens com conjuntos de pacotes do SO diferentes e
+# sem registo de qual foi entregue — e um repontamento a montante entrava sem ser visto. É a mesma
+# disciplina que os workflows já aplicam a 100% dos `uses:` de terceiros (todos com SHA de 40
+# caracteres) e que parava na fronteira do contentor. A etiqueta fica no próprio `FROM` para
+# continuar legível; o digest é o que o Docker resolve.
+#
+# Digest do índice OCI multi-arquitectura, confirmado por duas vias independentes em 2026-08-17:
+# o cabeçalho `docker-content-digest` da API do registry e `docker buildx imagetools inspect`.
+# Actualizá-lo é trabalho de manutenção: acrescentar o ecossistema `docker` a .github/dependabot.yml
+# põe-no na mesma janela de arrefecimento de 7 dias do resto (esse ficheiro fica fora deste lote).
+FROM python:3.12-slim-bookworm@sha256:a116514e19457bcb7af7efe9c3dd0b9b71e85b317694e7882a1c52aa15a78134
 # Atualizações de segurança do SO antes de instalar dependências da aplicação.
 RUN apt-get update \
     && apt-get upgrade -y --no-install-recommends \

@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:acf794d15eaabbb50e696cc3d66bc2df07a921e946c1e8c524446597882e3ee1",
+  "claims": [
+    {
+      "id": "claim_26a6f711eaca4ca6bc492ebd43aeaba5",
+      "statement": "The API composes versioned routers and applies its configured perimeter middleware.",
+      "evidence": [
+        {
+          "resource": "repo://apps/api/otm_api/main.py",
+          "version": "repo-file-v1:sha256:6063a32ced860f0d52d67ef62014c3217b3dc39a704c53166ba44d84551ee272"
+        }
+      ]
+    },
+    {
+      "id": "claim_7f2900a017d842bfb173cd2b94d32c5f",
+      "statement": "The web client sends report export requests to the local API and reads the resulting file as a blob.",
+      "evidence": [
+        {
+          "resource": "repo://apps/web/src/api/otmApi.ts#L157-L195",
+          "version": "repo-lines-v1:sha256:84aa222a257f2f2d8d8b9092a5b5e6ee302d03bddc7fd62e958cf2535426a7ca:eyJzZWxlY3RlZExpbmVDb3VudCI6MzksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjE3YTdjMWI0N2I0NTlmYmZmMDA0NGMxODZlOTEwYjBmNTczNzgxMjg0YjY0NGExZWY5OWEwODU5MmIyZTA0M2YiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImEwOWNmNDRiZWU0MWJlMDE2NjhjYmVkNWVkYWMzNjRmMDlhNzQ5YzMzY2VkMWU3MzVhNzk1Zjg1MGU0MGEwZDAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImJjYmZhZTdjZmMxM2MwYmM5MGI2ZGVmOWMyOGJmZDU5Y2FiMTg0YzhhZDY1MDdhMmU1ZGZjNGMyZDNkZGQxNzIifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_00481db7c15d4be2978750d834278015",
+      "statement": "The contributor guide starts the API and web development services with scripts/run_dev.py.",
+      "evidence": [
+        {
+          "resource": "repo://README.md#L122-L140",
+          "version": "repo-lines-v1:sha256:011702484789da0b2dd5998e2ae844c5bfb289fc4acb901901d8a01e119610af:eyJzZWxlY3RlZExpbmVDb3VudCI6MTksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjgzMTA4Yjc5ODYxM2JlNTYzZjIwOTJiZmQ4NTY4Y2IzZGI0NzdkNzNmYjRkMGU4YjFlNjk4NjhhNDJmY2Y2ODUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU5MzFmMmQ1NzM4MDZkYjc5NGU0NDEwMmFhOTljZThkMjE1YThmNmM2YjI5NzM2ZDEzNDVlZjU0YjEyYTg3NmYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjQ3ZjM2OWI0MmE0NzA2MTMyZjFhNGM0YjQxZTAyMDFiOWVkYTgxMDRmYzk5Yzg2MDQ2MTA3NmQzZGIwZTVmZjIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjAyMWZkYjZiMDkwOTcwMjRmZmM1ODllZDQzNjdjMGI3YzRmNjdlMjMxNWFjYjJlN2I5MTZmNjEyMTY4M2M3YmQifQ"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.7.2",
+    "at": "2026-11-25T16:05:04.236Z"
+  }
+}

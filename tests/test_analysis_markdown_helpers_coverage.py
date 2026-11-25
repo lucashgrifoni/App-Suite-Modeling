@@ -22,7 +22,9 @@ def test_is_business_specific() -> None:
 def test_biz_family_flags() -> None:
     active = [_t("biz_webhook_1", "w"), _t("biz_coupon_2", "c"), _t("biz_balance_3", "b")]
     flags = am._biz_family_flags(active)
-    assert flags["webhook"] and flags["coupon"] and flags["balance"]
+    assert flags["webhook"]
+    assert flags["coupon"]
+    assert flags["balance"]
     assert not flags["authorization"]
 
 

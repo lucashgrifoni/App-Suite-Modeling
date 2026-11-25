@@ -12,6 +12,7 @@ from otm_cli.application.recommend_service import run_recommend_methodology
 from otm_cli.commands.bootstrap import console
 from otm_cli.commands.handle_errors import exit_on_cli_error
 from otm_cli.shared.errors import CliUserError
+from otm_cli.shared.render import safe
 
 
 def register(app: typer.Typer) -> None:
@@ -26,7 +27,7 @@ def register(app: typer.Typer) -> None:
             exit_on_cli_error(console, e)
         console.print(
             Panel.fit(
-                f"Suggested methodology: [bold]{rec.methodology.value}[/bold]\n\nReason: {rec.reason}",
+                f"Suggested methodology: [bold]{safe(rec.methodology.value)}[/bold]\n\nReason: {safe(rec.reason)}",
                 title="recommend-methodology",
                 border_style="magenta",
             )

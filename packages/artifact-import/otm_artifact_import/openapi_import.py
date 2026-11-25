@@ -99,6 +99,68 @@ def _count_operations(paths: dict[str, Any] | None) -> tuple[int, list[str]]:
     return n, detail[:40]
 
 
+def _operation_snapshot(data: dict[str, Any]) -> dict[str, tuple[dict[str, Any], dict[str, Any]]]:
+    version = data.get("openapi")
+    if not (isinstance(version, str) and version.startswith("3.")) and data.get("swagger") != "2.0":
+        raise ValueError("Expected OpenAPI 3.x or Swagger 2.0.")
+    paths = data.get("paths")
+    if not isinstance(paths, dict):
+        raise ValueError("Expected an OpenAPI paths object. Use paths: {} for a contract with no operations.")
+
+    operations: dict[str, tuple[dict[str, Any], dict[str, Any]]] = {}
+    for path, item in paths.items():
+        if isinstance(path, str) and path.startswith("x-"):
+            continue
+        if not isinstance(path, str) or not path.startswith("/") or not isinstance(item, dict):
+            raise ValueError("Each OpenAPI path must start with '/' and have an object definition.")
+        if "$ref" in item:
+            raise ValueError("Inline referenced OpenAPI path items before comparing operations.")
+        shared = {field: item[field] for field in ("parameters", "servers", "security") if field in item}
+        for method in _HTTP_METHODS & item.keys():
+            operation = item[method]
+            if not isinstance(operation, dict):
+                raise ValueError("Each HTTP operation must have an object definition.")
+            operations[f"{method.upper()} {path}"] = (operation, shared)
+    return operations
+
+
+def compare_openapi_operations(previous: str, revised: str) -> dict[str, list[str]]:
+    """Compare operation definitions in two snapshots without altering their source or an OTM model."""
+    snapshots = []
+    for label, content in (("Previous contract", previous), ("Revised contract", revised)):
+        try:
+            contract = load_object_from_text(content)
+            snapshots.append((contract, _operation_snapshot(contract)))
+        except ValueError as error:
+            raise ValueError(f"{label}: {error}") from error
+    (before, previous_ops), (after, revised_ops) = snapshots
+    shared = (
+        "openapi",
+        "swagger",
+        "components",
+        "definitions",
+        "host",
+        "basePath",
+        "schemes",
+        "servers",
+        "security",
+        "securityDefinitions",
+        "parameters",
+        "responses",
+        "consumes",
+        "produces",
+        "webhooks",
+    )
+    return {
+        "added": sorted(revised_ops.keys() - previous_ops.keys()),
+        "removed": sorted(previous_ops.keys() - revised_ops.keys()),
+        "changed": sorted(
+            key for key in previous_ops.keys() & revised_ops.keys() if previous_ops[key] != revised_ops[key]
+        ),
+        "shared_sections_changed": sorted(field for field in shared if before.get(field) != after.get(field)),
+    }
+
+
 def _detect_openapi_header(data: dict[str, Any]) -> tuple[str, list[str], bool, list[str], str, str | None]:
     """Devolve (version, servers, has_auth, scheme_names, title, unknown_msg-ou-None) por dialecto."""
     if "openapi" in data:
@@ -120,33 +182,44 @@ def _detect_openapi_header(data: dict[str, Any]) -> tuple[str, list[str], bool, 
 
 
 def _infer_authenticated(data: dict[str, Any], paths: dict[str, Any]) -> bool | None:
-    """Inferência de autenticação: segurança global > consenso por operação > segurança por path."""
-    any_sec: list[bool] = []
+    """Autenticação efetiva por operação: a declaração mais específica ganha.
+
+    A precedência é a que a especificação OpenAPI define, e não a inversa: `security` numa
+    operação **substitui** o do documento, e uma lista vazia remove a exigência para essa
+    operação. Consultar a raiz primeiro — o que esta função fazia, e a sua docstring declarava
+    como regra — devolvia `True` para uma spec cuja raiz exige `bearerAuth` e cujas operações
+    **todas** declaram `security: []`, isto é, uma API inteiramente aberta. Indistinguível da
+    spec em que as operações herdam o requisito, e errada na direção que esconde exposição.
+
+    `all`, e não `any`: um único caminho aberto basta para a API não ser toda autenticada.
+    Ausência de qualquer declaração continua a ser `None` — não saber não é o mesmo que saber
+    que não há, e só a renúncia explícita vale como resposta negativa.
+    """
+    root = _root_security_required(data)
+    effective: list[bool] = []
+    declared = False
+
     for item in paths.values():
         if not isinstance(item, dict):
             continue  # pragma: no cover - defensive guard
+        path_level = _operation_security_required(item)
         for method, op in item.items():
-            if (
-                isinstance(method, str)
-                and method.lower() in _HTTP_METHODS
-                and isinstance(op, dict)
-                and "security" in op
-            ):
-                any_sec.append(bool(op.get("security")))
-    auth_from_ops = all(any_sec) if any_sec else None
+            if not (isinstance(method, str) and method.lower() in _HTTP_METHODS and isinstance(op, dict)):
+                continue
+            if "security" in op:
+                declared = True
+                effective.append(bool(op.get("security")))
+            elif path_level is not None:
+                declared = True
+                effective.append(path_level)
+            else:
+                effective.append(root)
 
-    if _root_security_required(data):
-        return True
-    if auth_from_ops is not None:
-        return auth_from_ops
-    path_level_sec = [
-        x
-        for x in (_operation_security_required(item) for item in paths.values() if isinstance(item, dict))
-        if x is not None
-    ]
-    if path_level_sec:
-        return all(path_level_sec)
-    return None
+    if not effective:
+        return True if root else None
+    if not declared and not root:
+        return None
+    return all(effective)
 
 
 def import_openapi_text(text: str, *, filename: str = "openapi.yaml") -> ArtifactImportResult:

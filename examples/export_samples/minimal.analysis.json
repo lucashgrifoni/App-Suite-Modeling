@@ -1,5 +1,7 @@
 {
   "engine_version": "0.1.0",
+  "methodology": "stride",
+  "methodology_recommendation_reason": null,
   "document_title": "Exemplo — API de pedidos",
   "structural_findings": [],
   "trust_boundary_findings": [
@@ -15,7 +17,7 @@
     {
       "id": "eng_user_spoofing",
       "title": "[spoofing] Usuário",
-      "description": "Ameaça genérica STRIDE para o componente 'Usuário' como user. Rever controlos específicos do contexto.",
+      "description": "Ameaça STRIDE para 'Usuário' como user. Rever controlos específicos do contexto.",
       "stride": "spoofing",
       "target_component_id": "user",
       "target_data_flow_id": null,
@@ -31,6 +33,16 @@
           "framework": "owasp_tm",
           "control_id": "STRIDE-S",
           "notes": "Tratar falsificação de identidade na matriz STRIDE e no diagrama (OWASP Threat Modeling Cheat Sheet)."
+        },
+        {
+          "framework": "capec",
+          "control_id": "CAPEC-151",
+          "notes": "Identity Spoofing — falsificação de identidade de um ator ou componente (MITRE CAPEC-151)."
+        },
+        {
+          "framework": "cwe",
+          "control_id": "CWE-287",
+          "notes": "Improper Authentication — autenticação ausente ou insuficiente (MITRE CWE-287)."
         },
         {
           "framework": "owasp_asvs",
@@ -62,12 +74,15 @@
           "control_id": "A.5.16",
           "notes": "Gestão de identidades (A.5.16)."
         }
-      ]
+      ],
+      "finding_family": null,
+      "heuristic_tier": "generic_stride",
+      "signal_refs": []
     },
     {
       "id": "eng_user_repudiation",
       "title": "[repudiation] Usuário",
-      "description": "Ameaça genérica STRIDE para o componente 'Usuário' como user. Rever controlos específicos do contexto.",
+      "description": "Ameaça STRIDE para 'Usuário' como user. Rever controlos específicos do contexto.",
       "stride": "repudiation",
       "target_component_id": "user",
       "target_data_flow_id": null,
@@ -83,6 +98,16 @@
           "framework": "owasp_tm",
           "control_id": "STRIDE-R",
           "notes": "Avaliar se atores podem negar ações; ligar a logging e auditoria."
+        },
+        {
+          "framework": "capec",
+          "control_id": "CAPEC-93",
+          "notes": "Log Injection-Tampering-Forging — manipulação de registos que permite repúdio (MITRE CAPEC-93)."
+        },
+        {
+          "framework": "cwe",
+          "control_id": "CWE-778",
+          "notes": "Insufficient Logging — registo de eventos de segurança insuficiente (MITRE CWE-778)."
         },
         {
           "framework": "owasp_asvs",
@@ -101,28 +126,26 @@
         },
         {
           "framework": "iso_27001",
-          "control_id": "A.8.17",
-          "notes": "Registo de eventos (A.8.17)."
-        },
-        {
-          "framework": "iso_27001",
           "control_id": "A.8.15",
-          "notes": "Registo de acessos (A.8.15)."
+          "notes": "Registo de eventos (A.8.15)."
         }
-      ]
+      ],
+      "finding_family": null,
+      "heuristic_tier": "generic_stride",
+      "signal_refs": []
     },
     {
       "id": "eng_api_spoofing",
-      "title": "[spoofing] API",
-      "description": "Ameaça genérica STRIDE para o componente 'API' (REST) como process. Rever controlos específicos do contexto.",
+      "title": "[spoofing] API (public_api)",
+      "description": "Ameaça STRIDE para 'API' (REST) como process. Rever controlos específicos do contexto.",
       "stride": "spoofing",
       "target_component_id": "api",
       "target_data_flow_id": null,
       "target_asset_id": null,
       "risk": {
         "likelihood": 4,
-        "impact": 3,
-        "score": 12.0
+        "impact": 5,
+        "score": 20.0
       },
       "skipped_as_duplicate": false,
       "framework_refs": [
@@ -130,6 +153,16 @@
           "framework": "owasp_tm",
           "control_id": "STRIDE-S",
           "notes": "Tratar falsificação de identidade na matriz STRIDE e no diagrama (OWASP Threat Modeling Cheat Sheet)."
+        },
+        {
+          "framework": "capec",
+          "control_id": "CAPEC-151",
+          "notes": "Identity Spoofing — falsificação de identidade de um ator ou componente (MITRE CAPEC-151)."
+        },
+        {
+          "framework": "cwe",
+          "control_id": "CWE-287",
+          "notes": "Improper Authentication — autenticação ausente ou insuficiente (MITRE CWE-287)."
         },
         {
           "framework": "owasp_asvs",
@@ -161,20 +194,23 @@
           "control_id": "A.5.16",
           "notes": "Gestão de identidades (A.5.16)."
         }
-      ]
+      ],
+      "finding_family": null,
+      "heuristic_tier": "generic_stride",
+      "signal_refs": []
     },
     {
       "id": "eng_api_tampering",
-      "title": "[tampering] API",
-      "description": "Ameaça genérica STRIDE para o componente 'API' (REST) como process. Rever controlos específicos do contexto.",
+      "title": "[tampering] API (public_api)",
+      "description": "Ameaça STRIDE para 'API' (REST) como process. Rever controlos específicos do contexto.",
       "stride": "tampering",
       "target_component_id": "api",
       "target_data_flow_id": null,
       "target_asset_id": null,
       "risk": {
         "likelihood": 3,
-        "impact": 3,
-        "score": 9.0
+        "impact": 5,
+        "score": 15.0
       },
       "skipped_as_duplicate": false,
       "framework_refs": [
@@ -182,6 +218,16 @@
           "framework": "owasp_tm",
           "control_id": "STRIDE-T",
           "notes": "Modelar alteração não autorizada de dados ou fluxos (STRIDE Tampering)."
+        },
+        {
+          "framework": "capec",
+          "control_id": "CAPEC-184",
+          "notes": "Software Integrity Attack — adulteração da integridade de software/dados (MITRE CAPEC-184)."
+        },
+        {
+          "framework": "cwe",
+          "control_id": "CWE-345",
+          "notes": "Insufficient Verification of Data Authenticity — verificação de autenticidade insuficiente (MITRE CWE-345)."
         },
         {
           "framework": "owasp_asvs",
@@ -195,8 +241,8 @@
         },
         {
           "framework": "nist_csf",
-          "control_id": "PR.DS-06",
-          "notes": "Integridade de software e firmware (NIST CSF 2.0 PR.DS)."
+          "control_id": "PR.DS-01",
+          "notes": "Confidencialidade, integridade e disponibilidade dos dados em repouso (NIST CSF 2.0 PR.DS-01)."
         },
         {
           "framework": "nist_csf",
@@ -213,20 +259,23 @@
           "control_id": "A.8.12",
           "notes": "Prevenção de fuga de dados (relevante a integridade em canais — A.8.12)."
         }
-      ]
+      ],
+      "finding_family": null,
+      "heuristic_tier": "generic_stride",
+      "signal_refs": []
     },
     {
       "id": "eng_api_information_disclosure",
-      "title": "[information_disclosure] API",
-      "description": "Ameaça genérica STRIDE para o componente 'API' (REST) como process. Rever controlos específicos do contexto.",
+      "title": "[information_disclosure] API (public_api)",
+      "description": "Ameaça STRIDE para 'API' (REST) como process. Rever controlos específicos do contexto.",
       "stride": "information_disclosure",
       "target_component_id": "api",
       "target_data_flow_id": null,
       "target_asset_id": null,
       "risk": {
         "likelihood": 3,
-        "impact": 3,
-        "score": 9.0
+        "impact": 5,
+        "score": 15.0
       },
       "skipped_as_duplicate": false,
       "framework_refs": [
@@ -234,6 +283,16 @@
           "framework": "owasp_tm",
           "control_id": "STRIDE-I",
           "notes": "Expor dados sensíveis no modelo e controlos de confidencialidade."
+        },
+        {
+          "framework": "capec",
+          "control_id": "CAPEC-118",
+          "notes": "Collect and Analyze Information — recolha de informação exposta (MITRE CAPEC-118)."
+        },
+        {
+          "framework": "cwe",
+          "control_id": "CWE-200",
+          "notes": "Exposure of Sensitive Information to an Unauthorized Actor (MITRE CWE-200)."
         },
         {
           "framework": "owasp_asvs",
@@ -257,28 +316,31 @@
         },
         {
           "framework": "iso_27001",
-          "control_id": "A.8.11",
-          "notes": "Criptografia (A.8.11)."
+          "control_id": "A.8.24",
+          "notes": "Utilização de criptografia (A.8.24)."
         },
         {
           "framework": "iso_27001",
           "control_id": "A.5.14",
           "notes": "Transferência de informação (A.5.14)."
         }
-      ]
+      ],
+      "finding_family": null,
+      "heuristic_tier": "generic_stride",
+      "signal_refs": []
     },
     {
       "id": "eng_api_denial_of_service",
-      "title": "[denial_of_service] API",
-      "description": "Ameaça genérica STRIDE para o componente 'API' (REST) como process. Rever controlos específicos do contexto.",
+      "title": "[denial_of_service] API (public_api)",
+      "description": "Ameaça STRIDE para 'API' (REST) como process. Rever controlos específicos do contexto.",
       "stride": "denial_of_service",
       "target_component_id": "api",
       "target_data_flow_id": null,
       "target_asset_id": null,
       "risk": {
         "likelihood": 3,
-        "impact": 3,
-        "score": 9.0
+        "impact": 5,
+        "score": 15.0
       },
       "skipped_as_duplicate": false,
       "framework_refs": [
@@ -288,14 +350,29 @@
           "notes": "Disponibilidade e abuso de recursos no modelo de ameaças."
         },
         {
+          "framework": "capec",
+          "control_id": "CAPEC-125",
+          "notes": "Flooding — exaustão de recursos por inundação (MITRE CAPEC-125)."
+        },
+        {
+          "framework": "cwe",
+          "control_id": "CWE-400",
+          "notes": "Uncontrolled Resource Consumption — consumo de recursos sem limite (MITRE CWE-400)."
+        },
+        {
           "framework": "owasp_asvs",
           "control_id": "V11.1.1",
           "notes": "Lógica de negócio e quotas — ASVS V11 Business Logic."
         },
         {
           "framework": "nist_csf",
-          "control_id": "PR.IR-01",
-          "notes": "Resiliência de infraestruturas e recursos (NIST CSF 2.0 PR.IR)."
+          "control_id": "PR.IR-04",
+          "notes": "Capacidade de recursos para assegurar disponibilidade (NIST CSF 2.0 PR.IR-04)."
+        },
+        {
+          "framework": "nist_csf",
+          "control_id": "PR.IR-03",
+          "notes": "Mecanismos de resiliência em situação normal e adversa (NIST CSF 2.0 PR.IR-03)."
         },
         {
           "framework": "iso_27001",
@@ -304,23 +381,26 @@
         },
         {
           "framework": "iso_27001",
-          "control_id": "A.8.13",
-          "notes": "Redundância de recursos de processamento (A.8.13)."
+          "control_id": "A.8.14",
+          "notes": "Redundância de recursos de tratamento de informação (A.8.14)."
         }
-      ]
+      ],
+      "finding_family": null,
+      "heuristic_tier": "generic_stride",
+      "signal_refs": []
     },
     {
       "id": "eng_api_elevation_of_privilege",
-      "title": "[elevation_of_privilege] API",
-      "description": "Ameaça genérica STRIDE para o componente 'API' (REST) como process. Rever controlos específicos do contexto.",
+      "title": "[elevation_of_privilege] API (public_api)",
+      "description": "Ameaça STRIDE para 'API' (REST) como process. Rever controlos específicos do contexto.",
       "stride": "elevation_of_privilege",
       "target_component_id": "api",
       "target_data_flow_id": null,
       "target_asset_id": null,
       "risk": {
         "likelihood": 4,
-        "impact": 3,
-        "score": 12.0
+        "impact": 5,
+        "score": 20.0
       },
       "skipped_as_duplicate": false,
       "framework_refs": [
@@ -328,6 +408,16 @@
           "framework": "owasp_tm",
           "control_id": "STRIDE-E",
           "notes": "Rever superfícies de autorização e escalação no diagrama."
+        },
+        {
+          "framework": "capec",
+          "control_id": "CAPEC-233",
+          "notes": "Privilege Escalation — obtenção de privilégios acima dos autorizados (MITRE CAPEC-233)."
+        },
+        {
+          "framework": "cwe",
+          "control_id": "CWE-269",
+          "notes": "Improper Privilege Management — gestão de privilégios incorreta (MITRE CWE-269)."
         },
         {
           "framework": "owasp_asvs",
@@ -341,13 +431,13 @@
         },
         {
           "framework": "nist_csf",
-          "control_id": "PR.AC-01",
-          "notes": "Identidades e credenciais são geridas, autenticadas e sujeitas a ciclo de vida (PR.AC)."
+          "control_id": "PR.AA-01",
+          "notes": "Identidades e credenciais são geridas ao longo do ciclo de vida (NIST CSF 2.0 PR.AA-01)."
         },
         {
           "framework": "nist_csf",
-          "control_id": "PR.AC-04",
-          "notes": "Permissões de acesso são geridas, incorporando princípio do menor privilégio."
+          "control_id": "PR.AA-05",
+          "notes": "Permissões e autorizações seguem o princípio do menor privilégio (NIST CSF 2.0 PR.AA-05)."
         },
         {
           "framework": "iso_27001",
@@ -359,12 +449,15 @@
           "control_id": "A.8.3",
           "notes": "Restrição de acesso à informação (A.8.3)."
         }
-      ]
+      ],
+      "finding_family": null,
+      "heuristic_tier": "generic_stride",
+      "signal_refs": []
     },
     {
       "id": "eng_worker_spoofing",
       "title": "[spoofing] Worker",
-      "description": "Ameaça genérica STRIDE para o componente 'Worker' como process. Rever controlos específicos do contexto.",
+      "description": "Ameaça STRIDE para 'Worker' como process. Rever controlos específicos do contexto.",
       "stride": "spoofing",
       "target_component_id": "worker",
       "target_data_flow_id": null,
@@ -380,6 +473,16 @@
           "framework": "owasp_tm",
           "control_id": "STRIDE-S",
           "notes": "Tratar falsificação de identidade na matriz STRIDE e no diagrama (OWASP Threat Modeling Cheat Sheet)."
+        },
+        {
+          "framework": "capec",
+          "control_id": "CAPEC-151",
+          "notes": "Identity Spoofing — falsificação de identidade de um ator ou componente (MITRE CAPEC-151)."
+        },
+        {
+          "framework": "cwe",
+          "control_id": "CWE-287",
+          "notes": "Improper Authentication — autenticação ausente ou insuficiente (MITRE CWE-287)."
         },
         {
           "framework": "owasp_asvs",
@@ -411,12 +514,15 @@
           "control_id": "A.5.16",
           "notes": "Gestão de identidades (A.5.16)."
         }
-      ]
+      ],
+      "finding_family": null,
+      "heuristic_tier": "generic_stride",
+      "signal_refs": []
     },
     {
       "id": "eng_worker_tampering",
       "title": "[tampering] Worker",
-      "description": "Ameaça genérica STRIDE para o componente 'Worker' como process. Rever controlos específicos do contexto.",
+      "description": "Ameaça STRIDE para 'Worker' como process. Rever controlos específicos do contexto.",
       "stride": "tampering",
       "target_component_id": "worker",
       "target_data_flow_id": null,
@@ -434,6 +540,16 @@
           "notes": "Modelar alteração não autorizada de dados ou fluxos (STRIDE Tampering)."
         },
         {
+          "framework": "capec",
+          "control_id": "CAPEC-184",
+          "notes": "Software Integrity Attack — adulteração da integridade de software/dados (MITRE CAPEC-184)."
+        },
+        {
+          "framework": "cwe",
+          "control_id": "CWE-345",
+          "notes": "Insufficient Verification of Data Authenticity — verificação de autenticidade insuficiente (MITRE CWE-345)."
+        },
+        {
           "framework": "owasp_asvs",
           "control_id": "V5.1.1",
           "notes": "Validação de entrada e integridade — ASVS V5 Validation, Sanitization and Encoding."
@@ -445,8 +561,8 @@
         },
         {
           "framework": "nist_csf",
-          "control_id": "PR.DS-06",
-          "notes": "Integridade de software e firmware (NIST CSF 2.0 PR.DS)."
+          "control_id": "PR.DS-01",
+          "notes": "Confidencialidade, integridade e disponibilidade dos dados em repouso (NIST CSF 2.0 PR.DS-01)."
         },
         {
           "framework": "nist_csf",
@@ -463,12 +579,15 @@
           "control_id": "A.8.12",
           "notes": "Prevenção de fuga de dados (relevante a integridade em canais — A.8.12)."
         }
-      ]
+      ],
+      "finding_family": null,
+      "heuristic_tier": "generic_stride",
+      "signal_refs": []
     },
     {
       "id": "eng_worker_information_disclosure",
       "title": "[information_disclosure] Worker",
-      "description": "Ameaça genérica STRIDE para o componente 'Worker' como process. Rever controlos específicos do contexto.",
+      "description": "Ameaça STRIDE para 'Worker' como process. Rever controlos específicos do contexto.",
       "stride": "information_disclosure",
       "target_component_id": "worker",
       "target_data_flow_id": null,
@@ -484,6 +603,16 @@
           "framework": "owasp_tm",
           "control_id": "STRIDE-I",
           "notes": "Expor dados sensíveis no modelo e controlos de confidencialidade."
+        },
+        {
+          "framework": "capec",
+          "control_id": "CAPEC-118",
+          "notes": "Collect and Analyze Information — recolha de informação exposta (MITRE CAPEC-118)."
+        },
+        {
+          "framework": "cwe",
+          "control_id": "CWE-200",
+          "notes": "Exposure of Sensitive Information to an Unauthorized Actor (MITRE CWE-200)."
         },
         {
           "framework": "owasp_asvs",
@@ -507,20 +636,23 @@
         },
         {
           "framework": "iso_27001",
-          "control_id": "A.8.11",
-          "notes": "Criptografia (A.8.11)."
+          "control_id": "A.8.24",
+          "notes": "Utilização de criptografia (A.8.24)."
         },
         {
           "framework": "iso_27001",
           "control_id": "A.5.14",
           "notes": "Transferência de informação (A.5.14)."
         }
-      ]
+      ],
+      "finding_family": null,
+      "heuristic_tier": "generic_stride",
+      "signal_refs": []
     },
     {
       "id": "eng_worker_denial_of_service",
       "title": "[denial_of_service] Worker",
-      "description": "Ameaça genérica STRIDE para o componente 'Worker' como process. Rever controlos específicos do contexto.",
+      "description": "Ameaça STRIDE para 'Worker' como process. Rever controlos específicos do contexto.",
       "stride": "denial_of_service",
       "target_component_id": "worker",
       "target_data_flow_id": null,
@@ -538,14 +670,29 @@
           "notes": "Disponibilidade e abuso de recursos no modelo de ameaças."
         },
         {
+          "framework": "capec",
+          "control_id": "CAPEC-125",
+          "notes": "Flooding — exaustão de recursos por inundação (MITRE CAPEC-125)."
+        },
+        {
+          "framework": "cwe",
+          "control_id": "CWE-400",
+          "notes": "Uncontrolled Resource Consumption — consumo de recursos sem limite (MITRE CWE-400)."
+        },
+        {
           "framework": "owasp_asvs",
           "control_id": "V11.1.1",
           "notes": "Lógica de negócio e quotas — ASVS V11 Business Logic."
         },
         {
           "framework": "nist_csf",
-          "control_id": "PR.IR-01",
-          "notes": "Resiliência de infraestruturas e recursos (NIST CSF 2.0 PR.IR)."
+          "control_id": "PR.IR-04",
+          "notes": "Capacidade de recursos para assegurar disponibilidade (NIST CSF 2.0 PR.IR-04)."
+        },
+        {
+          "framework": "nist_csf",
+          "control_id": "PR.IR-03",
+          "notes": "Mecanismos de resiliência em situação normal e adversa (NIST CSF 2.0 PR.IR-03)."
         },
         {
           "framework": "iso_27001",
@@ -554,15 +701,18 @@
         },
         {
           "framework": "iso_27001",
-          "control_id": "A.8.13",
-          "notes": "Redundância de recursos de processamento (A.8.13)."
+          "control_id": "A.8.14",
+          "notes": "Redundância de recursos de tratamento de informação (A.8.14)."
         }
-      ]
+      ],
+      "finding_family": null,
+      "heuristic_tier": "generic_stride",
+      "signal_refs": []
     },
     {
       "id": "eng_worker_elevation_of_privilege",
       "title": "[elevation_of_privilege] Worker",
-      "description": "Ameaça genérica STRIDE para o componente 'Worker' como process. Rever controlos específicos do contexto.",
+      "description": "Ameaça STRIDE para 'Worker' como process. Rever controlos específicos do contexto.",
       "stride": "elevation_of_privilege",
       "target_component_id": "worker",
       "target_data_flow_id": null,
@@ -580,6 +730,16 @@
           "notes": "Rever superfícies de autorização e escalação no diagrama."
         },
         {
+          "framework": "capec",
+          "control_id": "CAPEC-233",
+          "notes": "Privilege Escalation — obtenção de privilégios acima dos autorizados (MITRE CAPEC-233)."
+        },
+        {
+          "framework": "cwe",
+          "control_id": "CWE-269",
+          "notes": "Improper Privilege Management — gestão de privilégios incorreta (MITRE CWE-269)."
+        },
+        {
           "framework": "owasp_asvs",
           "control_id": "V4.1.1",
           "notes": "Controlos de acesso — ASVS V4 Access Control."
@@ -591,13 +751,13 @@
         },
         {
           "framework": "nist_csf",
-          "control_id": "PR.AC-01",
-          "notes": "Identidades e credenciais são geridas, autenticadas e sujeitas a ciclo de vida (PR.AC)."
+          "control_id": "PR.AA-01",
+          "notes": "Identidades e credenciais são geridas ao longo do ciclo de vida (NIST CSF 2.0 PR.AA-01)."
         },
         {
           "framework": "nist_csf",
-          "control_id": "PR.AC-04",
-          "notes": "Permissões de acesso são geridas, incorporando princípio do menor privilégio."
+          "control_id": "PR.AA-05",
+          "notes": "Permissões e autorizações seguem o princípio do menor privilégio (NIST CSF 2.0 PR.AA-05)."
         },
         {
           "framework": "iso_27001",
@@ -609,20 +769,23 @@
           "control_id": "A.8.3",
           "notes": "Restrição de acesso à informação (A.8.3)."
         }
-      ]
+      ],
+      "finding_family": null,
+      "heuristic_tier": "generic_stride",
+      "signal_refs": []
     },
     {
       "id": "eng_db_tampering",
       "title": "[tampering] Pedidos",
-      "description": "Ameaça genérica STRIDE para o componente 'Pedidos' (PostgreSQL) como datastore. Rever controlos específicos do contexto.",
+      "description": "Ameaça STRIDE para 'Pedidos' (PostgreSQL) como datastore. Rever controlos específicos do contexto.",
       "stride": "tampering",
       "target_component_id": "db",
       "target_data_flow_id": null,
       "target_asset_id": null,
       "risk": {
         "likelihood": 3,
-        "impact": 4,
-        "score": 12.0
+        "impact": 5,
+        "score": 15.0
       },
       "skipped_as_duplicate": false,
       "framework_refs": [
@@ -630,6 +793,16 @@
           "framework": "owasp_tm",
           "control_id": "STRIDE-T",
           "notes": "Modelar alteração não autorizada de dados ou fluxos (STRIDE Tampering)."
+        },
+        {
+          "framework": "capec",
+          "control_id": "CAPEC-184",
+          "notes": "Software Integrity Attack — adulteração da integridade de software/dados (MITRE CAPEC-184)."
+        },
+        {
+          "framework": "cwe",
+          "control_id": "CWE-345",
+          "notes": "Insufficient Verification of Data Authenticity — verificação de autenticidade insuficiente (MITRE CWE-345)."
         },
         {
           "framework": "owasp_asvs",
@@ -643,8 +816,8 @@
         },
         {
           "framework": "nist_csf",
-          "control_id": "PR.DS-06",
-          "notes": "Integridade de software e firmware (NIST CSF 2.0 PR.DS)."
+          "control_id": "PR.DS-01",
+          "notes": "Confidencialidade, integridade e disponibilidade dos dados em repouso (NIST CSF 2.0 PR.DS-01)."
         },
         {
           "framework": "nist_csf",
@@ -661,20 +834,23 @@
           "control_id": "A.8.12",
           "notes": "Prevenção de fuga de dados (relevante a integridade em canais — A.8.12)."
         }
-      ]
+      ],
+      "finding_family": null,
+      "heuristic_tier": "generic_stride",
+      "signal_refs": []
     },
     {
       "id": "eng_db_information_disclosure",
       "title": "[information_disclosure] Pedidos",
-      "description": "Ameaça genérica STRIDE para o componente 'Pedidos' (PostgreSQL) como datastore. Rever controlos específicos do contexto.",
+      "description": "Ameaça STRIDE para 'Pedidos' (PostgreSQL) como datastore. Rever controlos específicos do contexto.",
       "stride": "information_disclosure",
       "target_component_id": "db",
       "target_data_flow_id": null,
       "target_asset_id": null,
       "risk": {
         "likelihood": 3,
-        "impact": 4,
-        "score": 12.0
+        "impact": 5,
+        "score": 15.0
       },
       "skipped_as_duplicate": false,
       "framework_refs": [
@@ -682,6 +858,16 @@
           "framework": "owasp_tm",
           "control_id": "STRIDE-I",
           "notes": "Expor dados sensíveis no modelo e controlos de confidencialidade."
+        },
+        {
+          "framework": "capec",
+          "control_id": "CAPEC-118",
+          "notes": "Collect and Analyze Information — recolha de informação exposta (MITRE CAPEC-118)."
+        },
+        {
+          "framework": "cwe",
+          "control_id": "CWE-200",
+          "notes": "Exposure of Sensitive Information to an Unauthorized Actor (MITRE CWE-200)."
         },
         {
           "framework": "owasp_asvs",
@@ -705,28 +891,31 @@
         },
         {
           "framework": "iso_27001",
-          "control_id": "A.8.11",
-          "notes": "Criptografia (A.8.11)."
+          "control_id": "A.8.24",
+          "notes": "Utilização de criptografia (A.8.24)."
         },
         {
           "framework": "iso_27001",
           "control_id": "A.5.14",
           "notes": "Transferência de informação (A.5.14)."
         }
-      ]
+      ],
+      "finding_family": null,
+      "heuristic_tier": "generic_stride",
+      "signal_refs": []
     },
     {
       "id": "eng_db_denial_of_service",
       "title": "[denial_of_service] Pedidos",
-      "description": "Ameaça genérica STRIDE para o componente 'Pedidos' (PostgreSQL) como datastore. Rever controlos específicos do contexto.",
+      "description": "Ameaça STRIDE para 'Pedidos' (PostgreSQL) como datastore. Rever controlos específicos do contexto.",
       "stride": "denial_of_service",
       "target_component_id": "db",
       "target_data_flow_id": null,
       "target_asset_id": null,
       "risk": {
         "likelihood": 3,
-        "impact": 4,
-        "score": 12.0
+        "impact": 5,
+        "score": 15.0
       },
       "skipped_as_duplicate": false,
       "framework_refs": [
@@ -736,14 +925,29 @@
           "notes": "Disponibilidade e abuso de recursos no modelo de ameaças."
         },
         {
+          "framework": "capec",
+          "control_id": "CAPEC-125",
+          "notes": "Flooding — exaustão de recursos por inundação (MITRE CAPEC-125)."
+        },
+        {
+          "framework": "cwe",
+          "control_id": "CWE-400",
+          "notes": "Uncontrolled Resource Consumption — consumo de recursos sem limite (MITRE CWE-400)."
+        },
+        {
           "framework": "owasp_asvs",
           "control_id": "V11.1.1",
           "notes": "Lógica de negócio e quotas — ASVS V11 Business Logic."
         },
         {
           "framework": "nist_csf",
-          "control_id": "PR.IR-01",
-          "notes": "Resiliência de infraestruturas e recursos (NIST CSF 2.0 PR.IR)."
+          "control_id": "PR.IR-04",
+          "notes": "Capacidade de recursos para assegurar disponibilidade (NIST CSF 2.0 PR.IR-04)."
+        },
+        {
+          "framework": "nist_csf",
+          "control_id": "PR.IR-03",
+          "notes": "Mecanismos de resiliência em situação normal e adversa (NIST CSF 2.0 PR.IR-03)."
         },
         {
           "framework": "iso_27001",
@@ -752,10 +956,13 @@
         },
         {
           "framework": "iso_27001",
-          "control_id": "A.8.13",
-          "notes": "Redundância de recursos de processamento (A.8.13)."
+          "control_id": "A.8.14",
+          "notes": "Redundância de recursos de tratamento de informação (A.8.14)."
         }
-      ]
+      ],
+      "finding_family": null,
+      "heuristic_tier": "generic_stride",
+      "signal_refs": []
     },
     {
       "id": "eng_flow_http_in_tampering",
@@ -764,6 +971,201 @@
       "stride": "tampering",
       "target_component_id": null,
       "target_data_flow_id": "http_in",
+      "target_asset_id": null,
+      "risk": {
+        "likelihood": 5,
+        "impact": 4,
+        "score": 20.0
+      },
+      "skipped_as_duplicate": false,
+      "framework_refs": [
+        {
+          "framework": "owasp_tm",
+          "control_id": "STRIDE-T",
+          "notes": "Modelar alteração não autorizada de dados ou fluxos (STRIDE Tampering)."
+        },
+        {
+          "framework": "capec",
+          "control_id": "CAPEC-184",
+          "notes": "Software Integrity Attack — adulteração da integridade de software/dados (MITRE CAPEC-184)."
+        },
+        {
+          "framework": "cwe",
+          "control_id": "CWE-345",
+          "notes": "Insufficient Verification of Data Authenticity — verificação de autenticidade insuficiente (MITRE CWE-345)."
+        },
+        {
+          "framework": "owasp_asvs",
+          "control_id": "V5.1.1",
+          "notes": "Validação de entrada e integridade — ASVS V5 Validation, Sanitization and Encoding."
+        },
+        {
+          "framework": "owasp_asvs",
+          "control_id": "V14.1.1",
+          "notes": "Ambiente de build e dependências — ASVS V14 Configuration."
+        },
+        {
+          "framework": "nist_csf",
+          "control_id": "PR.DS-01",
+          "notes": "Confidencialidade, integridade e disponibilidade dos dados em repouso (NIST CSF 2.0 PR.DS-01)."
+        },
+        {
+          "framework": "nist_csf",
+          "control_id": "PR.PS-01",
+          "notes": "Configuração e manutenção de componentes de infraestrutura (PR.PS)."
+        },
+        {
+          "framework": "iso_27001",
+          "control_id": "A.8.9",
+          "notes": "Gestão de configuração (A.8.9)."
+        },
+        {
+          "framework": "iso_27001",
+          "control_id": "A.8.12",
+          "notes": "Prevenção de fuga de dados (relevante a integridade em canais — A.8.12)."
+        }
+      ],
+      "finding_family": null,
+      "heuristic_tier": "generic_stride",
+      "signal_refs": []
+    },
+    {
+      "id": "eng_flow_to_worker_tampering",
+      "title": "[tampering] Canal do fluxo to_worker",
+      "description": "Propriedades de confidencialidade/integridade a rever no fluxo 'to_worker' (api → worker).",
+      "stride": "tampering",
+      "target_component_id": null,
+      "target_data_flow_id": "to_worker",
+      "target_asset_id": null,
+      "risk": {
+        "likelihood": 4,
+        "impact": 3,
+        "score": 12.0
+      },
+      "skipped_as_duplicate": false,
+      "framework_refs": [
+        {
+          "framework": "owasp_tm",
+          "control_id": "STRIDE-T",
+          "notes": "Modelar alteração não autorizada de dados ou fluxos (STRIDE Tampering)."
+        },
+        {
+          "framework": "capec",
+          "control_id": "CAPEC-184",
+          "notes": "Software Integrity Attack — adulteração da integridade de software/dados (MITRE CAPEC-184)."
+        },
+        {
+          "framework": "cwe",
+          "control_id": "CWE-345",
+          "notes": "Insufficient Verification of Data Authenticity — verificação de autenticidade insuficiente (MITRE CWE-345)."
+        },
+        {
+          "framework": "owasp_asvs",
+          "control_id": "V5.1.1",
+          "notes": "Validação de entrada e integridade — ASVS V5 Validation, Sanitization and Encoding."
+        },
+        {
+          "framework": "owasp_asvs",
+          "control_id": "V14.1.1",
+          "notes": "Ambiente de build e dependências — ASVS V14 Configuration."
+        },
+        {
+          "framework": "nist_csf",
+          "control_id": "PR.DS-01",
+          "notes": "Confidencialidade, integridade e disponibilidade dos dados em repouso (NIST CSF 2.0 PR.DS-01)."
+        },
+        {
+          "framework": "nist_csf",
+          "control_id": "PR.PS-01",
+          "notes": "Configuração e manutenção de componentes de infraestrutura (PR.PS)."
+        },
+        {
+          "framework": "iso_27001",
+          "control_id": "A.8.9",
+          "notes": "Gestão de configuração (A.8.9)."
+        },
+        {
+          "framework": "iso_27001",
+          "control_id": "A.8.12",
+          "notes": "Prevenção de fuga de dados (relevante a integridade em canais — A.8.12)."
+        }
+      ],
+      "finding_family": null,
+      "heuristic_tier": "generic_stride",
+      "signal_refs": []
+    },
+    {
+      "id": "eng_flow_to_worker_information_disclosure",
+      "title": "[information_disclosure] Canal do fluxo to_worker",
+      "description": "Propriedades de confidencialidade/integridade a rever no fluxo 'to_worker' (api → worker).",
+      "stride": "information_disclosure",
+      "target_component_id": null,
+      "target_data_flow_id": "to_worker",
+      "target_asset_id": null,
+      "risk": {
+        "likelihood": 4,
+        "impact": 3,
+        "score": 12.0
+      },
+      "skipped_as_duplicate": false,
+      "framework_refs": [
+        {
+          "framework": "owasp_tm",
+          "control_id": "STRIDE-I",
+          "notes": "Expor dados sensíveis no modelo e controlos de confidencialidade."
+        },
+        {
+          "framework": "capec",
+          "control_id": "CAPEC-118",
+          "notes": "Collect and Analyze Information — recolha de informação exposta (MITRE CAPEC-118)."
+        },
+        {
+          "framework": "cwe",
+          "control_id": "CWE-200",
+          "notes": "Exposure of Sensitive Information to an Unauthorized Actor (MITRE CWE-200)."
+        },
+        {
+          "framework": "owasp_asvs",
+          "control_id": "V8.3.1",
+          "notes": "Proteção de dados sensíveis em repouso — ASVS V8 Data Protection."
+        },
+        {
+          "framework": "owasp_asvs",
+          "control_id": "V9.1.1",
+          "notes": "Comunicações seguras com TLS — ASVS V9 Communication."
+        },
+        {
+          "framework": "nist_csf",
+          "control_id": "PR.DS-01",
+          "notes": "Dados em repouso são protegidos (PR.DS)."
+        },
+        {
+          "framework": "nist_csf",
+          "control_id": "PR.DS-02",
+          "notes": "Dados em trânsito são protegidos."
+        },
+        {
+          "framework": "iso_27001",
+          "control_id": "A.8.24",
+          "notes": "Utilização de criptografia (A.8.24)."
+        },
+        {
+          "framework": "iso_27001",
+          "control_id": "A.5.14",
+          "notes": "Transferência de informação (A.5.14)."
+        }
+      ],
+      "finding_family": null,
+      "heuristic_tier": "generic_stride",
+      "signal_refs": []
+    },
+    {
+      "id": "eng_flow_to_db_tampering",
+      "title": "[tampering] Canal do fluxo to_db",
+      "description": "Propriedades de confidencialidade/integridade a rever no fluxo 'to_db' (worker → db).",
+      "stride": "tampering",
+      "target_component_id": null,
+      "target_data_flow_id": "to_db",
       "target_asset_id": null,
       "risk": {
         "likelihood": 4,
@@ -778,56 +1180,14 @@
           "notes": "Modelar alteração não autorizada de dados ou fluxos (STRIDE Tampering)."
         },
         {
-          "framework": "owasp_asvs",
-          "control_id": "V5.1.1",
-          "notes": "Validação de entrada e integridade — ASVS V5 Validation, Sanitization and Encoding."
+          "framework": "capec",
+          "control_id": "CAPEC-184",
+          "notes": "Software Integrity Attack — adulteração da integridade de software/dados (MITRE CAPEC-184)."
         },
         {
-          "framework": "owasp_asvs",
-          "control_id": "V14.1.1",
-          "notes": "Ambiente de build e dependências — ASVS V14 Configuration."
-        },
-        {
-          "framework": "nist_csf",
-          "control_id": "PR.DS-06",
-          "notes": "Integridade de software e firmware (NIST CSF 2.0 PR.DS)."
-        },
-        {
-          "framework": "nist_csf",
-          "control_id": "PR.PS-01",
-          "notes": "Configuração e manutenção de componentes de infraestrutura (PR.PS)."
-        },
-        {
-          "framework": "iso_27001",
-          "control_id": "A.8.9",
-          "notes": "Gestão de configuração (A.8.9)."
-        },
-        {
-          "framework": "iso_27001",
-          "control_id": "A.8.12",
-          "notes": "Prevenção de fuga de dados (relevante a integridade em canais — A.8.12)."
-        }
-      ]
-    },
-    {
-      "id": "eng_flow_to_worker_tampering",
-      "title": "[tampering] Canal do fluxo to_worker",
-      "description": "Propriedades de confidencialidade/integridade a rever no fluxo 'to_worker' (api → worker).",
-      "stride": "tampering",
-      "target_component_id": null,
-      "target_data_flow_id": "to_worker",
-      "target_asset_id": null,
-      "risk": {
-        "likelihood": 5,
-        "impact": 4,
-        "score": 20.0
-      },
-      "skipped_as_duplicate": false,
-      "framework_refs": [
-        {
-          "framework": "owasp_tm",
-          "control_id": "STRIDE-T",
-          "notes": "Modelar alteração não autorizada de dados ou fluxos (STRIDE Tampering)."
+          "framework": "cwe",
+          "control_id": "CWE-345",
+          "notes": "Insufficient Verification of Data Authenticity — verificação de autenticidade insuficiente (MITRE CWE-345)."
         },
         {
           "framework": "owasp_asvs",
@@ -838,115 +1198,11 @@
           "framework": "owasp_asvs",
           "control_id": "V14.1.1",
           "notes": "Ambiente de build e dependências — ASVS V14 Configuration."
-        },
-        {
-          "framework": "nist_csf",
-          "control_id": "PR.DS-06",
-          "notes": "Integridade de software e firmware (NIST CSF 2.0 PR.DS)."
-        },
-        {
-          "framework": "nist_csf",
-          "control_id": "PR.PS-01",
-          "notes": "Configuração e manutenção de componentes de infraestrutura (PR.PS)."
-        },
-        {
-          "framework": "iso_27001",
-          "control_id": "A.8.9",
-          "notes": "Gestão de configuração (A.8.9)."
-        },
-        {
-          "framework": "iso_27001",
-          "control_id": "A.8.12",
-          "notes": "Prevenção de fuga de dados (relevante a integridade em canais — A.8.12)."
-        }
-      ]
-    },
-    {
-      "id": "eng_flow_to_worker_information_disclosure",
-      "title": "[information_disclosure] Canal do fluxo to_worker",
-      "description": "Propriedades de confidencialidade/integridade a rever no fluxo 'to_worker' (api → worker).",
-      "stride": "information_disclosure",
-      "target_component_id": null,
-      "target_data_flow_id": "to_worker",
-      "target_asset_id": null,
-      "risk": {
-        "likelihood": 5,
-        "impact": 4,
-        "score": 20.0
-      },
-      "skipped_as_duplicate": false,
-      "framework_refs": [
-        {
-          "framework": "owasp_tm",
-          "control_id": "STRIDE-I",
-          "notes": "Expor dados sensíveis no modelo e controlos de confidencialidade."
-        },
-        {
-          "framework": "owasp_asvs",
-          "control_id": "V8.3.1",
-          "notes": "Proteção de dados sensíveis em repouso — ASVS V8 Data Protection."
-        },
-        {
-          "framework": "owasp_asvs",
-          "control_id": "V9.1.1",
-          "notes": "Comunicações seguras com TLS — ASVS V9 Communication."
         },
         {
           "framework": "nist_csf",
           "control_id": "PR.DS-01",
-          "notes": "Dados em repouso são protegidos (PR.DS)."
-        },
-        {
-          "framework": "nist_csf",
-          "control_id": "PR.DS-02",
-          "notes": "Dados em trânsito são protegidos."
-        },
-        {
-          "framework": "iso_27001",
-          "control_id": "A.8.11",
-          "notes": "Criptografia (A.8.11)."
-        },
-        {
-          "framework": "iso_27001",
-          "control_id": "A.5.14",
-          "notes": "Transferência de informação (A.5.14)."
-        }
-      ]
-    },
-    {
-      "id": "eng_flow_to_db_tampering",
-      "title": "[tampering] Canal do fluxo to_db",
-      "description": "Propriedades de confidencialidade/integridade a rever no fluxo 'to_db' (worker → db).",
-      "stride": "tampering",
-      "target_component_id": null,
-      "target_data_flow_id": "to_db",
-      "target_asset_id": null,
-      "risk": {
-        "likelihood": 5,
-        "impact": 4,
-        "score": 20.0
-      },
-      "skipped_as_duplicate": false,
-      "framework_refs": [
-        {
-          "framework": "owasp_tm",
-          "control_id": "STRIDE-T",
-          "notes": "Modelar alteração não autorizada de dados ou fluxos (STRIDE Tampering)."
-        },
-        {
-          "framework": "owasp_asvs",
-          "control_id": "V5.1.1",
-          "notes": "Validação de entrada e integridade — ASVS V5 Validation, Sanitization and Encoding."
-        },
-        {
-          "framework": "owasp_asvs",
-          "control_id": "V14.1.1",
-          "notes": "Ambiente de build e dependências — ASVS V14 Configuration."
-        },
-        {
-          "framework": "nist_csf",
-          "control_id": "PR.DS-06",
-          "notes": "Integridade de software e firmware (NIST CSF 2.0 PR.DS)."
+          "notes": "Confidencialidade, integridade e disponibilidade dos dados em repouso (NIST CSF 2.0 PR.DS-01)."
         },
         {
           "framework": "nist_csf",
@@ -963,7 +1219,10 @@
           "control_id": "A.8.12",
           "notes": "Prevenção de fuga de dados (relevante a integridade em canais — A.8.12)."
         }
-      ]
+      ],
+      "finding_family": null,
+      "heuristic_tier": "generic_stride",
+      "signal_refs": []
     },
     {
       "id": "eng_flow_to_db_information_disclosure",
@@ -974,9 +1233,9 @@
       "target_data_flow_id": "to_db",
       "target_asset_id": null,
       "risk": {
-        "likelihood": 5,
+        "likelihood": 4,
         "impact": 4,
-        "score": 20.0
+        "score": 16.0
       },
       "skipped_as_duplicate": false,
       "framework_refs": [
@@ -984,6 +1243,16 @@
           "framework": "owasp_tm",
           "control_id": "STRIDE-I",
           "notes": "Expor dados sensíveis no modelo e controlos de confidencialidade."
+        },
+        {
+          "framework": "capec",
+          "control_id": "CAPEC-118",
+          "notes": "Collect and Analyze Information — recolha de informação exposta (MITRE CAPEC-118)."
+        },
+        {
+          "framework": "cwe",
+          "control_id": "CWE-200",
+          "notes": "Exposure of Sensitive Information to an Unauthorized Actor (MITRE CWE-200)."
         },
         {
           "framework": "owasp_asvs",
@@ -1007,15 +1276,18 @@
         },
         {
           "framework": "iso_27001",
-          "control_id": "A.8.11",
-          "notes": "Criptografia (A.8.11)."
+          "control_id": "A.8.24",
+          "notes": "Utilização de criptografia (A.8.24)."
         },
         {
           "framework": "iso_27001",
           "control_id": "A.5.14",
           "notes": "Transferência de informação (A.5.14)."
         }
-      ]
+      ],
+      "finding_family": null,
+      "heuristic_tier": "generic_stride",
+      "signal_refs": []
     }
   ],
   "summary": {
@@ -1027,12 +1299,817 @@
     "pack_threats_skipped_duplicate": 0,
     "max_risk_score": 20.0,
     "framework_ref_counts_by_catalog": {
-      "iso_27001": 40,
-      "nist_csf": 37,
+      "capec": 20,
+      "cwe": 20,
+      "iso_27001": 39,
+      "nist_csf": 40,
       "owasp_asvs": 36,
       "owasp_tm": 20
     }
   },
+  "methodology_insights": null,
   "industry_pack_id": null,
-  "pack_control_hints": []
+  "pack_control_hints": [],
+  "explanations": [
+    {
+      "id": "exp_tb_0001",
+      "type": "trust_boundary",
+      "category": "trust_boundary",
+      "subject": "Fronteira CROSS_BOUNDARY_FLOW",
+      "message": "Tráfego entre perímetros exige controlos explícitos; usar este achado para rever segmentação.",
+      "evidence": [
+        "Fluxo 'http_in' liga fronteira 'internet' → 'vpc'.",
+        "Fluxo: http_in",
+        "Zonas `internet` → `vpc`."
+      ],
+      "confidence": "high",
+      "related_entities": [
+        {
+          "entity_kind": "data_flow",
+          "entity_id": "http_in"
+        }
+      ],
+      "reasoning_path": null
+    },
+    {
+      "id": "exp_ht_0002",
+      "type": "threat_heuristic",
+      "category": "threat",
+      "subject": "[spoofing] Usuário",
+      "message": "Heurística identificou spoofing em Usuário (user) com base no desenho e no motor STRIDE.",
+      "evidence": [
+        "STRIDE spoofing com score ~12 (L=4, I=3).",
+        "Componente alvo: Usuário (user).",
+        "Normas: owasp_tm:STRIDE-S, capec:CAPEC-151, cwe:CWE-287, owasp_asvs:V2.2.1"
+      ],
+      "confidence": "medium",
+      "related_entities": [
+        {
+          "entity_kind": "heuristic_threat",
+          "entity_id": "eng_user_spoofing"
+        },
+        {
+          "entity_kind": "component",
+          "entity_id": "user"
+        }
+      ],
+      "reasoning_path": [
+        "Heurística STRIDE",
+        "Alvo no diagrama",
+        "Score L×I"
+      ]
+    },
+    {
+      "id": "exp_ht_0003",
+      "type": "threat_heuristic",
+      "category": "threat",
+      "subject": "[repudiation] Usuário",
+      "message": "Heurística identificou repudiation em Usuário (user) com base no desenho e no motor STRIDE.",
+      "evidence": [
+        "STRIDE repudiation com score ~9 (L=3, I=3).",
+        "Componente alvo: Usuário (user).",
+        "Normas: owasp_tm:STRIDE-R, capec:CAPEC-93, cwe:CWE-778, owasp_asvs:V7.1.1"
+      ],
+      "confidence": "medium",
+      "related_entities": [
+        {
+          "entity_kind": "heuristic_threat",
+          "entity_id": "eng_user_repudiation"
+        },
+        {
+          "entity_kind": "component",
+          "entity_id": "user"
+        }
+      ],
+      "reasoning_path": [
+        "Heurística STRIDE",
+        "Alvo no diagrama",
+        "Score L×I"
+      ]
+    },
+    {
+      "id": "exp_ht_0004",
+      "type": "threat_heuristic",
+      "category": "threat",
+      "subject": "[spoofing] API (public_api)",
+      "message": "Heurística identificou spoofing em API (api) com base no desenho e no motor STRIDE.",
+      "evidence": [
+        "STRIDE spoofing com score ~20 (L=4, I=5).",
+        "Componente alvo: API (api).",
+        "Normas: owasp_tm:STRIDE-S, capec:CAPEC-151, cwe:CWE-287, owasp_asvs:V2.2.1"
+      ],
+      "confidence": "high",
+      "related_entities": [
+        {
+          "entity_kind": "heuristic_threat",
+          "entity_id": "eng_api_spoofing"
+        },
+        {
+          "entity_kind": "component",
+          "entity_id": "api"
+        }
+      ],
+      "reasoning_path": [
+        "Heurística STRIDE",
+        "Alvo no diagrama",
+        "Score L×I"
+      ]
+    },
+    {
+      "id": "exp_rk_0005",
+      "type": "risk_score",
+      "category": "risk",
+      "subject": "Prioridade de risco · eng_api_spoofing",
+      "message": "Score ~20 merece prioridade na triagem.",
+      "evidence": [
+        "L×I = 4×5",
+        "Fluxo —"
+      ],
+      "confidence": "medium",
+      "related_entities": [
+        {
+          "entity_kind": "heuristic_threat",
+          "entity_id": "eng_api_spoofing"
+        }
+      ],
+      "reasoning_path": null
+    },
+    {
+      "id": "exp_ht_0006",
+      "type": "threat_heuristic",
+      "category": "threat",
+      "subject": "[tampering] API (public_api)",
+      "message": "Heurística identificou tampering em API (api) com base no desenho e no motor STRIDE.",
+      "evidence": [
+        "STRIDE tampering com score ~15 (L=3, I=5).",
+        "Componente alvo: API (api).",
+        "Normas: owasp_tm:STRIDE-T, capec:CAPEC-184, cwe:CWE-345, owasp_asvs:V5.1.1"
+      ],
+      "confidence": "high",
+      "related_entities": [
+        {
+          "entity_kind": "heuristic_threat",
+          "entity_id": "eng_api_tampering"
+        },
+        {
+          "entity_kind": "component",
+          "entity_id": "api"
+        }
+      ],
+      "reasoning_path": [
+        "Heurística STRIDE",
+        "Alvo no diagrama",
+        "Score L×I"
+      ]
+    },
+    {
+      "id": "exp_ht_0007",
+      "type": "threat_heuristic",
+      "category": "threat",
+      "subject": "[information_disclosure] API (public_api)",
+      "message": "Heurística identificou information_disclosure em API (api) com base no desenho e no motor STRIDE.",
+      "evidence": [
+        "STRIDE information_disclosure com score ~15 (L=3, I=5).",
+        "Componente alvo: API (api).",
+        "Normas: owasp_tm:STRIDE-I, capec:CAPEC-118, cwe:CWE-200, owasp_asvs:V8.3.1"
+      ],
+      "confidence": "high",
+      "related_entities": [
+        {
+          "entity_kind": "heuristic_threat",
+          "entity_id": "eng_api_information_disclosure"
+        },
+        {
+          "entity_kind": "component",
+          "entity_id": "api"
+        }
+      ],
+      "reasoning_path": [
+        "Heurística STRIDE",
+        "Alvo no diagrama",
+        "Score L×I"
+      ]
+    },
+    {
+      "id": "exp_ht_0008",
+      "type": "threat_heuristic",
+      "category": "threat",
+      "subject": "[denial_of_service] API (public_api)",
+      "message": "Heurística identificou denial_of_service em API (api) com base no desenho e no motor STRIDE.",
+      "evidence": [
+        "STRIDE denial_of_service com score ~15 (L=3, I=5).",
+        "Componente alvo: API (api).",
+        "Normas: owasp_tm:STRIDE-D, capec:CAPEC-125, cwe:CWE-400, owasp_asvs:V11.1.1"
+      ],
+      "confidence": "high",
+      "related_entities": [
+        {
+          "entity_kind": "heuristic_threat",
+          "entity_id": "eng_api_denial_of_service"
+        },
+        {
+          "entity_kind": "component",
+          "entity_id": "api"
+        }
+      ],
+      "reasoning_path": [
+        "Heurística STRIDE",
+        "Alvo no diagrama",
+        "Score L×I"
+      ]
+    },
+    {
+      "id": "exp_ht_0009",
+      "type": "threat_heuristic",
+      "category": "threat",
+      "subject": "[elevation_of_privilege] API (public_api)",
+      "message": "Heurística identificou elevation_of_privilege em API (api) com base no desenho e no motor STRIDE.",
+      "evidence": [
+        "STRIDE elevation_of_privilege com score ~20 (L=4, I=5).",
+        "Componente alvo: API (api).",
+        "Normas: owasp_tm:STRIDE-E, capec:CAPEC-233, cwe:CWE-269, owasp_asvs:V4.1.1"
+      ],
+      "confidence": "high",
+      "related_entities": [
+        {
+          "entity_kind": "heuristic_threat",
+          "entity_id": "eng_api_elevation_of_privilege"
+        },
+        {
+          "entity_kind": "component",
+          "entity_id": "api"
+        }
+      ],
+      "reasoning_path": [
+        "Heurística STRIDE",
+        "Alvo no diagrama",
+        "Score L×I"
+      ]
+    },
+    {
+      "id": "exp_rk_0010",
+      "type": "risk_score",
+      "category": "risk",
+      "subject": "Prioridade de risco · eng_api_elevation_of_privilege",
+      "message": "Score ~20 merece prioridade na triagem.",
+      "evidence": [
+        "L×I = 4×5",
+        "Fluxo —"
+      ],
+      "confidence": "medium",
+      "related_entities": [
+        {
+          "entity_kind": "heuristic_threat",
+          "entity_id": "eng_api_elevation_of_privilege"
+        }
+      ],
+      "reasoning_path": null
+    },
+    {
+      "id": "exp_ht_0011",
+      "type": "threat_heuristic",
+      "category": "threat",
+      "subject": "[spoofing] Worker",
+      "message": "Heurística identificou spoofing em Worker (worker) com base no desenho e no motor STRIDE.",
+      "evidence": [
+        "STRIDE spoofing com score ~12 (L=4, I=3).",
+        "Componente alvo: Worker (worker).",
+        "Normas: owasp_tm:STRIDE-S, capec:CAPEC-151, cwe:CWE-287, owasp_asvs:V2.2.1"
+      ],
+      "confidence": "medium",
+      "related_entities": [
+        {
+          "entity_kind": "heuristic_threat",
+          "entity_id": "eng_worker_spoofing"
+        },
+        {
+          "entity_kind": "component",
+          "entity_id": "worker"
+        }
+      ],
+      "reasoning_path": [
+        "Heurística STRIDE",
+        "Alvo no diagrama",
+        "Score L×I"
+      ]
+    },
+    {
+      "id": "exp_ht_0012",
+      "type": "threat_heuristic",
+      "category": "threat",
+      "subject": "[tampering] Worker",
+      "message": "Heurística identificou tampering em Worker (worker) com base no desenho e no motor STRIDE.",
+      "evidence": [
+        "STRIDE tampering com score ~9 (L=3, I=3).",
+        "Componente alvo: Worker (worker).",
+        "Normas: owasp_tm:STRIDE-T, capec:CAPEC-184, cwe:CWE-345, owasp_asvs:V5.1.1"
+      ],
+      "confidence": "medium",
+      "related_entities": [
+        {
+          "entity_kind": "heuristic_threat",
+          "entity_id": "eng_worker_tampering"
+        },
+        {
+          "entity_kind": "component",
+          "entity_id": "worker"
+        }
+      ],
+      "reasoning_path": [
+        "Heurística STRIDE",
+        "Alvo no diagrama",
+        "Score L×I"
+      ]
+    },
+    {
+      "id": "exp_ht_0013",
+      "type": "threat_heuristic",
+      "category": "threat",
+      "subject": "[information_disclosure] Worker",
+      "message": "Heurística identificou information_disclosure em Worker (worker) com base no desenho e no motor STRIDE.",
+      "evidence": [
+        "STRIDE information_disclosure com score ~9 (L=3, I=3).",
+        "Componente alvo: Worker (worker).",
+        "Normas: owasp_tm:STRIDE-I, capec:CAPEC-118, cwe:CWE-200, owasp_asvs:V8.3.1"
+      ],
+      "confidence": "medium",
+      "related_entities": [
+        {
+          "entity_kind": "heuristic_threat",
+          "entity_id": "eng_worker_information_disclosure"
+        },
+        {
+          "entity_kind": "component",
+          "entity_id": "worker"
+        }
+      ],
+      "reasoning_path": [
+        "Heurística STRIDE",
+        "Alvo no diagrama",
+        "Score L×I"
+      ]
+    },
+    {
+      "id": "exp_ht_0014",
+      "type": "threat_heuristic",
+      "category": "threat",
+      "subject": "[denial_of_service] Worker",
+      "message": "Heurística identificou denial_of_service em Worker (worker) com base no desenho e no motor STRIDE.",
+      "evidence": [
+        "STRIDE denial_of_service com score ~9 (L=3, I=3).",
+        "Componente alvo: Worker (worker).",
+        "Normas: owasp_tm:STRIDE-D, capec:CAPEC-125, cwe:CWE-400, owasp_asvs:V11.1.1"
+      ],
+      "confidence": "medium",
+      "related_entities": [
+        {
+          "entity_kind": "heuristic_threat",
+          "entity_id": "eng_worker_denial_of_service"
+        },
+        {
+          "entity_kind": "component",
+          "entity_id": "worker"
+        }
+      ],
+      "reasoning_path": [
+        "Heurística STRIDE",
+        "Alvo no diagrama",
+        "Score L×I"
+      ]
+    },
+    {
+      "id": "exp_ht_0015",
+      "type": "threat_heuristic",
+      "category": "threat",
+      "subject": "[elevation_of_privilege] Worker",
+      "message": "Heurística identificou elevation_of_privilege em Worker (worker) com base no desenho e no motor STRIDE.",
+      "evidence": [
+        "STRIDE elevation_of_privilege com score ~12 (L=4, I=3).",
+        "Componente alvo: Worker (worker).",
+        "Normas: owasp_tm:STRIDE-E, capec:CAPEC-233, cwe:CWE-269, owasp_asvs:V4.1.1"
+      ],
+      "confidence": "medium",
+      "related_entities": [
+        {
+          "entity_kind": "heuristic_threat",
+          "entity_id": "eng_worker_elevation_of_privilege"
+        },
+        {
+          "entity_kind": "component",
+          "entity_id": "worker"
+        }
+      ],
+      "reasoning_path": [
+        "Heurística STRIDE",
+        "Alvo no diagrama",
+        "Score L×I"
+      ]
+    },
+    {
+      "id": "exp_ht_0016",
+      "type": "threat_heuristic",
+      "category": "threat",
+      "subject": "[tampering] Pedidos",
+      "message": "Heurística identificou tampering em Pedidos (db) com base no desenho e no motor STRIDE.",
+      "evidence": [
+        "STRIDE tampering com score ~15 (L=3, I=5).",
+        "Componente alvo: Pedidos (db).",
+        "Normas: owasp_tm:STRIDE-T, capec:CAPEC-184, cwe:CWE-345, owasp_asvs:V5.1.1"
+      ],
+      "confidence": "high",
+      "related_entities": [
+        {
+          "entity_kind": "heuristic_threat",
+          "entity_id": "eng_db_tampering"
+        },
+        {
+          "entity_kind": "component",
+          "entity_id": "db"
+        }
+      ],
+      "reasoning_path": [
+        "Heurística STRIDE",
+        "Alvo no diagrama",
+        "Score L×I"
+      ]
+    },
+    {
+      "id": "exp_ht_0017",
+      "type": "threat_heuristic",
+      "category": "threat",
+      "subject": "[information_disclosure] Pedidos",
+      "message": "Heurística identificou information_disclosure em Pedidos (db) com base no desenho e no motor STRIDE.",
+      "evidence": [
+        "STRIDE information_disclosure com score ~15 (L=3, I=5).",
+        "Componente alvo: Pedidos (db).",
+        "Normas: owasp_tm:STRIDE-I, capec:CAPEC-118, cwe:CWE-200, owasp_asvs:V8.3.1"
+      ],
+      "confidence": "high",
+      "related_entities": [
+        {
+          "entity_kind": "heuristic_threat",
+          "entity_id": "eng_db_information_disclosure"
+        },
+        {
+          "entity_kind": "component",
+          "entity_id": "db"
+        }
+      ],
+      "reasoning_path": [
+        "Heurística STRIDE",
+        "Alvo no diagrama",
+        "Score L×I"
+      ]
+    },
+    {
+      "id": "exp_ht_0018",
+      "type": "threat_heuristic",
+      "category": "threat",
+      "subject": "[denial_of_service] Pedidos",
+      "message": "Heurística identificou denial_of_service em Pedidos (db) com base no desenho e no motor STRIDE.",
+      "evidence": [
+        "STRIDE denial_of_service com score ~15 (L=3, I=5).",
+        "Componente alvo: Pedidos (db).",
+        "Normas: owasp_tm:STRIDE-D, capec:CAPEC-125, cwe:CWE-400, owasp_asvs:V11.1.1"
+      ],
+      "confidence": "high",
+      "related_entities": [
+        {
+          "entity_kind": "heuristic_threat",
+          "entity_id": "eng_db_denial_of_service"
+        },
+        {
+          "entity_kind": "component",
+          "entity_id": "db"
+        }
+      ],
+      "reasoning_path": [
+        "Heurística STRIDE",
+        "Alvo no diagrama",
+        "Score L×I"
+      ]
+    },
+    {
+      "id": "exp_ht_0019",
+      "type": "threat_heuristic",
+      "category": "threat",
+      "subject": "[tampering] Atravessa fronteira — http_in",
+      "message": "Heurística identificou tampering com base no desenho e no motor STRIDE. O fluxo atravessa fronteira: exposição típica maior.",
+      "evidence": [
+        "STRIDE tampering com score ~20 (L=5, I=4).",
+        "Fluxo referido: http_in.",
+        "Fluxo cruza trust boundaries no diagrama.",
+        "Normas: owasp_tm:STRIDE-T, capec:CAPEC-184, cwe:CWE-345, owasp_asvs:V5.1.1"
+      ],
+      "confidence": "high",
+      "related_entities": [
+        {
+          "entity_kind": "heuristic_threat",
+          "entity_id": "eng_flow_http_in_tampering"
+        }
+      ],
+      "reasoning_path": [
+        "Heurística STRIDE",
+        "Alvo no diagrama",
+        "Score L×I"
+      ]
+    },
+    {
+      "id": "exp_rk_0020",
+      "type": "risk_score",
+      "category": "risk",
+      "subject": "Prioridade de risco · eng_flow_http_in_tampering",
+      "message": "Score ~20 merece prioridade na triagem. Fluxo cruza boundary externa ou entre zonas.",
+      "evidence": [
+        "L×I = 5×4",
+        "Fluxo http_in"
+      ],
+      "confidence": "medium",
+      "related_entities": [
+        {
+          "entity_kind": "heuristic_threat",
+          "entity_id": "eng_flow_http_in_tampering"
+        }
+      ],
+      "reasoning_path": null
+    },
+    {
+      "id": "exp_ht_0021",
+      "type": "threat_heuristic",
+      "category": "threat",
+      "subject": "[tampering] Canal do fluxo to_worker",
+      "message": "Heurística identificou tampering com base no desenho e no motor STRIDE.",
+      "evidence": [
+        "STRIDE tampering com score ~12 (L=4, I=3).",
+        "Fluxo referido: to_worker.",
+        "Normas: owasp_tm:STRIDE-T, capec:CAPEC-184, cwe:CWE-345, owasp_asvs:V5.1.1"
+      ],
+      "confidence": "medium",
+      "related_entities": [
+        {
+          "entity_kind": "heuristic_threat",
+          "entity_id": "eng_flow_to_worker_tampering"
+        }
+      ],
+      "reasoning_path": [
+        "Heurística STRIDE",
+        "Alvo no diagrama",
+        "Score L×I"
+      ]
+    },
+    {
+      "id": "exp_ht_0022",
+      "type": "threat_heuristic",
+      "category": "threat",
+      "subject": "[information_disclosure] Canal do fluxo to_worker",
+      "message": "Heurística identificou information_disclosure com base no desenho e no motor STRIDE.",
+      "evidence": [
+        "STRIDE information_disclosure com score ~12 (L=4, I=3).",
+        "Fluxo referido: to_worker.",
+        "Normas: owasp_tm:STRIDE-I, capec:CAPEC-118, cwe:CWE-200, owasp_asvs:V8.3.1"
+      ],
+      "confidence": "medium",
+      "related_entities": [
+        {
+          "entity_kind": "heuristic_threat",
+          "entity_id": "eng_flow_to_worker_information_disclosure"
+        }
+      ],
+      "reasoning_path": [
+        "Heurística STRIDE",
+        "Alvo no diagrama",
+        "Score L×I"
+      ]
+    },
+    {
+      "id": "exp_ht_0023",
+      "type": "threat_heuristic",
+      "category": "threat",
+      "subject": "[tampering] Canal do fluxo to_db",
+      "message": "Heurística identificou tampering com base no desenho e no motor STRIDE.",
+      "evidence": [
+        "STRIDE tampering com score ~16 (L=4, I=4).",
+        "Fluxo referido: to_db.",
+        "Normas: owasp_tm:STRIDE-T, capec:CAPEC-184, cwe:CWE-345, owasp_asvs:V5.1.1"
+      ],
+      "confidence": "high",
+      "related_entities": [
+        {
+          "entity_kind": "heuristic_threat",
+          "entity_id": "eng_flow_to_db_tampering"
+        }
+      ],
+      "reasoning_path": [
+        "Heurística STRIDE",
+        "Alvo no diagrama",
+        "Score L×I"
+      ]
+    },
+    {
+      "id": "exp_ht_0024",
+      "type": "threat_heuristic",
+      "category": "threat",
+      "subject": "[information_disclosure] Canal do fluxo to_db",
+      "message": "Heurística identificou information_disclosure com base no desenho e no motor STRIDE.",
+      "evidence": [
+        "STRIDE information_disclosure com score ~16 (L=4, I=4).",
+        "Fluxo referido: to_db.",
+        "Normas: owasp_tm:STRIDE-I, capec:CAPEC-118, cwe:CWE-200, owasp_asvs:V8.3.1"
+      ],
+      "confidence": "high",
+      "related_entities": [
+        {
+          "entity_kind": "heuristic_threat",
+          "entity_id": "eng_flow_to_db_information_disclosure"
+        }
+      ],
+      "reasoning_path": [
+        "Heurística STRIDE",
+        "Alvo no diagrama",
+        "Score L×I"
+      ]
+    }
+  ],
+  "ai_system_context": null,
+  "model_quality_precheck": {
+    "score_0_100": 62,
+    "band": "good",
+    "methodology_fit": "strong",
+    "recommendation_confidence": "medium",
+    "checks": [
+      {
+        "code": "assets_present",
+        "passed": true,
+        "message": "2 ativo(s) declarado(s)."
+      },
+      {
+        "code": "trust_boundaries",
+        "passed": true,
+        "message": "2 fronteira(s); 0 validada(s) pelo modelador."
+      },
+      {
+        "code": "flow_semantics",
+        "passed": true,
+        "message": "3 fluxo(s) com semântica ou exposição explícita."
+      },
+      {
+        "code": "component_context",
+        "passed": false,
+        "message": "1 componente(s) com responsabilidade/privilégio explícitos."
+      },
+      {
+        "code": "business_context",
+        "passed": false,
+        "message": "Sem objetivos de negócio — PASTA/risk-centric degradam."
+      },
+      {
+        "code": "data_classification",
+        "passed": true,
+        "message": "2 ativo(s) com classificação ou sensibilidade."
+      }
+    ],
+    "methodology_fit_matrix": {
+      "stride": "strong",
+      "pasta": "partial",
+      "nist_data_centric": "strong",
+      "linddun": "partial",
+      "plot4ai": "weak",
+      "octave_allegro": "partial",
+      "cia_die": "strong"
+    },
+    "structure_score": 51,
+    "methodology_score": 94,
+    "context_score": 30,
+    "overall_score": 57,
+    "methodology_fit_reasons": [
+      "Metodologia do documento: `stride`; matriz de aderência: `strong`.",
+      "Contexto mínimo para esta metodologia parece suficiente."
+    ]
+  },
+  "methodology_completeness": {
+    "state": "complete",
+    "reasons": [],
+    "note": null
+  },
+  "wizard_context_notes": [],
+  "wizard_signal_trace": [],
+  "anti_pattern_hits": [],
+  "aggregate_risk": {
+    "schema_version": "1.0",
+    "active_threat_count": 20,
+    "total_risk_score": 278.0,
+    "mean_risk_score": 13.9,
+    "max_risk_score": 20.0,
+    "severity_distribution": {
+      "high": 13,
+      "medium": 4,
+      "critical": 3
+    },
+    "top_threats": [
+      {
+        "id": "eng_api_spoofing",
+        "title": "[spoofing] API (public_api)",
+        "score": 20.0,
+        "stride": "spoofing"
+      },
+      {
+        "id": "eng_api_elevation_of_privilege",
+        "title": "[elevation_of_privilege] API (public_api)",
+        "score": 20.0,
+        "stride": "elevation_of_privilege"
+      },
+      {
+        "id": "eng_flow_http_in_tampering",
+        "title": "[tampering] Atravessa fronteira — http_in",
+        "score": 20.0,
+        "stride": "tampering"
+      },
+      {
+        "id": "eng_flow_to_db_tampering",
+        "title": "[tampering] Canal do fluxo to_db",
+        "score": 16.0,
+        "stride": "tampering"
+      },
+      {
+        "id": "eng_flow_to_db_information_disclosure",
+        "title": "[information_disclosure] Canal do fluxo to_db",
+        "score": 16.0,
+        "stride": "information_disclosure"
+      },
+      {
+        "id": "eng_api_tampering",
+        "title": "[tampering] API (public_api)",
+        "score": 15.0,
+        "stride": "tampering"
+      },
+      {
+        "id": "eng_api_information_disclosure",
+        "title": "[information_disclosure] API (public_api)",
+        "score": 15.0,
+        "stride": "information_disclosure"
+      },
+      {
+        "id": "eng_api_denial_of_service",
+        "title": "[denial_of_service] API (public_api)",
+        "score": 15.0,
+        "stride": "denial_of_service"
+      }
+    ],
+    "top_components": [
+      {
+        "id": "api",
+        "aggregate_score": 85.0
+      },
+      {
+        "id": "worker",
+        "aggregate_score": 51.0
+      },
+      {
+        "id": "db",
+        "aggregate_score": 45.0
+      },
+      {
+        "id": "user",
+        "aggregate_score": 21.0
+      }
+    ],
+    "top_flows": [
+      {
+        "id": "to_db",
+        "aggregate_score": 32.0
+      },
+      {
+        "id": "to_worker",
+        "aggregate_score": 24.0
+      },
+      {
+        "id": "http_in",
+        "aggregate_score": 20.0
+      }
+    ],
+    "top_assets": [],
+    "dominant_themes": [
+      "eng: 20"
+    ],
+    "mitigation_starters": [
+      "Priorizar `eng_api_spoofing` em `api` (score 20.0).",
+      "Priorizar `eng_api_elevation_of_privilege` em `api` (score 20.0).",
+      "Priorizar `eng_flow_http_in_tampering` em `http_in` (score 20.0).",
+      "Priorizar `eng_flow_to_db_tampering` em `to_db` (score 16.0).",
+      "Priorizar `eng_flow_to_db_information_disclosure` em `to_db` (score 16.0)."
+    ]
+  },
+  "decision_cockpit": {
+    "schema_version": "1.0",
+    "risk_posture": "elevated",
+    "headline": "Postura crítica agregada — tratamento prioritário recomendado.",
+    "key_decisions": [
+      "20 achados heurísticos activos; soma de scores ≈ 278.0.",
+      "Ordenar backlog pelos `top_threats` e validar com donos de sistema."
+    ],
+    "next_reviews": [
+      "Rever controlos nas fronteiras com fluxos de maior risco acumulado.",
+      "Confirmar classificação e retenção nos ativos mais expostos."
+    ]
+  }
 }

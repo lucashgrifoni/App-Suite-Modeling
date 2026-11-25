@@ -8,11 +8,13 @@ from otm_threat_engine import recommend_methodology
 from otm_threat_engine.comparison_models import ThreatModelComparisonResult
 from otm_threat_engine.methodology_completeness import assess_methodology_completeness
 from otm_threat_engine.result import AnalysisResult
-from pydantic import ValidationError as PydanticValidationError
 
+from otm_api.error_models import API_ERROR_RESPONSES
 from otm_api.routers._errors import (
+    analysis_from_payload_or_422,
     document_from_payload_or_422,
-    raise_analysis_validation_error,
+    ensure_analysis_matches_document,
+    ensure_pack_exists,
     raise_pack_not_found,
 )
 from otm_api.schemas.bodies import (
@@ -30,7 +32,7 @@ from otm_api.services.analysis import run_analysis
 from otm_api.services.compare import comparison_from_validated_documents
 from otm_api.services.documents import create_blank_document
 
-router = APIRouter(prefix="/models", tags=["Models"])
+router = APIRouter(prefix="/models", tags=["Models"], responses=API_ERROR_RESPONSES)
 
 
 @router.post(
@@ -66,7 +68,6 @@ def validate_model(body: DocumentBody) -> ValidateResponse:
         "Avalia completude do modelo (score, banda, matriz de adequação metodológica) e, "
         "opcionalmente, estado de completude da metodologia escolhida — sem correr heurísticas STRIDE."
     ),
-    response_model=ModelPrecheckResponse,
     response_description="`precheck` + `methodology_completeness` serializados.",
 )
 def model_precheck(body: PrecheckBody) -> ModelPrecheckResponse:
@@ -85,7 +86,6 @@ def model_precheck(body: PrecheckBody) -> ModelPrecheckResponse:
         "Compares two canonical versions (baseline vs revised) and returns structured diff. "
         "Implemented in `otm_core_schema.diff_documents` — same semantics as `otm diff` in the CLI."
     ),
-    response_model=ThreatModelDiff,
     response_description="Serialized `ThreatModelDiff` JSON object.",
 )
 def diff_model_versions(body: DiffBody) -> ThreatModelDiff:
@@ -101,26 +101,35 @@ def diff_model_versions(body: DiffBody) -> ThreatModelDiff:
         "Returns `ThreatModelComparisonResult`: canonical diff, aggregates, insights and, when "
         "`baseline_analysis`/`revised_analysis` or `run_analysis=true` is provided, risk/heuristic delta."
     ),
-    response_model=ThreatModelComparisonResult,
     response_description="JSON of the unified comparison result.",
 )
 def compare_models(body: CompareBody) -> ThreatModelComparisonResult:
     b_doc = document_from_payload_or_422(body.baseline)
     r_doc = document_from_payload_or_422(body.revised)
-    try:
-        result = comparison_from_validated_documents(
-            b_doc,
-            r_doc,
-            baseline_analysis=body.baseline_analysis,
-            revised_analysis=body.revised_analysis,
-            run_analysis_flag=body.run_analysis,
-            pack_id=body.pack_id,
+    b_analysis = analysis_from_payload_or_422(body.baseline_analysis)
+    r_analysis = analysis_from_payload_or_422(body.revised_analysis)
+    # Cada análise tem de descrever o documento que vem ao lado dela. Sem isto, trocar as duas
+    # (um copy/paste num passo de CI) devolvia 200 com o delta ao contrário: as ameaças que a
+    # revisão *removeu* apareciam como "added", com a metade estrutural do resultado — essa
+    # calculada a partir dos documentos certos — a dar-lhe ar de resposta legítima.
+    if b_analysis is not None and r_analysis is not None:
+        ensure_analysis_matches_document(
+            b_doc, b_analysis, analysis_field="baseline_analysis", document_field="baseline"
         )
-    except FileNotFoundError as e:
-        raise raise_pack_not_found(e) from e
-    except PydanticValidationError as e:
-        raise raise_analysis_validation_error(e) from e
-    return result
+        ensure_analysis_matches_document(r_doc, r_analysis, analysis_field="revised_analysis", document_field="revised")
+    # Verificado à cabeça, e não dentro do motor: aqui o pack só é lido no ramo `run_analysis`,
+    # por isso sem essa flag um `pack_id` com uma gralha era aceite com 200 — inerte, sem
+    # efeito nenhum na resposta e sem nada a dizê-lo — enquanto `/v1/models/analyze`,
+    # `/v1/exports` e `/v1/remediation/backlog` devolviam 404 para o mesmo valor.
+    ensure_pack_exists(body.pack_id)
+    return comparison_from_validated_documents(
+        b_doc,
+        r_doc,
+        baseline_analysis=b_analysis,
+        revised_analysis=r_analysis,
+        run_analysis_flag=body.run_analysis,
+        pack_id=body.pack_id,
+    )
 
 
 @router.post(
@@ -149,7 +158,6 @@ def recommend_methodology_for_model(body: DocumentBody) -> RecommendMethodologyR
     "/analyze",
     summary="Analyze model",
     description="Runs the STRIDE engine, trust boundaries, and risk; optional industry pack.",
-    response_model=AnalysisResult,
     response_description="Serialized `AnalysisResult` JSON.",
 )
 def analyze_model(body: AnalyzeBody) -> AnalysisResult:
@@ -162,5 +170,5 @@ def analyze_model(body: AnalyzeBody) -> AnalysisResult:
             auto_recommend_methodology=body.auto_recommend_methodology,
         )
     except FileNotFoundError as e:
-        raise raise_pack_not_found(e) from e
+        raise raise_pack_not_found(body.pack_id) from e
     return result

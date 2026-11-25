@@ -21,6 +21,18 @@ type CaseResult = {
   screenshot?: string;
 };
 
+/**
+ * Coerces a value read from the matrix JSON to text. Only primitives have a useful
+ * string form: `String()` on an object or array yields "[object Object]", which would
+ * quietly become a lab id, template id or case key and then a screenshot filename.
+ * Non-primitives take the fallback instead.
+ */
+function asText(value: unknown, fallback = ""): string {
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  return fallback;
+}
+
 function loadCases(): MatrixCase[] {
   const matrixPath = process.env.APPVULN_UI_MATRIX;
   if (!matrixPath || !fs.existsSync(matrixPath)) {
@@ -28,18 +40,14 @@ function loadCases(): MatrixCase[] {
   }
   const payload = JSON.parse(fs.readFileSync(matrixPath, "utf-8")) as { cases: Array<Record<string, unknown>> };
   return payload.cases.map((item) => {
-    const lab = typeof item.lab_id === "string" ? item.lab_id : String(item.lab_id ?? "");
-    const dir =
-      item.case_dir_name === undefined || item.case_dir_name === null
-        ? ""
-        : String(item.case_dir_name);
-    const tpl = typeof item.template_id === "string" ? item.template_id : String(item.template_id ?? "");
+    const lab = asText(item.lab_id);
+    const dir = asText(item.case_dir_name);
+    const tpl = asText(item.template_id);
     const fallbackKey = dir ? `${lab}/${dir}` : `${lab}/${tpl}`;
-    const ck = item.case_key;
     return {
       lab_id: lab,
       template_id: tpl,
-      case_key: typeof ck === "string" ? ck : String(ck ?? fallbackKey),
+      case_key: asText(item.case_key, fallbackKey),
     };
   });
 }
@@ -83,7 +91,8 @@ test("catalog -> wizard -> review works for all template cases", async ({ page }
       await page.waitForTimeout(450);
       const row = page.getByTestId(`tpl-row-${item.template_id}`);
       await expect(row).toBeVisible({ timeout: 30000 });
-      const useBtn = row.getByRole("button", {
+      await row.getByRole("button").click();
+      const useBtn = page.getByRole("button", {
         name: /Usar este template|Use this template|Use template/i,
       });
       await expect(useBtn).toBeEnabled({ timeout: 60000 });
@@ -93,13 +102,13 @@ test("catalog -> wizard -> review works for all template cases", async ({ page }
       await expect(page.getByLabel(/Título do modelo|Model title/i)).toBeVisible({ timeout: 15000 });
 
       await page.goto("/review");
-      await expect(page.getByRole("button", { name: /Validar no servidor|Validate on server/i })).toBeVisible({
+      await expect(page.getByRole("button", { name: /Validar modelo|Validate on server/i })).toBeVisible({
         timeout: 15000,
       });
-      await page.getByRole("button", { name: /Validar no servidor|Validate on server/i }).click();
+      await page.getByRole("button", { name: /Validar modelo|Validate on server/i }).click();
       await expect(page.getByText(/schema/i)).toBeVisible({ timeout: 15000 });
 
-      await page.getByRole("link", { name: /Correr análise|Run analysis/i }).click();
+      await page.getByRole("link", { name: /Analisar modelo|Run analysis/i }).click();
       await expect(page).toHaveURL(/\/analysis$/);
       await expect(page.getByRole("button", { name: /Recomendar metodologia|Recommend methodology/i })).toBeVisible({
         timeout: 15000,

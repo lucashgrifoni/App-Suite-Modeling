@@ -1,35 +1,38 @@
-import { lazy, Suspense } from "react";
+import { Suspense } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router";
 import { SessionProvider } from "./context/SessionContext";
 import { AnalysisHistoryProvider } from "./context/AnalysisHistoryContext";
 import { AppLayout } from "./components/layout/AppLayout";
 import { RouteFallback } from "./components/layout/RouteFallback";
+import { lazyRoute } from "./lib/lazyRoute";
 
-const HomePage = lazy(() =>
+// `lazyRoute`, not the bare `React.lazy`: a single dropped chunk request used to take the
+// route out of the running application until a full browser reload. See lib/lazyRoute.
+const HomePage = lazyRoute(() =>
   import("./pages/HomePage").then((m) => ({ default: m.HomePage })),
 );
-const TemplatesPage = lazy(() =>
+const TemplatesPage = lazyRoute(() =>
   import("./pages/TemplatesPage").then((m) => ({ default: m.TemplatesPage })),
 );
-const ImportPage = lazy(() =>
+const ImportPage = lazyRoute(() =>
   import("./pages/ImportPage").then((m) => ({ default: m.ImportPage })),
 );
-const WizardPage = lazy(() =>
+const WizardPage = lazyRoute(() =>
   import("./pages/WizardPage").then((m) => ({ default: m.WizardPage })),
 );
-const ReviewPage = lazy(() =>
+const ReviewPage = lazyRoute(() =>
   import("./pages/ReviewPage").then((m) => ({ default: m.ReviewPage })),
 );
-const AnalysisPage = lazy(() =>
+const AnalysisPage = lazyRoute(() =>
   import("./pages/AnalysisPage").then((m) => ({ default: m.AnalysisPage })),
 );
-const ExportPage = lazy(() =>
+const ExportPage = lazyRoute(() =>
   import("./pages/ExportPage").then((m) => ({ default: m.ExportPage })),
 );
-const DiffPage = lazy(() =>
+const DiffPage = lazyRoute(() =>
   import("./pages/DiffPage").then((m) => ({ default: m.DiffPage })),
 );
-const HistoryPage = lazy(() =>
+const HistoryPage = lazyRoute(() =>
   import("./pages/HistoryPage").then((m) => ({ default: m.HistoryPage })),
 );
 

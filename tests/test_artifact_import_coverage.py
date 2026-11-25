@@ -80,7 +80,9 @@ def test_openapi_from_json_text() -> None:
 
 
 def test_openapi_invalid_raises() -> None:
-    with pytest.raises(Exception):
+    # The input is neither YAML nor JSON, so it must fail while parsing — not later, with
+    # some AttributeError from code that assumed a mapping came back.
+    with pytest.raises(ValueError, match="interpretar como YAML/JSON"):
         import_openapi_text("this: is: not: openapi: :::", filename="bad.yaml")
 
 

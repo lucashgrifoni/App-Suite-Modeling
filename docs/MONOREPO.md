@@ -155,7 +155,7 @@ Pastas **opcionais** além das acima:
 | `docs/architecture/adr/` | Decisões importantes (ex.: schema canônico). |
 | `.github/workflows/*` | CI mínimo verde. |
 
-Recomendados em breve: `SECURITY.md` (como reportar vulnerabilidade), `CODE_OF_CONDUCT.md` (comunidade).
+Presentes na raiz: [`SECURITY.md`](../SECURITY.md) (como reportar vulnerabilidade), [`CODE_OF_CONDUCT.md`](../CODE_OF_CONDUCT.md) (comunidade) e [`CONTRIBUTING.md`](../CONTRIBUTING.md) (como contribuir).
 
 ---
 
@@ -166,4 +166,4 @@ Recomendados em breve: `SECURITY.md` (como reportar vulnerabilidade), `CODE_OF_C
 3. **UI e CLI como clientes:** mesma validação e mesmos tipos conceituais; divergência = bug.
 4. **Documentar decisões estruturais** em ADRs curtos, não só no chat.
 
-Para a visão de produto e fases, ver [`features/MVP_ROADMAP.md`](features/MVP_ROADMAP.md).
+Para o registo histórico das fases que levaram ao MVP, ver [`features/MVP_ROADMAP.md`](features/MVP_ROADMAP.md) — não é o roadmap actual.

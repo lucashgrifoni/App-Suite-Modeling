@@ -8,6 +8,8 @@ from __future__ import annotations
 
 from typing import Literal
 
+from otm_core_schema import TreatmentStatus
+from otm_threat_engine.remediation import FindingRef
 from pydantic import BaseModel, Field
 
 from .enums import ReportLevel
@@ -101,6 +103,25 @@ class DistributionBlock(BaseModel):
     top_boundaries_ranked: list[tuple[str, float]]
 
 
+TreatmentDestination = Literal[
+    "action", "verify_mitigation", "confirm_false_positive", "review_no_fix", "review_accepted", "history"
+]
+
+
+class DeclaredThreatTreatment(BaseModel):
+    """Current treatment from the model, including threats without a risk score."""
+
+    id: str
+    title: str
+    treatment_status: TreatmentStatus
+    treatment_notes: str | None = None
+    destination: TreatmentDestination | None = None
+    has_score: bool = False
+    assignee: str | None = None
+    review_date: str | None = None
+    verification_reference: str | None = None
+
+
 class TopRiskItem(BaseModel):
     """Item na lista priorizada."""
 
@@ -128,6 +149,8 @@ class RootCauseGroup(BaseModel):
     display_name: str
     threat_count: int
     component_ids: list[str]
+    backlog_item_ids: list[str] = Field(default_factory=list)
+    finding_refs: list[FindingRef] = Field(default_factory=list)
     suggested_controls: list[str]
     single_fix_recommendation: str
 
@@ -171,7 +194,14 @@ class OwnershipRow(BaseModel):
     scope: str
     suggested_owner_role: str | None
     explanation: str
+    #: Amostra limitada, para o payload não crescer com o backlog. NÃO é a contagem: quem quiser
+    #: saber quantos itens o responsável tem lê `item_count`.
     backlog_item_ids: list[str] = Field(default_factory=list)
+    #: Quantos itens o responsável tem de facto. Existe porque o renderizador imprimia
+    #: `len(backlog_item_ids)`, que é o tecto assim que alguém passa dele: três responsáveis com
+    #: 75, 48 e 31 itens saíam todos como "30 itens", sem marca de truncagem, e a leitura era de
+    #: carga distribuída por igual. Ver `tests/test_p3_ownership_count_is_the_real_count.py`.
+    item_count: int = 0
 
 
 class RoadmapPhase(BaseModel):
@@ -233,10 +263,29 @@ class StrategicRecommendation(BaseModel):
     detail: str
 
 
+#: Contrato da listagem do apêndice: cada ameaça começa uma linha com este prefixo e o corpo vem
+#: na linha seguinte. É por aqui que o renderizador HTML volta a ler a listagem como estrutura
+#: para montar a tabela do PDF, e é por aqui que se conta quantas entradas ficaram à vista.
+APPENDIX_ENTRY_PREFIX = "### "
+
+
+def count_appendix_entries(listing: str) -> int:
+    """Entradas presentes na listagem — linhas iniciadas pelo prefixo, não ocorrências no texto."""
+    return sum(1 for line in listing.splitlines() if line.startswith(APPENDIX_ENTRY_PREFIX))
+
+
 class TechnicalAppendix(BaseModel):
     """Apêndice técnico (deep)."""
 
     full_threat_listing: str
+    total_threat_count: int = Field(
+        default=0,
+        description=(
+            "Ameaças que a análise produziu, antes de qualquer corte. `full_threat_listing` pode "
+            "trazer menos (orçamento de tamanho); quem renderiza declara 'N de M' a partir daqui, "
+            "e não do comprimento da listagem, que já vem cortada."
+        ),
+    )
     methodology_outputs_note: str
     import_evidence_note: str | None = None
 
@@ -273,6 +322,9 @@ class PremiumReportPayload(BaseModel):
     architecture: ArchitectureSummary
     distributions: DistributionBlock
     top_risks: list[TopRiskItem]
+    exposure_count: int | None = None
+    ranking_candidate_count: int | None = None
+    declared_treatments: list[DeclaredThreatTreatment] = Field(default_factory=list)
     root_cause_groups: list[RootCauseGroup]
     exploitability_profiles: list[ExploitabilityProfile]
     business_impacts: list[BusinessImpactRow]

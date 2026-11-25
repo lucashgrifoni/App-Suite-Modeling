@@ -128,7 +128,8 @@ def test_risk_calc_data_flow_payment_semantic() -> None:
     )
     likelihood, impact = likelihood_impact_for_data_flow(flow, crosses_boundary=False)
     # PAYMENT_FLOW semantic class bumps impact
-    assert 1 <= likelihood <= 5 and 1 <= impact <= 5
+    assert 1 <= likelihood <= 5
+    assert 1 <= impact <= 5
 
 
 def test_payment_anchor_via_component_name() -> None:
@@ -177,7 +178,8 @@ def test_semantic_diff_methodology_improved_branch() -> None:
     a = analyze_document(health, methodology=ThreatModelMethodology.LINDDUN)
     b = analyze_document(rich, methodology=ThreatModelMethodology.STRIDE)
     out = semantic_diff_from_analyses_only(a, b)
-    assert isinstance(out, tuple) and len(out) == 4
+    assert isinstance(out, tuple)
+    assert len(out) == 4
 
 
 def test_owner_for_third_party_and_ml() -> None:
@@ -332,10 +334,13 @@ def test_should_suppress_stride_noise_cancel_branch() -> None:
         title="cancel subscription revog",
         description="d",
         stride=StrideCategory.TAMPERING,
+        target_component_id="subscription_service",
         risk=build_risk_assessment(3, 3),
     )
-    # only the `cancel` family armed -> earlier families skipped, cancel-token branch returns True
-    assert _should_suppress_stride_noise(h=h, flags={"cancel": True}) is True
+    # only the `cancel` family armed, and it covers this threat's target -> suppressed.
+    assert _should_suppress_stride_noise(h=h, family_targets={"cancel": {"subscription_service"}}) is True
+    # same family armed, but pointing somewhere else -> the finding survives.
+    assert _should_suppress_stride_noise(h=h, family_targets={"cancel": {"other_service"}}) is False
 
 
 def test_description_for_component_handles_credentials() -> None:
@@ -457,7 +462,8 @@ def test_run_diff_analysis_text_with_remap(tmp_path: Path) -> None:
     rf.write_text(json.dumps(rev.model_dump(mode="json")), encoding="utf-8")
     _payload, lines, _ad = run_diff_analysis(bf, rf, fmt=DiffFormat.text)
     # same-signature rename -> signature_remap_hints rendered (text branch)
-    assert lines is not None and any("remap" in ln.lower() or "→" in ln for ln in lines)
+    assert lines is not None
+    assert any("remap" in ln.lower() or "→" in ln for ln in lines)
 
 
 def test_flow_heuristics_skipped_as_duplicate() -> None:
@@ -525,7 +531,8 @@ def test_model_diff_more_than_12_modified(tmp_path: Path) -> None:
     _payload, _j, _m, text, _ad = run_model_diff(
         bf, rf, with_analysis=False, pack=None, fmt=DiffFormat.text, summary_only=False
     )
-    assert text is not None and "more modified" in text  # >12 modified -> truncation summary branch
+    assert text is not None
+    assert "more modified" in text  # >12 modified -> truncation summary branch
 
 
 def test_openapi_path_level_security_auth() -> None:

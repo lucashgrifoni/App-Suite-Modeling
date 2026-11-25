@@ -2,9 +2,69 @@
 
 from __future__ import annotations
 
+from typing import Any
+
+from otm_core_schema import ThreatModelDocument
+from otm_exporters.markdown_text import md_block, md_code, md_inline
+from otm_exporters.threat_treatment import markdown_literal, markdown_treatment_fields, treatment_text
+from pydantic import BaseModel
+
 from .enums import ReportLevel
-from .models import PremiumReportPayload
+from .models import ArchitectureSummary, PremiumReportPayload, TechnicalAppendix, count_appendix_entries
 from .report_i18n import PremiumRenderCopy, premium_render_copy
+from .treatment_overview import (
+    decision_details,
+    decision_sections,
+    exposure_overview,
+    pending_check,
+    treatment_overview,
+)
+
+#: Campos que o **builder** já entrega como Markdown pronto (estrutura escrita pelo produto, não
+#: valores colocados dentro de uma linha): a listagem do apêndice técnico e o diagrama Mermaid.
+#: Achatá-los destruiria o contorno que o próprio renderizador conta emitir, por isso o texto do
+#: modelo que entra neles é neutralizado onde é construído (`builder._build_tech_appendix`).
+_PREBUILT_MARKDOWN_FIELDS = frozenset(
+    {
+        (TechnicalAppendix, "full_threat_listing"),
+        (ArchitectureSummary, "mermaid_flowchart"),
+    }
+)
+
+
+def _inlined(value: Any) -> Any:
+    """Cópia do valor com todo o texto achatado a uma linha, recursivamente.
+
+    O contorno do relatório (títulos, listas, tabelas) é decisão deste renderizador; o documento é
+    dados do utilizador. Um nome de componente com `\\n\\n## Conclusion\\n\\nNo risks were found.`
+    fechava o bullet onde estava e passava a emitir um H2 verdadeiro seguido de um parágrafo — num
+    relatório de segurança entregue a um revisor, sete vezes no mesmo ficheiro. A defesa existia
+    nos exportadores (`otm_exporters.markdown_text`) e nas células de tabela daqui; faltava em
+    tudo o resto.
+
+    É feita **uma vez, à entrada**, e não em cada interpolação: o payload tem ~40 campos de texto
+    espalhados por doze secções, e a garantia tem de valer também para o campo que alguém
+    acrescentar amanhã. Só as exceções acima ficam de fora, explicitamente.
+    """
+    if isinstance(value, str):
+        return md_inline(value)
+    if isinstance(value, BaseModel):
+        cls = type(value)
+        return value.model_copy(
+            update={
+                name: (
+                    getattr(value, name) if (cls, name) in _PREBUILT_MARKDOWN_FIELDS else _inlined(getattr(value, name))
+                )
+                for name in cls.model_fields
+            }
+        )
+    if isinstance(value, dict):
+        return {_inlined(k): _inlined(v) for k, v in value.items()}
+    if isinstance(value, tuple):
+        return tuple(_inlined(v) for v in value)
+    if isinstance(value, list):
+        return [_inlined(v) for v in value]
+    return value
 
 
 def _md_cell(value: str) -> str:
@@ -41,7 +101,7 @@ def _md_cover_and_disclaimer(lines: list[str], payload: PremiumReportPayload, r:
     lines.append(f"- {r.md_overall_state} {payload.cover.overall_status_display}\n")
 
     lines.append(f"{r.md_inference_notice}\n")
-    lines.append(payload.disclaimer.summary)
+    lines.append(md_block(payload.disclaimer.summary))
     for bullet in payload.disclaimer.bullets:
         lines.append(f"- {bullet}")
     lines.append("")
@@ -70,12 +130,12 @@ def _md_executive_summary(lines: list[str], payload: PremiumReportPayload, r: Pr
         )
     )
     lines.append(f"{r.md_top_tb}\n")
-    lines.append("\n".join(f"- {x}" for x in es.top_trust_boundaries) or r.md_none_listed)
+    lines.append("\n".join(f"- {md_block(x)}" for x in es.top_trust_boundaries) or r.md_none_listed)
     lines.append(f"\n{r.md_top_surfaces}\n")
-    lines.append("\n".join(f"- {x}" for x in es.top_attack_surfaces) or r.md_none_listed)
+    lines.append("\n".join(f"- {md_block(x)}" for x in es.top_attack_surfaces) or r.md_none_listed)
     lines.append(f"\n{r.md_top5_titles}\n")
     for t in es.top5_risk_titles:
-        lines.append(f"- {t}")
+        lines.append(f"- {md_block(t)}")
     lines.append(f"\n{r.md_readiness_questions}\n")
     for q in es.readiness_questions:
         lines.append(f"- {q}")
@@ -118,11 +178,11 @@ def _md_architecture_and_stats(lines: list[str], payload: PremiumReportPayload, 
         return
     lines.append(f"{r.md_arch_overview}\n")
     ar = payload.architecture
-    lines.append(ar.narrative + "\n")
+    lines.append(md_block(ar.narrative) + "\n")
     lines.append(f"{r.md_main_components}\n")
-    lines.append("\n".join(f"- {c}" for c in ar.main_components[:15]))
+    lines.append("\n".join(f"- {md_block(c)}" for c in ar.main_components[:15]))
     lines.append(f"\n{r.md_main_flows}\n")
-    lines.append("\n".join(f"- {f}" for f in ar.main_flows[:15]))
+    lines.append("\n".join(f"- {md_block(f)}" for f in ar.main_flows[:15]))
     lines.append(f"\n{r.md_meth_used_vs_rec}\n")
     lines.append(f"- {r.md_used} {ar.methodology_used}")
     lines.append(f"- {r.md_recommended} {ar.methodology_recommended or r.nd}")
@@ -173,6 +233,21 @@ def _md_top_risks(lines: list[str], payload: PremiumReportPayload, r: PremiumRen
     lines.append("")
 
 
+def _md_declared_treatments(lines: list[str], payload: PremiumReportPayload) -> None:
+    copy = treatment_text(payload.locale)
+    lines.extend([f"## {copy.heading}", ""])
+    if not payload.declared_treatments:
+        lines.append(copy.no_threats)
+    for heading, decisions in decision_sections(payload.declared_treatments, payload.locale):
+        if heading and decisions:
+            lines.extend(["", f"### {heading}", ""])
+        for threat in decisions:
+            lines.append(f"- **{markdown_literal(threat.title)}** (`{threat.id}`)")
+            lines.extend(markdown_treatment_fields(threat.treatment_status, threat.treatment_notes, copy))
+            lines.extend(f"  - {markdown_literal(detail)}" for detail in decision_details(threat, payload.locale))
+    lines.append("")
+
+
 def _md_deep_details(lines: list[str], payload: PremiumReportPayload, r: PremiumRenderCopy) -> None:
     if payload.level == ReportLevel.EXECUTIVE:
         return
@@ -203,11 +278,11 @@ def _md_deep_details(lines: list[str], payload: PremiumReportPayload, r: Premium
     lines.append(f"{r.md_ownership}\n")
     for ow in payload.ownership:
         role = ow.suggested_owner_role or r.md_to_define
-        lines.append(f"- **{role}:** {len(ow.backlog_item_ids)} {r.md_items} {r.md_em_dash} {ow.explanation}\n")
+        lines.append(f"- **{role}:** {ow.item_count} {r.md_items} {r.md_em_dash} {ow.explanation}\n")
 
     lines.append(f"{r.md_strategic}\n")
     for s in payload.strategic_recommendations:
-        lines.append(f"### {s.title}\n{s.detail}\n")
+        lines.append(f"### {s.title}\n{md_block(s.detail)}\n")
 
 
 def _md_roadmap(lines: list[str], payload: PremiumReportPayload, r: PremiumRenderCopy) -> None:
@@ -250,10 +325,33 @@ def _md_baseline_diff(lines: list[str], payload: PremiumReportPayload, r: Premiu
     if not (payload.baseline_diff and payload.baseline_diff.has_baseline):
         return
     lines.append(f"{r.md_baseline_diff}\n")
-    lines.append(payload.baseline_diff.narrative + "\n")
+    lines.append(md_block(payload.baseline_diff.narrative) + "\n")
     lines.append(f"{r.md_new} {', '.join(payload.baseline_diff.threats_added[:20])}\n")
     lines.append(f"{r.md_removed} {', '.join(payload.baseline_diff.threats_removed[:20])}\n")
     _md_baseline_semantic(lines, payload.baseline_diff, r)
+
+
+def _md_technical_appendix(lines: list[str], appendix: TechnicalAppendix, r: PremiumRenderCopy) -> None:
+    """Apêndice do nível `deep`, com a sua própria cobertura declarada.
+
+    A listagem era cortada aqui a 20 000 caracteres, a meio da palavra da última entrada e logo
+    seguida de `</details>` — indistinguível de um ficheiro truncado — sobre uma listagem que o
+    builder já tinha cortado. Passa a haver um único corte (o do builder, por entrada inteira) e
+    uma linha que diz quantas ameaças estão à vista de quantas existem, com o caminho para as
+    restantes quando ficaram de fora.
+    """
+    lines.append(f"{r.md_technical_appendix}\n")
+    lines.append(md_block(appendix.methodology_outputs_note) + "\n")
+    if appendix.import_evidence_note:
+        lines.append(md_block(appendix.import_evidence_note) + "\n")
+    shown = count_appendix_entries(appendix.full_threat_listing)
+    coverage = r.md_appendix_coverage.format(shown=shown, total=appendix.total_threat_count)
+    if shown < appendix.total_threat_count:
+        coverage = f"{coverage} {r.md_appendix_truncated}"
+    lines.append(f"{coverage}\n")
+    lines.append(f"{r.md_threats_excerpt}\n\n")
+    lines.append(appendix.full_threat_listing)
+    lines.append("\n</details>\n")
 
 
 def _md_tail_sections(lines: list[str], payload: PremiumReportPayload, r: PremiumRenderCopy) -> None:
@@ -272,13 +370,7 @@ def _md_tail_sections(lines: list[str], payload: PremiumReportPayload, r: Premiu
             lines.append(f"- **[{ex_snippet.category}]** {ex_snippet.message[:400]}\n")
 
     if lvl == ReportLevel.DEEP and payload.technical_appendix:
-        lines.append(f"{r.md_technical_appendix}\n")
-        lines.append(payload.technical_appendix.methodology_outputs_note + "\n")
-        if payload.technical_appendix.import_evidence_note:
-            lines.append(payload.technical_appendix.import_evidence_note + "\n")
-        lines.append(f"{r.md_threats_excerpt}\n\n")
-        lines.append(payload.technical_appendix.full_threat_listing[:20000])
-        lines.append("\n</details>\n")
+        _md_technical_appendix(lines, payload.technical_appendix, r)
 
     if payload.methodology_voice:
         lines.append(f"{r.md_methodology_adaptation}\n")
@@ -289,6 +381,7 @@ def _md_tail_sections(lines: list[str], payload: PremiumReportPayload, r: Premiu
 
 def render_premium_markdown(payload: PremiumReportPayload) -> str:
     """Gera Markdown completo; profundidade controlada por `payload.level`."""
+    payload = _inlined(payload)
     r = premium_render_copy(payload.locale)
     lines: list[str] = []
     _md_cover_and_disclaimer(lines, payload, r)
@@ -296,9 +389,224 @@ def render_premium_markdown(payload: PremiumReportPayload) -> str:
     _md_guided_audit(lines, payload, r)
     _md_architecture_and_stats(lines, payload, r)
     _md_top_risks(lines, payload, r)
+    _md_declared_treatments(lines, payload)
     _md_deep_details(lines, payload, r)
     _md_roadmap(lines, payload, r)
     _md_baseline_diff(lines, payload, r)
     _md_tail_sections(lines, payload, r)
     lines.append(f"---\n{r.md_footer}\n")
+    return "\n".join(lines)
+
+
+def _risk_summary(lines: list[str], payload: PremiumReportPayload, analysis_generated: bool) -> None:
+    pt = payload.locale == "pt-BR"
+    cover = payload.cover
+    summary = payload.executive_summary
+    scored = sum(summary.severity_distribution.values())
+    active = payload.exposure_count if payload.exposure_count is not None else summary.threat_count
+    peak = payload.top_risks[0] if payload.top_risks else None
+    lines.extend(
+        [
+            f"# {markdown_literal(cover.title)}",
+            "",
+            "**Relatório de riscos**" if pt else "**Risk report**",
+            "",
+            f"{cover.analysis_date_iso} · {markdown_literal(cover.primary_methodology.upper())} · "
+            f"{markdown_literal(cover.system_type)}",
+            "",
+            "## Resumo executivo" if pt else "## Executive summary",
+            "",
+        ]
+    )
+    if peak:
+        decision = next((t for t in payload.declared_treatments if t.id == peak.threat_id), None)
+        copy = treatment_text(payload.locale)
+        state = copy.statuses[decision.treatment_status] if decision else ("Sem decisão" if pt else "No decision")
+        if pending := pending_check(decision, payload.locale):
+            state = f"{state} · {pending}"
+        lines.extend(
+            [
+                f"**{peak.priority_tier} · {markdown_literal(peak.title)}**  ",
+                f"{md_code(peak.threat_id)} · {state}",
+                "",
+            ]
+        )
+        if decision and decision.treatment_notes:
+            lines.extend(
+                [
+                    f"**{copy.rationale}** — {markdown_literal(decision.treatment_notes)}",
+                    "",
+                ]
+            )
+    labels = ("Total de ameaças", "Com pontuação", "Sem pontuação") if pt else ("Total threats", "Scored", "Unscored")
+    if payload.exposure_count is not None:
+        labels = (
+            (labels[0], "Exposição com pontuação", "Exposição sem pontuação")
+            if pt
+            else (labels[0], "Scored exposure", "Unscored exposure")
+        )
+    for label, count in zip(labels, (summary.threat_count, scored, active - scored), strict=True):
+        lines.append(f"- **{label}** — {count}")
+    lines.append("")
+    if exposure := exposure_overview(payload):
+        lines.extend([exposure, ""])
+    if overview := treatment_overview(payload):
+        heading = "Tratamento" if pt else "Treatment"
+        lines.extend([f"**{heading}** — {overview}", ""])
+
+    bands = (
+        {"critical": "Crítica", "high": "Alta", "medium": "Média", "low": "Baixa", "informational": "Informativa"}
+        if pt
+        else {
+            "critical": "Critical",
+            "high": "High",
+            "medium": "Medium",
+            "low": "Low",
+            "informational": "Informational",
+        }
+    )
+    if scored:
+        severity = " · ".join(
+            f"{bands.get(key, key)} {summary.severity_distribution[key]}"
+            for key in dict.fromkeys([*bands, *summary.severity_distribution])
+            if key in summary.severity_distribution
+        )
+        heading = "Severidade das ameaças pontuadas" if pt else "Scored threats by severity"
+        if payload.exposure_count is not None:
+            heading = "Severidade da exposição ativa" if pt else "Active exposure by severity"
+        lines.extend([f"**{heading}**", "", severity, ""])
+    if analysis_generated:
+        lines.extend(
+            [
+                "Análise gerada na exportação a partir do modelo fornecido."
+                if pt
+                else "Analysis generated at export from the supplied model.",
+                "",
+            ]
+        )
+    if peak and peak.recommended_action:
+        review_label = "Próxima ação sugerida" if pt else "Suggested next action"
+        lines.extend([f"**{review_label}** — {markdown_literal(peak.recommended_action)}", ""])
+    lines.extend(
+        [
+            "A modelagem indica cenários de risco. A confirmação dos controles depende de evidência do ambiente."
+            if pt
+            else "The model identifies risk scenarios. Verifying controls requires evidence from the environment.",
+            "",
+        ]
+    )
+
+
+def _risk_priorities(lines: list[str], payload: PremiumReportPayload) -> None:
+    pt = payload.locale == "pt-BR"
+    copy = treatment_text(payload.locale)
+    decisions = {t.id: t for t in payload.declared_treatments}
+    labels = ("Pontuação", "Índice", "Sem decisão") if pt else ("Score", "Index", "No decision")
+    lines.extend(["## Riscos prioritários" if pt else "## Prioritized risks", ""])
+    if not payload.top_risks:
+        empty = "Nenhuma ameaça pontuada." if pt else "No scored threats."
+        if payload.exposure_count is not None:
+            empty = "Nenhuma ação com pontuação." if pt else "No scored action items."
+        lines.extend([empty, ""])
+        return
+    lines.extend(
+        [
+            "Até dez ameaças pontuadas com ação pendente, em ordem de prioridade."
+            if pt
+            else "Up to ten scored threats with pending action, in priority order.",
+            "",
+        ]
+    )
+    for risk in payload.top_risks:
+        decision = decisions.get(risk.threat_id)
+        status = copy.statuses[decision.treatment_status] if decision else labels[2]
+        if pending := pending_check(decision, payload.locale):
+            status = f"{status} · {pending}"
+        score = f"{risk.severity_score:g}" if risk.severity_score is not None else "—"
+        index = f"{risk.composite_score:.2f}"
+        if pt:
+            index = index.replace(".", ",")
+        lines.extend(
+            [
+                f"### {risk.rank}. {markdown_literal(risk.title)}",
+                "",
+                md_code(risk.threat_id),
+                "",
+                f"**{risk.priority_tier}** · {labels[0]} {score} · {labels[1]} {index} · **{status}**",
+                "",
+            ]
+        )
+
+
+def _risk_architecture(lines: list[str], payload: PremiumReportPayload, doc: ThreatModelDocument) -> None:
+    pt = payload.locale == "pt-BR"
+    r = premium_render_copy(payload.locale)
+    lines.extend([r.md_arch_overview, "", markdown_literal(payload.architecture.narrative), ""])
+    if payload.architecture.trust_boundaries:
+        boundaries = ", ".join(map(markdown_literal, payload.architecture.trust_boundaries))
+        lines.extend([f"**{'Fronteiras de confiança' if pt else 'Trust boundaries'}** — {boundaries}", ""])
+    if not doc.data_flows:
+        return
+    components = {c.id: c.name for c in doc.components}
+    lines.extend([r.md_main_flows, ""])
+    direction = "para" if pt else "to"
+    for flow in doc.data_flows[:15]:
+        source = markdown_literal(components.get(flow.from_component, flow.from_component))
+        target = markdown_literal(components.get(flow.to_component, flow.to_component))
+        protocol = markdown_literal(flow.protocol or r.nd)
+        lines.append(f"- **{source} {direction} {target}** · {protocol} · `{flow.id}`")
+        declared_controls = (
+            ("Autenticação" if pt else "Authentication", flow.authenticated),
+            ("Criptografia" if pt else "Encryption", flow.encrypted),
+        )
+        control_states = (
+            {True: "declarada", False: "declarada como ausente", None: "sem informação"}
+            if pt
+            else {True: "declared", False: "declared absent", None: "unspecified"}
+        )
+        lines.append("  - " + " · ".join(f"{label}: {control_states[value]}" for label, value in declared_controls))
+    if len(doc.data_flows) > 15:
+        lines.extend(["", f"15 {'de' if pt else 'of'} {len(doc.data_flows)} {'fluxos' if pt else 'flows'}."])
+    lines.append("")
+
+
+def render_risk_report_markdown(
+    payload: PremiumReportPayload, doc: ThreatModelDocument, *, analysis_generated: bool = False
+) -> str:
+    """Render the shared content for the default report's Markdown and PDF."""
+    payload = _inlined(payload)
+    r = premium_render_copy(payload.locale)
+    pt = payload.locale == "pt-BR"
+    lines: list[str] = []
+    _risk_summary(lines, payload, analysis_generated)
+    _risk_priorities(lines, payload)
+    _md_declared_treatments(lines, payload)
+    _risk_architecture(lines, payload, doc)
+    if payload.top_risks or payload.roadmap:
+        lines.extend(["## Próxima revisão" if pt else "## Next review", ""])
+        for risk in payload.top_risks[:3]:
+            lines.append(f"- {md_code(risk.threat_id)} — {markdown_literal(risk.recommended_action)}")
+        lines.append("")
+        for phase in payload.roadmap:
+            if phase.items:
+                lines.extend([f"### {markdown_literal(phase.title)}", ""])
+                lines.extend(f"- {markdown_literal(item)}" for item in phase.items)
+                lines.append("")
+    if payload.root_cause_groups:
+        lines.extend([r.md_root_cause_groups, ""])
+        item_label = ("item de remediação", "itens de remediação") if pt else ("remediation item", "remediation items")
+        lines.extend(
+            f"- **{markdown_literal(group.display_name)}** — {group.threat_count} {item_label[group.threat_count != 1]}"
+            for group in payload.root_cause_groups
+        )
+        lines.append("")
+    _md_baseline_diff(lines, payload, r)
+    lines.extend(
+        [
+            "---",
+            f"App Suite Modeling {markdown_literal(payload.cover.app_suite_version)} · "
+            f"{'Esquema do modelo' if pt else 'Model schema'} {markdown_literal(payload.cover.schema_version)}",
+            "",
+        ]
+    )
     return "\n".join(lines)

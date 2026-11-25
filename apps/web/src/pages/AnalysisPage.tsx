@@ -2,12 +2,12 @@ import { useMemo, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { Navigate } from "react-router";
 import { analyzeDocument, fetchRemediationBacklog, recommendMethodology } from "../api/otmApi";
-import { ApiError } from "../api/client";
+import { apiErrorMessage } from "../api/apiErrorMessage";
 import { Alert } from "../components/ui/Alert";
 import { PageHeader } from "../components/patterns/PageHeader";
 import { EmptyState } from "../components/patterns/EmptyState";
-import { WorkflowGuide } from "../components/onboarding/WorkflowGuide";
-import { ContextHint } from "../components/onboarding/ContextHint";
+import { DeclaredDecisions } from "../components/analysis/ThreatDecision";
+import { Button } from "../components/ui/Button";
 import { RunEngineCard } from "../components/analysis/RunEngineCard";
 import { AnalysisMetricsGrid } from "../components/analysis/AnalysisMetricsGrid";
 import { ModelQualityStrip } from "../components/analysis/ModelQualityStrip";
@@ -33,10 +33,12 @@ export function AnalysisPage() {
   const { document, analysis, setAnalysis } = useSession();
   const { appendSnapshot } = useAnalysisHistory();
   const toast = useToast();
-  const [packId, setPackId] = useState("");
+  const [packId, setPackId] = useState(analysis?.industry_pack_id ?? "");
   const [methodology, setMethodology] = useState<MethodologyId>(
-    (document?.model?.methodology as MethodologyId) || "stride",
+    (analysis?.methodology as MethodologyId) || document?.model?.methodology || "stride",
   );
+  const [declaredId, setDeclaredId] = useState("");
+  const [engineOpen, setEngineOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [recommending, setRecommending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -89,11 +91,29 @@ export function AnalysisPage() {
         packId: packId.trim() || null,
         methodology,
       });
-      setAnalysis(r);
-      appendSnapshot("analysis");
+      if (!setAnalysis(r, doc)) return;
+      setEngineOpen(false);
+      // O backlog é derivado de UMA execução (`fetchRemediationBacklog({ document, analysis })`),
+      // por isso não sobrevive à que o substitui: sem isto, as métricas e a lista de ameaças
+      // passavam a mostrar a execução nova enquanto o cartão do backlog continuava a render a
+      // anterior — o resumo executivo, o top 5 e os quick wins dela — sem nada no ecrã a dizer que
+      // vinham de execuções diferentes. É a parte sobre a qual alguém age.
+      //
+      // `recommendation` fica: vem de `recommendMethodology(doc)` e depende do documento, não da
+      // análise, portanto uma execução nova não o invalida.
+      setBacklog(null);
+      // `r`, not the session analysis: this render still holds the pre-run value.
+      const stored = appendSnapshot("analysis", r);
       toast.success(t("analysis.toastOk"));
+      // The analysis itself succeeded; only the History snapshot was lost. Saying so beats
+      // a run that silently stops appearing in History once the browser's quota is full.
+      if (stored === "failed") toast.warning(t("history.toastStorageFull"));
+      // `"evicted"` era calculado e deitado fora: snapshots antigos desapareciam para
+      // abrir espaço a este, debaixo de um toast de sucesso sem ressalva, e o "máximo 20"
+      // que a página de Histórico anuncia deixava de se verificar sem ninguém saber.
+      else if (stored === "evicted") toast.warning(t("history.toastStorageEvicted"));
     } catch (e) {
-      const msg = e instanceof ApiError ? e.message : t("analysis.toastFail");
+      const msg = apiErrorMessage(e, t, "analysis.toastFail");
       setError(msg);
       toast.error(msg);
     } finally {
@@ -110,7 +130,7 @@ export function AnalysisPage() {
       setBacklog(b);
       toast.success(t("analysis.toastBacklog"));
     } catch (e) {
-      const msg = e instanceof ApiError ? e.message : t("analysis.toastBacklogFail");
+      const msg = apiErrorMessage(e, t, "analysis.toastBacklogFail");
       setError(msg);
       toast.error(msg);
     } finally {
@@ -128,7 +148,7 @@ export function AnalysisPage() {
       setMethodology(rec.methodology);
       toast.info(t("analysis.toastRecommend", { methodology: rec.methodology }));
     } catch (e) {
-      const msg = e instanceof ApiError ? e.message : t("analysis.toastRecommendFail");
+      const msg = apiErrorMessage(e, t, "analysis.toastRecommendFail");
       setError(msg);
       toast.error(msg);
     } finally {
@@ -137,49 +157,66 @@ export function AnalysisPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="work-page">
       <PageHeader
         eyebrow={t("analysis.eyebrow")}
         title={t("analysis.title")}
-        description={t("analysis.description")}
+        description={doc.metadata.title}
+        actions={
+          analysis && (
+            <>
+              <Button
+                variant="secondary"
+                aria-expanded={engineOpen}
+                onClick={() => setEngineOpen(!engineOpen)}
+              >
+                {t("work.configure")}
+              </Button>
+              {!engineOpen && (
+                <Button disabled={loading} onClick={() => void run()}>
+                  {loading ? t("runEngine.running") : t("runEngine.run")}
+                </Button>
+              )}
+            </>
+          )
+        }
       />
-
-      <div className="space-y-2 rounded-otm-lg border border-otm-border/80 bg-otm-surface-1/50 px-4 py-3">
-        <WorkflowGuide variant="compact" />
-        <ContextHint>
-          <Trans
-            i18nKey="analysis.contextHintRich"
-            components={{
-              0: <strong className="font-medium text-otm-text-muted" />,
-              1: <strong className="font-medium text-otm-text-muted" />,
-            }}
-          />
-        </ContextHint>
-      </div>
-
-      <RunEngineCard
-        methodology={methodology}
-        onMethodologyChange={setMethodology}
-        packId={packId}
-        onPackIdChange={setPackId}
-        loading={loading}
-        recommending={recommending}
-        recommendation={recommendation}
-        onRun={() => void run()}
-        onRecommend={() => void recommend()}
-      />
-
+      {(!analysis || engineOpen) && (
+        <RunEngineCard
+          methodology={methodology}
+          onMethodologyChange={setMethodology}
+          packId={packId}
+          onPackIdChange={setPackId}
+          loading={loading}
+          recommending={recommending}
+          recommendation={recommendation}
+          onRun={() => void run()}
+          onRecommend={() => void recommend()}
+        />
+      )}
       {error && <Alert>{error}</Alert>}
 
       {analysis && (
-        <div className="space-y-8">
+        <div className="work-page">
           <AnalysisMetricsGrid analysis={analysis} />
+          <ThreatsAnalysisCard
+            onSelectDeclared={setDeclaredId}
+            filtered={filtered}
+            activeThreatCount={activeThreatCount}
+            minScore={minScore}
+            onMinScoreChange={setMinScore}
+            frameworkFilter={frameworkFilter}
+            onFrameworkFilterChange={setFrameworkFilter}
+            frameworks={frameworks}
+          />
           <ModelQualityStrip analysis={analysis} />
           <DecisionCockpit analysis={analysis} />
           <Plot4aiContextCard analysis={analysis} />
           {analysis.methodology_recommendation_reason && (
             <Alert variant="info">
-              {t("analysis.recommendationApplied", { reason: analysis.methodology_recommendation_reason })}
+              {t("analysis.recommendationApplied", {
+                reason: analysis.methodology_recommendation_reason,
+              })}
             </Alert>
           )}
           {analysis.explanations && analysis.explanations.length > 0 ? (
@@ -197,26 +234,22 @@ export function AnalysisPage() {
             onLoad={() => void loadBacklog()}
           />
           <MethodologyInsightsSection analysis={analysis} />
-          <ThreatsAnalysisCard
-            filtered={filtered}
-            activeThreatCount={activeThreatCount}
-            minScore={minScore}
-            onMinScoreChange={setMinScore}
-            frameworkFilter={frameworkFilter}
-            onFrameworkFilterChange={setFrameworkFilter}
-            frameworks={frameworks}
-          />
         </div>
       )}
 
+      <DeclaredDecisions selected={declaredId} onSelect={setDeclaredId} />
       {analysis === null && (
         <EmptyState
-          title={t("analysis.emptyTitle")}
+          title={t(doc.threats.length ? "work.analysisPending" : "analysis.emptyTitle")}
           description={
-            <Trans
-              i18nKey="analysis.emptyDescRich"
-              components={{ 0: <strong className="text-otm-text" /> }}
-            />
+            doc.threats.length ? (
+              t("work.rerunAction")
+            ) : (
+              <Trans
+                i18nKey="analysis.emptyDescRich"
+                components={{ 0: <strong className="text-otm-text" /> }}
+              />
+            )
           }
         />
       )}

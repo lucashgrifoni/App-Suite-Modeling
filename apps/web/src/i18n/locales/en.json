@@ -1,4 +1,108 @@
 {
+  "work": {
+    "area": "Workspace",
+    "model": "Model",
+    "evidence": "Evidence",
+    "home": "Home",
+    "diff": "Compare versions",
+    "openFirst": "Open or create a model first",
+    "menu": "Menu",
+    "local": "Local session",
+    "browser": "In this browser",
+    "overview": "Overview",
+    "resumeHint": "Continue your open model or choose a starting point.",
+    "sessionModel": "Session model",
+    "schema": "Schema {{value}}",
+    "dataFlow": "Data flow",
+    "previewCount": "Preview of {{shown}} of {{total}} components",
+    "structure": "Model structure",
+    "boundaries": "Boundaries",
+    "startOther": "Start another model",
+    "owner": "Owner",
+    "diagramMode": "Diagram mode",
+    "minimap": "Minimap",
+    "suggestedThreat": "Suggested threat",
+    "analysisPending": "The analysis needs updating",
+    "rerunAction": "This model contains declared threats. Run the engine to get results for this version.",
+    "topology": "System topology",
+    "trustBoundary": "Trust boundary",
+    "inspector": "Component inspector",
+    "technology": "Technology",
+    "responsibility": "Responsibility",
+    "relatedFlows": "Related flows",
+    "relatedAssets": "Related assets",
+    "editComponent": "Edit component",
+    "noComponents": "Add a component to inspect it here.",
+    "elements": "Model elements",
+    "savedDecision": "Decision saved in the model.",
+    "idConflict": "A declared threat already uses this ID. Review it under Declared threats.",
+    "editDecision": "Edit decision",
+    "viewDecision": "View decision in model",
+    "recordDecision": "Record decision",
+    "treatment": "Treatment status",
+    "notes": "Decision notes",
+    "riskOwner": "Risk owner",
+    "riskReviewDate": "Review date",
+    "verificationReference": "Verification reference",
+    "confirmMitigation": "I confirm risk closure based on this evidence.",
+    "confirmFalsePositive": "I confirm the false positive based on this evidence.",
+    "mitigationEvidenceHint": "A linked, verified mitigation is required to remove the risk from active exposure.",
+    "rerunHint": "Saving changes the model. Run the analysis again for updated results.",
+    "saveDecision": "Save decision",
+    "cancel": "Cancel",
+    "declared": "Declared threats",
+    "declaredThreat": "Select a declared threat",
+    "priorities": "Suggestions by priority",
+    "sortedRisk": "Ordered by likelihood × impact.",
+    "filter": "Filters",
+    "previous": "Previous",
+    "next": "Next",
+    "selectedSuggestion": "Selected suggestion",
+    "target": "Target",
+    "likelihood": "Likelihood",
+    "impact": "Impact",
+    "score": "Score",
+    "configure": "Configure engine",
+    "riskFormula": "Likelihood × impact",
+    "crossings": "Boundary crossings",
+    "quality": "Model completeness",
+    "catalog": "Catalog",
+    "templateCount_one": "{{count}} template",
+    "templateCount_other": "{{count}} templates",
+    "reviewAfter": "What to review after import",
+    "checkComponents": "Components inferred from the file",
+    "checkFlows": "Suggested data flows",
+    "checkBoundaries": "Boundaries to confirm",
+    "savedRecords": "Saved records",
+    "restoreEffect": "Restoring this record replaces the model and analysis in this session.",
+    "diffHint": "Compare the structure and analysis of two versions of a model.",
+    "changedComponent": "Changed component details",
+    "selectChange": "Select changed component",
+    "component": "Component",
+    "identifier": "Identifier",
+    "comparisonInputs": "Comparison settings",
+    "baseline": "Baseline · current session",
+    "revision": "Revised document",
+    "addedComponents": "Components added",
+    "addedSuggestions": "Additional heuristics",
+    "stride": {
+      "spoofing": "Identity spoofing",
+      "elevation_of_privilege": "Privilege escalation",
+      "information_disclosure": "Information disclosure",
+      "tampering": "Tampering",
+      "denial_of_service": "Denial of service",
+      "repudiation": "Repudiation"
+    },
+    "status": {
+      "new": "New",
+      "triaged": "Triaged",
+      "in_progress": "In progress",
+      "mitigated": "Mitigated",
+      "accepted_risk": "Accepted risk",
+      "false_positive": "False positive",
+      "wont_fix": "Won’t fix"
+    }
+  },
   "nav": {
     "templates": "Templates",
     "import": "Import",
@@ -8,11 +112,16 @@
     "export": "Export",
     "history": "History",
     "diff": "Diff",
-    "newModel": "New model"
+    "newModel": "New model",
+    "confirmNewModel": "Starting a new model discards the model in this session, and this is its only copy. Continue?"
+  },
+  "session": {
+    "confirmReplaceModel": "This replaces the model in this session, and this is its only copy. Continue?"
   },
   "layout": {
     "brandSubtitle": "Professional threat modeling",
     "footerNote": "Validation and the engine run on the server — the UI does not duplicate business rules.",
+    "skipToContent": "Skip to content",
     "ariaMainNav": "Main"
   },
   "theme": {
@@ -36,8 +145,20 @@
   "errorBoundary": {
     "title": "Something went wrong in the UI",
     "fallback": "Unexpected error while rendering this screen.",
+    "detailsSummary": "Technical details",
     "reload": "Reload page",
     "home": "Back to home"
+  },
+  "apiErrors": {
+    "timeout": "The API did not respond in time. Check that it is running and reachable, then try again.",
+    "unreachable": "Could not reach the API. Check that it is running and reachable, then try again.",
+    "entityIdPattern": "Use only letters, digits, `_`, `.` or `-`, starting with a letter, digit or `_`.",
+    "reference": "Reference: {{id}} — quote this if you report the failure.",
+    "codes": {
+      "IMPORT_ARTIFACT_INVALID": "The artifact could not be read as YAML or JSON. Check the file opens in an editor without syntax errors, then upload it again.",
+      "OPENAPI_REIMPORT_INVALID": "Use two OpenAPI YAML or JSON contracts with inline path items and a valid model.",
+      "PDF_DEPENDENCY": "The local PDF component is unavailable. Use \"Download Markdown\" to get the report."
+    }
   },
   "home": {
     "eyebrow": "Engineering-driven threat modeling",
@@ -111,6 +232,25 @@
     "cardSubtitle": "The file is processed on the server; nothing is persisted in the API (MVP).",
     "artifactType": "Artifact type",
     "kindOpenapi": "OpenAPI / Swagger (YAML or JSON)",
+    "reimportTitle": "Update model from OpenAPI",
+    "reimportPrevious": "Contract used for the last import",
+    "reimportRevised": "Revised contract",
+    "reimportComparing": "Comparing…",
+    "reimportCompare": "Compare contracts",
+    "reimportReview": "Update preview",
+    "reimportConflicts": "Conflicts. The model will keep its current values.",
+    "reimportCurrent": "Current model:",
+    "reimportIncoming": "Revised contract:",
+    "reimportChanges": "Changes ready to apply",
+    "reimportApply": "Apply changes without conflicts",
+    "reimportApplied": "Model updated. Run the analysis again.",
+    "reimportNoChanges": "There are no model changes to apply.",
+    "reimportOps": {
+      "added": "Added operations",
+      "removed": "Removed operations",
+      "changed": "Changed operations",
+      "shared_sections_changed": "Changed shared sections"
+    },
     "kindTerraform": "Terraform (.tf)",
     "kindKubernetes": "Kubernetes (YAML)",
     "fileLabel": "File",
@@ -131,7 +271,8 @@
     "explanationsCode": "explanations",
     "unknownTitle": "Not inferred",
     "unknownSubtitle": "Explicit limitations of this batch.",
-    "acceptedTypes": "Accepted types:"
+    "acceptedTypes": "Accepted types:",
+    "selectionClearedByType": "“{{name}}” is not one of the types this artifact accepts ({{accepted}}), so the selection was cleared. Choose a matching file."
   },
   "wizard": {
     "eyebrow": "Guided assistant",
@@ -151,6 +292,7 @@
     "methodology": "Methodology (analysis target)",
     "semanticProfile": "Template semantic profile (optional)",
     "templateSemanticProfilePlaceholder": "e.g. api_backend_rest",
+    "templateSemanticProfileLabel": "Profile identifier",
     "semanticProfileBody": "Fill if you use a gallery template or want to unlock adaptive questions. For example <0>internal_admin_portal</0>, <1>file_handling_application</1>, <2>api_backend_rest</2>.",
     "adaptiveTitle": "Context-adaptive questions",
     "adaptiveBody": "Answers are stored as tags on the model (JSON export includes them). They do not replace server validation.",
@@ -161,6 +303,9 @@
     "componentsSubtitle": "Diagram elements (processes, data, users…).",
     "id": "ID",
     "idTrailingWhitespace": "IDs cannot end with whitespace. Remove anything after the last visible character.",
+    "idDuplicate": "The id “{{id}}” is already used by another component. Ids must be unique.",
+    "removeCascadedToFlows_one": "Removing “{{name}}” also deleted 1 data flow that referenced it.",
+    "removeCascadedToFlows_other": "Removing “{{name}}” also deleted {{count}} data flows that referenced it.",
     "name": "Name",
     "type": "Type",
     "remove": "Remove",
@@ -176,8 +321,10 @@
     "addFlow": "Add flow",
     "reviewTitle": "Ready to review",
     "reviewBody": "Validate on the server and continue to the components and flows view. You can return to any step to adjust.",
-    "reviewCountComponents": "{{count}} components",
-    "reviewCountFlows": "{{count}} flows",
+    "reviewCountComponents_one": "{{count}} component",
+    "reviewCountComponents_other": "{{count}} components",
+    "reviewCountFlows_one": "{{count}} flow",
+    "reviewCountFlows_other": "{{count}} flows",
     "reviewMethodology": "Target methodology: {{methodology}}",
     "contextSummary": "Context summary (wizard)",
     "contextSummaryBody": "These answers are sent to the engine as <0>wz:</0> tags and influence ranking and anti-patterns in an explainable way.",
@@ -209,6 +356,9 @@
       "web_application": "Web application",
       "api_backend": "API / backend",
       "mobile_application": "Mobile",
+      "desktop": "Desktop",
+      "batch_data_pipeline": "Batch / data pipeline",
+      "iot_system": "IoT system",
       "hybrid": "Hybrid",
       "other": "Other"
     }
@@ -226,8 +376,10 @@
     "diagramCardSubtitle": "Default: Edit (drag, connect, delete, labels). “View” = read-only.",
     "componentsTitle": "Components",
     "flowsTitle": "Flows",
-    "items": "{{count}} items",
-    "links": "{{count}} links",
+    "items_one": "{{count}} item",
+    "items_other": "{{count}} items",
+    "links_one": "{{count}} link",
+    "links_other": "{{count}} links",
     "trustTitle": "Trust boundaries",
     "trustSubtitle": "Inference notes, crossing flows, and manual validation (without editing JSON).",
     "whyPrefix": "Why:",
@@ -281,13 +433,48 @@
     "toastRecommendFail": "Failed to recommend methodology."
   },
   "methodologyMeta": {
-    "stride": { "hint": "Default technical choice, most mature for web/API/cloud.", "bestFor": "Web, API, cloud-native", "maturity": "Mature", "category": "General security" },
-    "linddun": { "hint": "Privacy: PII, consent, minimization, and compliance.", "bestFor": "LGPD/GDPR and personal data", "maturity": "Evolving", "category": "Privacy" },
-    "nist_data_centric": { "hint": "Protection of critical data and sensitive paths.", "bestFor": "Critical/classified data", "maturity": "Evolving", "category": "Data-centric" },
-    "octave_allegro": { "hint": "Business risk oriented to assets.", "bestFor": "Assets and organizational risk", "maturity": "Evolving", "category": "Business risk" },
-    "cia_die": { "hint": "Quick analysis and executive communication.", "bestFor": "Fast workshops", "maturity": "Evolving", "category": "Executive" },
-    "pasta": { "hint": "Advanced risk-centric analysis (attack, vulnerability, impact).", "bestFor": "Advanced enterprise contexts", "maturity": "Specialized", "category": "Advanced risk" },
-    "plot4ai": { "hint": "AI/LLM threats (prompt, RAG, agents, inference).", "bestFor": "AI/LLM systems", "maturity": "Specialized", "category": "AI/LLM" }
+    "stride": {
+      "hint": "Default technical choice, most mature for web/API/cloud.",
+      "bestFor": "Web, API, cloud-native",
+      "maturity": "Mature",
+      "category": "General security"
+    },
+    "linddun": {
+      "hint": "Privacy: PII, consent, minimization, and compliance.",
+      "bestFor": "LGPD/GDPR and personal data",
+      "maturity": "Evolving",
+      "category": "Privacy"
+    },
+    "nist_data_centric": {
+      "hint": "Protection of critical data and sensitive paths.",
+      "bestFor": "Critical/classified data",
+      "maturity": "Evolving",
+      "category": "Data-centric"
+    },
+    "octave_allegro": {
+      "hint": "Business risk oriented to assets.",
+      "bestFor": "Assets and organizational risk",
+      "maturity": "Evolving",
+      "category": "Business risk"
+    },
+    "cia_die": {
+      "hint": "Quick analysis and executive communication.",
+      "bestFor": "Fast workshops",
+      "maturity": "Evolving",
+      "category": "Executive"
+    },
+    "pasta": {
+      "hint": "Advanced risk-centric analysis (attack, vulnerability, impact).",
+      "bestFor": "Advanced enterprise contexts",
+      "maturity": "Specialized",
+      "category": "Advanced risk"
+    },
+    "plot4ai": {
+      "hint": "AI/LLM threats (prompt, RAG, agents, inference).",
+      "bestFor": "AI/LLM systems",
+      "maturity": "Specialized",
+      "category": "AI/LLM"
+    }
   },
   "runEngine": {
     "title": "Run engine",
@@ -337,8 +524,10 @@
     "fitStride": "STRIDE fit:",
     "fitPasta": "· PASTA:",
     "fitNist": "· NIST DC:",
-    "precheckReasons": "Pre-check reasons ({{count}} missing)",
-    "antiPatterns": "Anti-patterns ({{count}})",
+    "precheckReasons_one": "Pre-check reason ({{count}} missing)",
+    "precheckReasons_other": "Pre-check reasons ({{count}} missing)",
+    "antiPatterns_one": "Anti-pattern ({{count}})",
+    "antiPatterns_other": "Anti-patterns ({{count}})",
     "confHint": "· conf. {{hint}}"
   },
   "decisionCockpit": {
@@ -355,7 +544,8 @@
     "noGaps": "No critical gaps listed by the pre-check.",
     "strongSignals": "Strong signals",
     "noWizardSignals": "No wizard signals — fill the adaptive questionnaire for context.",
-    "antiPatternHits": "{{count}} relevant modeling anti-pattern(s) for the template.",
+    "antiPatternHits_one": "{{count}} relevant modeling anti-pattern for the template.",
+    "antiPatternHits_other": "{{count}} relevant modeling anti-patterns for the template.",
     "auditTrail": "Guided modeling trace (audit trail)"
   },
   "plot4ai": {
@@ -376,7 +566,8 @@
     "stride": "STRIDE:",
     "liScore": "L×I {{score}}",
     "showing": "Showing {{shown}} of {{total}} active threats.",
-    "noneMatch": "No threats match the filters."
+    "noneMatch": "No threats match the filters.",
+    "noneAtAll": "The engine produced no threats for this model. Complete it in the wizard — components and data flows — then run the engine again."
   },
   "explanations": {
     "sectionTitle": "Result explainability",
@@ -402,20 +593,20 @@
   "export": {
     "eyebrow": "Delivery and evidence",
     "title": "Export",
-    "description": "Generates files in the browser. Formats that include analysis use the latest session result; if missing, the server runs the engine automatically.",
+    "description": "Generate the risk report or export the model’s technical files.",
     "contextHint": "Formats with analysis use the latest session result; <strong>diff</strong> compares exported JSON with another revision.",
     "formatsTitle": "Formats",
     "formatsSubtitle": "Select what you need for reporting or integration.",
     "fmtJson": "Document (JSON)",
     "fmtJsonHint": "Canonical model",
     "fmtMd": "Document (Markdown)",
-    "fmtMdHint": "Readable report",
+    "fmtMdHint": "Model in readable text",
     "fmtMermaid": "Mermaid diagram",
     "fmtMermaidHint": "Flowchart LR",
     "fmtAnalysisJson": "Analysis (JSON)",
     "fmtAnalysisJsonHint": "Full engine output",
     "fmtAnalysisMd": "Analysis (Markdown)",
-    "fmtAnalysisMdHint": "Report section",
+    "fmtAnalysisMdHint": "Analysis output in readable text",
     "fmtBundle": "Bundle (JSON)",
     "fmtBundleHint": "Document + analysis in one file",
     "pickOne": "Choose at least one format.",
@@ -423,44 +614,21 @@
     "generateFiles": "Generate files",
     "toastReady": "Artifacts ready to download.",
     "toastFail": "Export failed.",
-    "toastPdf": "PDF generated.",
-    "toastPdfFail": "Failed to generate PDF.",
-    "toastPremiumPdf": "Premium PDF generated.",
-    "toastPremiumMd": "Premium Markdown downloaded.",
-    "toastPremiumFail": "Premium report failed.",
-    "premiumTitle": "Premium report (API)",
-    "premiumSubtitle": "Executive / Standard / Deep — Markdown or PDF aligned with engine and backlog (requires API running).",
-    "level": "Level",
-    "premiumMd": "Premium Markdown",
-    "premiumPdf": "Premium PDF",
-    "premiumNote": "If there is no session analysis, the API runs the engine automatically. The PDF uses the same pipeline as the CLI.",
-    "pdfCardTitle": "Report (PDF)",
-    "pdfCardSubtitle": "Generated in the browser (jsPDF) — model and session analysis, no extra API call.",
-    "pdfCardBody": "Includes title, summary, metrics, and threats (sample). Plain text content for safe reading.",
-    "generatingPdf": "Generating PDF…",
-    "generatePdf": "Generate PDF",
+    "reportTitle": "Risk report",
+    "reportSubtitle": "Download the report with risk priorities and treatment decisions. Generation uses the local service.",
+    "reportPdf": "Download PDF",
+    "reportMarkdown": "Download Markdown",
+    "reportReady": "Report ready to download.",
+    "reportUnavailable": "Report generation failed. Check that the local service is running and try again.",
     "downloadTitle": "Download",
     "downloadSubtitle": "Files ready for archive or review.",
     "download": "Download",
     "copyPreview": "You can also copy from the technical preview below.",
     "exportResults": "Export results",
-    "optExecutive": "Executive",
-    "optStandard": "Standard",
-    "optDeep": "Deep technical",
     "artifactLanguage": "Language for Markdown / PDF exports",
     "artifactLangUi": "Same as UI",
     "artifactLangPtBR": "Portuguese (Brazil)",
     "artifactLangEn": "English"
-  },
-  "artifactPdf": {
-    "summary": "Summary:",
-    "systemMethodology": "System: {{system}} · Methodology: {{methodology}}",
-    "counts": "Components: {{components}} · Flows: {{flows}}",
-    "analysisHeading": "Analysis (engine)",
-    "analysisLine": "Engine: {{engine}} · New heuristics: {{new}} · Highest L×I: {{max}}",
-    "threatsSample": "Threats (sample):",
-    "threatBullet": "• {{title}} — STRIDE {{stride}} — L×I {{score}}",
-    "noAnalysis": "Analysis not available in this report."
   },
   "diff": {
     "eyebrow": "Semantic comparison",
@@ -470,6 +638,8 @@
     "helpTitle": "Baseline vs revision",
     "helpBody": "The current session is the <strong>baseline</strong>. Paste exported JSON as revision to compare structural evolution and, optionally, engine deltas.",
     "revisionJson": "Revision (JSON)",
+    "revisionFileLabel": "Revised model file (JSON)",
+    "readFail": "Could not read the selected file.",
     "includeAnalysis": "Include analysis (runs engine for both documents on the server)",
     "packOptional": "Pack (optional)",
     "comparing": "Comparing…",
@@ -479,10 +649,14 @@
     "toastFail": "Failed to request comparison from the API.",
     "invalidJson": "Invalid JSON.",
     "expectedDoc": "Expected object with `model` and `metadata` (canonical document).",
-    "changes": "changes",
-    "added": "+{{count}} added",
-    "removed": "−{{count}} removed",
-    "changed": "~{{count}} changed",
+    "changesCount_one": "{{count}} change",
+    "changesCount_other": "{{count}} changes",
+    "added_one": "+{{count}} added",
+    "added_other": "+{{count}} added",
+    "removed_one": "−{{count}} removed",
+    "removed_other": "−{{count}} removed",
+    "changed_one": "~{{count}} changed",
+    "changed_other": "~{{count}} changed",
     "summary": "Summary",
     "structural": "Structure",
     "analysis": "Analysis",
@@ -507,6 +681,7 @@
     "keyInsights": "Key insights",
     "whyStructured": "Why (structured diff)",
     "changesBySection": "Changes by section (IDs)",
+    "noSectionChanges": "No changes in any section.",
     "aggComponents": "Components",
     "aggAssets": "Assets",
     "aggFlows": "Data flows",
@@ -526,21 +701,24 @@
     "triggerAnalysis": "Analysis",
     "triggerExport": "Export",
     "maxLi": "Max L×I:",
+    "summaryLine": "{{title}} · max L×I {{score}}",
     "components": "Components:",
     "flows": "Flows:",
     "heuristicThreats": "Heuristic threats:",
     "snapshotSummary": "View snapshot summary",
     "restore": "Restore",
     "goExport": "Go to export",
-    "pdfSnapshot": "PDF from this snapshot",
+    "pdfSnapshot": "Download PDF",
+    "markdownSnapshot": "Download Markdown",
     "remove": "Remove",
     "confirmRestore": "Restoring this snapshot replaces the current model and analysis in the session. Continue?",
     "toastRestored": "Snapshot restored.",
     "confirmExport": "Restore and open the export page with this snapshot?",
     "toastSession": "Session updated. Choose formats in Export.",
-    "toastPdfOk": "PDF generated from snapshot.",
-    "toastPdfFail": "Failed to generate PDF.",
-    "toastRemoved": "Entry removed."
+    "reportReady": "Revision report ready to download.",
+    "toastRemoved": "Entry removed.",
+    "toastStorageFull": "Browser storage is full: this snapshot was not added to History. Remove entries there, or export the results.",
+    "toastStorageEvicted": "Browser storage is full: older snapshots were removed to save this one. History now holds fewer entries than its limit."
   },
   "templates": {
     "eyebrow": "Technical catalog",
@@ -577,24 +755,49 @@
   },
   "adaptive": {
     "internal_admin_portal": {
-      "approval": { "label": "Are there privileged actions that require explicit approval?", "hint": "Segregation of duties and approval flows." },
-      "segregation": { "label": "Is there clear segregation between admins and end users?" },
-      "jit": { "label": "Are there just-in-time privileges or temporary elevation?" }
+      "approval": {
+        "label": "Are there privileged actions that require explicit approval?",
+        "hint": "Segregation of duties and approval flows."
+      },
+      "segregation": {
+        "label": "Is there clear segregation between admins and end users?"
+      },
+      "jit": {
+        "label": "Are there just-in-time privileges or temporary elevation?"
+      }
     },
     "file_handling_application": {
-      "quarantine": { "label": "Is there a quarantine or isolated zone before processing?" },
-      "scan": { "label": "Antivirus, sandbox, or content revalidation after upload?" },
-      "public_objects": { "label": "Are stored objects exposed publicly (public URLs)?" }
+      "quarantine": {
+        "label": "Is there a quarantine or isolated zone before processing?"
+      },
+      "scan": {
+        "label": "Antivirus, sandbox, or content revalidation after upload?"
+      },
+      "public_objects": {
+        "label": "Are stored objects exposed publicly (public URLs)?"
+      }
     },
     "api_backend_rest": {
-      "auth": { "label": "Are authentication and authorization explicitly modeled for clients?" },
-      "rate_limit": { "label": "Is rate limiting / throttling applied?" },
-      "edge_controls": { "label": "Are cache, WAF, or strong perimeter policies represented at the gateway?" }
+      "auth": {
+        "label": "Are authentication and authorization explicitly modeled for clients?"
+      },
+      "rate_limit": {
+        "label": "Is rate limiting / throttling applied?"
+      },
+      "edge_controls": {
+        "label": "Are cache, WAF, or strong perimeter policies represented at the gateway?"
+      }
     },
     "industry_ecommerce": {
-      "checkout": { "label": "Does the checkout and payment flow have clear contextual controls?" },
-      "psp_boundary": { "label": "Is the payment processor (PSP) modeled as a third party with an adequate boundary?" },
-      "sensitive_data": { "label": "Are sensitive data (account, order, payment) covered by assets and classification?" }
+      "checkout": {
+        "label": "Does the checkout and payment flow have clear contextual controls?"
+      },
+      "psp_boundary": {
+        "label": "Is the payment processor (PSP) modeled as a third party with an adequate boundary?"
+      },
+      "sensitive_data": {
+        "label": "Are sensitive data (account, order, payment) covered by assets and classification?"
+      }
     }
   }
 }

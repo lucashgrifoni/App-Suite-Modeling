@@ -29,7 +29,7 @@
 
 ```bash
 otm templates
-otm init -t saas-web -o modelo.otm.yaml
+otm init -t saas-web modelo.otm.yaml
 otm validate modelo.otm.yaml
 otm analyze modelo.otm.yaml --pack saas
 otm report modelo.otm.yaml --pack saas -o REL.md

@@ -48,8 +48,19 @@ export function resolveInitialLocaleFromNavigator(languages: readonly string[]):
  */
 export function getInitialLocaleFromWindow(): SupportedLocale {
   if ("window" in globalThis) {
-    const stored = parseStoredLocale(globalThis.localStorage.getItem(LOCALE_STORAGE_KEY));
-    if (stored) return stored;
+    // `localStorage.getItem` **lança** quando o browser recusa storage — Safari em navegação
+    // privada, cookies de terceiros bloqueados, política corporativa — em vez de devolver `null`.
+    // Este era o único acesso a storage em `apps/web` sem `try`, e corre na inicialização do
+    // i18n, antes de o React montar: a app inteira ficava em branco, sem mensagem nem fallback.
+    // Uma preferência de idioma não lida é um inconveniente; uma página branca não é.
+    try {
+      const stored = parseStoredLocale(globalThis.localStorage.getItem(LOCALE_STORAGE_KEY));
+      if (stored) return stored;
+    } catch {
+      // Sem preferência recuperável: cai para o idioma principal do produto, como uma primeira
+      // visita. O utilizador pode voltar a escolher; a escrita é que falhará, e essa já é tratada
+      // em `i18n.ts`.
+    }
   }
   return "en";
 }

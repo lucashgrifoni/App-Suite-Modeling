@@ -1,6 +1,8 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
+import { resolveApiProxyTarget } from "./src/config/devApiTarget.ts";
+
 /**
  * CSP alinhada com `public/_headers` (deploy estático). Em dev não enviamos CSP no servidor
  * Vite para não quebrar HMR (`import.meta.hot` / WebSocket).
@@ -35,7 +37,8 @@ export default defineConfig({
     headers: DEV_SECURITY_HEADERS,
     proxy: {
       "/api": {
-        target: "http://localhost:8000",
+        // Overridable via OTM_API_PORT / OTM_API_URL — see src/config/devApiTarget.ts.
+        target: resolveApiProxyTarget(process.env),
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ""),
       },

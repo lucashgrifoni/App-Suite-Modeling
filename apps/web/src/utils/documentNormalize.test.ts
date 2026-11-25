@@ -4,6 +4,8 @@ import {
   applyDataFlowIdRename,
   applyKnownComponentIdTypoFixes,
   OTM_ENTITY_ID_REGEX,
+  removeComponents,
+  removeDataFlows,
   sanitizeEntityIdInput,
 } from "./documentNormalize";
 
@@ -172,5 +174,149 @@ describe("sanitizeEntityIdInput", () => {
         expect(OTM_ENTITY_ID_REGEX.test(out)).toBe(true);
       }
     }
+  });
+});
+
+/**
+ * Deleting a component used to splice only `components`, leaving `assets[].related_component_ids`
+ * and `trust_boundaries[].member_component_ids` pointing at an id that no longer existed. The
+ * canonical schema rejects that ("asset '<id>' references unknown component '<id>'"), so every
+ * later validate/analyze/export returned 422 and the broken document was persisted to
+ * sessionStorage — with no UI anywhere to repair those reference lists.
+ */
+function docWithReferences(): OtmDocument {
+  return minimalDoc({
+    components: [
+      { id: "a", name: "A", kind: "process" },
+      { id: "b", name: "B", kind: "process" },
+      { id: "c", name: "C", kind: "process" },
+    ],
+    data_flows: [
+      { id: "f_ab", from_component: "a", to_component: "b" },
+      { id: "f_ac", from_component: "a", to_component: "c" },
+    ],
+    assets: [
+      {
+        id: "asset_1",
+        name: "Asset 1",
+        related_component_ids: ["b", "c"],
+        related_data_flow_ids: ["f_ab", "f_ac"],
+      },
+    ],
+    trust_boundaries: [
+      {
+        id: "tb_1",
+        name: "TB 1",
+        member_component_ids: ["b", "c"],
+        outside_component_ids: ["b"],
+        crossing_flow_ids: ["f_ab", "f_ac"],
+      },
+    ],
+    threats: [
+      { id: "t_b", target_component_id: "b" },
+      { id: "t_c", target_component_id: "c" },
+      { id: "t_fab", target_data_flow_id: "f_ab" },
+    ],
+    mitigations: [{ id: "m_b", target_component_id: "b" }],
+  });
+}
+
+/** Every id the canonical schema would cross-check, flattened for an orphan sweep. */
+function allReferencedIds(doc: OtmDocument): string[] {
+  return [
+    ...doc.data_flows.flatMap((f) => [f.from_component, f.to_component]),
+    ...doc.assets.flatMap((a) => [...(a.related_component_ids ?? []), ...(a.related_data_flow_ids ?? [])]),
+    ...doc.trust_boundaries.flatMap((tb) => [
+      ...(tb.member_component_ids ?? []),
+      ...(tb.outside_component_ids ?? []),
+      ...(tb.crossing_flow_ids ?? []),
+    ]),
+  ];
+}
+
+describe("removeComponents", () => {
+  it("drops the component and every flow touching it", () => {
+    const out = removeComponents(docWithReferences(), ["b"]);
+
+    expect(out.components.map((c) => c.id)).toEqual(["a", "c"]);
+    expect(out.data_flows.map((f) => f.id)).toEqual(["f_ac"]);
+  });
+
+  it("leaves no orphan reference anywhere in the document", () => {
+    const out = removeComponents(docWithReferences(), ["b"]);
+
+    expect(allReferencedIds(out)).not.toContain("b");
+    expect(allReferencedIds(out)).not.toContain("f_ab");
+  });
+
+  it("keeps references to components and flows that survive", () => {
+    const out = removeComponents(docWithReferences(), ["b"]);
+
+    expect(out.assets[0].related_component_ids).toEqual(["c"]);
+    expect(out.assets[0].related_data_flow_ids).toEqual(["f_ac"]);
+    expect(out.trust_boundaries[0].member_component_ids).toEqual(["c"]);
+    expect(out.trust_boundaries[0].crossing_flow_ids).toEqual(["f_ac"]);
+  });
+
+  it("drops threats and mitigations aimed at what was removed, and keeps the rest", () => {
+    const out = removeComponents(docWithReferences(), ["b"]);
+
+    expect((out.threats as { id: string }[]).map((t) => t.id)).toEqual(["t_c"]);
+    expect(out.mitigations).toEqual([]);
+  });
+
+  it("removes several components in one pass", () => {
+    const out = removeComponents(docWithReferences(), ["b", "c"]);
+
+    expect(out.components.map((c) => c.id)).toEqual(["a"]);
+    expect(out.data_flows).toEqual([]);
+    expect(allReferencedIds(out)).toEqual([]);
+  });
+
+  it("is a no-op for an empty id list", () => {
+    const doc = docWithReferences();
+    expect(removeComponents(doc, [])).toBe(doc);
+  });
+
+  it("ignores an unknown id rather than corrupting the document", () => {
+    const out = removeComponents(docWithReferences(), ["does_not_exist"]);
+
+    expect(out.components).toHaveLength(3);
+    expect(out.data_flows).toHaveLength(2);
+  });
+
+  it("does not invent reference arrays that were absent", () => {
+    const doc = minimalDoc({
+      components: [{ id: "a", name: "A", kind: "process" }, { id: "b", name: "B", kind: "process" }],
+      assets: [{ id: "asset_1", name: "Asset 1" }],
+    });
+
+    const out = removeComponents(doc, ["b"]);
+
+    expect(out.assets[0].related_component_ids).toBeUndefined();
+  });
+});
+
+describe("removeDataFlows", () => {
+  it("drops the flow and every reference to it, leaving components alone", () => {
+    const out = removeDataFlows(docWithReferences(), ["f_ab"]);
+
+    expect(out.components).toHaveLength(3);
+    expect(out.data_flows.map((f) => f.id)).toEqual(["f_ac"]);
+    expect(out.assets[0].related_data_flow_ids).toEqual(["f_ac"]);
+    expect(out.trust_boundaries[0].crossing_flow_ids).toEqual(["f_ac"]);
+    expect((out.threats as { id: string }[]).map((t) => t.id)).toEqual(["t_b", "t_c"]);
+  });
+
+  it("keeps component references untouched", () => {
+    const out = removeDataFlows(docWithReferences(), ["f_ab"]);
+
+    expect(out.assets[0].related_component_ids).toEqual(["b", "c"]);
+    expect(out.trust_boundaries[0].member_component_ids).toEqual(["b", "c"]);
+  });
+
+  it("is a no-op for an empty id list", () => {
+    const doc = docWithReferences();
+    expect(removeDataFlows(doc, [])).toBe(doc);
   });
 });

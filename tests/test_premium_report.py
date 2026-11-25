@@ -19,7 +19,7 @@ _ROOT = Path(__file__).resolve().parents[1]
 _MINIMAL = _ROOT / "examples" / "minimal.otm.yaml"
 
 
-@pytest.fixture()
+@pytest.fixture
 def doc_and_result():
     doc = load_document_from_yaml_path(_MINIMAL)
     return doc, analyze_document(doc)
