@@ -314,7 +314,7 @@ function ThreatModelDiagramInner({
                 <MiniMap
                   style={{ width: 120, height: 72, backgroundColor: "var(--otm-surface-2)" }}
                   nodeColor="var(--otm-primary-ink)"
-                  className="!bg-otm-surface-2/90 !border-otm-border"
+                  className="border-otm-border!"
                   maskColor="var(--otm-primary-subtle)"
                 />
               )}
@@ -428,7 +428,7 @@ function ThreatModelDiagramInner({
             <p className="work-muted">{t("work.noComponents")}</p>
           )}
           {editMode && selectedComponent ? (
-            <div className="grid gap-2 rounded-otm-md border border-otm-border bg-otm-surface-1/80 p-3 sm:grid-cols-2">
+            <div className="grid gap-2 rounded-otm-md border border-otm-border p-3 sm:grid-cols-2">
               <div>
                 <label className="text-xs font-medium text-otm-text-muted" htmlFor="dm-label">
                   {t("diagram.nameNoHtml")}

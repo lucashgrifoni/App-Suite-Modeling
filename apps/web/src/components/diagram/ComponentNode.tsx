@@ -21,7 +21,7 @@ function ComponentNodeInner({ data, selected }: NodeProps<OtmNodeData>) {
   const { t } = useTranslation();
   return (
     <div
-      className={`min-w-[140px] max-w-[152px] rounded-otm-md border bg-otm-surface-2/95 px-3 py-2 shadow-otm-sm transition duration-otm ${
+      className={`min-w-[140px] max-w-[152px] rounded-otm-md border px-3 py-2 shadow-otm-sm transition duration-otm ${
         selected ? "border-otm-accent ring-2 ring-[color:var(--otm-ring)]" : "border-otm-border"
       }`}
     >

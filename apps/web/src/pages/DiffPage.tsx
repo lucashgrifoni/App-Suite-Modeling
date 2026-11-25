@@ -61,7 +61,7 @@ function AggregateBlock({
   const total = added.length + removed.length + changed.length;
   return (
     <div className="rounded-otm-lg border border-otm-border bg-gradient-to-br from-otm-surface-1/95 to-otm-surface-2/80 p-4 text-xs text-otm-text shadow-otm-sm">
-      <div className="flex items-center justify-between gap-2 border-b border-otm-border/80 pb-2 font-display text-sm font-semibold text-otm-text">
+      <div className="flex items-center justify-between gap-2 border-b pb-2 font-display text-sm font-semibold text-otm-text">
         {title}
         {/* Count-aware, like the `+n added` / `−n removed` pills right below it. The
             hand-concatenated `{total} {t("diff.changes")}` printed "1 CHANGES". */}
@@ -172,7 +172,7 @@ function DiffSummaryCard({
       {/* O resultado decide, não o checkbox: `run_analysis: false` devolve estes campos a
           `null`, por isso o próprio valor já diz se há análise. Ver DiffPage.analysisToggle.test. */}
       {typeof maxRev === "number" ? (
-        <div className="rounded-otm-md border border-otm-border bg-otm-surface-1/70 p-3">
+        <div className="rounded-otm-md border border-otm-border p-3">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-otm-text-subtle">{t("diff.maxLi")}</p>
           <p className="mt-1 font-display text-2xl font-semibold tabular-nums text-otm-text">{maxRev}</p>
           {typeof maxBase === "number" ? (
@@ -250,7 +250,7 @@ function SemanticDiffSectionsBlock({ meta }: Readonly<{ meta: ComparisonMeta }>)
   return (
     <div className="grid gap-3 sm:grid-cols-3">
       {scs.length ? (
-        <div className="rounded-otm-md border border-otm-border bg-otm-surface-1/80 p-3 text-xs text-otm-text-muted sm:col-span-3">
+        <div className="rounded-otm-md border border-otm-border p-3 text-xs text-otm-text-muted sm:col-span-3">
           <p className="font-semibold text-otm-text">{t("diff.structuralCounts")}</p>
           <ul className="mt-2 list-inside list-disc space-y-1">
             {scs.map((x) => (
@@ -280,7 +280,7 @@ function SemanticDiffSectionsBlock({ meta }: Readonly<{ meta: ComparisonMeta }>)
         </div>
       ) : null}
       {risk.length ? (
-        <div className="rounded-otm-md border border-otm-border bg-otm-surface-1/80 p-3 text-xs text-otm-text-muted sm:col-span-3 lg:col-span-1">
+        <div className="rounded-otm-md border border-otm-border p-3 text-xs text-otm-text-muted sm:col-span-3 lg:col-span-1">
           <p className="font-semibold text-otm-text">{t("diff.riskImpact")}</p>
           <ul className="mt-2 list-inside list-disc space-y-1">
             {risk.map((x) => (
@@ -622,7 +622,7 @@ export function DiffPage() {
             <Label htmlFor="revised-json">{t("diff.revisionJson")}</Label>
             <textarea
               id="revised-json"
-              className="mt-1 min-h-[180px] w-full rounded-otm-md border border-otm-border-control bg-otm-surface-1 px-3 py-2 font-mono text-xs text-otm-text placeholder:text-otm-text-subtle focus:border-otm-mint-400/50 focus:outline-none focus:ring-2 focus:ring-[color:var(--otm-ring)]"
+              className="mt-1 min-h-[180px] w-full rounded-otm-md border border-otm-border-control bg-otm-surface-1 px-3 py-2 font-mono text-xs text-otm-text placeholder:text-otm-text-subtle focus:outline-hidden focus:ring-2 focus:ring-[color:var(--otm-ring)]"
               value={revisedText}
               onChange={(ev) => setRevisedText(ev.target.value)}
               placeholder={t("diff.revisionPlaceholder")}

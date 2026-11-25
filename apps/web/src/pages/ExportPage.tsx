@@ -152,7 +152,7 @@ export function ExportPage() {
             data-testid="export-artifact-locale"
             value={artifactLocaleChoice}
             onChange={(e) => setArtifactLocaleChoice(e.target.value as ArtifactLocaleChoice)}
-            className="mt-1 flex h-10 w-full rounded-otm-md border border-otm-border bg-otm-surface px-3 text-sm text-otm-text shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-otm-accent"
+            className="mt-1 flex h-10 w-full rounded-otm-md border border-otm-border bg-[color:Field] px-3 text-sm text-otm-text shadow-sm focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-otm-accent"
           >
             <option value="ui">{t("export.artifactLangUi")}</option>
             <option value="pt-BR">{t("export.artifactLangPtBR")}</option>
@@ -183,7 +183,7 @@ export function ExportPage() {
             {formats.map((f) => (
               <li
                 key={f.id}
-                className="flex items-start gap-3 rounded-otm-md border border-otm-border-strong px-3 py-3 has-[:checked]:bg-otm-primary-muted transition hover:border-otm-border hover:bg-otm-surface-1/60"
+                className="flex items-start gap-3 rounded-otm-md border border-otm-border-strong px-3 py-3 has-[:checked]:bg-otm-primary-muted transition hover:border-otm-border"
               >
                 <Checkbox
                   id={f.id}
@@ -237,7 +237,7 @@ export function ExportPage() {
                 {Object.entries(result).map(([key, text]) => (
                   <details
                     key={`d-${key}`}
-                    className="mt-2 rounded-otm-md border border-otm-border bg-otm-surface-1/50 p-2"
+                    className="mt-2 rounded-otm-md border border-otm-border p-2"
                   >
                     <summary className="cursor-pointer text-sm font-medium text-otm-text">{key}</summary>
                     <pre className="mt-2 max-h-48 overflow-auto rounded-otm-md bg-otm-green-950 p-3 text-xs text-otm-mint-300">

@@ -17,7 +17,7 @@ export function StatCard({
 }>) {
   return (
     <div
-      className={`group relative overflow-hidden rounded-otm-md border border-otm-border bg-otm-surface-2/90 px-4 py-3 shadow-otm-sm transition duration-otm ease-otm hover:border-otm-border-strong hover:shadow-otm-glow ${className}`}
+      className={`group relative overflow-hidden rounded-otm-md border border-otm-border px-4 py-3 shadow-otm-sm transition duration-otm ease-otm hover:border-otm-border-strong hover:shadow-otm-glow ${className}`}
     >
       <div
         className="pointer-events-none absolute inset-0 opacity-0 transition group-hover:opacity-100"

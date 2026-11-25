@@ -19,7 +19,7 @@ export function ExplanationsSection({
   const { t } = useTranslation();
   if (!analysis.explanations?.length) return null;
   return (
-    <details className="rounded-otm-lg border border-otm-border bg-otm-surface-2/80 p-4 text-sm text-otm-text">
+    <details className="rounded-otm-lg border border-otm-border p-4 text-sm text-otm-text">
       <summary className="cursor-pointer font-medium">{t("explanations.sectionTitle")}</summary>
       <p className="mt-2 text-xs text-otm-text-muted">{t("explanations.sectionBody")}</p>
       <div className="mt-2 max-w-xs">

@@ -24,7 +24,7 @@ export function LanguageSwitcher() {
         aria-label={t("language.label")}
         value={OPTIONS.includes(current) ? current : "en"}
         onChange={(e) => void changeLocale(e.target.value)}
-        className="rounded-full border border-otm-border bg-otm-surface-2 px-2 py-1.5 text-xs font-medium text-otm-text focus:outline-none focus:ring-2 focus:ring-[color:var(--otm-ring)]"
+        className="rounded-full border border-otm-border bg-otm-surface-2 px-2 py-1.5 text-xs font-medium text-otm-text focus:outline-hidden focus:ring-2 focus:ring-[color:var(--otm-ring)]"
       >
         {OPTIONS.map((lng) => (
           <option key={lng} value={lng}>

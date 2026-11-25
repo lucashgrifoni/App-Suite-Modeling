@@ -13,7 +13,7 @@ export function QuickStartPanel({
 
   return (
     <div className="grid gap-3 sm:grid-cols-3">
-      <div className="rounded-otm-md border border-otm-border bg-otm-surface-1/80 p-4">
+      <div className="rounded-otm-md border border-otm-border p-4">
         <p className="text-xs font-semibold uppercase tracking-wider text-otm-text-subtle">{t("quickStart.fast")}</p>
         <p className="mt-1 font-display text-sm font-semibold text-otm-text">{t("quickStart.blankTitle")}</p>
         <p className="mt-1 text-xs text-otm-text-muted">{t("quickStart.blankDesc")}</p>
@@ -21,7 +21,7 @@ export function QuickStartPanel({
           {loading ? t("quickStart.blankCtaLoading") : t("quickStart.blankCta")}
         </Button>
       </div>
-      <div className="rounded-otm-md border border-otm-border bg-otm-surface-1/80 p-4">
+      <div className="rounded-otm-md border border-otm-border p-4">
         <p className="text-xs font-semibold uppercase tracking-wider text-otm-text-subtle">{t("quickStart.infra")}</p>
         <p className="mt-1 font-display text-sm font-semibold text-otm-text">{t("quickStart.importTitle")}</p>
         <p className="mt-1 text-xs text-otm-text-muted">{t("quickStart.importDesc")}</p>
@@ -31,7 +31,7 @@ export function QuickStartPanel({
           </Button>
         </Link>
       </div>
-      <div className="rounded-otm-md border border-otm-border bg-otm-surface-1/80 p-4">
+      <div className="rounded-otm-md border border-otm-border p-4">
         <p className="text-xs font-semibold uppercase tracking-wider text-otm-text-subtle">
           {t("quickStart.accelerator")}
         </p>

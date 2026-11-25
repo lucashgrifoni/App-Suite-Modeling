@@ -31,10 +31,10 @@ export function Stepper({
             // Behind the cursor or unlocked ahead of it: either way the user can go there,
             // so it must not be painted as a dead step.
             stateClass =
-              "border border-otm-border-strong bg-otm-surface-3 text-otm-text hover:border-otm-mint-400/40";
+              "border border-otm-border-strong bg-otm-surface-3 text-otm-text";
           } else {
             stateClass =
-              "cursor-not-allowed border border-otm-border bg-otm-surface-1/60 text-otm-text-subtle";
+              "cursor-not-allowed border border-otm-border text-otm-text-subtle";
           }
           return (
             <li key={s.id}>

@@ -34,7 +34,7 @@ export function RunEngineCard({
   return (
     <Card title={t("runEngine.title")} subtitle={t("runEngine.subtitle")} variant="glass">
       <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:gap-4">
-        <div className="min-w-0 flex-1 space-y-3 lg:max-w-md">
+        <div className="flex min-w-0 flex-1 flex-col gap-3 lg:max-w-md">
           <Label htmlFor="methodology">{t("runEngine.methodology")}</Label>
           <Select
             id="methodology"
@@ -64,7 +64,7 @@ export function RunEngineCard({
           </div>
           <p className="text-xs text-otm-text-muted">{t("runEngine.overrideHint")}</p>
         </div>
-        <div className="min-w-0 flex-1 space-y-2">
+        <div className="flex min-w-0 flex-1 flex-col gap-2">
           <Label htmlFor="pack">{t("runEngine.pack")}</Label>
           <Input
             id="pack"

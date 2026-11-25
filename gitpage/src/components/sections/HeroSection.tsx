@@ -54,7 +54,7 @@ export function HeroSection() {
             initial={{ opacity: 0, y: 28 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.75, delay: 0.08, ease: [0.16, 1, 0.3, 1] }}
-            className="mt-6 font-display text-4xl font-semibold leading-[1.05] tracking-tight text-mist md:text-5xl lg:text-6xl"
+            className="mt-6 font-display text-4xl font-semibold leading-[1.05] tracking-tight text-mist md:text-5xl/[1] lg:text-6xl/[1]"
           >
             App Suite{" "}
             <span className="animate-gradient-shift bg-gradient-to-r from-mint via-emerald-200 to-mint bg-[length:200%_auto] bg-clip-text text-transparent">
@@ -74,7 +74,7 @@ export function HeroSection() {
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.65, delay: 0.22 }}
-            className="mt-4 text-base leading-relaxed text-steel md:text-lg"
+            className="mt-4 text-base leading-relaxed text-steel md:text-lg/7"
           >
             {hero.subtitle}
           </motion.p>
@@ -87,7 +87,7 @@ export function HeroSection() {
           >
             <a
               href={repoUrl}
-              className="group inline-flex items-center gap-2 rounded-xl bg-mint px-6 py-3.5 text-sm font-semibold text-midnight shadow-mint transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mint"
+              className="group inline-flex items-center gap-2 rounded-xl bg-mint px-6 py-3.5 text-sm font-semibold text-midnight shadow-[0_0_40px_var(--color-mint)] transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mint"
             >
               View on GitHub
               <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />

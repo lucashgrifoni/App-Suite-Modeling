@@ -129,7 +129,7 @@ function RadarFace({ reduced }: { reduced: boolean }) {
       {RADAR_CONTACTS.map((c, i) => (
         <motion.div
           key={i}
-          className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-full ring-2 ${
+          className={`absolute rounded-full ring-2 [transform:translate(-50%,-50%)] ${
             c.ok
               ? "h-2 w-2 bg-mint ring-mint/50 shadow-[0_0_14px_rgba(8,185,139,0.95)]"
               : "h-3 w-3 bg-danger-strong ring-danger ring-offset-1 ring-offset-[rgba(12,18,76,0.35)] shadow-[0_0_20px_rgba(239,68,68,1)]"
@@ -205,7 +205,7 @@ function ScanTicker({ reduced }: { reduced: boolean }) {
             />
           )}
           <p
-            className={`text-left text-[11px] leading-snug md:text-xs ${
+            className={`text-left text-[11px] leading-snug md:text-xs/4 ${
               isAlert
                 ? "font-medium text-danger-strong"
                 : "text-mist/90"
@@ -335,7 +335,7 @@ export function HeroVisual() {
         />
 
         <div
-          className="relative z-[4] overflow-hidden rounded-[1.75rem] border border-white/12 bg-gradient-to-br from-white/[0.1] via-midnight/90 to-midnight p-6 shadow-hero-stack md:rounded-[2rem] md:p-8"
+          className="relative z-[4] overflow-hidden rounded-[1.75rem] border bg-gradient-to-br from-white/[0.1] via-midnight/90 to-midnight p-6 shadow-hero-stack md:rounded-[2rem] md:p-8"
           style={{
             aspectRatio: "1 / 1",
             transform: "translateZ(22px)",
@@ -376,7 +376,7 @@ export function HeroVisual() {
           ) : null}
 
           <motion.div
-            className="pointer-events-none absolute inset-[11%] z-[1] rounded-2xl border border-mint/12 bg-mint/[0.04]"
+            className="pointer-events-none absolute inset-[11%] z-[1] rounded-2xl border bg-mint/[0.04]"
             animate={reduced ? {} : { scale: [0.98, 1, 0.98], opacity: [0.45, 0.8, 0.45] }}
             transition={
               reduced
@@ -395,7 +395,7 @@ export function HeroVisual() {
               aria-hidden
             >
               <motion.span
-                className="inline-flex items-center gap-2 rounded-lg border border-white/14 bg-midnight/70 px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-steel shadow-hero-lip backdrop-blur-sm md:text-xs"
+                className="inline-flex items-center gap-2 rounded-lg border bg-midnight/70 px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-steel shadow-hero-lip backdrop-blur-sm md:text-xs"
                 animate={reduced ? {} : { y: [0, -3, 0] }}
                 transition={
                   reduced
@@ -407,7 +407,7 @@ export function HeroVisual() {
                 Model graph
               </motion.span>
               <motion.span
-                className="inline-flex items-center gap-1.5 rounded-lg border border-mint/35 bg-mint/14 px-2.5 py-1.5 text-[10px] font-semibold text-mint shadow-[0_0_24px_-8px_rgba(8,185,139,0.85)] md:text-xs"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-mint/35 px-2.5 py-1.5 text-[10px] font-semibold text-mint shadow-[0_0_24px_-8px_rgba(8,185,139,0.85)] md:text-xs"
                 animate={reduced ? {} : { y: [0, 3, 0] }}
                 transition={
                   reduced
@@ -446,7 +446,7 @@ export function HeroVisual() {
               </motion.div>
             </div>
 
-            <div className="shrink-0 rounded-xl border border-white/12 bg-midnight/60 p-3 shadow-hero-lip backdrop-blur-md md:p-4">
+            <div className="shrink-0 rounded-xl border bg-midnight/60 p-3 shadow-hero-lip backdrop-blur-md md:p-4">
               <ScanTicker reduced={reduced} />
             </div>
           </div>

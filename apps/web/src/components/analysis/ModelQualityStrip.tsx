@@ -35,7 +35,7 @@ export function ModelQualityStrip({ analysis }: Readonly<{ analysis: AnalysisRes
     <section
       aria-label={t("modelQuality.aria")}
       data-testid="model-quality-strip"
-      className="rounded-otm-lg border border-otm-border/90 bg-otm-surface-1/60 px-4 py-3 text-sm text-otm-text"
+      className="rounded-otm-lg border px-4 py-3 text-sm text-otm-text"
     >
       <div className="flex flex-wrap items-start gap-3">
         {pq ? (
@@ -86,7 +86,7 @@ export function ModelQualityStrip({ analysis }: Readonly<{ analysis: AnalysisRes
           </div>
         ) : null}
         {mc ? (
-          <div className="min-w-[220px] flex-1 space-y-1 border-t border-otm-border/60 pt-2 sm:border-l sm:border-t-0 sm:pl-4 sm:pt-0">
+          <div className="min-w-[220px] flex-1 space-y-1 border-t pt-2 sm:border-l sm:border-t-0 sm:pl-4 sm:pt-0">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-otm-text-subtle">
               {t("modelQuality.methodologyCompleteness")}
             </p>

@@ -25,7 +25,7 @@ export function AboutSection() {
               transition={{ delay: i * 0.08, duration: 0.55 }}
               className="glass rounded-2xl p-6 md:p-7"
             >
-              <p className="text-sm leading-relaxed text-mist/90 md:text-base">{p}</p>
+              <p className="text-sm leading-relaxed text-mist/90 md:text-base/6">{p}</p>
             </motion.article>
           ))}
         </div>
