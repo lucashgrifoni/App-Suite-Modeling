@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:ea03843653ae9ff83865a137791d402d3820b59a80452cae3b551412d9a24553",
+  "claims": [
+    {
+      "id": "claim_39cfb36a39da42d282efb7cb6974afee",
+      "statement": "The report builder derives the review date from metadata and routes accepted risk into a dedicated review destination.",
+      "evidence": [
+        {
+          "resource": "repo://packages/report-premium/otm_report_premium/treatment_policy.py#L45-L70",
+          "version": "repo-lines-v1:sha256:3d4d0116fc27bd22b2de95d0af33d30abbec00a0d21313c1d25a96113bc11a74:eyJzZWxlY3RlZExpbmVDb3VudCI6MjYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImEzZmI1MjdjMzI0NDllNTlhMzk5M2RlYzliNzI5ZWRiMTZiYjU2MDVhNTc4OTUyOThkZmZjNzRlYzUwNzU3NGUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU1MDMyZTk2NGQwOTMyMzUxZTVkMTg1MjY5MjgxYjE3MWEzYTA5YjA4YjI4NmU2NjFlYTQ3MDMyM2M4MmViNGQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijc5NzA5MGY3NTc5YWM1YjNjZDQ4NmMzZTI1M2E0MjA5NWMzNjAwYzFiYmMxNGRhMzMzZDFlYTAxYWI2NjE2ZGEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjU5ZDQ0YzViNDZiZmM0NTM2ZWE3YjU0OTM2NjAzZTA3NTliNDkyNDY2MzBmZjNmMDBiYzViZmQ2MjhlNWZiMTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_a2f0b48120cd4234859f3dbd7a4c7a51",
+      "statement": "The report API preserves the populated review owner and date in Markdown and the extracted PDF text.",
+      "evidence": [
+        {
+          "resource": "repo://tests/test_report_treatment_decisions.py#L186-L210",
+          "version": "repo-lines-v1:sha256:b8dc30b1e5a71150cccdd97ac4832b69dbf01bbd9bb1b994215ff10156f48675:eyJzZWxlY3RlZExpbmVDb3VudCI6MjUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImE4YTMwYzU5M2VlYzQ4ZDVkZWMzMGJkYjE5YzY4ODg2OTNlNWEwNzM5ZDg5OTc3ZDI3MmQ3OGVhNzZmM2ViN2IiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjNiNGMzM2JhMjU2Mzc4YzgwMmU3MzA0MGI3N2Y2OTM0ZjU3ZWE3NzYwOWNiMzE4YjM4ZGM2YmJjYzBiZjIwOGQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJkZDI3ZmE3Zjg3ZGU3NDExNDE2MTA0Yzc5YzUwNmUyZmM0NmQ5ZGM0MmM0YzdkNDg3NmMzZjcyMzZjNWY3MTAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjU2ODBiMGYyOTI4YWMwZGJmM2RkNGEzMWQ1YzE2ZTkxOThhMjlhNjA4NmQzOWNmYjU3YzIwZjYwYmUzM2E2NWQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_f41e93dc6b114d41b861b8f270519d08",
+      "statement": "The API report tests check the registered total on the cover and active exposure in both outputs.",
+      "evidence": [
+        {
+          "resource": "repo://tests/test_report_treatment_decisions.py#L140-L178",
+          "version": "repo-lines-v1:sha256:e5e68acace65e360d2d38089f9a288bb9e3131ab7434e4e21c229272bff9e345:eyJzZWxlY3RlZExpbmVDb3VudCI6MzksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjVkM2VjMWM5ODU5OTYyZGYyNzMyZDllMjhmMDQ0MjdiMGI0MTk3ZDViMmRhNzM0ZjNkOGRkOTU4Y2NmOGY1ODMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRmMzg1MzI1OGY2YWM5ZWRkNTYwOTgzYzc2NzE5ZGEyMDY5ZmQ2NmZiMzMwODMwMDBlNTMwZDlmYzcyNzliNjYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijg3MzFkZDExOTMxZjkzYWFiMjgyMDEwOWYwNjNhOTQwNmJjNWQ2ZDFiZjUwODY2ZDVlYWZhNzdhNjhjMWYxMTMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjI5NjFiNmI4NzA0NTNjODlhOWIxNzcxYWY1YzUxMzBjYTc0ZTI2MGJhNGQxMDQxYzgyZDBjMzhiNTYzM2M3MjAifQ"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.7.2",
+    "at": "2026-11-25T16:05:04.236Z"
+  }
+}

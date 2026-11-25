@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:0bbc19c625cbe9dd3443c735834852561225840b575a8ca6f2ebf1ca56fa8ce4",
+  "claims": [
+    {
+      "id": "claim_9ece95157a054530a05aa728d84088cc",
+      "statement": "The Python distribution is named open-threat-model and requires Python 3.11 or newer.",
+      "evidence": [
+        {
+          "resource": "repo://pyproject.toml#L5-L11",
+          "version": "repo-lines-v1:sha256:5b6fbd7f85465ff16c6f02a7bb7b6bb62310cb7f325c0f9da81a2369a73c51b0:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNzAyYTgxYzM4MzZlZGVmMmQwYmExMWQyMzUzZmI2ZGFiYzc3NzE1MGE3Y2E4M2VhMGQ5ZTlhNzAzMTNmZWFiYiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMjg4ZmEyNDU0ODMzZjAxODU3ODQ3YzhlZWI1NDZiNjVhMjI4Y2VhNjM3MDcyMmIyY2MxYjA3MWUxMTMyMGQ1NSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZjJmMTNjNjM5NTNkNjE3ZDAwZmMwMzkxNTNmOGMxZDIyZjcyZTQ5Yzk2ZGU1ZWM4YmUyZjFiNzI4NzZmM2FmZSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYTEyMjIwNDNlOWMzODIxYTM3ZGExZWI2MjQzMDA1NjY3ZWI3OTg1NjY3ZTU5YWFkYTRlNzc4NGJjNDMyNzNlZSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_b51b67541f6e4aba9d487939d055442b",
+      "statement": "The quickstart creates a SaaS example, validates it, runs STRIDE and writes a Markdown report.",
+      "evidence": [
+        {
+          "resource": "repo://README.md#L96-L109",
+          "version": "repo-lines-v1:sha256:25db163acc020fca1c05f299aa513f49ded796c02d92af326d9e56737ab0a2e5:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImMyM2Y1NjE4YmMzY2NkODFkMjQ2NzVhOWIyNGM1NzY5ZDIxZjE1Y2I1ZjBlMjRlOWY3OThhYTY1MjhlN2ZmODMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjdlYjcwMjU3NTkzZGEwNmY2ODJhM2RkZGE1NGE5ZDI2MGQ0ZmM1MTRmNjQ1MjM3ZjVjYTc0YjA4ZjhkYTYxYTYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjRmOTMyMzUyMDJmN2QwNDk4ZTljMTMzOGIxN2NmZDg4NzEyNzRkN2Y3YjkwYzE5NjFiYTcyNGI1ZjI2Mjk5ODMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImI4YTc4ZTc4Njg3Mzc3ZWM2ZTFjZjNmZDQ3OGIwMmI4YTI5MWRmZGNjZGJhODIxYmNhYjg3NTEwNmIwY2EwY2QifQ"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.7.2",
+    "at": "2026-11-25T16:05:04.236Z"
+  }
+}

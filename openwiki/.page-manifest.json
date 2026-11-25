@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "pages": {
+    "/openwiki/architecture/application-surfaces.md": {
+      "pageVersion": "sha256:acf794d15eaabbb50e696cc3d66bc2df07a921e946c1e8c524446597882e3ee1",
+      "completedBy": "codex",
+      "completedRunId": "68462b29-f047-4cd5-af74-f5cfc5b9171b",
+      "gitHead": "e648fb837a8a9942ef2decfe4af5fecf58737870",
+      "sourceFingerprint": "sha256:c29ec0d0f22a1e00f0c5864dbc233d981d2caccee95b1ae8e741e473c2946324"
+    },
+    "/openwiki/concepts/model-and-analysis.md": {
+      "pageVersion": "sha256:ea03843653ae9ff83865a137791d402d3820b59a80452cae3b551412d9a24553",
+      "completedBy": "codex",
+      "completedRunId": "68462b29-f047-4cd5-af74-f5cfc5b9171b",
+      "gitHead": "e648fb837a8a9942ef2decfe4af5fecf58737870",
+      "sourceFingerprint": "sha256:c29ec0d0f22a1e00f0c5864dbc233d981d2caccee95b1ae8e741e473c2946324"
+    },
+    "/openwiki/guides/imports-and-comparisons.md": {
+      "pageVersion": "sha256:c9eb6c405508aed3702328b35ce403084ac0cbafd131c9d79495c135eceb8f3f",
+      "completedBy": "codex",
+      "completedRunId": "68462b29-f047-4cd5-af74-f5cfc5b9171b",
+      "gitHead": "e648fb837a8a9942ef2decfe4af5fecf58737870",
+      "sourceFingerprint": "sha256:c29ec0d0f22a1e00f0c5864dbc233d981d2caccee95b1ae8e741e473c2946324"
+    },
+    "/openwiki/quickstart.md": {
+      "pageVersion": "sha256:0bbc19c625cbe9dd3443c735834852561225840b575a8ca6f2ebf1ca56fa8ce4",
+      "completedBy": "codex",
+      "completedRunId": "68462b29-f047-4cd5-af74-f5cfc5b9171b",
+      "gitHead": "e648fb837a8a9942ef2decfe4af5fecf58737870",
+      "sourceFingerprint": "sha256:c29ec0d0f22a1e00f0c5864dbc233d981d2caccee95b1ae8e741e473c2946324"
+    },
+    "/openwiki/testing/dependency-and-pr-checks.md": {
+      "pageVersion": "sha256:fd05887aef5d441a1046538ba70d0653a32236dd77e07f9599f179208346e5af",
+      "completedBy": "codex",
+      "completedRunId": "68462b29-f047-4cd5-af74-f5cfc5b9171b",
+      "gitHead": "e648fb837a8a9942ef2decfe4af5fecf58737870",
+      "sourceFingerprint": "sha256:c29ec0d0f22a1e00f0c5864dbc233d981d2caccee95b1ae8e741e473c2946324"
+    }
+  }
+}

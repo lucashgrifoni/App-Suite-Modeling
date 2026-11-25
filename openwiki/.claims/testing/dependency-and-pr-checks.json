@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:fd05887aef5d441a1046538ba70d0653a32236dd77e07f9599f179208346e5af",
+  "claims": [
+    {
+      "id": "claim_06a9809d3e4a43f9ad3166d049b62146",
+      "statement": "The workflow's Gitleaks job uses read permissions, full checkout history and disabled comments.",
+      "evidence": [
+        {
+          "resource": "repo://.github/workflows/security-ci-cd.yml#L744-L774",
+          "version": "repo-lines-v1:sha256:43e303df8a36cb3a90c342ad7a9f04fc1fbe28de10b097b5d6fa0e97ee89bd53:eyJzZWxlY3RlZExpbmVDb3VudCI6MzEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRhN2NkYjlhMThhYzk4ZGZjMTkxYjcxMjQxZTI4MDczOGFiYzBhZDc0OTQxYmYyM2E1NzhlY2FjOTM4OTlkYzEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBmZmNjY2M0ZTg5MTk2YjYyNTU5YzRlMzNlZTM1NTJiYTA3NzQ4NDcyMTNkZDY5ODI1NGY3ZDY0NjE1OGQ1ZTgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJjNzA4M2JiYjE3Njg5NzFmY2IwOGRkMDliMTg5YTIwNmIwNmRjYzkyNWUwMjdhMjAwY2FjMzgxMmMxMmI5MmIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjUxZjQ0ZWM4YmM2ZTMxMzYyOTIxYzkzMTIzMDIzY2VhMTlhMjM3MzcxYWI3YWUzN2MyZWVjZWU5N2Y4MjFhN2YifQ"
+        },
+        {
+          "resource": "repo://tests/test_cicd_pipeline_invariants.py#L423-L430",
+          "version": "repo-lines-v1:sha256:aa49484a5215842646d3130f6623c628b98272112d6f119ba34a2035a3b02fd5:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMzcwMjkzYzQ5YWY5NTRmZWM2MjI5ZDUxNTEyMWYyZjMzMTQ1YWZkNzc5OTMyNTJhMzY3YWUwMzMwZGY2ZjhjOSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNjVhODllZGJlZWRjOGVmMGE3NzdiYmZlY2FkNzEzMWJkYTE2YTg1MmQ4NDc1MjQwNzNlNTAwYTBiNjBhYWYzYyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZmY5YzIzMDdjODUzNDUxNzRhYmMwZWQ2NzlmMmI4MzM4NWEyMjRiYmZjYTMxMDJiZmJmOGE0OTQ3NGVkNzk4NiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMzUxYTg0ZjYzYTQ0YWJmN2I5NzQ2NDZkNWYzMDNhN2E1NGEyMDU2YzdkMTUyNjE5ZTZlY2IxMTQxNzQzNWU4ZCJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_27230e2da8474c22a3910d986315b11f",
+      "statement": "The action shares one resolved rules input between the analysis and drift steps.",
+      "evidence": [
+        {
+          "resource": "repo://tests/test_p2r2_cli_custom_rules_drift.py#L67-L78",
+          "version": "repo-lines-v1:sha256:99ee40a5ba1f580893a381bf9f800845272990657a70bf089d1b5ad8e0b8b5d9:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM0NmI4OWYzNGQ2YTNiZjE0ZGI2ODVjZmNkMmY3OWU1NWMwMTcwYzljZTE0Yzc4MzNlMTNiYTVlOGZkNTQzODQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQzOTAwODkxZTZiNWIxNGRhMDMzZTllNmEzM2ViNmM5Yzc1NmU0YzU0NzZlYjAyMGY2ZmUxOThkNTYxNzkwZDUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImY4ODJkNTcyZGM5MjRmYzIxZmMyMDBmMjA2ZmMwZGY0ZDI0NTJmODAyMWQ5NzI5MDM2MmU5ZDY2NmQyN2M4MjkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjgxYzE0MjZiZWE3ZmFiYTA1YTEyYzFlMWM4NjBkYTY3YzYxNzM4ZmZjY2NjYTRmNjc2ZTRiOTI2ZGVhNjZlMDIifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_325aa3b4024149258b222c0002787f8e",
+      "statement": "The CLI SARIF output ties distinct result locations to the YAML lines of their target IDs.",
+      "evidence": [
+        {
+          "resource": "repo://tests/test_p2_export_sarif_location.py#L85-L99",
+          "version": "repo-lines-v1:sha256:2b781235ff51be62119dec431f6eb86c0af265da5673b60de1d267fa0d62174c:eyJzZWxlY3RlZExpbmVDb3VudCI6MTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ0NDUxNDJiOTVhMmIwM2I4YWFlOWExZGVmODBkY2M2NzJlN2Q5OTExZWU0ZGJiYjYzNGU5ZDJiNzc5MjNlNzIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZkOWZmZWY1MTFjODA3ODA1ZGQ3ZjIzOGU2ODIzMDM0YWQ5ZjNiNjU4NWZhNjU0MTEzOTM3NGVhYjczNjEzMWIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjgwOGQxZDJhYmE2ZTYwOGNmZmRjMWU4ZjFlMjhmYTJmMTk1ZTcxNmQ0MTdmMzJiMWM1ZDg3Nzk4M2QwZGU1NGMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjIyYzEzZTVlYWEyY2Y0ZmU0OWFmNGEyM2FiYTE4MTIzNzQ5YzE3MWMzMGQ1YWEwYzExM2EwMGEzYzJkNmVmMDMifQ"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.7.2",
+    "at": "2026-11-25T16:05:04.236Z"
+  }
+}

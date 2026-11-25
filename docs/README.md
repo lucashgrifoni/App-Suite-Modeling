@@ -12,6 +12,7 @@ Ponto de entrada único para navegar o `/docs`. O mapa editorial (público vs in
 2. Primeiro modelo: `otm init` ou [`examples/minimal.otm.yaml`](../examples/minimal.otm.yaml).  
 3. Fluxo: `otm validate` → `otm analyze` → `otm report` / exports via API.  
 4. Limitações honestas: [`KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md).
+5. Wiki com referências ao código e aos testes: [OpenWiki](../openwiki/quickstart.md) e [manutenção local](openwiki.md).
 
 ### Release e qualidade (mantenedores)
 

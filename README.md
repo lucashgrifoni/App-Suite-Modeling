@@ -306,6 +306,7 @@ Test suite (reference): **400+** Python tests in CI when installing `.[dev,cli,a
 | Doc | Purpose |
 |-----|---------|
 | [docs/README.md](docs/README.md) | Doc hub & onboarding (including PT-BR oriented guides) |
+| [OpenWiki](openwiki/quickstart.md) | Source-linked guides for models, reports, imports and CI |
 | [docs/features/CLI.md](docs/features/CLI.md) | CLI reference |
 | [docs/features/API.md](docs/features/API.md) | REST API & optional perimeter |
 | [docs/features/UI.md](docs/features/UI.md) | Web app flows |
