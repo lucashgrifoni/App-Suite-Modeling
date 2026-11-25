@@ -1,7 +1,7 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
-import { resolveApiProxyTarget } from "./src/config/devApiTarget";
+import { resolveApiProxyTarget } from "./src/config/devApiTarget.ts";
 
 /**
  * CSP alinhada com `public/_headers` (deploy estático). Em dev não enviamos CSP no servidor
