@@ -17,7 +17,7 @@ def _ids_unique(result) -> bool:
     return len(ids) == len(set(ids))
 
 
-def test_kubernetes_same_name_service_across_namespaces_does_not_crash() -> None:
+def test_kubernetes_same_name_services_across_namespaces_are_preserved() -> None:
     text = """
 apiVersion: v1
 kind: Service
@@ -31,7 +31,10 @@ spec: {type: ClusterIP}
 """
     result = import_kubernetes_text(text)
     assert _ids_unique(result)
-    assert any("duplicado" in u for u in result.unknowns)
+    services = [c for c in result.document.components if c.technology == "Kubernetes Service"]
+    assert len(services) == 2
+    assert {c.metadata["namespace"] for c in services} == {"ns1", "ns2"}
+    assert result.unknowns == []
 
 
 def test_terraform_duplicate_resource_address_does_not_crash() -> None:

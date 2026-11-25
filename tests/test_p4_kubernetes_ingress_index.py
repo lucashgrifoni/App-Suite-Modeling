@@ -23,7 +23,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from otm_artifact_import.k8s_import import _build_ingress_flows
+from otm_artifact_import.k8s_import import IngressRef, ResourceName, _build_ingress_flows
 
 
 class _CountingDocs(list):
@@ -54,10 +54,10 @@ def _ingress_doc(name: str, service: str) -> dict[str, Any]:
     }
 
 
-def _fixture(count: int) -> tuple[_CountingDocs, list[tuple[str, str, list[str]]], dict[str, str]]:
+def _fixture(count: int) -> tuple[_CountingDocs, list[IngressRef], dict[ResourceName, str]]:
     docs = _CountingDocs([_ingress_doc(f"ing{i}", f"svc{i}") for i in range(count)])
-    ingresses = [(f"k8s_ing{i}", f"ing{i}", [f"ing{i}.example.com"]) for i in range(count)]
-    services = {f"svc{i}": f"k8s_svc{i}" for i in range(count)}
+    ingresses = [(f"k8s_ing{i}", ("default", f"ing{i}"), [f"ing{i}.example.com"]) for i in range(count)]
+    services = {("default", f"svc{i}"): f"k8s_svc{i}" for i in range(count)}
     return docs, ingresses, services
 
 
@@ -92,19 +92,15 @@ def test_every_ingress_still_reaches_its_backend_service() -> None:
     assert unknowns == []
 
 
-def test_two_ingresses_sharing_a_name_resolve_to_the_first_one_declared() -> None:
-    """`_find_ingress_spec` returned the first match; the index must not silently prefer the last.
-
-    Manifests legitimately repeat a name across namespaces, so this is reachable input, not a
-    contrived one — the same shape the importer already handles for Services.
-    """
+def test_duplicate_ingress_in_the_same_namespace_uses_the_first_spec() -> None:
+    """The spec index keeps the first declaration of the same resource identity."""
     docs = _CountingDocs([_ingress_doc("shared", "svc_first"), _ingress_doc("shared", "svc_second")])
     unknowns: list[str] = []
 
     flows = _build_ingress_flows(
         docs,
-        [("k8s_shared", "shared", ["shared.example.com"])],
-        {"svc_first": "k8s_svc_first", "svc_second": "k8s_svc_second"},
+        [("k8s_shared", ("default", "shared"), ["shared.example.com"])],
+        {("default", "svc_first"): "k8s_svc_first", ("default", "svc_second"): "k8s_svc_second"},
         "k.yaml",
         lambda *a, **k: None,
         unknowns,
@@ -120,8 +116,8 @@ def test_an_ingress_with_no_matching_manifest_is_still_reported_as_unknown() -> 
 
     flows = _build_ingress_flows(
         docs,
-        [("k8s_absent", "absent", [])],
-        {"svc_present": "k8s_svc_present"},
+        [("k8s_absent", ("default", "absent"), [])],
+        {("default", "svc_present"): "k8s_svc_present"},
         "k.yaml",
         lambda *a, **k: None,
         unknowns,

@@ -588,9 +588,8 @@ def test_run_backlog_unsupported_extension(tmp_path: Path) -> None:
 def test_k8s_find_ingress_spec_no_match_returns_none() -> None:
     from otm_artifact_import.k8s_import import _find_ingress_spec
 
-    # no Ingress doc with that name -> the loop falls through to the final `return None`
-    assert _find_ingress_spec([], "missing") is None
-    assert _find_ingress_spec([{"kind": "Service", "metadata": {"name": "x"}}], "x") is None
+    assert _find_ingress_spec([], ("default", "missing")) is None
+    assert _find_ingress_spec([{"kind": "Service", "metadata": {"name": "x"}}], ("default", "x")) is None
 
 
 def test_k8s_backend_service_name_variants() -> None:
