@@ -44,7 +44,7 @@ from fastapi.testclient import TestClient  # noqa: E402
 from otm_api.main import app  # noqa: E402
 from otm_api.perimeter_settings import (  # noqa: E402
     ApiKeyConfigError,
-    describe_weak_api_key_consequence,
+    has_weak_api_key,
     resolve_api_key_perimeter,
 )
 
@@ -203,39 +203,24 @@ def test_a_blank_value_still_fails_closed_without_raising(monkeypatch: pytest.Mo
 def test_a_weak_secret_is_called_out(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("OTM_API_KEY", "s3cr3t")
 
-    assert describe_weak_api_key_consequence(resolve_api_key_perimeter())
-
-
-def test_the_weak_secret_line_says_how_to_generate_a_real_one(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("OTM_API_KEY", "x")
-    line = describe_weak_api_key_consequence(resolve_api_key_perimeter())
-
-    assert "token_urlsafe" in (line or "")
-
-
-def test_the_weak_secret_line_never_prints_the_secret(monkeypatch: pytest.MonkeyPatch) -> None:
-    """O aviso vai para o stdout do processo; o segredo não pode ir com ele."""
-    monkeypatch.setenv("OTM_API_KEY", "hunter2")
-    line = describe_weak_api_key_consequence(resolve_api_key_perimeter())
-
-    assert "hunter2" not in (line or "")
+    assert has_weak_api_key(resolve_api_key_perimeter())
 
 
 def test_a_strong_secret_says_nothing(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("OTM_API_KEY", _STRONG)
 
-    assert describe_weak_api_key_consequence(resolve_api_key_perimeter()) is None
+    assert not has_weak_api_key(resolve_api_key_perimeter())
 
 
 def test_an_off_perimeter_says_nothing() -> None:
-    assert describe_weak_api_key_consequence(resolve_api_key_perimeter()) is None
+    assert not has_weak_api_key(resolve_api_key_perimeter())
 
 
 def test_a_blank_value_says_nothing_here(monkeypatch: pytest.MonkeyPatch) -> None:
     """O caso em branco já tem a sua própria linha (`api_key=misconfigured`); duas seria ruído."""
     monkeypatch.setenv("OTM_API_KEY", "   ")
 
-    assert describe_weak_api_key_consequence(resolve_api_key_perimeter()) is None
+    assert not has_weak_api_key(resolve_api_key_perimeter())
 
 
 def test_startup_warns_about_a_weak_secret(
@@ -266,7 +251,7 @@ def test_that_startup_line_is_a_warning(
     assert [r.levelname for r in caplog.records if "api_key_weak" in r.message] == ["WARNING"]
 
 
-def test_startup_weak_key_warning_does_not_disclose_key_length(
+def test_startup_weak_key_warning_does_not_disclose_key_details(
     monkeypatch: pytest.MonkeyPatch,
     caplog: pytest.LogCaptureFixture,
     restore_main_module: None,
@@ -275,11 +260,14 @@ def test_startup_weak_key_warning_does_not_disclose_key_length(
 
     messages = []
     with caplog.at_level(logging.INFO, logger="otm.api"):
-        for key in ("x", "x" * 6):
+        for key in ("fixture-a", "fixture-b-long"):
             caplog.clear()
             monkeypatch.setenv("OTM_API_KEY", key)
             importlib.reload(main)
-            messages.append(next(record.message for record in caplog.records if "api_key_weak" in record.message))
+            warning = next(record.message for record in caplog.records if "api_key_weak" in record.message)
+            assert key not in warning
+            assert "token_urlsafe" in warning
+            messages.append(warning)
 
     assert messages[0] == messages[1]
 

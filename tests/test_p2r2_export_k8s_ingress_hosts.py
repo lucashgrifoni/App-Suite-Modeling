@@ -86,7 +86,10 @@ def test_the_false_hostless_claim_is_gone(imported: ArtifactImportResult) -> Non
 
 def test_the_hostnames_survive_into_the_saved_model(imported: ArtifactImportResult) -> None:
     """The assumptions block is what travels with the draft into reports and exports."""
-    assert any("shop.example.com" in assumption for assumption in _assumptions(imported))
+    assert (
+        "[inferência high | kubernetes] Ingress `shop-ingress` com host(s) "
+        "shop.example.com, admin.example.com — fronteira externa sugerida."
+    ) in _assumptions(imported)
 
 
 def test_an_ingress_that_really_has_no_hosts_still_says_so() -> None:

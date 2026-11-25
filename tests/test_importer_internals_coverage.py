@@ -12,7 +12,7 @@ def test_collect_servers_v2_no_host() -> None:
 
 def test_collect_servers_v2_with_host_relative_base() -> None:
     out = oi._collect_servers_v2({"host": "api.example.com", "basePath": "v1", "schemes": ["https", 5]})
-    assert any("api.example.com" in u for u in out)
+    assert out == ["https://api.example.com/v1"]
 
 
 def test_security_hints_v3_schemes_not_dict() -> None:

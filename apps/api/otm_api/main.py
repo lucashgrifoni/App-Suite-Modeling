@@ -30,9 +30,10 @@ from otm_api.observability import (
 )
 from otm_api.openapi_security import api_key_header, bearer_token
 from otm_api.perimeter_settings import (
+    WEAK_API_KEY_WARNING,
     describe_effective_perimeter,
     describe_shared_bucket_consequence,
-    describe_weak_api_key_consequence,
+    has_weak_api_key,
     resolve_api_key_perimeter,
     resolve_rate_limit_default,
     resolve_trusted_proxy,
@@ -114,9 +115,8 @@ if _shared_bucket_line:
 # segredo curto é uma escolha legítima e não aborta o arranque (ao contrário de um valor que é
 # um interruptor, recusado em `resolve_api_key_perimeter`), mas não pode ficar indistinguível
 # de um forte na única evidência que o operador tem.
-_weak_key_line = describe_weak_api_key_consequence(_api_key)
-if _weak_key_line:
-    LOG.warning(_weak_key_line, extra={"event_name": "api_key_weak"})
+if has_weak_api_key(_api_key):
+    LOG.warning(WEAK_API_KEY_WARNING, extra={"event_name": "api_key_weak"})
 
 # Resolvido no arranque para que uma gralha em `OTM_MAX_DOCUMENT_ENTITIES` aborte o deploy em
 # vez de aparecer como um 500 no primeiro pedido com documento — e anunciado quando está

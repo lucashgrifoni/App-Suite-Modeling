@@ -60,9 +60,14 @@ _SWITCH_LIKE_API_KEYS = frozenset(
 )
 
 #: Abaixo disto o segredo é anunciado como fraco no arranque (não recusado — ver
-#: `describe_weak_api_key_consequence`). 16 carateres de uma fonte aleatória é o mínimo que
+#: `has_weak_api_key`). 16 carateres de uma fonte aleatória é o mínimo que
 #: `token_urlsafe` produz de forma confortável e o valor que a documentação passa a pedir.
 _WEAK_API_KEY_LENGTH = 16
+WEAK_API_KEY_WARNING = (
+    f"api_key_weak OTM_API_KEY is shorter than the recommended {_WEAK_API_KEY_LENGTH} characters. "
+    'Replace it with python -c "import secrets; print(secrets.token_urlsafe(32))" '
+    "(docs/features/API.md)."
+)
 
 
 def _switch_like_api_key_error(value: str) -> ApiKeyConfigError:
@@ -98,7 +103,7 @@ def resolve_api_key_perimeter() -> ApiKeyPerimeter:
 
     Um segredo real mas curto **não** é recusado: a intenção e o efeito coincidem e recusá-lo
     partiria deployments legítimos. Leva uma linha de aviso própria — ver
-    ``describe_weak_api_key_consequence``.
+    ``has_weak_api_key``.
     """
     raw = os.environ.get("OTM_API_KEY")
     if raw is None:
@@ -111,30 +116,9 @@ def resolve_api_key_perimeter() -> ApiKeyPerimeter:
     return ApiKeyPerimeter(enforced=True, secret=secret, misconfigured=False)
 
 
-def describe_weak_api_key_consequence(api_key: ApiKeyPerimeter) -> str | None:
-    """
-    A linha de arranque para quem ligou o perímetro com um segredo curto.
-
-    ``api_key=enforced`` é a única evidência que o operador tem de que o controlo está ligado,
-    e lê-se exatamente igual com 32 bytes aleatórios ou com a palavra `x`. Recusar o arranque
-    aqui seria errado — um segredo curto é uma escolha legítima, e há instalações a correr com
-    um — mas deixá-lo indistinguível de um segredo forte é o que torna a fraqueza invisível.
-
-    ``None`` quando não há nada a dizer: perímetro desligado, segredo em branco (esse caso já
-    tem a sua linha, ``api_key=misconfigured``), ou segredo com comprimento suficiente.
-
-    A mensagem é igual para todas as chaves abaixo do mínimo. O stdout do processo pode
-    ser recolhido, por isso o aviso omite o valor e o comprimento exato da chave.
-    """
-    if not api_key.enforced or api_key.secret is None:
-        return None
-    if len(api_key.secret) >= _WEAK_API_KEY_LENGTH:
-        return None
-    return (
-        f"api_key_weak OTM_API_KEY is shorter than the recommended {_WEAK_API_KEY_LENGTH} characters. "
-        'Replace it with python -c "import secrets; print(secrets.token_urlsafe(32))" '
-        "(docs/features/API.md)."
-    )
+def has_weak_api_key(api_key: ApiKeyPerimeter) -> bool:
+    """Indica se a chave em uso fica abaixo do comprimento recomendado."""
+    return api_key.enforced and api_key.secret is not None and len(api_key.secret) < _WEAK_API_KEY_LENGTH
 
 
 def resolve_optional_api_secret() -> str | None:
