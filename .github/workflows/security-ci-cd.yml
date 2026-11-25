@@ -242,14 +242,14 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Install Semgrep
-        # Verify the wheels for Semgrep and every dependency before installing.
+        # Pinned to an exact version for reproducible scans. Bump deliberately
+        # (or via Dependabot 'pip') rather than floating across releases.
         #
         # PYTHONSAFEPATH keeps the working directory off `sys.path`. `python -m pip` resolves
         # `pip` through `sys.path`, whose first entry is the CWD -- here the repository
         # checkout -- so a file named `pip.py` in the tree would shadow the real pip and run
         # its module body as this job, before any install happens.
-        run: |
-          python -m pip install --require-hashes --only-binary :all: -r requirements-semgrep.txt
+        run: python -m pip install "semgrep==1.163.0"
         env:
           PYTHONSAFEPATH: "1"
 

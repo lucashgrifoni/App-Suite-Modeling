@@ -28,7 +28,6 @@ def main() -> None:
             ["--extra", "dev", "--extra", "api", "--no-binary", "esprima"],
         ),
         ("requirements-pip-audit.txt", ("-",), ["pip-audit==2.10.1"], "3.12", []),
-        ("requirements-semgrep.txt", ("-",), ["semgrep==1.163.0"], "3.13", []),
         ("requirements-release.txt", ("-",), [*backend, "build", "twine", "packaging"], "3.12", []),
         ("requirements-cli.txt", ("pyproject.toml",), [], "3.12", []),
     )

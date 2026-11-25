@@ -81,7 +81,7 @@ O comando no `.github/workflows/github-ci-cd.yml` (job `python`) inclui **todos*
 
 ### Thresholds
 
-- **Python:** o gate audita as versões da CLI e da API em `requirements.txt`. O `pip-audit` roda em um ambiente virtual próprio, com dependências verificadas por hash.
+- **Python.** `python -m pip_audit --desc on --disable-pip --require-hashes -r requirements.txt` audita as versões da CLI e da API em `requirements.txt`. O `pip-audit` roda em um ambiente virtual próprio, com dependências verificadas por hash.
 - **Node:** **`npm audit --audit-level=moderate`** (job `web`, em `apps/web`, depois de `npm ci`).
 
 Os locks Python usados pela CI, pela imagem da API e pela publicação são gerados com `python scripts/refresh_python_locks.py`. O comando requer Python 3.11+ e `uv` no PATH e aceita nomes de arquivos para atualizar apenas o recorte desejado. Revise o diff dos pins e execute os checks dos ambientes afetados.

@@ -407,7 +407,7 @@ def test_semgrep_install_keeps_the_cwd_off_sys_path():
 
 DOC_CLAIMED_CI_COMMANDS = (
     ("python", "bandit -r packages apps -ll -q"),
-    ("python", "pip_audit --desc on -S ."),
+    ("python", "pip_audit --desc on --disable-pip --require-hashes -r requirements.txt"),
     ("web", "npm audit --audit-level=moderate"),
 )
 
