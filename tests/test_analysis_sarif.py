@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from otm_cli.cli import app
 from otm_core_schema import load_document_from_yaml_path
@@ -47,7 +48,8 @@ def test_sarif_one_result_per_active_threat_with_valid_levels() -> None:
 
 def test_sarif_rule_help_uri_links_to_cwe_or_capec() -> None:
     rules = export_analysis_sarif_obj(_result())["runs"][0]["tool"]["driver"]["rules"]
-    assert any("cwe.mitre.org" in r.get("helpUri", "") or "capec.mitre.org" in r.get("helpUri", "") for r in rules)
+    links = (urlsplit(rule["helpUri"]) for rule in rules if "helpUri" in rule)
+    assert any(link.scheme == "https" and link.hostname in {"cwe.mitre.org", "capec.mitre.org"} for link in links)
 
 
 def test_sarif_is_valid_json_and_deterministic() -> None:

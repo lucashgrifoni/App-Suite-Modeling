@@ -93,19 +93,13 @@ def test_a_json_looking_value_is_refused(monkeypatch: pytest.MonkeyPatch) -> Non
         _profile(monkeypatch, "[1,2,3]")
 
 
-def test_the_refusal_names_the_offending_value(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_the_refusal_names_only_the_offending_value(monkeypatch: pytest.MonkeyPatch) -> None:
     """Quem lê isto está a meio de um deploy com uma lista de dez origens."""
     with pytest.raises(InvalidCorsOriginsError) as excinfo:
         _profile(monkeypatch, "https://ok.example.com,https://typo.example.com/")
 
-    assert "https://typo.example.com/" in str(excinfo.value)
-
-
-def test_the_refusal_does_not_name_the_valid_neighbour(monkeypatch: pytest.MonkeyPatch) -> None:
-    with pytest.raises(InvalidCorsOriginsError) as excinfo:
-        _profile(monkeypatch, "https://ok.example.com,https://typo.example.com/")
-
-    assert "'https://ok.example.com'" not in str(excinfo.value)
+    listed = str(excinfo.value).partition("match: ")[2].partition(". An origin")[0]
+    assert listed == "'https://typo.example.com/'"
 
 
 def test_the_refusal_says_what_a_correct_value_looks_like(monkeypatch: pytest.MonkeyPatch) -> None:
