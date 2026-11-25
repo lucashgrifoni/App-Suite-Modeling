@@ -76,13 +76,15 @@ O comando no `.github/workflows/github-ci-cd.yml` (job `python`) inclui **todos*
 
 | Stack | Ferramenta | Onde |
 |-------|------------|------|
-| Python | **pip-audit** (OSV/PyPI) | Job `python` no CI, após `pip install -e ".[dev,cli,api]"` |
+| Python | **pip-audit** (OSV/PyPI) | Job `python` no CI, após instalar a partir de `requirements-ci.txt` |
 | Node | **npm audit** | Job `web`, `apps/web`, após `npm ci` |
 
 ### Thresholds
 
-- **Python:** `python -m pip_audit --desc on -S .` — gate estrito (qualquer vulnerabilidade conhecida falha o CI na árvore resolvida). `pip-audit` é fixado em `pip-audit==2.10.1` e instalado num **virtualenv próprio**, para que as suas dependências não se resolvam contra as do projecto nos passos que correm a seguir.
+- **Python.** `python -m pip_audit --desc on --disable-pip --require-hashes -r requirements.txt` audita as versões da CLI e da API em `requirements.txt`. O `pip-audit` roda em um ambiente virtual próprio, com dependências verificadas por hash.
 - **Node:** **`npm audit --audit-level=moderate`** (job `web`, em `apps/web`, depois de `npm ci`).
+
+Os locks Python usados pela CI, pela imagem da API e pela publicação são gerados com `python scripts/refresh_python_locks.py`. O comando requer Python 3.11+ e `uv` no PATH e aceita nomes de arquivos para atualizar apenas o recorte desejado. Revise o diff dos pins e execute os checks dos ambientes afetados.
 
 > **Estes dois gates foram implementados, não descritos.** Esta secção afirmava-os como gates
 > bloqueantes do CI e **nenhum workflow os executava**: `grep -rniE 'pip.audit|npm audit' .github/`
