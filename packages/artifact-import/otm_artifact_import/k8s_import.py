@@ -1,11 +1,13 @@
 """
 Importação assistida a partir de manifests Kubernetes (YAML multi-documento).
 
-Modelo de fluxo simplificado: clientes → Ingress → Service → Deployment (quando nomes coincidem).
+Modelo de fluxo simplificado: clientes → Ingress → Service → Deployment no mesmo namespace.
 """
 
 from __future__ import annotations
 
+import hashlib
+import json
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -24,8 +26,37 @@ def _as_dict(obj: Any) -> dict[str, Any] | None:
 
 
 InfFn = Callable[..., None]
-# (cid, name, hosts) registered per Ingress for the flow-building phase.
-IngressRef = tuple[str, str, list[str]]
+ResourceName = tuple[str, str]  # (namespace, name)
+IngressRef = tuple[str, ResourceName, list[str]]
+_DEFAULT_NAMESPACE = "default"
+
+
+def _resource_name(doc: dict[str, Any]) -> ResourceName:
+    metadata = _as_dict(doc.get("metadata")) or {}
+    return str(metadata.get("namespace") or _DEFAULT_NAMESPACE), str(metadata.get("name") or "unnamed")
+
+
+def _display_name(key: ResourceName) -> str:
+    namespace, name = key
+    return name if namespace == _DEFAULT_NAMESPACE else f"{namespace}/{name}"
+
+
+def _stable_id(value: str, *identity: str) -> str:
+    readable = slug_id(value)
+    if readable == value:
+        return readable
+    # Include the full identity when slug_id normalizes or truncates the name.
+    digest = hashlib.sha256(json.dumps(identity).encode()).hexdigest()[:16]
+    return f"{readable[:37].rstrip('_')}___{digest}"
+
+
+def _resource_id(prefix: str, key: ResourceName) -> str:
+    namespace, name = key
+    qualified = name if namespace == _DEFAULT_NAMESPACE else f"{namespace}__{name}"
+    if "_" in namespace or "_" in name:
+        # Keep "__" reserved for namespace separation in readable IDs.
+        qualified = f"{namespace}/{name}"
+    return _stable_id(f"{prefix}_{qualified}", prefix, namespace, name)
 
 
 def _extract_hosts_from_rules(rules: Any) -> list[str]:
@@ -50,45 +81,46 @@ def _extract_container_images(pod_spec: dict[str, Any]) -> list[str]:
 
 
 def _handle_ingress(
-    name: str,
+    key: ResourceName,
     doc: dict[str, Any],
     filename: str,
     tb_edge: str,
     components: list[Component],
     ingresses: list[IngressRef],
 ) -> None:
-    cid = slug_id(f"ing_{name}", prefix="ing")
+    cid = _resource_id("ing", key)
     # `.spec.rules`, not the document root — as `_find_ingress_spec` already notes. Reading the
     # root meant every valid Ingress recorded `hosts: []` and the importer then wrote the
     # opposite of the manifest ("sem hosts explícitos") into the draft's assumptions, losing the
     # public hostnames, which are the exposure surface a threat modeller most needs.
     spec = _as_dict(doc.get("spec")) or {}
     hosts = _extract_hosts_from_rules(spec.get("rules") or [])
-    ingresses.append((cid, name, hosts))
+    ingresses.append((cid, key, hosts))
     components.append(
         Component(
             id=cid,
-            name=f"Ingress/{name}",
+            name=f"Ingress/{_display_name(key)}",
             kind=ComponentKind.GATEWAY,
             description="Ingress controller (recurso Ingress).",
             technology="Kubernetes Ingress",
             in_trust_boundary=tb_edge,
-            metadata={"artifact": filename, "hosts": hosts},
+            metadata={"artifact": filename, "namespace": key[0], "hosts": hosts},
         )
     )
 
 
 def _handle_service(
-    name: str,
+    key: ResourceName,
     doc: dict[str, Any],
     filename: str,
     tb_cluster: str,
     components: list[Component],
-    services: dict[str, str],
+    services: dict[ResourceName, str],
     inf: InfFn,
 ) -> None:
-    cid = slug_id(f"svc_{name}", prefix="svc")
-    services[name] = cid
+    cid = _resource_id("svc", key)
+    services[key] = cid
+    name = _display_name(key)
     # `_as_dict`, e não `doc.get("spec", {})`: o valor por omissão do `get` só se aplica quando a
     # **chave** falta. Com `spec:` presente e sem corpo -- o que fica quando alguém comenta um
     # `type: LoadBalancer` -- o YAML dá `None`, e o `.get` seguinte rebentava. Todo o resto deste
@@ -102,7 +134,7 @@ def _handle_service(
             description=f"Service Kubernetes (type={st}).",
             technology="Kubernetes Service",
             in_trust_boundary=tb_cluster,
-            metadata={"artifact": filename, "service_type": st},
+            metadata={"artifact": filename, "namespace": key[0], "service_type": st},
         )
     )
     if st == "LoadBalancer":
@@ -114,15 +146,15 @@ def _handle_service(
 
 
 def _handle_deployment(
-    name: str,
+    key: ResourceName,
     doc: dict[str, Any],
     filename: str,
     tb_cluster: str,
     components: list[Component],
-    deployments: dict[str, str],
+    deployments: dict[ResourceName, str],
 ) -> None:
-    cid = slug_id(f"dep_{name}", prefix="dep")
-    deployments[name] = cid
+    cid = _resource_id("dep", key)
+    deployments[key] = cid
     spec_dep = _as_dict(doc.get("spec")) or {}
     tmpl = _as_dict(spec_dep.get("template")) or {}
     pod_spec = _as_dict(tmpl.get("spec")) or {}
@@ -130,18 +162,21 @@ def _handle_deployment(
     components.append(
         Component(
             id=cid,
-            name=f"Deployment/{name}",
+            name=f"Deployment/{_display_name(key)}",
             kind=ComponentKind.PROCESS,
             description="Carga de trabalho inferida a partir do Deployment.",
             technology="Kubernetes",
             in_trust_boundary=tb_cluster,
-            metadata={"artifact": filename, "container_images": images[:10]},
+            metadata={"artifact": filename, "namespace": key[0], "container_images": images[:10]},
         )
     )
 
 
-def _handle_configmap(name: str, filename: str, tb_cluster: str, components: list[Component], inf: InfFn) -> None:
-    cid = slug_id(f"cfg_{name}", prefix="cfg")
+def _handle_configmap(
+    key: ResourceName, filename: str, tb_cluster: str, components: list[Component], inf: InfFn
+) -> None:
+    cid = _resource_id("cfg", key)
+    name = _display_name(key)
     components.append(
         Component(
             id=cid,
@@ -150,7 +185,7 @@ def _handle_configmap(name: str, filename: str, tb_cluster: str, components: lis
             description="Configuração não-secreta (sensibilidade depende do conteúdo).",
             technology="Kubernetes ConfigMap",
             in_trust_boundary=tb_cluster,
-            metadata={"artifact": filename},
+            metadata={"artifact": filename, "namespace": key[0]},
         )
     )
     inf(
@@ -167,26 +202,25 @@ def _parse_workloads(
     tb_cluster: str,
     components: list[Component],
     ingresses: list[IngressRef],
-    services: dict[str, str],
-    deployments: dict[str, str],
+    services: dict[ResourceName, str],
+    deployments: dict[ResourceName, str],
     inf: InfFn,
 ) -> None:
     for doc in docs:
         kind = str(doc.get("kind") or "")
-        meta = _as_dict(doc.get("metadata")) or {}
-        name = str(meta.get("name") or "unnamed")
+        key = _resource_name(doc)
         if kind == "Ingress":
-            _handle_ingress(name, doc, filename, tb_edge, components, ingresses)
+            _handle_ingress(key, doc, filename, tb_edge, components, ingresses)
         elif kind == "Service":
-            _handle_service(name, doc, filename, tb_cluster, components, services, inf)
+            _handle_service(key, doc, filename, tb_cluster, components, services, inf)
         elif kind == "Deployment":
-            _handle_deployment(name, doc, filename, tb_cluster, components, deployments)
+            _handle_deployment(key, doc, filename, tb_cluster, components, deployments)
         elif kind == "ConfigMap":
-            _handle_configmap(name, filename, tb_cluster, components, inf)
+            _handle_configmap(key, filename, tb_cluster, components, inf)
 
 
-def _index_ingress_specs(docs: list[Any]) -> dict[str, dict[str, Any] | None]:
-    """`.spec` de cada Ingress indexado por nome: construído uma vez, consultado uma vez por Ingress.
+def _index_ingress_specs(docs: list[Any]) -> dict[ResourceName, dict[str, Any] | None]:
+    """`.spec` de cada Ingress indexado por namespace e nome em uma passagem.
 
     `_build_ingress_flows` percorria `docs` a cada Ingress, e ambas as contagens crescem com o
     upload — O(ingressos * documentos). Isolado do parse, o custo das consultas duplicava com o
@@ -199,31 +233,28 @@ def _index_ingress_specs(docs: list[Any]) -> dict[str, dict[str, Any] | None]:
     essa gama ainda é dominada pelo parse YAML e o termo quadrático só assume depois. O expoente
     estava medido na região errada, não medido mal.
 
-    O primeiro Ingress com um dado nome vence, e o seu `spec` é guardado mesmo quando é `None` —
-    exactamente o que a varredura fazia. Manifests repetem nomes entre namespaces, por isso a regra
-    de desempate é comportamento observável, não detalhe.
+    Duplicatas da mesma identidade mantêm a primeira declaração, inclusive quando o `spec` é `None`.
     """
-    specs: dict[str, dict[str, Any] | None] = {}
+    specs: dict[ResourceName, dict[str, Any] | None] = {}
     for d in docs:
         if str(d.get("kind")) != "Ingress":
             continue
-        meta = _as_dict(d.get("metadata")) or {}
-        name = str(meta.get("name") or "")
-        if name not in specs:
+        key = _resource_name(d)
+        if key not in specs:
             # Ingress rules live under `.spec.rules`, not at the document root.
-            specs[name] = _as_dict(d.get("spec"))
+            specs[key] = _as_dict(d.get("spec"))
     return specs
 
 
 def _find_ingress_spec(
     docs: list[Any],
-    ing_name: str,
+    key: ResourceName,
     *,
-    index: dict[str, dict[str, Any] | None] | None = None,
+    index: dict[ResourceName, dict[str, Any] | None] | None = None,
 ) -> dict[str, Any] | None:
-    """O `.spec` do Ingress `ing_name`. Em ciclo, passe `index` — sem ele isto é O(documentos)."""
+    """Em ciclo, passe o índice para evitar uma varredura por Ingress."""
     resolved = _index_ingress_specs(docs) if index is None else index
-    return resolved.get(ing_name)
+    return resolved.get(key)
 
 
 def _backend_service_name(backend: Any) -> str | None:
@@ -279,7 +310,7 @@ def _ingress_backend_service_names(spec: dict[str, Any] | None) -> list[str]:
 def _build_ingress_flows(
     docs: list[Any],
     ingresses: list[IngressRef],
-    services: dict[str, str],
+    services: dict[ResourceName, str],
     filename: str,
     inf: InfFn,
     unknowns: list[str],
@@ -287,8 +318,9 @@ def _build_ingress_flows(
     flows: list[DataFlow] = []
     # Uma passagem por `docs`, não uma por Ingress: ver `_index_ingress_specs`.
     ingress_specs = _index_ingress_specs(docs)
-    for ing_id, ing_name, hosts in ingresses:
-        spec = _find_ingress_spec(docs, ing_name, index=ingress_specs)
+    for ing_id, key, hosts in ingresses:
+        ing_name = _display_name(key)
+        spec = _find_ingress_spec(docs, key, index=ingress_specs)
         backend_svcs = _ingress_backend_service_names(spec)
         if hosts:
             inf(
@@ -303,13 +335,16 @@ def _build_ingress_flows(
                 related=[ing_id],
             )
         for svc_name in dict.fromkeys(backend_svcs):
-            sid = services.get(svc_name)
+            service_key = (key[0], svc_name)
+            sid = services.get(service_key)
             if not sid:
-                unknowns.append(f"Ingress referencia Service `{svc_name}` não encontrado neste conjunto de manifests.")
+                unknowns.append(
+                    f"Ingress referencia Service `{_display_name(service_key)}` não encontrado neste conjunto de manifests."
+                )
                 continue
             flows.append(
                 DataFlow(
-                    id=slug_id(f"fl_{ing_id}_{sid}", prefix="fl"),
+                    id=_stable_id(f"fl_{ing_id}_{sid}", ing_id, sid),
                     name=f"Ingress → {svc_name}",
                     from_component=ing_id,
                     to_component=sid,
@@ -322,16 +357,17 @@ def _build_ingress_flows(
 
 
 def _build_service_workload_flows(
-    services: dict[str, str], deployments: dict[str, str], filename: str, inf: InfFn
+    services: dict[ResourceName, str], deployments: dict[ResourceName, str], filename: str, inf: InfFn
 ) -> list[DataFlow]:
     flows: list[DataFlow] = []
-    for svc_name, sid in services.items():
-        dep_id = deployments.get(svc_name)
+    for key, sid in services.items():
+        dep_id = deployments.get(key)
         if not dep_id:
             continue
+        svc_name = _display_name(key)
         flows.append(
             DataFlow(
-                id=slug_id(f"fl_{sid}_{dep_id}", prefix="fl"),
+                id=_stable_id(f"fl_{sid}_{dep_id}", sid, dep_id),
                 name=f"Service → Deployment ({svc_name})",
                 from_component=sid,
                 to_component=dep_id,
@@ -350,11 +386,11 @@ def _build_service_workload_flows(
 
 def _build_ext_ingress_flows(ingresses: list[IngressRef], ext: str, filename: str) -> list[DataFlow]:
     flows: list[DataFlow] = []
-    for ing_id, ing_name, _hosts in ingresses:
+    for ing_id, key, _hosts in ingresses:
         flows.append(
             DataFlow(
-                id=slug_id(f"fl_ext_{ing_id}", prefix="fl"),
-                name=f"Clientes → Ingress {ing_name}",
+                id=_stable_id(f"fl_ext_{ing_id}", ext, ing_id),
+                name=f"Clientes → Ingress {_display_name(key)}",
                 from_component=ext,
                 to_component=ing_id,
                 protocol="HTTPS (assumido)",
@@ -365,7 +401,7 @@ def _build_ext_ingress_flows(ingresses: list[IngressRef], ext: str, filename: st
     return flows
 
 
-def _build_workload_assets(deployments: dict[str, str], filename: str, inf: InfFn) -> list[Asset]:
+def _build_workload_assets(deployments: dict[ResourceName, str], filename: str, inf: InfFn) -> list[Asset]:
     if not deployments:
         return []
     asset = Asset(
@@ -423,8 +459,8 @@ def import_kubernetes_text(text: str, *, filename: str = "manifests.yaml") -> Ar
     ]
 
     ingresses: list[IngressRef] = []
-    services: dict[str, str] = {}
-    deployments: dict[str, str] = {}
+    services: dict[ResourceName, str] = {}
+    deployments: dict[ResourceName, str] = {}
 
     _parse_workloads(docs, filename, tb_edge, tb_cluster, components, ingresses, services, deployments, inf)
 
@@ -478,7 +514,7 @@ def import_kubernetes_text(text: str, *, filename: str = "manifests.yaml") -> Ar
         inferences=inferences,
         unknowns=unknowns,
         extra_assumptions=[
-            "Selectors de Service→Pod não foram avaliados; apenas casos com nomes coincidentes.",
+            "Selectors de Service→Pod não foram avaliados; o fluxo usa nomes coincidentes no mesmo namespace.",
             "Secrets e ServiceAccounts não foram lidos automaticamente.",
         ],
         import_signals_corpus=import_corpus or None,

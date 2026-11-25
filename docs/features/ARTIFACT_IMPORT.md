@@ -15,8 +15,14 @@ Geração **semiautomática** de rascunho (`ThreatModelDocument`) a partir de ev
 |--------|---------|------------------|
 | OpenAPI 3 / Swagger 2 | YAML/JSON | Superfície REST agregada, contagem de operações, `servers`/host, pistas de `securitySchemes`, fluxo cliente→API, fronteiras pública vs aplicação. |
 | Terraform | `.tf` (ficheiro ou directório) | Blocos `resource "tipo" "nome"`; buckets/DB/filas/gateways/heurística `0.0.0.0/0`; **não** resolve módulos nem expressões HCL. |
-| Kubernetes | YAML multi-doc ou directório | Ingress/Service/Deployment/ConfigMap; fluxos cliente→Ingress→Service→Deployment quando nomes coincidem; LoadBalancer como exposição. |
+| Kubernetes | YAML multi-doc ou directório | Ingress, Service, Deployment e ConfigMap. O backend do Ingress e o Deployment com nome coincidente são procurados no mesmo namespace. Services LoadBalancer sugerem exposição externa. |
 | Helm | — | Apenas **menção** quando existe `helm_release` em Terraform; charts não são expandidos. |
+
+Na importação Kubernetes, a identidade de cada recurso inclui tipo, namespace e nome. Um namespace
+ausente vale como `default`. A ordem dos manifestos, o nome do ficheiro e a presença de outros
+recursos não alteram os IDs. IDs curtos do namespace `default` preservam o formato anterior.
+Ao gerar um novo rascunho de um modelo antigo, reveja os vínculos a recursos fora de `default`
+e a IDs que antes eram truncados, pois podem receber IDs novos.
 
 ## Não suportado (ainda)
 
