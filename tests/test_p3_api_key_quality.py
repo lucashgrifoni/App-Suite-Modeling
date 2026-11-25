@@ -266,6 +266,24 @@ def test_that_startup_line_is_a_warning(
     assert [r.levelname for r in caplog.records if "api_key_weak" in r.message] == ["WARNING"]
 
 
+def test_startup_weak_key_warning_does_not_disclose_key_length(
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+    restore_main_module: None,
+) -> None:
+    import otm_api.main as main
+
+    messages = []
+    with caplog.at_level(logging.INFO, logger="otm.api"):
+        for key in ("x", "x" * 6):
+            caplog.clear()
+            monkeypatch.setenv("OTM_API_KEY", key)
+            importlib.reload(main)
+            messages.append(next(record.message for record in caplog.records if "api_key_weak" in record.message))
+
+    assert messages[0] == messages[1]
+
+
 def test_a_strong_secret_produces_no_such_line(
     monkeypatch: pytest.MonkeyPatch,
     caplog: pytest.LogCaptureFixture,
