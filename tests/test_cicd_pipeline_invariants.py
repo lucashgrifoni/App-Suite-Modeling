@@ -76,6 +76,19 @@ def _load(path: pathlib.Path) -> dict:
     return yaml.safe_load(path.read_text(encoding="utf-8"))
 
 
+def test_security_event_write_is_granted_to_upload_jobs_only() -> None:
+    workflow = _load(SECURITY_WF)
+    assert workflow["permissions"].get("security-events") != "write"
+
+    for job_id, job in workflow["jobs"].items():
+        uploads_security_events = any(
+            step.get("uses", "").startswith(("github/codeql-action/upload-sarif@", "github/codeql-action/analyze@"))
+            for step in job["steps"]
+        )
+        has_write = job.get("permissions", {}).get("security-events") == "write"
+        assert has_write == uploads_security_events, job_id
+
+
 def _triggers(workflow: dict) -> dict:
     """`on:` is YAML 1.1 truthy, so PyYAML keys it under `True`."""
     return workflow.get("on", workflow.get(True))
