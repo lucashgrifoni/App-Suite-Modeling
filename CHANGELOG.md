@@ -8,6 +8,24 @@ This project follows **Keep a Changelog** and **Semantic Versioning**.
 
 ## [Unreleased]
 
+## [7.10.1] — 2026-11-25
+
+### Fixed
+
+- Preserve distinct Kubernetes resource and flow IDs when resources share a name across namespaces.
+- Preserve distinct Terraform resource and flow IDs when local modules contain resources with the same name.
+- Keep IDs stable when inputs are reordered or when an unrelated resource is added.
+
+### Changed
+
+- Updated Tailwind CSS for the modeling workspace and the project site.
+- Added property-based tests for model ID normalization and document identity.
+
+### Security
+
+- Verify Python dependency hashes in CI, the API image, and the package build. Verify the Snyk CLI binary before running scans.
+- Narrow workflow permissions and keep API credential values and lengths out of the startup warning.
+
 ## [7.10.0] — 2026-11-25
 
 ### Changed
