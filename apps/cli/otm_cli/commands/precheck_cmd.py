@@ -15,6 +15,7 @@ from otm_cli.commands.handle_errors import exit_on_cli_error
 from otm_cli.shared.emit import write_json_file
 from otm_cli.shared.enums import MethodologyOption
 from otm_cli.shared.errors import CliUserError
+from otm_cli.shared.render import safe
 
 
 def register(app: typer.Typer) -> None:
@@ -40,14 +41,16 @@ def register(app: typer.Typer) -> None:
             exit_on_cli_error(console, e)
         if json_out:
             try:
-                write_json_file(payload=payload, output=json_out)
+                write_json_file(payload=payload, output=json_out, sources=(path,))
             except CliUserError as e:
                 exit_on_cli_error(console, e)
-            console.print(f"[green]Pre-check written to[/green] {json_out.resolve()}")
+            console.print(f"[green]Pre-check written to[/green] {safe(json_out.resolve())}")
         else:
             console.print(
                 Panel.fit(
-                    json.dumps(payload, indent=2, ensure_ascii=False),
+                    # The payload embeds the document title and entity ids; unescaped, a title
+                    # such as `Checkout [v2]` would be rendered as a style tag and disappear.
+                    safe(json.dumps(payload, indent=2, ensure_ascii=False)),
                     title="precheck",
                     border_style="cyan",
                 )

@@ -39,6 +39,7 @@ from otm_threat_engine.result import (
     AnalysisSummary,
     HeuristicThreat,
     StructuralFinding,
+    ThreatIdCollisionError,
     TrustBoundaryFinding,
 )
 from otm_threat_engine.severity import (
@@ -61,6 +62,7 @@ __all__ = [
     "AnalysisDiff",
     "ThreatModelComparisonResult",
     "AnalysisResult",
+    "ThreatIdCollisionError",
     "AnalysisSummary",
     "HeuristicThreat",
     "StructuralFinding",

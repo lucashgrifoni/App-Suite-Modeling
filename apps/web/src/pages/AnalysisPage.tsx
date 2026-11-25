@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { Navigate } from "react-router";
 import { analyzeDocument, fetchRemediationBacklog, recommendMethodology } from "../api/otmApi";
-import { ApiError } from "../api/client";
+import { apiErrorMessage } from "../api/apiErrorMessage";
 import { Alert } from "../components/ui/Alert";
 import { PageHeader } from "../components/patterns/PageHeader";
 import { EmptyState } from "../components/patterns/EmptyState";
@@ -90,10 +90,27 @@ export function AnalysisPage() {
         methodology,
       });
       setAnalysis(r);
-      appendSnapshot("analysis");
+      // O backlog é derivado de UMA execução (`fetchRemediationBacklog({ document, analysis })`),
+      // por isso não sobrevive à que o substitui: sem isto, as métricas e a lista de ameaças
+      // passavam a mostrar a execução nova enquanto o cartão do backlog continuava a render a
+      // anterior — o resumo executivo, o top 5 e os quick wins dela — sem nada no ecrã a dizer que
+      // vinham de execuções diferentes. É a parte sobre a qual alguém age.
+      //
+      // `recommendation` fica: vem de `recommendMethodology(doc)` e depende do documento, não da
+      // análise, portanto uma execução nova não o invalida.
+      setBacklog(null);
+      // `r`, not the session analysis: this render still holds the pre-run value.
+      const stored = appendSnapshot("analysis", r);
       toast.success(t("analysis.toastOk"));
+      // The analysis itself succeeded; only the History snapshot was lost. Saying so beats
+      // a run that silently stops appearing in History once the browser's quota is full.
+      if (stored === "failed") toast.warning(t("history.toastStorageFull"));
+      // `"evicted"` era calculado e deitado fora: snapshots antigos desapareciam para
+      // abrir espaço a este, debaixo de um toast de sucesso sem ressalva, e o "máximo 20"
+      // que a página de Histórico anuncia deixava de se verificar sem ninguém saber.
+      else if (stored === "evicted") toast.warning(t("history.toastStorageEvicted"));
     } catch (e) {
-      const msg = e instanceof ApiError ? e.message : t("analysis.toastFail");
+      const msg = apiErrorMessage(e, t, "analysis.toastFail");
       setError(msg);
       toast.error(msg);
     } finally {
@@ -110,7 +127,7 @@ export function AnalysisPage() {
       setBacklog(b);
       toast.success(t("analysis.toastBacklog"));
     } catch (e) {
-      const msg = e instanceof ApiError ? e.message : t("analysis.toastBacklogFail");
+      const msg = apiErrorMessage(e, t, "analysis.toastBacklogFail");
       setError(msg);
       toast.error(msg);
     } finally {
@@ -128,7 +145,7 @@ export function AnalysisPage() {
       setMethodology(rec.methodology);
       toast.info(t("analysis.toastRecommend", { methodology: rec.methodology }));
     } catch (e) {
-      const msg = e instanceof ApiError ? e.message : t("analysis.toastRecommendFail");
+      const msg = apiErrorMessage(e, t, "analysis.toastRecommendFail");
       setError(msg);
       toast.error(msg);
     } finally {

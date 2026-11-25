@@ -19,8 +19,34 @@ export function AppLayout() {
   const { document, reset } = useSession();
   const location = useLocation();
 
+  /**
+   * "New model" discards the session document, which is the only copy of the user's work —
+   * the home page says so. It used to do that on a single click of a control that sits in
+   * the header of every page, with no confirmation, no undo and, for a model that was never
+   * analysed, no History snapshot to fall back on. The equivalent session-replacing action
+   * on the History page already asks first; this one now asks the same way.
+   */
+  function confirmReset() {
+    if (!globalThis.confirm(t("nav.confirmNewModel"))) return;
+    reset();
+  }
+
   return (
     <div className="relative min-h-screen overflow-x-hidden text-otm-text">
+      {/*
+        First focusable element in the document, and it has to stay first.
+        WCAG 2.4.1 Bypass Blocks (Level A): tabbing into any route used to cost twenty stops
+        before the first control on the page — ten in the header, six in the WorkflowGuide
+        breadcrumb that repeats six of the same destinations, four in the stepper — and that
+        block repeats on every single page load. Visually hidden until it takes focus, which
+        is the point: it is for keyboard and screen-reader users and nobody else.
+      */}
+      <a
+        href="#main"
+        className="sr-only rounded-otm-md focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[60] focus:border focus:border-otm-border focus:bg-otm-surface-1 focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-otm-text focus:shadow-otm-md focus:outline-none focus:ring-2 focus:ring-otm-accent"
+      >
+        {t("layout.skipToContent")}
+      </a>
       <div
         className="pointer-events-none fixed inset-0 -z-10"
         aria-hidden
@@ -97,7 +123,7 @@ export function AppLayout() {
             <LanguageSwitcher />
             <ThemeToggle />
             {document && (
-              <Button variant="ghost" className="!py-1.5 !text-xs" onClick={() => reset()}>
+              <Button variant="ghost" className="!py-1.5 !text-xs" onClick={confirmReset}>
                 {t("nav.newModel")}
               </Button>
             )}
@@ -105,7 +131,18 @@ export function AppLayout() {
         </div>
       </header>
 
-      <main className="mx-auto min-h-[50vh] w-full min-w-0 max-w-7xl px-4 py-10 md:py-12">
+      {/*
+        `id` is the skip link's target and `tabIndex={-1}` is what makes the jump actually
+        move focus: without it several browsers scroll to the fragment and leave focus at
+        the top of the document, so the next Tab lands back on the second nav link. -1 keeps
+        it out of the tab sequence, so the outline it would draw on a whole page region
+        after a mouse interaction is suppressed rather than shown for no reason.
+      */}
+      <main
+        id="main"
+        tabIndex={-1}
+        className="mx-auto min-h-[50vh] w-full min-w-0 max-w-7xl px-4 py-10 focus:outline-none md:py-12"
+      >
         <FadeIn key={location.pathname}>
           <ErrorBoundary>
             <Outlet />

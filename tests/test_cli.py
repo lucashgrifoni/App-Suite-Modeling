@@ -15,7 +15,7 @@ _ROOT = Path(__file__).resolve().parents[1]
 _MINIMAL = _ROOT / "examples" / "minimal.otm.yaml"
 
 
-@pytest.fixture()
+@pytest.fixture
 def runner() -> CliRunner:
     return CliRunner()
 
@@ -83,7 +83,8 @@ def test_validate_reports_every_bad_file_then_exits_one(runner: CliRunner, tmp_p
     r = runner.invoke(app, ["validate", str(_MINIMAL), str(bad_a), str(bad_b)])
     assert r.exit_code == 1
     out = r.stdout + (r.stderr or "")
-    assert "a.otm.yaml" in out and "b.otm.yaml" in out, "stopped at the first failure"
+    assert "a.otm.yaml" in out, "stopped at the first failure"
+    assert "b.otm.yaml" in out, "stopped at the first failure"
 
 
 def test_validate_single_file_keeps_its_rich_error(runner: CliRunner, tmp_path: Path) -> None:

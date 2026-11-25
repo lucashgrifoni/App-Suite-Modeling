@@ -30,18 +30,22 @@ def _wrong_shape(tmp_path: Path, name: str = "wrong.json") -> Path:
 
 
 def test_load_analysis_bad_json(tmp_path: Path) -> None:
+    bad = _bad_json(tmp_path)
     with pytest.raises(CliUserError):
-        load_analysis_result_from_path(_bad_json(tmp_path))
+        load_analysis_result_from_path(bad)
 
 
 def test_load_analysis_wrong_shape(tmp_path: Path) -> None:
+    wrong = _wrong_shape(tmp_path)
     with pytest.raises(CliUserError):
-        load_analysis_result_from_path(_wrong_shape(tmp_path))
+        load_analysis_result_from_path(wrong)
 
 
 def test_load_two_bad_json(tmp_path: Path) -> None:
+    a = _bad_json(tmp_path, "a.json")
+    b = _bad_json(tmp_path, "b.json")
     with pytest.raises(CliUserError):
-        load_two_analysis_results(_bad_json(tmp_path, "a.json"), _bad_json(tmp_path, "b.json"))
+        load_two_analysis_results(a, b)
 
 
 def test_load_two_wrong_shape(tmp_path: Path) -> None:
@@ -69,18 +73,21 @@ def test_explain_missing_file(tmp_path: Path) -> None:
 
 
 def test_explain_bad_json(tmp_path: Path) -> None:
+    bad = _bad_json(tmp_path)
     with pytest.raises(CliUserError):
-        run_explain(_bad_json(tmp_path), kind="analysis", category=None, limit=25)
+        run_explain(bad, kind="analysis", category=None, limit=25)
 
 
 def test_explain_invalid_kind(tmp_path: Path) -> None:
+    analysis = _expl(tmp_path)
     with pytest.raises(CliUserError):
-        run_explain(_expl(tmp_path), kind="bogus", category=None, limit=25)
+        run_explain(analysis, kind="bogus", category=None, limit=25)
 
 
 def test_explain_compare_kind(tmp_path: Path) -> None:
     rows = run_explain(_expl(tmp_path), kind="compare", category=None, limit=25)
-    assert rows and rows[0][0] == "risk"
+    assert rows
+    assert rows[0][0] == "risk"
 
 
 def test_explain_category_filter_match_and_miss(tmp_path: Path) -> None:

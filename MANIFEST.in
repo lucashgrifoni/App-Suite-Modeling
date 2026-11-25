@@ -1,0 +1,26 @@
+# O sdist tem de descrever a fonte, não o disco de quem construiu.
+#
+# `[tool.setuptools.package-data]` e `exclude-package-data` governam o **wheel**. O sdist é
+# seleccionado à parte, e por omissão arrasta o que estiver dentro dos directórios dos pacotes —
+# incluindo `__pycache__`. Como `otm_threat_engine/data/` é ele próprio um pacote, basta alguém
+# importar o catálogo (uma corrida de testes chega) para o sdist seguinte levar bytecode.
+#
+# Medido nesta árvore, depois de correr a suíte: o wheel saiu com 321 entradas e **zero** `.pyc`,
+# e o sdist da mesma fonte com **quatro** entradas `__pycache__`, das quais dois `.pyc`. Dois
+# sdists da mesma fonte diferiam em tamanho (1 062 485 vs 1 062 398 bytes) com lista de ficheiros
+# idêntica — o conteúdo do bytecode difere entre construções. É isso que impede uma reconstrução
+# independente de servir como verificação contra a atestação de proveniência do workflow.
+#
+# O caminho de publicação está limpo hoje porque constrói sobre um checkout novo e não corre testes
+# antes: ordenação, não construção. `pyproject.toml` já diz isto por escrito e fê-lo por construção
+# para o wheel. Isto faz o mesmo para o sdist.
+#
+# A lista espelha deliberadamente `[tool.setuptools.exclude-package-data]`, para que wheel e sdist
+# não possam divergir sobre o que é lixo; `tests/test_p5_sdist_excludes_bytecode.py` falha se
+# divergirem.
+global-exclude *.pyc
+global-exclude *.pyo
+global-exclude *.bak
+global-exclude *.tmp
+global-exclude .env*
+prune **/__pycache__

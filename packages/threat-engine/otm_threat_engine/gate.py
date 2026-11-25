@@ -7,6 +7,9 @@ Princípios (nesta ordem):
 
 1. **Nunca reprovar por algo que o programador não causou.** Só disparam ameaças *novas* ou
    *agravadas*. Remoções, melhorias, descidas de score e troca de metodologia nunca disparam.
+   Não disparar não é o mesmo que aprovar: a troca de metodologia sai daqui como
+   `not_evaluated`, e quem traduz o veredito em código de saída fecha o gate na mesma
+   (`otm_cli.shared.gate.gate_exit_code`) — só o `0` diz "sem risco novo".
 
 2. **Nunca aprovar em silêncio o que devia disparar.** Uma ameaça cujo id mudou aparece como um
    par `(added, removed)` — nunca em `modified` — e a assinatura de remapeamento **ignora o score**.
@@ -197,6 +200,11 @@ def evaluate_gate(diff: AnalysisDiff, policy: GatePolicy) -> GateResult:
     # ameaças "novas" não são atribuíveis à mudança do modelo. O comando irmão já recusa
     # comparar entre versões do motor pela mesma razão; aqui o diff continua a ser produzido,
     # mas o gate não emite veredito. Não é PASSED, é `not_evaluated` — e é dito em voz alta.
+    #
+    # `tripped=False` diz só "a política não foi violada", nunca "o modelo está limpo": a
+    # metodologia declara-se dentro do modelo em revisão, portanto quem abre o PR controla esta
+    # condição. Quem transforma o veredito em código de saída trata `not_evaluated` como
+    # não-zero, senão bastava uma linha no ficheiro sob revisão para desligar o gate.
     if diff.methodology_changed:
         return GateResult(tripped=False, policy=policy, not_evaluated_reason="methodology_changed")
 

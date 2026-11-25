@@ -14,7 +14,7 @@ from otm_core_schema.enums import ComponentKind
 
 from otm_threat_engine.ai_modeling.corpus import build_ai_calibration_corpus
 from otm_threat_engine.ai_modeling.keyword_signal_apply import apply_keyword_signals
-from otm_threat_engine.methodology_lenses.common import has_any
+from otm_threat_engine.methodology_lenses.common import has_any, has_any_token
 
 
 @dataclass
@@ -118,14 +118,19 @@ def _apply_structural_enrichment(doc: ThreatModelDocument, b: AiSignalBundle) ->
             "prompt_input",
             "Orquestração ou API que monta prompts/contexto para o modelo.",
         )
-    if has_any(comp_blob, ("retrieval", "rag", "vector search", "chunk")) and has_any(
-        comp_blob,
-        (
-            "vector",
-            "embedding",
-            "ann",
-            "similarity",
-        ),
+    # `rag` e `ann` por token, o resto por subcadeia. As duas condições existem para exigir sinais
+    # **independentes**, e comparadas por subcadeia um único par de nomes banais satisfazia as duas:
+    # *sto`rag`e* a primeira, *sc`ann`er* a segunda. Quarto ficheiro com este par exacto.
+    if (has_any_token(comp_blob, ("rag",)) or has_any(comp_blob, ("retrieval", "vector search", "chunk"))) and (
+        has_any_token(comp_blob, ("ann",))
+        or has_any(
+            comp_blob,
+            (
+                "vector",
+                "embedding",
+                "similarity",
+            ),
+        )
     ):
         b.retrieval_grounding = True
         b.vector_embedding = True

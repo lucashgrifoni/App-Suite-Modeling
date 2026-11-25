@@ -9,6 +9,7 @@ from otm_core_schema import (
     load_document_from_yaml_path,
 )
 from otm_core_schema.enums import ThreatModelMethodology
+from pydantic import ValidationError
 
 _ROOT = Path(__file__).resolve().parents[1]
 _EXAMPLE_MIN = _ROOT / "examples" / "minimal.otm.yaml"
@@ -53,8 +54,12 @@ data_flows:
     from_component: a
     to_component: missing
 """
-    with pytest.raises(Exception):
+    with pytest.raises(ValidationError) as excinfo:
         load_document_from_yaml(raw)
+    # A dangling reference is a schema failure, reported as one model-level error —
+    # not an AttributeError or a KeyError escaping from the cross-reference check.
+    assert excinfo.value.error_count() == 1
+    assert excinfo.value.errors()[0]["type"] == "value_error"
 
 
 def test_invalid_flow_reference_error_message_is_clear() -> None:
@@ -141,5 +146,6 @@ mitigations: []
 evidence_suggestions: []
 unexpected_root: true
 """
-    with pytest.raises(Exception):
+    with pytest.raises(ValidationError, match=r"unexpected_root") as excinfo:
         load_document_from_yaml(raw)
+    assert excinfo.value.errors()[0]["type"] == "extra_forbidden"

@@ -19,4 +19,4 @@ def export_analysis_json_obj(result: AnalysisResult) -> dict[str, Any]:
 
 def export_analysis_json(result: AnalysisResult, *, indent: int = 2) -> str:
     """JSON do motor (heurísticas, summary, achados)."""
-    return json.dumps(export_analysis_json_obj(result), indent=indent, ensure_ascii=False)
+    return json.dumps(export_analysis_json_obj(result), indent=indent, ensure_ascii=False, allow_nan=False)

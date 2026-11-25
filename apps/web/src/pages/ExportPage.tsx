@@ -6,7 +6,7 @@ import {
 } from "../i18n/exportArtifactLocale";
 import { Navigate } from "react-router";
 import { exportArtifacts, fetchPremiumReport, type PremiumReportLevel } from "../api/otmApi";
-import { ApiError } from "../api/client";
+import { apiErrorMessage } from "../api/apiErrorMessage";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { Label } from "../components/ui/Label";
@@ -107,10 +107,15 @@ export function ExportPage() {
         locale: resolvedArtifactLocale(),
       });
       setResult(artifacts);
-      appendSnapshot("export");
+      const stored = appendSnapshot("export");
       toast.success(t("export.toastReady"));
+      if (stored === "failed") toast.warning(t("history.toastStorageFull"));
+      // `"evicted"` era calculado e deitado fora: snapshots antigos desapareciam para
+      // abrir espaço a este, debaixo de um toast de sucesso sem ressalva, e o "máximo 20"
+      // que a página de Histórico anuncia deixava de se verificar sem ninguém saber.
+      else if (stored === "evicted") toast.warning(t("history.toastStorageEvicted"));
     } catch (e) {
-      const msg = e instanceof ApiError ? e.message : t("export.toastFail");
+      const msg = apiErrorMessage(e, t, "export.toastFail");
       setError(msg);
       toast.error(msg);
     } finally {
@@ -130,8 +135,13 @@ export function ExportPage() {
       });
       const safe = model.metadata.title.replaceAll(/[^\w-]+/g, "_").slice(0, 40);
       downloadPdfBlob(blob, `otm-report-${safe}.pdf`);
-      appendSnapshot("export");
+      const stored = appendSnapshot("export");
       toast.success(t("export.toastPdf"));
+      if (stored === "failed") toast.warning(t("history.toastStorageFull"));
+      // `"evicted"` era calculado e deitado fora: snapshots antigos desapareciam para
+      // abrir espaço a este, debaixo de um toast de sucesso sem ressalva, e o "máximo 20"
+      // que a página de Histórico anuncia deixava de se verificar sem ninguém saber.
+      else if (stored === "evicted") toast.warning(t("history.toastStorageEvicted"));
     } catch {
       const msg = t("export.toastPdfFail");
       setError(msg);
@@ -153,10 +163,15 @@ export function ExportPage() {
         locale: resolvedArtifactLocale(),
       });
       downloadPdfBlob(blob, filename);
-      appendSnapshot("export");
+      const stored = appendSnapshot("export");
       toast.success(kind === "pdf" ? t("export.toastPremiumPdf") : t("export.toastPremiumMd"));
+      if (stored === "failed") toast.warning(t("history.toastStorageFull"));
+      // `"evicted"` era calculado e deitado fora: snapshots antigos desapareciam para
+      // abrir espaço a este, debaixo de um toast de sucesso sem ressalva, e o "máximo 20"
+      // que a página de Histórico anuncia deixava de se verificar sem ninguém saber.
+      else if (stored === "evicted") toast.warning(t("history.toastStorageEvicted"));
     } catch (e) {
-      const msg = e instanceof Error ? e.message : t("export.toastPremiumFail");
+      const msg = apiErrorMessage(e, t, "export.toastPremiumFail");
       setError(msg);
       toast.error(msg);
     } finally {

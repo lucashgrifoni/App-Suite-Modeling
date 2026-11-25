@@ -44,7 +44,8 @@ def test_risk_score_is_product() -> None:
 
 def test_skips_duplicate_when_threat_exists() -> None:
     doc = load_document_from_yaml_path(_MINIMAL)
-    # Colide com a heurística do utilizador (primeiro componente): SPOOFING em `user`
+    # Colide com a heurística do utilizador (primeiro componente): SPOOFING em `user`.
+    # A declaração traz `risk`: sem avaliação de risco não conta como cobertura.
     doc2 = doc.model_copy(
         update={
             "threats": [
@@ -54,6 +55,7 @@ def test_skips_duplicate_when_threat_exists() -> None:
                     title="dup",
                     stride=StrideCategory.SPOOFING,
                     target_component_id="user",
+                    risk=RiskAssessment(likelihood=3, impact=3),
                     treatment_status=TreatmentStatus.NEW,
                 ),
             ]
@@ -90,11 +92,17 @@ def test_trust_insight_message_contains_flow_id() -> None:
 
 
 def test_methodology_explicit_cia_die_changes_output_shape() -> None:
+    """What `cia_die` changes is the *presentation*, not the threat list.
+
+    This asserted `len(active) <= 10`, which was the lens truncating its own analysis: the
+    threats past the tenth were deleted from the result, not merely left out of a summary.
+    See `test_cia_die_lens_highlights_top_threats_without_deleting_any`.
+    """
     doc = load_document_from_yaml_path(_MINIMAL)
     r = analyze_document(doc, methodology=ThreatModelMethodology.CIA_DIE)
     assert r.methodology == ThreatModelMethodology.CIA_DIE
-    active = [h for h in r.heuristic_threats if not h.skipped_as_duplicate]
-    assert len(active) <= 10
+    assert r.methodology_insights is not None
+    assert [b.key for b in r.methodology_insights.blocks] == ["cia_die_top_impact"]
 
 
 def test_auto_recommend_methodology_for_privacy_context() -> None:
@@ -269,11 +277,21 @@ def test_octave_lens_adds_expected_engine_note() -> None:
     assert "risco de negócio" in notes[0].message.lower()
 
 
-def test_cia_die_lens_keeps_top_active_threats_only() -> None:
+def test_cia_die_lens_highlights_top_threats_without_deleting_any() -> None:
+    """Replaces `test_cia_die_lens_keeps_top_active_threats_only`, which specified the defect.
+
+    That test asserted the lens kept at most ten active threats. It did — by rebuilding
+    `heuristic_threats` from the top-ten selection, which removed the rest from the JSON, the
+    SARIF, the premium report, the remediation backlog and the set the CI drift gate compares.
+    The executive selection is legitimate; deleting the analysis to express it is not.
+    """
     doc = load_document_from_yaml_path(_MINIMAL)
-    result = analyze_document(doc, methodology=ThreatModelMethodology.CIA_DIE)
-    active = [h for h in result.heuristic_threats if not h.skipped_as_duplicate]
-    assert len(active) <= 10
+    under_stride = analyze_document(doc, methodology=ThreatModelMethodology.STRIDE)
+    under_cia_die = analyze_document(doc, methodology=ThreatModelMethodology.CIA_DIE)
+
+    assert [h.id for h in under_cia_die.heuristic_threats] == [h.id for h in under_stride.heuristic_threats]
+    assert under_cia_die.summary.heuristic_threats_generated == under_stride.summary.heuristic_threats_generated
+    assert under_cia_die.summary.max_risk_score == under_stride.summary.max_risk_score
 
 
 def test_no_duplicate_heuristic_ids_for_same_flow_conditions() -> None:
@@ -332,14 +350,25 @@ def test_phase3_engine_suppresses_stride_noise_only_when_biz_present_finance() -
 
 
 def test_phase3_engine_suppresses_stride_noise_only_when_biz_present_ecommerce() -> None:
+    """Suppression fires on the target the business finding points at — and only there.
+
+    This used to assert `eng_payment_gateway_tampering` was suppressed, and it was: the
+    `webhook` family was armed by findings on `checkout_service`/`gateway_webhook`, and the
+    threat's id merely *contains* the token `payment_gateway`. A HIGH (12) tampering finding on
+    a different component was deleted from the analysis, the SARIF and the gate because of a
+    substring. The suppression is now scoped to the target, so it keeps
+    `eng_subscription_service_*` (same component as `biz_payment_entitlement_mismatch`) and
+    spares the payment gateway.
+    """
     ecommerce_doc = load_document_from_yaml_path(_ROOT / "examples" / "test-apps" / "ecommerce-subscription.otm.yaml")
     result = analyze_document(ecommerce_doc, methodology=ThreatModelMethodology.PASTA)
     all_ids = {h.id for h in result.heuristic_threats}
     assert "biz_payment_entitlement_mismatch" in all_ids
-    assert "eng_payment_gateway_tampering" in all_ids
+    assert "eng_subscription_service_tampering" in all_ids
     active_ids = {h.id for h in result.heuristic_threats if not h.skipped_as_duplicate}
     assert "biz_payment_entitlement_mismatch" in active_ids
-    assert "eng_payment_gateway_tampering" not in active_ids
+    assert "eng_subscription_service_tampering" not in active_ids
+    assert "eng_payment_gateway_tampering" in active_ids
 
 
 def test_phase3_engine_does_not_suppress_when_no_biz_families_present() -> None:
@@ -356,25 +385,36 @@ def test_phase3_engine_does_not_suppress_when_no_biz_families_present() -> None:
     assert suppressed_eng == []
 
 
-def test_phase3_suppression_toggle_off_does_not_change_heuristics(monkeypatch) -> None:
-    monkeypatch.setenv("OTM_ENGINE_STRIDE_NOISE_SUPPRESSION", "0")
+def _coupon_pair_on_one_target() -> tuple[HeuristicThreat, list[HeuristicThreat]]:
+    """A business finding and a generic finding on the **same** component.
+
+    Both threats used to be built with no target at all, which was enough to suppress while
+    the `coupon` family was armed globally. Suppression is now scoped to the target the
+    business finding points at, so the pair has to name one for the toggle to have anything
+    to switch off.
+    """
     eng = HeuristicThreat(
         id="eng_coupon_tampering",
         title="Coupon tampering on checkout",
         description="x",
         stride=StrideCategory.TAMPERING,
+        target_component_id="coupon_store",
         risk=RiskAssessment(likelihood=1, impact=1, score=1.0),
     )
-    heuristics = [
-        HeuristicThreat(
-            id="biz_coupon_reuse",
-            title="Coupon reuse and stacking",
-            description="x",
-            stride=StrideCategory.TAMPERING,
-            risk=RiskAssessment(likelihood=1, impact=1, score=1.0),
-        ),
-        eng,
-    ]
+    biz = HeuristicThreat(
+        id="biz_coupon_reuse",
+        title="Coupon reuse and stacking",
+        description="x",
+        stride=StrideCategory.TAMPERING,
+        target_component_id="coupon_store",
+        risk=RiskAssessment(likelihood=1, impact=1, score=1.0),
+    )
+    return eng, [biz, eng]
+
+
+def test_phase3_suppression_toggle_off_does_not_change_heuristics(monkeypatch) -> None:
+    monkeypatch.setenv("OTM_ENGINE_STRIDE_NOISE_SUPPRESSION", "0")
+    eng, heuristics = _coupon_pair_on_one_target()
     suppressed = suppress_stride_genericity_noise(heuristics)
     assert suppressed == 0
     assert eng.skipped_as_duplicate is False
@@ -382,23 +422,7 @@ def test_phase3_suppression_toggle_off_does_not_change_heuristics(monkeypatch) -
 
 def test_phase3_suppression_toggle_on_can_mark_eng_as_skipped(monkeypatch) -> None:
     monkeypatch.setenv("OTM_ENGINE_STRIDE_NOISE_SUPPRESSION", "1")
-    eng = HeuristicThreat(
-        id="eng_coupon_tampering",
-        title="Coupon tampering on checkout",
-        description="x",
-        stride=StrideCategory.TAMPERING,
-        risk=RiskAssessment(likelihood=1, impact=1, score=1.0),
-    )
-    heuristics = [
-        HeuristicThreat(
-            id="biz_coupon_reuse",
-            title="Coupon reuse and stacking",
-            description="x",
-            stride=StrideCategory.TAMPERING,
-            risk=RiskAssessment(likelihood=1, impact=1, score=1.0),
-        ),
-        eng,
-    ]
+    eng, heuristics = _coupon_pair_on_one_target()
     suppressed = suppress_stride_genericity_noise(heuristics)
     assert suppressed == 1
     assert eng.skipped_as_duplicate is True

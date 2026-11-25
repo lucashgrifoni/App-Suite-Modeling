@@ -4,13 +4,15 @@ from __future__ import annotations
 
 from otm_threat_engine.comparison_models import ThreatModelComparisonResult
 
+from otm_exporters.markdown_text import md_inline
+
 
 def _cmp_bullets(lines: list[str], header: str, items: list[str], limit: int) -> None:
     if not items:
         return
     lines.append(header)
     for item in items[:limit]:
-        lines.append(f"- {item}")
+        lines.append(f"- {md_inline(item)}")
     lines.append("")
 
 
@@ -40,7 +42,10 @@ def _cmp_structural_refs(lines: list[str], result: ThreatModelComparisonResult) 
     lines.extend(["", "### Ligação estrutura → interpretação (refs estáveis)", ""])
     for ref_row in refs[:20]:
         cc = f" · `{ref_row.change_category}`" if ref_row.change_category else ""
-        lines.append(f"- `{ref_row.ref}` · {ref_row.entity_kind} `{ref_row.entity_id}`{cc} — {ref_row.note}")
+        lines.append(
+            f"- `{ref_row.ref}` · {md_inline(ref_row.entity_kind)} `{md_inline(ref_row.entity_id)}`{cc} — "
+            f"{md_inline(ref_row.note)}"
+        )
     lines.append("")
 
 
@@ -61,13 +66,14 @@ def _cmp_interpretation_links(lines: list[str], result: ThreatModelComparisonRes
         ]
     )
     for link_row in links[:16]:
-        tok = ", ".join(link_row.shared_tokens) if link_row.shared_tokens else "—"
-        rationale = (link_row.anchoring_rationale or "").replace("\n", " ")
+        tok = md_inline(", ".join(link_row.shared_tokens)) if link_row.shared_tokens else "—"
+        rationale = md_inline(link_row.anchoring_rationale or "")
         lines.append(
-            f"- `{link_row.structural_ref}` → **{link_row.related_section}** "
-            f"(`{link_row.link_kind}`, {link_row.inference_strength}; tokens: {tok}): {link_row.summary}"
+            f"- `{link_row.structural_ref}` → **{md_inline(link_row.related_section)}** "
+            f"(`{md_inline(link_row.link_kind)}`, {md_inline(link_row.inference_strength)}; tokens: {tok}): "
+            f"{md_inline(link_row.summary)}"
         )
-        if rationale:
+        if rationale.strip():
             lines.append(f"  - _Porquê:_ {rationale}")
     lines.append("")
 
@@ -78,7 +84,7 @@ def _cmp_semantic_insights(lines: list[str], result: ThreatModelComparisonResult
         return
     lines.extend(["", "### Insights semânticos (narrativa)", ""])
     for insight_line in si[:14]:
-        lines.append(f"- {insight_line}")
+        lines.append(f"- {md_inline(insight_line)}")
     lines.append("")
 
 
@@ -87,7 +93,7 @@ def _cmp_explanations(lines: list[str], result: ThreatModelComparisonResult) -> 
         return
     lines.extend(["", "### Explicabilidade (foco)", ""])
     for ex in result.explanations[:6]:
-        lines.append(f"- **{ex.subject}** — {ex.message}")
+        lines.append(f"- **{md_inline(ex.subject)}** — {md_inline(ex.message)}")
     lines.append("")
 
 
@@ -128,9 +134,9 @@ def _cmp_recommendations(lines: list[str], result: ThreatModelComparisonResult) 
     lines.extend(["", "### Recomendações e cobertura", ""])
     rec = result.recommendation_delta
     if rec.pack_hints_added:
-        lines.append(f"- Novos controlos (pack): {'; '.join(rec.pack_hints_added[:8])}")
+        lines.append(f"- Novos controlos (pack): {md_inline('; '.join(rec.pack_hints_added[:8]))}")
     if rec.pack_hints_removed:
-        lines.append(f"- Controlos pack deixaram de surgir: {'; '.join(rec.pack_hints_removed[:8])}")
+        lines.append(f"- Controlos pack deixaram de surgir: {md_inline('; '.join(rec.pack_hints_removed[:8]))}")
     for fr in rec.framework_catalog_deltas[:6]:
         lines.append(f"- Framework `{fr.catalog}`: {fr.count_before} → {fr.count_after}")
 
@@ -142,7 +148,7 @@ def export_comparison_markdown(result: ThreatModelComparisonResult) -> str:
         "",
         "### Resumo executivo",
         "",
-        f"- {result.summary.headline}",
+        f"- {md_inline(result.summary.headline)}",
         f"- Mudanças estruturais: {'sim' if result.summary.has_structural_changes else 'não'}",
         f"- Mudanças na análise: {'sim' if result.summary.has_analysis_changes else 'não'}",
         f"- Metodologia no documento alterada: {'sim' if result.summary.methodology_in_model_changed else 'não'}",
@@ -151,13 +157,13 @@ def export_comparison_markdown(result: ThreatModelComparisonResult) -> str:
         "",
     ]
     for i, ins in enumerate(result.key_insights[:20], 1):
-        lines.append(f"{i}. {ins}")
+        lines.append(f"{i}. {md_inline(ins)}")
     if not result.key_insights:
         lines.append("_Nenhum insight automático._")
     meta = result.meta
     disc = meta.interpretation_disclaimer
     if isinstance(disc, str) and disc.strip():
-        lines.extend(["", "### Aviso inferencial (diff)", "", f"_{disc}_", ""])
+        lines.extend(["", "### Aviso inferencial (diff)", "", f"_{md_inline(disc)}_", ""])
 
     _cmp_semantic_diff(lines, result)
     _cmp_structural_refs(lines, result)

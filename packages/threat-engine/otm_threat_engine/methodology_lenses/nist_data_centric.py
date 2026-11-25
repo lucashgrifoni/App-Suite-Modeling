@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from otm_core_schema import StrideCategory, ThreatModelMethodology
+from otm_core_schema import Asset, AssetKind, StrideCategory, ThreatModelDocument, ThreatModelMethodology
+from otm_core_schema.asset_membership import resolve_component_assets
 
 from otm_threat_engine.methodology_lenses.common import (
     append_engine_lens_note,
@@ -11,12 +12,12 @@ from otm_threat_engine.methodology_lenses.common import (
 from otm_threat_engine.result import AnalysisResult, HeuristicThreat, StructuralFinding
 
 
-def apply_nist_data_centric_lens(result: AnalysisResult) -> AnalysisResult:
+def apply_nist_data_centric_lens(result: AnalysisResult, doc: ThreatModelDocument | None = None) -> AnalysisResult:
     out = boost_impact(
         result,
         lambda h: h.target_asset_id is not None or h.stride == StrideCategory.INFORMATION_DISCLOSURE,
     )
-    out = _append_nist_data_centric_native_heuristics(out)
+    out = _append_nist_data_centric_native_heuristics(out, doc)
     out = _append_nist_data_centric_focus_findings(out)
     out = _append_nist_data_centric_prep_notes(out)
     return append_engine_lens_note(
@@ -48,7 +49,9 @@ def _append_nist_data_centric_prep_notes(result: AnalysisResult) -> AnalysisResu
     return result.model_copy(update={"structural_findings": findings})
 
 
-def _append_nist_data_centric_native_heuristics(result: AnalysisResult) -> AnalysisResult:
+def _append_nist_data_centric_native_heuristics(
+    result: AnalysisResult, doc: ThreatModelDocument | None = None
+) -> AnalysisResult:
     out = list(result.heuristic_threats)
     existing = {h.id for h in out}
     by_comp: dict[str, list[HeuristicThreat]] = {}
@@ -60,6 +63,11 @@ def _append_nist_data_centric_native_heuristics(result: AnalysisResult) -> Analy
             by_flow.setdefault(h.target_data_flow_id, []).append(h)
     sensitive_components = _collect_sensitive_component_ids(by_comp)
     sensitive_flows = _collect_sensitive_flow_ids(by_flow)
+    # Intersecção, não substituição: a lente nunca passa a acrescentar ameaças, só deixa de
+    # afirmar as que o documento não sustenta. Ver `_components_holding_classified_data`.
+    if doc is not None:
+        declared = _components_holding_classified_data(doc, by_comp)
+        sensitive_components = {cid for cid in sensitive_components if cid in declared}
     for comp_id in sorted(sensitive_components):
         append_heuristics_from_entries(
             out,
@@ -230,3 +238,52 @@ def _append_nist_dc_state_heuristics(
             ],
             target_component_id=comp_id,
         )
+
+
+#: Tipos de ativo que **são** dados classificados por natureza, sem depender de um nível.
+_CLASSIFIED_KINDS = {
+    AssetKind.PII,
+    AssetKind.CREDENTIAL,
+    AssetKind.CRYPTO_KEY,
+    AssetKind.FINANCIAL_RECORD,
+    AssetKind.CONFIGURATION_SECRET,
+    AssetKind.SESSION,
+}
+_CLASSIFIED_LEVELS = {"confidential", "restricted"}
+
+
+def _asset_is_classified(asset: Asset) -> bool:
+    if asset.asset_kind in _CLASSIFIED_KINDS:
+        return True
+    declared = asset.data_classification.value if asset.data_classification else ""
+    return declared in _CLASSIFIED_LEVELS or (asset.sensitivity or "").lower() in _CLASSIFIED_LEVELS
+
+
+def _components_holding_classified_data(
+    doc: ThreatModelDocument, by_comp: dict[str, list[HeuristicThreat]]
+) -> set[str]:
+    """Os componentes onde o **documento** diz haver dados classificados.
+
+    A escolha anterior não lia o documento: `_looks_sensitive_component_heuristics` decidia a
+    partir do texto e do score das heurísticas STRIDE já existentes (`score >= 12.0`), o que
+    reetiqueta severidade STRIDE em vez de analisar dados. O resultado era o mesmo conjunto de
+    ameaças para um modelo cujo único ativo é público, para um modelo sem ativos nenhuns e para um
+    com dados restritos -- e uma delas afirmava dados classificados num componente `kind: user`,
+    isto é, numa pessoa.
+
+    Duas ligações contam, porque os modelos usam ambas: o componente declarar o ativo em
+    `asset_ids`, e uma ameaça dirigida a ele apontar o ativo em `target_asset_id`. Os 38 templates
+    distribuídos declaram um ativo sensível e ligam-no a componentes, por isso o corpus real não
+    muda.
+    """
+    classified = {a.id for a in doc.assets if _asset_is_classified(a)}
+    if not classified:
+        return set()
+    # As duas direcções da ligação, não só `Component.asset_ids`: um documento que a declare
+    # em `Asset.related_component_ids` é igualmente válido e produzia zero afirmações.
+    membership = resolve_component_assets(doc)
+    holders = {cid for cid, owned in membership.items() if classified.intersection(owned)}
+    for comp_id, items in by_comp.items():
+        if any(h.target_asset_id in classified for h in items):
+            holders.add(comp_id)
+    return holders

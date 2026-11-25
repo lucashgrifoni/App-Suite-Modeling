@@ -12,11 +12,14 @@ from datetime import date
 from typing import Any, Literal
 
 from otm_core_schema import ComponentKind
-from otm_core_schema.document import ThreatModelDocument
+from otm_core_schema.document import RiskAssessment, ThreatModelDocument
+from otm_core_schema.trust_membership import resolve_component_boundaries
 from otm_diagram_engine import export_flowchart_mermaid
+from otm_exporters.markdown_text import md_block, md_inline
 from otm_threat_engine import build_remediation_backlog
 from otm_threat_engine.analysis_diff import diff_analysis_results
 from otm_threat_engine.methodologies import recommend_methodology
+from otm_threat_engine.remediation.classify import ComponentIndex
 from otm_threat_engine.result import AnalysisResult, HeuristicThreat
 from otm_threat_engine.semantic_comparison import semantic_diff_from_analyses_only
 from otm_threat_engine.severity import severity_at_least, severity_for_score
@@ -68,6 +71,59 @@ def _band_for_score(raw: float) -> str:
 def _severity_band(t: HeuristicThreat) -> str:
     raw = t.risk.score if t.risk.score is not None else float(t.risk.likelihood * t.risk.impact)
     return _band_for_score(raw)
+
+
+def _declared_as_rankable(doc: ThreatModelDocument) -> tuple[list[HeuristicThreat], int]:
+    """As ameacas declaradas, na forma que o pipeline de prioridade ja sabe ler.
+
+    `composite_priority_score`, `infer_exploitability` e `build_business_impact_row` recebem
+    `HeuristicThreat`. Adaptar aqui, na fronteira do relatorio, deixa esse pipeline intacto: a
+    alternativa era alargar cada um deles a um tipo cujo `risk` e opcional, e `risk` e lido por
+    dezenas de sitios em nove ficheiros.
+
+    O `score` e normalizado para `likelihood x impact`. E a mesma decisao que
+    `_build_distribution_counters` toma, pela mesma razao: os limiares de `severity_for_score` e a
+    normalizacao `rs / 25.0` em `composite_priority_score` estao nessa escala, e o `score` do
+    esquema admite outra ("Ex.: LxI ou normalizado").
+
+    Devolve tambem quantas ameacas declaradas ficaram sem `risk`: essas nao se ordenam contra
+    scores sem lhes inventar um numero, e a exclusao e anunciada em vez de silenciosa.
+    """
+    rankable: list[HeuristicThreat] = []
+    unscored = 0
+    for t in doc.threats:
+        if t.risk is None:
+            unscored += 1
+            continue
+        rankable.append(
+            HeuristicThreat(
+                id=t.id,
+                title=t.title,
+                description=t.description or "",
+                stride=t.stride,
+                target_component_id=t.target_component_id,
+                target_data_flow_id=t.target_data_flow_id,
+                target_asset_id=t.target_asset_id,
+                risk=RiskAssessment(
+                    likelihood=t.risk.likelihood,
+                    impact=t.risk.impact,
+                    score=float(t.risk.likelihood * t.risk.impact),
+                ),
+                framework_refs=list(t.framework_refs),
+            )
+        )
+    return rankable, unscored
+
+
+def _overall_max_score(heuristic_max: float | None, doc: ThreatModelDocument) -> float | None:
+    """O maior risco que o relatório mostra, venha de onde vier."""
+    scores = [heuristic_max] if heuristic_max is not None else []
+    scores += [
+        float(t.risk.likelihood * t.risk.impact)
+        for t in doc.threats
+        if t.risk is not None and t.risk.likelihood is not None and t.risk.impact is not None
+    ]
+    return max(scores) if scores else None
 
 
 def _overall_status(
@@ -133,11 +189,13 @@ def _boundary_name(doc: ThreatModelDocument, bid: str | None) -> str | None:
 
 
 def _trust_boundary_by_component(doc: ThreatModelDocument) -> dict[str, str]:
-    tb_by_component: dict[str, str] = {}
-    for c in doc.components:
-        if c.in_trust_boundary:
-            tb_by_component[c.id] = c.in_trust_boundary
-    return tb_by_component
+    """As duas formas de declarar a pertença, juntas — que é o que o motor já fazia.
+
+    Ler só `Component.in_trust_boundary` imprimia "Principais trust boundaries: _Nenhuma listada._"
+    para um documento cujas fronteiras estão declaradas do lado da fronteira, no mesmo relatório
+    que reportava `trust_perimeter_crossing`: uma contradição dentro da mesma página.
+    """
+    return resolve_component_boundaries(doc)
 
 
 def _build_distribution_counters(
@@ -163,10 +221,35 @@ def _build_distribution_counters(
     for threat in doc.threats:
         stride_counter[threat.stride.value] += 1
         if threat.risk:
-            raw = threat.risk.score or float(threat.risk.likelihood * threat.risk.impact)
-            sev_counter[_band_for_score(raw)] += 1
+            # `likelihood x impact` e nao `score`. A banda vem de `severity_for_score`, cujo
+            # docstring fixa o dominio: "o score L×I (1–5)", com limiares 20/12/6 nessa escala.
+            # No esquema `likelihood` e `impact` sao obrigatorios e validados em 1–5, enquanto
+            # `score` e opcional e a sua descricao admite outra escala — "Ex.: L×I ou
+            # normalizado". Um valor CVSS (0–10) escrito ali e legitimo e rebaixava a banda: uma
+            # ameaca L5×I5 com score 9.8 saia `medium` no quadro ao lado de uma capa a dizer
+            # "Requer atenção imediata", que ja lia `likelihood x impact` em `_overall_max_score`.
+            # Para as heuristicas nao muda nada: `build_risk_assessment` grava `score = L×I`.
+            raw = float(threat.risk.likelihood * threat.risk.impact)
+            band = _band_for_score(raw)
+            sev_counter[band] += 1
+            # O mapa também: este ciclo alimentava STRIDE, severidade e componente e saltava o
+            # `heatmap`, por isso o quadro STRIDE x severidade contava menos ameaças do que a
+            # tabela impressa ao lado dele, na mesma página. E o efeito era pior do que uma
+            # contagem a menos: a heurística equivalente é suprimida como duplicada quando o
+            # modelador declara a sua própria, portanto declarar a ameaça **apagava** a linha do
+            # mapa em vez de a mover de banda.
+            heatmap[threat.stride.value][band] += 1
         if threat.target_component_id:
             comp_counter[threat.target_component_id] += 1
+            # E a fronteira desse componente, como no ciclo das heuristicas la em cima. Era o unico
+            # contador que este ciclo saltava, e a consequencia nao era contar a menos: a heuristica
+            # equivalente e suprimida como duplicada quando o modelador declara a sua propria, por
+            # isso declarar ameacas sobre os componentes de uma fronteira **apagava** a fronteira de
+            # `by_trust_boundary`, de `top_boundaries_ranked` e de "Principais trust boundaries" —
+            # na mesma pagina que continuava a listar esses componentes em "Principais superficies".
+            tb_id = tb_by_component.get(threat.target_component_id)
+            if tb_id:
+                tb_counter[tb_id] += 1
     return sev_counter, stride_counter, comp_counter, tb_counter, heatmap
 
 
@@ -230,11 +313,12 @@ def _build_distributions(
     active: list[HeuristicThreat],
     meth: Any,
     tb_by_component: dict[str, str],
+    index: ComponentIndex,
 ) -> DistributionBlock:
     comp_scores: dict[str, float] = defaultdict(float)
     for t in active:
         if t.target_component_id:
-            comp_scores[t.target_component_id] += composite_priority_score(t, doc, meth)
+            comp_scores[t.target_component_id] += composite_priority_score(t, doc, meth, index=index)
     tb_scores: dict[str, float] = defaultdict(float)
     for cid, sc in comp_scores.items():
         bid = tb_by_component.get(cid)
@@ -264,11 +348,12 @@ def _build_top_risks(
     meth: Any,
     backlog: Any,
     b: PremiumBuilderCopy,
+    index: ComponentIndex,
 ) -> list[TopRiskItem]:
     top_risks: list[TopRiskItem] = []
     for i, t in enumerate(sorted_threats[:10]):
         tier = assign_priority_tier(i, min(10, len(sorted_threats)))
-        ex = infer_exploitability(t, doc)
+        ex = infer_exploitability(t, doc, index=index)
         bi_labels = build_business_impact_row(t).labels + ai_business_labels_if_applicable(t)
         backlog_match = next(
             (b for b in backlog.items if any(r.id == t.id for r in b.related_findings if r.kind == "heuristic_threat")),
@@ -289,7 +374,7 @@ def _build_top_risks(
                 exploitability_summary=ex.notes,
                 business_impact_labels=list(dict.fromkeys(bi_labels))[:8],
                 priority_tier=tier,
-                composite_score=composite_priority_score(t, doc, meth),
+                composite_score=composite_priority_score(t, doc, meth, index=index),
                 recommended_action=action,
                 suggested_horizon=horizon_for_tier(tier),
             )
@@ -299,14 +384,25 @@ def _build_top_risks(
 
 def _build_root_cause_groups(backlog: Any, loc: PremiumReportLocale) -> list[RootCauseGroup]:
     rc_groups: list[RootCauseGroup] = []
+    # `item_ids` visto como conjunto. Testar pertença contra uma **lista**, uma vez por item e
+    # por grupo, é O(grupos x itens x ids): 0,44 s num único relatório de 1500 entidades, e a
+    # crescer ao quadrado. A iteração continua a ser sobre `backlog.items`, para o grupo manter
+    # exactamente a mesma ordem de antes.
     for root_key, item_ids in backlog.by_root_cause.items():
-        items = [i for i in backlog.items if i.id in item_ids]
+        wanted = set(item_ids)
+        items = [i for i in backlog.items if i.id in wanted]
         if not items:
             continue  # pragma: no cover - defensive guard
         comps: set[str] = set()
         for it in items:
             comps.update(it.related_components)
-        controls = list({it.suggested_control_type for it in items})[:6]
+        # `list(set(...))` here made the premium report non-reproducible: two runs of the same
+        # command over the same model emitted `data_protection, hardening_and_integrity` and its
+        # reverse, because set iteration order follows the per-process hash seed. Worse, once a
+        # group holds more than six distinct control types the `[:6]` slice would have dropped a
+        # *different* control each run. `dict.fromkeys` deduplicates in backlog order, which is
+        # the order the six kept controls should be chosen in anyway.
+        controls = list(dict.fromkeys(it.suggested_control_type for it in items))[:6]
         rc_groups.append(
             RootCauseGroup(
                 key=root_key,
@@ -351,6 +447,7 @@ def _build_ownership_rows(backlog: Any, b: PremiumBuilderCopy) -> list[Ownership
                 suggested_owner_role=None if role == "a_definir" else role,
                 explanation=b.ownership_explanation,
                 backlog_item_ids=ids[:30],
+                item_count=len(ids),
             )
         )
     return ownership_rows
@@ -448,20 +545,49 @@ def _build_explain_snippets(result: AnalysisResult) -> list[ExplainabilitySnippe
     ]
 
 
+#: Orçamento de caracteres da listagem do apêndice no payload. Existe para o relatório de um
+#: modelo com milhares de ameaças não crescer sem limite; não é um contrato de conteúdo.
+_APPENDIX_LISTING_BUDGET = 120_000
+
+
+def _appendix_entries_within_budget(entries: list[str], budget: int) -> list[str]:
+    """As primeiras entradas **inteiras** que cabem no orçamento.
+
+    Cortar por caracteres partia a última entrada a meio da palavra e entregava-a assim ao leitor,
+    indistinguível de um ficheiro corrompido. O corte passa a ser por entrada. Se nem a primeira
+    couber, é mantida na mesma: um apêndice vazio esconderia tudo, e o tamanho da entrada já está
+    limitado a montante pelos limites de tamanho do documento.
+    """
+    kept: list[str] = []
+    used = 0
+    for entry in entries:
+        cost = len(entry) + (1 if kept else 0)  # o "\n" que junta esta entrada à anterior
+        if kept and used + cost > budget:
+            break
+        kept.append(entry)
+        used += cost
+    return kept
+
+
 def _build_tech_appendix(
     doc: ThreatModelDocument, active: list[HeuristicThreat], b: PremiumBuilderCopy, level: ReportLevel
 ) -> TechnicalAppendix | None:
     if level != ReportLevel.DEEP:
         return None
-    lines = []
-    for t in active:
-        lines.append(f"### {t.id} — {t.title}\n{t.description}\n")
-    for c_threat in doc.threats:
-        lines.append(
-            f"### {b.threat_canonical_prefix} {c_threat.id} — {c_threat.title}\n{c_threat.description or ''}\n"
-        )
+    # `md_inline`/`md_block` no texto do modelo: cada entrada é escrita como um `### …` seguido da
+    # descrição no princípio da linha seguinte, portanto um título ou uma descrição com quebras de
+    # linha (ou que já comece por `###`) forjava entradas de apêndice que ninguém escreveu — e o
+    # renderizador HTML volta a ler esta listagem como estrutura para montar a tabela do PDF.
+    entries = [f"### {md_inline(t.id)} — {md_inline(t.title)}\n{md_block(t.description)}\n" for t in active]
+    entries += [
+        f"### {b.threat_canonical_prefix} {md_inline(c_threat.id)} — {md_inline(c_threat.title)}\n"
+        f"{md_block(c_threat.description or '')}\n"
+        for c_threat in doc.threats
+    ]
+    listed = _appendix_entries_within_budget(entries, _APPENDIX_LISTING_BUDGET)
     return TechnicalAppendix(
-        full_threat_listing="\n".join(lines)[:120000],
+        full_threat_listing="\n".join(listed),
+        total_threat_count=len(entries),
         methodology_outputs_note=b.tech_methodology_outputs,
         import_evidence_note=(b.tech_import_evidence if doc.import_signals_corpus else None),
     )
@@ -588,9 +714,20 @@ def build_premium_report_payload(
     app_v = app_version or _app_version()
 
     max_score = result.summary.max_risk_score
-    status_key, status_display = _overall_status(max_score, b)
+    # O **estado geral** olha para as duas origens; o rótulo de risco continua a ser o heurístico.
+    # `summary.max_risk_score` conta só heurísticas, e a capa classificava por ele — por isso um
+    # documento cuja única ameaça crítica é declarada pelo modelador (L5xI5 = 25) saía como
+    # "Aceitável com acompanhamento", exactamente igual ao mesmo documento sem ela. O relatório
+    # já contava essa ameaça no total, que descreve como "canónicas + heurísticas activas", e no
+    # quadro de severidade: era o veredito da capa que discordava do resto da própria página.
+    # O rótulo diz `Risk (heuristic)` no HTML e continua a medir isso, senão o rótulo é que
+    # passava a mentir. Ver `tests/test_p3_premium_cover_sees_declared_threats.py`.
+    status_key, status_display = _overall_status(_overall_max_score(max_score, doc), b)
 
     comp_names = {c.id: c.name for c in doc.components}
+    # Um índice para todo o pipeline: sem ele cada classificação por ameaça revarre
+    # `doc.components` (ver `ComponentIndex`).
+    index = ComponentIndex.of(doc)
     tb_by_component = _trust_boundary_by_component(doc)
 
     sev_counter, stride_counter, comp_counter, tb_counter, heatmap = _build_distribution_counters(
@@ -603,17 +740,26 @@ def build_premium_report_payload(
     top_boundaries = [_boundary_name(doc, bid) or bid for bid, _n in tb_counter.most_common(5)]
     top_surfaces = [comp_names.get(cid, cid) for cid, _n in comp_counter.most_common(5)]
 
+    # As ameacas declaradas entram na mesma ordenacao. Ficavam de fora do "Top 10 riscos
+    # prioritarios", do "Top 5" executivo e dos perfis de exploitability, num relatorio cuja capa,
+    # urgencia, quadro de severidade, mapa e contador de fronteiras ja as contavam: um RCE declarado
+    # de severidade 25 nao aparecia em lado nenhum da tabela accionavel, abaixo de heuristicas de 12.
+    declared_rankable, declared_without_risk = _declared_as_rankable(doc)
     sorted_threats = sorted(
-        active,
-        key=lambda x: composite_priority_score(x, doc, meth),
+        [*active, *declared_rankable],
+        key=lambda x: composite_priority_score(x, doc, meth, index=index),
         reverse=True,
     )
     top5_titles = [t.title for t in sorted_threats[:5]]
 
-    urgency = _urgency_level(max_score or 0)
+    # As três leituras da mesma página têm de concordar. `_overall_status` já usa o máximo das duas
+    # origens; estas duas ficaram na pontuação só-heurística, e o relatório executivo saía a dizer
+    # "Requer atenção imediata", "Urgência: medium" e "critical | 1" no mesmo bloco.
+    overall_max = _overall_max_score(max_score, doc)
+    urgency = _urgency_level(overall_max or 0)
 
     readiness = [
-        b.readiness_high if severity_at_least(severity_for_score(max_score or 0), "high") else b.readiness_moderate,
+        b.readiness_high if severity_at_least(severity_for_score(overall_max or 0), "high") else b.readiness_moderate,
         b.readiness_release,
         b.readiness_compensating,
     ]
@@ -639,12 +785,13 @@ def build_premium_report_payload(
         active=active,
         meth=meth,
         tb_by_component=tb_by_component,
+        index=index,
     )
 
-    top_risks = _build_top_risks(sorted_threats, doc, meth, backlog, b)
+    top_risks = _build_top_risks(sorted_threats, doc, meth, backlog, b, index)
     rc_groups = _build_root_cause_groups(backlog, loc)
 
-    exploit_profiles = [infer_exploitability(t, doc) for t in sorted_threats[:15]]
+    exploit_profiles = [infer_exploitability(t, doc, index=index) for t in sorted_threats[:15]]
     business_rows = [build_business_impact_row(t) for t in sorted_threats[:15]]
 
     quick_wins = _build_quick_wins(backlog)
@@ -652,13 +799,18 @@ def build_premium_report_payload(
     strategic = _build_strategic(result, b)
     roadmap = _build_roadmap(backlog, b)
     baseline_section = _build_baseline_section(baseline, result, b)
-    dedupe: list[DedupeGroup] = build_dedupe_groups(active, meth, doc)
+    dedupe: list[DedupeGroup] = build_dedupe_groups(active, meth, doc, index=index)
     explain_snippets = _build_explain_snippets(result)
     tech_appendix = _build_tech_appendix(doc, active, b, level)
 
+    disclaimer_bullets = [b.disclaimer_b1, b.disclaimer_b2]
+    if declared_without_risk:
+        # Excluir a visto, e nao em silencio: sem `risk` nao ha como ordenar a ameaca contra os
+        # scores das outras sem lhe atribuir um numero que o modelador nao escreveu.
+        disclaimer_bullets.append(b.disclaimer_declared_without_risk.format(count=declared_without_risk))
     disclaimer = InferenceDisclaimer(
         summary=b.disclaimer_summary,
-        bullets=[b.disclaimer_b1, b.disclaimer_b2],
+        bullets=disclaimer_bullets,
     )
     cover = _build_cover(doc, meth, app_v, max_score, status_key, status_display, b)
     exec_summary = _build_exec_summary(

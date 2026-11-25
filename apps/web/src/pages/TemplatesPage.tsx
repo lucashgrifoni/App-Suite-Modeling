@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 import { instantiateTemplate, listTemplates } from "../api/otmApi";
 import type { TemplateListQuery } from "../api/otmApi";
-import { ApiError } from "../api/client";
+import { apiErrorMessage } from "../api/apiErrorMessage";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { Alert } from "../components/ui/Alert";
@@ -15,6 +15,8 @@ import { EmptyState } from "../components/patterns/EmptyState";
 import { Skeleton } from "../components/patterns/Skeleton";
 import { useSession } from "../context/SessionContext";
 import { useToast } from "../context/ToastContext";
+import { useConfirmReplaceModel } from "../hooks/useConfirmReplaceModel";
+import { clearWizardStep } from "../utils/wizardStepStorage";
 import type { TemplateListItem } from "../types/api";
 
 export function TemplatesPage() {
@@ -22,6 +24,7 @@ export function TemplatesPage() {
   const navigate = useNavigate();
   const { setDocument } = useSession();
   const toast = useToast();
+  const confirmReplaceModel = useConfirmReplaceModel();
   const [items, setItems] = useState<TemplateListItem[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loadingId, setLoadingId] = useState<string | null>(null);
@@ -76,10 +79,21 @@ export function TemplatesPage() {
         const list = await listTemplates(
           Object.keys(params).length ? params : undefined,
         );
-        if (!cancelled) setItems(list);
+        if (!cancelled) {
+          setItems(list);
+          // Sem isto o banner de erro era só de escrita: um 5xx transitório enquanto o
+          // utilizador escrevia deixava-o fixo por cima de uma página a funcionar até
+          // recarregar o separador.
+          setError(null);
+        }
       } catch (e) {
-        if (!cancelled)
-          setError(e instanceof ApiError ? e.message : t("templates.listFail"));
+        if (!cancelled) {
+          setError(apiErrorMessage(e, t, "templates.listFail"));
+          // As linhas que ficavam no ecrã respondiam à consulta ANTERIOR, mas apareciam por
+          // baixo do texto de pesquisa novo, sem indicação de que estavam desactualizadas —
+          // o utilizador podia escolher um template julgando que correspondia ao filtro.
+          setItems([]);
+        }
       } finally {
         if (!cancelled) setLoadingList(false);
       }
@@ -90,15 +104,19 @@ export function TemplatesPage() {
   }, [category, complexity, tag, queryDebounced]);
 
   async function pick(id: string) {
+    if (!confirmReplaceModel()) return;
     setError(null);
     setLoadingId(id);
     try {
       const { document } = await instantiateTemplate(id);
       setDocument(document);
+      // A template the user has never seen opens at step 1, not wherever the previous
+      // model was left. See utils/wizardStepStorage.
+      clearWizardStep();
       toast.success(t("templates.toastOk"));
       navigate("/wizard");
     } catch (e) {
-      const msg = e instanceof ApiError ? e.message : t("templates.toastFail");
+      const msg = apiErrorMessage(e, t, "templates.toastFail");
       setError(msg);
       toast.error(msg);
     } finally {

@@ -141,7 +141,7 @@ A API foi pensada para **desenvolvimento e ambientes internos**; o perímetro op
 
 ## 12. Estado do produto e roadmap
 
-- Visão por fases e critérios de MVP: [`MVP_ROADMAP.md`](features/MVP_ROADMAP.md).
+- Registo histórico das fases e critérios do MVP (já entregues): [`MVP_ROADMAP.md`](features/MVP_ROADMAP.md).
 - Limitações honestas: [`KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md).
 - Congelamentos e escopo: [`RELEASE_SCOPE_FREEZE.md`](internal/decisions/RELEASE_SCOPE_FREEZE.md), [`ENGINEERING_CLOSEOUT_SCOPE.md`](internal/decisions/ENGINEERING_CLOSEOUT_SCOPE.md).
 

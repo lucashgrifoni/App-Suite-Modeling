@@ -14,6 +14,12 @@ from pathlib import Path
 
 import yaml
 from otm_core_schema import ThreatModelDocument
+from otm_core_schema.ai_context import has_stem
+
+# Vem de core-schema, não de `engine_support` (que importaria em círculo). Antes havia aqui uma
+# terceira cópia da regra de travessia de fronteira, e as três liam só um dos dois lados em que
+# a pertença pode ser declarada.
+from otm_core_schema.trust_membership import cross_boundary_flow_ids as _cross_boundary_flow_ids
 from pydantic import BaseModel, Field
 
 from otm_threat_engine.wizard_signals import signals_for_profile, synthetic_keyword_corpus
@@ -29,20 +35,6 @@ def _bump_confidence(hint: str, reason: str) -> str:
     if reason == "structural_primary" and hint == "medium":
         return "high"
     return hint
-
-
-def _cross_boundary_flow_ids(doc: ThreatModelDocument) -> set[str]:
-    """Cópia local (evita import circular com engine_support)."""
-    ids: set[str] = set()
-    by_comp = {c.id: c for c in doc.components}
-    for flow in doc.data_flows:
-        a = by_comp.get(flow.from_component)
-        b = by_comp.get(flow.to_component)
-        if not a or not b:
-            continue  # pragma: no cover - defensive guard
-        if a.in_trust_boundary and b.in_trust_boundary and a.in_trust_boundary != b.in_trust_boundary:
-            ids.add(flow.id)
-    return ids
 
 
 class AntiPatternDefinition(BaseModel):
@@ -237,7 +229,7 @@ def _dfn_field_gates_pass(dfn: AntiPatternDefinition, doc: ThreatModelDocument, 
         return False  # pragma: no cover - defensive guard
     if dfn.require_flow_flag_any and not _any_flow_bool(doc, dfn.require_flow_flag_any):
         return False
-    if any(mk.lower() in corpus for mk in dfn.mitigating_keywords):
+    if any(corpus_mentions(mk, corpus) for mk in dfn.mitigating_keywords):
         return False
     return True
 
@@ -275,7 +267,7 @@ def _structural_source_tags(dfn: AntiPatternDefinition) -> list[str]:
 
 def _structural_primary_hit(dfn: AntiPatternDefinition, profile: str, corpus: str) -> AntiPatternHit | None:
     if dfn.missing_any_of:
-        missing_sp = [kw for kw in dfn.missing_any_of if kw.lower() not in corpus]
+        missing_sp = [kw for kw in dfn.missing_any_of if not corpus_mentions(kw, corpus)]
         if len(missing_sp) != len(dfn.missing_any_of):
             return None  # pragma: no cover - defensive guard
     sources = ["structural:primary", *_structural_source_tags(dfn)]
@@ -299,8 +291,28 @@ def _structural_primary_hit(dfn: AntiPatternDefinition, profile: str, corpus: st
     )
 
 
+def corpus_mentions(keyword: str, corpus: str) -> bool:
+    """A palavra-chave começa numa fronteira de palavra do corpus.
+
+    Só à **esquerda**, e é uma decisão. A comparação era por subcadeia, e o corpus junta títulos,
+    nomes, ids e descrições de tudo: `rate` está dentro de **Corporate**, `card` dentro de
+    **discard** e de **wildcard**. Como `missing_any_of` dispara quando nenhuma das palavras
+    aparece, uma colisão dessas **silencia** o anti-padrão -- renomear um componente de "Partner
+    webhook endpoint" para "Corporate webhook endpoint" fazia desaparecer o achado de ingestão sem
+    limite de taxa, sem tocar em mais nada.
+
+    Fronteira dos dois lados partiria o catálogo, que usa radicais de propósito: `mascar` para
+    mascarar e mascaramento, `redac` para redacted e redação, `reauth`. Medido sobre os 38
+    templates distribuídos, esta fronteira não muda uma única resposta.
+    Ver `tests/test_p3_anti_pattern_keywords_start_at_a_word.py`.
+    """
+    # Delega em `has_stem`: a regra passou a ter casa única em `otm_core_schema.ai_context`, ao
+    # lado do matcher por token, para não haver duas implementações da mesma decisão a divergir.
+    return has_stem(corpus, keyword)
+
+
 def _missing_corpus_hit(dfn: AntiPatternDefinition, profile: str, corpus: str) -> AntiPatternHit | None:
-    missing = [kw for kw in dfn.missing_any_of if kw.lower() not in corpus]
+    missing = [kw for kw in dfn.missing_any_of if not corpus_mentions(kw, corpus)]
     if len(missing) != len(dfn.missing_any_of):
         return None
     sources = ["corpus:missing_any_of", *_structural_source_tags(dfn)]

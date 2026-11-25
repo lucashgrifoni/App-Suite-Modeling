@@ -17,15 +17,18 @@ def comparison_from_validated_documents(
     baseline_doc: ThreatModelDocument,
     revised_doc: ThreatModelDocument,
     *,
-    baseline_analysis: dict[str, Any] | None = None,
-    revised_analysis: dict[str, Any] | None = None,
+    baseline_analysis: dict[str, Any] | AnalysisResult | None = None,
+    revised_analysis: dict[str, Any] | AnalysisResult | None = None,
     run_analysis_flag: bool = False,
     pack_id: str | None = None,
 ) -> ThreatModelComparisonResult:
     """
     Documentos já validados (ex.: via `document_from_payload_or_422`).
 
-    Análises explícitas têm prioridade sobre `run_analysis_flag`.
+    Análises explícitas têm prioridade sobre `run_analysis_flag`. Aceitam-se `AnalysisResult`
+    já validados, para que a rota possa validá-los antes de os emparelhar com o documento
+    respetivo (ver `routers/models.py::compare_models`) sem os validar duas vezes —
+    `model_validate` devolve a instância tal como está.
     """
     ba: AnalysisResult | None = None
     ra: AnalysisResult | None = None

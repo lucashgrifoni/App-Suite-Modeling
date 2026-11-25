@@ -111,7 +111,13 @@ export function ThreatsAnalysisCard({
         ))}
       </ul>
       {filtered.length === 0 && (
-        <p className="py-6 text-center text-sm text-otm-text-muted">{t("threatsCard.noneMatch")}</p>
+        // "No threats match the filters" was shown for a model that produced no threats at
+        // all — pointing the user at filters they never touched (minimum score at its
+        // default 0, no framework chosen) while the real cause was an empty model. With
+        // nothing to filter, the filters cannot be the explanation.
+        <p className="py-6 text-center text-sm text-otm-text-muted">
+          {activeThreatCount === 0 ? t("threatsCard.noneAtAll") : t("threatsCard.noneMatch")}
+        </p>
       )}
       <div className="mt-6 flex justify-end border-t border-otm-border pt-4">
         <Link to="/export">

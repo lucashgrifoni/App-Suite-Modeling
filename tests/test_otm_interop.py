@@ -21,16 +21,20 @@ _MINIMAL = Path(__file__).resolve().parents[1] / "examples" / "minimal.otm.yaml"
 def test_export_produces_required_otm_fields() -> None:
     otm = document_to_otm(load_document_from_yaml_path(_MINIMAL))
     assert otm["otmVersion"] == "0.2.0"
-    assert otm["project"]["id"] and otm["project"]["name"]
+    assert otm["project"]["id"]
+    assert otm["project"]["name"]
     assert otm["components"]
     for c in otm["components"]:
-        assert c["id"] and c["name"] and c["type"]
+        assert c["id"]
+        assert c["name"]
+        assert c["type"]
     for z in otm.get("trustZones", []):
         assert z["risk"]["trustRating"]
     for a in otm.get("assets", []):
         assert {"confidentiality", "integrity", "availability"} <= set(a["risk"])
     for df in otm.get("dataflows", []):
-        assert df["source"] and df["destination"]
+        assert df["source"]
+        assert df["destination"]
 
 
 def test_round_trip_preserves_structure() -> None:
@@ -66,7 +70,8 @@ def test_import_otm_sanitizes_ids_maps_kinds_and_keeps_integrity() -> None:
     web = next(c for c in doc.components if c.name == "Web")
     assert web.in_trust_boundary in {b.id for b in doc.trust_boundaries}
     flow = doc.data_flows[0]
-    assert flow.from_component in ids and flow.to_component in ids
+    assert flow.from_component in ids
+    assert flow.to_component in ids
 
 
 def test_import_otm_drops_dataflow_with_unknown_endpoint() -> None:
@@ -117,7 +122,8 @@ def test_cli_import_otm_malformed_collection_is_a_friendly_error(tmp_path: Path)
     assert r.exit_code == 1
     combined = (r.stdout or "") + (r.stderr or "")
     assert "must be an array" in combined
-    assert "Traceback" not in combined and "TypeError" not in combined
+    assert "Traceback" not in combined
+    assert "TypeError" not in combined
 
 
 def test_cli_export_otm_then_import_round_trip(tmp_path: Path) -> None:

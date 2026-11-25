@@ -59,4 +59,6 @@ def test_aggregate_groups_by_targets_and_families() -> None:
     out = build_aggregate_and_cockpit(_result(threats))
     agg = out["aggregate_risk"]
     assert agg.active_threat_count == 3  # duplicate excluded
-    assert agg.top_components and agg.top_flows and agg.top_assets
+    assert agg.top_components
+    assert agg.top_flows
+    assert agg.top_assets

@@ -14,10 +14,16 @@ const variants = {
 export function Button({
   variant = "primary",
   className = "",
+  // A bare <button> defaults to type="submit", so any Button dropped inside a
+  // <form> would submit it on click. Default to "button" and let the caller opt
+  // in; because `type` is destructured out of `props`, the spread below cannot
+  // silently reintroduce the implicit default.
+  type = "button",
   ...props
 }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: keyof typeof variants }) {
   return (
     <button
+      type={type}
       className={`inline-flex items-center justify-center rounded-otm-md px-4 py-2 text-sm font-semibold transition duration-otm ease-otm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--otm-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--otm-surface-base)] motion-reduce:transition-none motion-reduce:active:scale-100 ${variants[variant]} ${className}`}
       {...props}
     />

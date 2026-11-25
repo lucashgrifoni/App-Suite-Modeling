@@ -44,6 +44,9 @@ class AnalysisMarkdownMessages:
     ref_more: str
     threats_harmonized_title: str
     threats_harmonized_blurb: str
+    threats_complete_title: str
+    threats_complete_blurb: str
+    engine_dedup_notes: str
     threat_line_fw_label: str
     more_entries: str
     harmonization_notes: str
@@ -82,6 +85,22 @@ class AnalysisMarkdownMessages:
     next_backlog: str
     next_controls: str
     next_use_insights: str
+    # `### Consolidação de risco e cockpit executivo` and its bullets were the only user-facing
+    # block in this exporter that never took the message bundle: with `locale=en` an entire
+    # Portuguese section sat between two English ones in the delivered Markdown.
+    aggregate_cockpit_title: str
+    agg_active_threats: str
+    agg_total_score: str
+    agg_mean_max: str
+    agg_severity_distribution: str
+    agg_top_threats: str
+    agg_top_components: str
+    agg_top_flows: str
+    agg_top_assets: str
+    agg_dominant_themes: str
+    agg_mitigation_starters: str
+    cockpit_posture: str
+    cockpit_next_review: str
 
 
 _MSG: dict[ExportArtifactLocale, AnalysisMarkdownMessages] = {
@@ -129,6 +148,15 @@ _MSG: dict[ExportArtifactLocale, AnalysisMarkdownMessages] = {
         threats_harmonized_title="### Ameaças sugeridas (harmonizadas)",
         threats_harmonized_blurb=(
             "Visualização priorizada por especificidade (`biz_*`) com redução de redundância semântica."
+        ),
+        threats_complete_title="### Ameaças sugeridas (lista completa)",
+        threats_complete_blurb=(
+            "Visualização sem redução de redundância: todos os achados activos, ordenados por especificidade (`biz_*`)."
+        ),
+        engine_dedup_notes=(
+            "- **De-duplicação do motor:** {skipped} achados foram marcados como duplicados "
+            "e não entram em nenhuma vista deste relatório "
+            "(presentes no JSON com `skipped_as_duplicate`)."
         ),
         threat_line_fw_label="Frameworks",
         more_entries="\n… e mais {n} entradas.",
@@ -184,6 +212,19 @@ _MSG: dict[ExportArtifactLocale, AnalysisMarkdownMessages] = {
         next_backlog="- Converter os achados críticos em backlog com owner e prazo.",
         next_controls=("- Revisar controles de acesso, integridade de fluxo e proteção de dados sensíveis."),
         next_use_insights=("- Usar os insights do perfil **{profile}** para priorização contextual."),
+        aggregate_cockpit_title="### Consolidação de risco e cockpit executivo",
+        agg_active_threats="Ameaças activas",
+        agg_total_score="Score total",
+        agg_mean_max="Média / máx",
+        agg_severity_distribution="Distribuição por severidade",
+        agg_top_threats="Top ameaças (score)",
+        agg_top_components="Componentes mais críticos",
+        agg_top_flows="Fluxos mais críticos",
+        agg_top_assets="Ativos mais críticos",
+        agg_dominant_themes="Temas dominantes",
+        agg_mitigation_starters="Mitigação inicial",
+        cockpit_posture="Postura",
+        cockpit_next_review="Rever",
     ),
     "en": AnalysisMarkdownMessages(
         heading_automatic="## Automated analysis (engine)",
@@ -225,6 +266,14 @@ _MSG: dict[ExportArtifactLocale, AnalysisMarkdownMessages] = {
         ref_more="… (+{n})",
         threats_harmonized_title="### Suggested threats (harmonized)",
         threats_harmonized_blurb=("View prioritized by specificity (`biz_*`) with reduced semantic redundancy."),
+        threats_complete_title="### Suggested threats (complete list)",
+        threats_complete_blurb=(
+            "View without redundancy reduction: every active finding, ordered by specificity (`biz_*`)."
+        ),
+        engine_dedup_notes=(
+            "- **Engine de-duplication:** {skipped} findings were marked as duplicates and appear "
+            "in no view of this report (present in the JSON with `skipped_as_duplicate`)."
+        ),
         threat_line_fw_label="Frameworks",
         more_entries="\n… and {n} more entries.",
         harmonization_notes=(
@@ -274,6 +323,19 @@ _MSG: dict[ExportArtifactLocale, AnalysisMarkdownMessages] = {
         next_backlog="- Turn critical findings into backlog items with owner and deadline.",
         next_controls="- Review access controls, flow integrity, and sensitive-data protection.",
         next_use_insights="- Use profile insights **{profile}** for contextual prioritization.",
+        aggregate_cockpit_title="### Risk consolidation and executive cockpit",
+        agg_active_threats="Active threats",
+        agg_total_score="Total score",
+        agg_mean_max="Mean / max",
+        agg_severity_distribution="Severity distribution",
+        agg_top_threats="Top threats (score)",
+        agg_top_components="Most critical components",
+        agg_top_flows="Most critical flows",
+        agg_top_assets="Most critical assets",
+        agg_dominant_themes="Dominant themes",
+        agg_mitigation_starters="Initial mitigation",
+        cockpit_posture="Posture",
+        cockpit_next_review="Review",
     ),
 }
 

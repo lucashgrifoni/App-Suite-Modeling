@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import sys
 from pathlib import Path
 from typing import Annotated
 
@@ -17,7 +16,8 @@ from otm_cli.commands.handle_errors import exit_on_cli_error
 from otm_cli.shared.emit import write_json_file
 from otm_cli.shared.enums import DiffFormat
 from otm_cli.shared.errors import CliUserError
-from otm_cli.shared.gate import GATE_TRIP_EXIT_CODE, parse_fail_on, render_gate_result
+from otm_cli.shared.gate import parse_fail_on, report_gate_verdict
+from otm_cli.shared.render import safe
 
 
 def register(app: typer.Typer) -> None:
@@ -26,7 +26,7 @@ def register(app: typer.Typer) -> None:
         baseline: Annotated[Path, typer.Argument(help="AnalysisResult JSON (baseline).")],
         revised: Annotated[Path, typer.Argument(help="AnalysisResult JSON (revised).")],
         json_out: Path | None = typer.Option(None, "--json-out", help="Write AnalysisDiff to JSON."),
-        fmt: DiffFormat = typer.Option(DiffFormat.text, "--format", "-f", help="text or json."),
+        fmt: DiffFormat = typer.Option(DiffFormat.text, "--format", "-f", help="text | json | markdown"),
         fail_on: str = typer.Option(
             "none",
             "--fail-on",
@@ -41,7 +41,10 @@ def register(app: typer.Typer) -> None:
     ) -> None:
         """Compare two analyze.json files without re-running the engine.
 
-        Exit codes: 0 no gate trip · 1 usage error · 3 gate tripped.
+        Exit codes: 0 no gate trip · 1 usage error, including an out-of-range `--fail-on` value,
+        or an armed gate with no verdict (the two analyses are not comparable) · 2 parsing error
+        raised by Typer/Click: unknown flag, missing argument, invalid enum value on `--format`
+        · 3 gate tripped.
         """
         try:
             policy = GatePolicy(fail_on=parse_fail_on(fail_on), fail_on_risk_increase=fail_on_risk_increase)
@@ -60,19 +63,25 @@ def register(app: typer.Typer) -> None:
 
         if json_out:
             try:
-                write_json_file(payload=payload, output=json_out)
+                write_json_file(payload=payload, output=json_out, sources=(baseline, revised))
             except CliUserError as e:
                 exit_on_cli_error(console, e)
-            console.print(f"[green]Analysis diff written to[/green] {json_out.resolve()}")
+            console.print(f"[green]Analysis diff written to[/green] {safe(json_out.resolve())}")
 
         if fmt == DiffFormat.json:
             print(json.dumps(payload, indent=2, ensure_ascii=False))
+        elif fmt == DiffFormat.markdown:
+            # Cru, como em `diff_cmd`: quem pede markdown vai canalizá-lo para um ficheiro, e um
+            # painel do Rich no meio faria dele lixo. Antes disto `markdown` caía no `else`.
+            print("\n".join(lines or []))
         else:
-            console.print(Panel("\n".join(lines or []), title="diff-analysis", border_style="magenta"))
+            console.print(Panel(safe("\n".join(lines or [])), title="diff-analysis", border_style="magenta"))
 
         # Gate last: every artifact is on disk and stdout is complete before we can exit non-zero.
         if policy.active:
-            result = evaluate_gate(analysis_diff, policy)
-            print(render_gate_result(result), file=sys.stderr)
-            if result.tripped:
-                raise typer.Exit(GATE_TRIP_EXIT_CODE)
+            # Same mapping and same ordering as `otm diff`, including the non-zero exit for a gate
+            # that could not judge: the two commands arm the same policy and must answer CI the
+            # same way, whether or not anyone is still reading the report.
+            code = report_gate_verdict(evaluate_gate(analysis_diff, policy))
+            if code:
+                raise typer.Exit(code)

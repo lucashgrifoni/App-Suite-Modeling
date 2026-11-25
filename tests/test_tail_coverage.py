@@ -14,7 +14,7 @@ _ROOT = Path(__file__).resolve().parents[1]
 _MODEL = _ROOT / "examples" / "saas-ordering-v1.otm.yaml"
 
 
-@pytest.fixture()
+@pytest.fixture
 def runner() -> CliRunner:
     return CliRunner()
 

@@ -9,7 +9,6 @@ export interface AnalysisHistoryEntry {
   title: string;
   systemType: string;
   maxScore: number | null;
-  summaryLine: string;
   document: OtmDocument;
   analysis: AnalysisResult | null;
 }

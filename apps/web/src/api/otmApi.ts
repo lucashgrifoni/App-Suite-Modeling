@@ -1,4 +1,9 @@
-import { apiFetch } from "./client";
+import {
+  apiErrorFromResponseText,
+  apiFetch,
+  fetchWithTimeout,
+  REPORT_TIMEOUT_MS,
+} from "./client";
 import type {
   AnalysisResult,
   ArtifactImportKind,
@@ -160,30 +165,27 @@ export async function fetchPremiumReport(args: {
   /** pt-BR | en — alinhado ao export Markdown e ao normalizador da API */
   locale?: "pt-BR" | "en";
 }): Promise<{ blob: Blob; filename: string }> {
-  const res = await fetch(`${API_PREFIX}/v1/reports/premium`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      document: args.document,
-      analysis: args.analysis,
-      run_analysis: args.analysis === null,
-      level: args.level,
-      output_format: args.outputFormat,
-      ...(args.locale ? { locale: args.locale } : {}),
-    }),
-  });
+  const res = await fetchWithTimeout(
+    `${API_PREFIX}/v1/reports/premium`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        document: args.document,
+        analysis: args.analysis,
+        run_analysis: args.analysis === null,
+        level: args.level,
+        output_format: args.outputFormat,
+        ...(args.locale ? { locale: args.locale } : {}),
+      }),
+    },
+    REPORT_TIMEOUT_MS,
+  );
   if (!res.ok) {
-    const text = await res.text();
-    let msg = res.statusText;
-    try {
-      const j = JSON.parse(text) as { detail?: { message?: string } };
-      if (j?.detail && typeof j.detail === "object" && "message" in j.detail) {
-        msg = String((j.detail as { message?: string }).message ?? msg);
-      }
-    } catch {
-      /* ignore */
-    }
-    throw new Error(msg);
+    // Built by the shared helper, not by hand: this route answers 501 PDF_DEPENDENCY when
+    // the server cannot render PDFs, and that coded envelope only reaches the presentation
+    // layer if `body` carries the PARSED response. See `apiErrorFromResponseText`.
+    throw apiErrorFromResponseText(res.status, res.statusText, await res.text());
   }
   const ext = args.outputFormat === "pdf" ? "pdf" : "md";
   if (args.outputFormat === "pdf") {

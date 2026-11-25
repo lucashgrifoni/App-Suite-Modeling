@@ -8,6 +8,10 @@ from otm_industry_packs.models import AdditionalThreatRule, PackDefinition
 from otm_threat_engine.result import HeuristicThreat
 from otm_threat_engine.risk_calc import build_risk_assessment
 
+#: Prefixo dos ids gerados por um industry pack. É o que distingue uma ameaça de pack de uma
+#: heurística base depois de as duas viverem na mesma lista `heuristic_threats`.
+ID_PREFIX = "pack"
+
 
 def apply_pack_to_li(
     likelihood: int,
@@ -82,7 +86,7 @@ def iter_pack_heuristic_threats(
             pack_unique = (comp.id, rule.id, stride_key)
             if pack_unique in emitted_pack_keys:
                 continue
-            hid = f"pack_{pack.id}_{rule.id}_{comp.id}"
+            hid = f"{ID_PREFIX}_{pack.id}_{rule.id}_{comp.id}"
 
             if doc_style_key in covered_keys:
                 out.append(

@@ -11,6 +11,7 @@ SARIF spec: https://docs.oasis-open.org/sarif/sarif/v2.1.0/sarif-v2.1.0.html
 
 from __future__ import annotations
 
+import importlib.metadata
 import json
 from typing import Any
 
@@ -19,6 +20,34 @@ from otm_threat_engine.result import AnalysisResult, HeuristicThreat
 _SARIF_SCHEMA = "https://json.schemastore.org/sarif-2.1.0.json"
 _TOOL_NAME = "App Suite Modeling"
 _TOOL_URI = "https://github.com/lucashgrifoni/App-Suite-Modeling"
+_DISTRIBUTION = "open-threat-model"
+
+#: Artefacto a que os resultados são ancorados quando quem chama não diz qual é o ficheiro.
+#: Uma ameaça STRIDE não tem ficheiro-fonte nem linha: o sujeito do achado é o próprio modelo de
+#: ameaças, por isso é o `.otm.yaml` que vai em `artifactLocation.uri`. A API (documento vindo
+#: num POST) e qualquer chamador em memória não têm caminho nenhum, e o GitHub exige
+#: `physicalLocation` com `uri` e `region.startLine` para ingerir o resultado — daí o nome
+#: canónico por omissão em vez de campo nenhum.
+_DEFAULT_MODEL_URI = "threat-model.otm.yaml"
+
+#: Identificador convencional para "a raiz do checkout". O GitHub code scanning resolve-o contra
+#: o repositório; sem ele, a `uri` de cada resultado não diz a que é relativa e o consumidor
+#: adivinha. Ver `_physical_location`.
+_URI_BASE_ID = "%SRCROOT%"
+_URI_BASE_DESCRIPTION = "The root of the repository checkout the analysis ran in."
+
+
+def product_version() -> str:
+    """Versão do produto instalado, para `tool.driver.version`.
+
+    `result.engine_version` identifica o motor de heurísticas (`0.1.0`, nunca incrementado) e é
+    isso que estava a ser publicado como versão da ferramenta chamada "App Suite Modeling" —
+    dois scans de releases diferentes ficavam indistinguíveis. O motor continua no property bag.
+    """
+    try:
+        return importlib.metadata.version(_DISTRIBUTION)
+    except importlib.metadata.PackageNotFoundError:
+        return "dev"
 
 
 def _level_for_score(score: float | None) -> str:
@@ -47,15 +76,57 @@ def _rule_id(result: AnalysisResult, threat: HeuristicThreat) -> str:
 
 
 def _logical_location(threat: HeuristicThreat) -> dict[str, Any] | None:
-    target = threat.target_component_id or threat.target_data_flow_id or threat.target_asset_id
-    if not target:
-        return None
-    kind = "component" if threat.target_component_id else "dataflow" if threat.target_data_flow_id else "asset"
-    return {"fullyQualifiedName": target, "kind": kind}
+    """First target the threat declares, in precedence order, with its SARIF kind.
+
+    Pairing each id with its kind in one table keeps the two from drifting apart: picking the
+    target and naming it were previously two independent expressions over the same fields.
+    """
+    for target, kind in (
+        (threat.target_component_id, "component"),
+        (threat.target_data_flow_id, "dataflow"),
+        (threat.target_asset_id, "asset"),
+    ):
+        if target:
+            return {"fullyQualifiedName": target, "kind": kind}
+    return None
 
 
-def export_analysis_sarif_obj(result: AnalysisResult) -> dict[str, Any]:
-    """SARIF 2.1.0 object for the analysis result (one run, one result per active threat)."""
+def _physical_location(model_uri: str) -> dict[str, Any]:
+    """`physicalLocation` do modelo, obrigatório para o GitHub code scanning.
+
+    O GitHub documenta `result.locations[]`, `location.physicalLocation`,
+    `artifactLocation.uri` e `region.startLine` como necessários para ingerir um resultado; sem
+    eles o upload que o `--sarif-out` e o `upload-sarif` da Action anunciam não produz alertas
+    localizados. A ameaça não tem linha própria — é o documento inteiro que a origina — por isso
+    todas ancoram na linha 1 do modelo, que é a convenção para achados ao nível do ficheiro.
+    """
+    return {
+        "artifactLocation": {"uri": model_uri, "uriBaseId": _URI_BASE_ID},
+        "region": {"startLine": 1},
+    }
+
+
+def _location(threat: HeuristicThreat, model_uri: str) -> dict[str, Any]:
+    """The single `location` of a result: always the model file, plus the target when there is one.
+
+    A threat that declares no component, data flow or asset — PASTA emits five of them, one per
+    model-level concern — still belongs to the model file, so it gets the same `physicalLocation`
+    as every other result. Anchoring it is what makes it ingestible; the `logicalLocations` entry
+    is what makes it readable, and only that part depends on a target existing.
+    """
+    location: dict[str, Any] = {"physicalLocation": _physical_location(model_uri)}
+    logical = _logical_location(threat)
+    if logical:
+        location["logicalLocations"] = [logical]
+    return location
+
+
+def export_analysis_sarif_obj(result: AnalysisResult, *, model_uri: str = _DEFAULT_MODEL_URI) -> dict[str, Any]:
+    """SARIF 2.1.0 object for the analysis result (one run, one result per active threat).
+
+    `model_uri` is the artifact every result points at — the threat-model file the analysis came
+    from, relative to the repository root so GitHub can resolve it.
+    """
     threats = [t for t in result.heuristic_threats if not t.skipped_as_duplicate]
 
     rules: list[dict[str, Any]] = []
@@ -92,9 +163,7 @@ def export_analysis_sarif_obj(result: AnalysisResult) -> dict[str, Any]:
                 "references": refs,
             },
         }
-        loc = _logical_location(t)
-        if loc:
-            res["locations"] = [{"logicalLocations": [loc]}]
+        res["locations"] = [_location(t, model_uri)]
         sarif_results.append(res)
 
     return {
@@ -106,16 +175,26 @@ def export_analysis_sarif_obj(result: AnalysisResult) -> dict[str, Any]:
                     "driver": {
                         "name": _TOOL_NAME,
                         "informationUri": _TOOL_URI,
-                        "version": result.engine_version,
+                        "version": product_version(),
+                        "properties": {"engineVersion": result.engine_version},
                         "rules": rules,
                     }
                 },
                 "results": sarif_results,
+                # Diz a que a `uri` de cada resultado é relativa. Sem isto o consumidor tem de
+                # adivinhar, e o GitHub adivinha "raiz do repositório": um `otm analyze` corrido
+                # com `working-directory: apps/api` emitia `sub/m.otm.yaml` e o alerta anexava a
+                # `sub/m.otm.yaml` a partir da raiz — um caminho que pode existir e ser **outro
+                # ficheiro**. `%SRCROOT%` é o identificador convencional para "a raiz do
+                # checkout", e é o que o GitHub resolve contra o repositório.
+                "originalUriBaseIds": {_URI_BASE_ID: {"description": {"text": _URI_BASE_DESCRIPTION}}},
             }
         ],
     }
 
 
-def export_analysis_sarif(result: AnalysisResult) -> str:
+def export_analysis_sarif(result: AnalysisResult, *, model_uri: str = _DEFAULT_MODEL_URI) -> str:
     """SARIF 2.1.0 JSON text for the analysis result."""
-    return json.dumps(export_analysis_sarif_obj(result), indent=2, ensure_ascii=False)
+    return json.dumps(
+        export_analysis_sarif_obj(result, model_uri=model_uri), indent=2, ensure_ascii=False, allow_nan=False
+    )

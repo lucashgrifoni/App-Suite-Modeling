@@ -16,9 +16,12 @@ import {
 import "reactflow/dist/style.css";
 import { ComponentNode, type OtmNodeData } from "./ComponentNode";
 import { sanitizeDiagramLabel } from "../../utils/diagramSanitize";
+import { removeComponents } from "../../utils/documentNormalize";
 import {
   clearDiagramLayout,
+  documentLayoutKey,
   loadDiagramLayout,
+  removeDiagramLayoutEntries,
   saveDiagramLayoutPatch,
 } from "../../utils/diagramLayoutStorage";
 import { COMPONENT_KINDS, type OtmDataFlow, type OtmDocument } from "../../types/document";
@@ -30,7 +33,7 @@ function gridPos(i: number): { x: number; y: number } {
 }
 
 function buildNodes(doc: OtmDocument, editMode: boolean): Node<OtmNodeData>[] {
-  const layout = loadDiagramLayout();
+  const layout = loadDiagramLayout(documentLayoutKey(doc));
   return doc.components.map((c, i) => ({
     id: c.id,
     type: "otm",
@@ -132,27 +135,20 @@ function ThreatModelDiagramInner({
     (toRemove: Node[]) => {
       if (!editMode) return;
       const rm = new Set(toRemove.map((n) => n.id));
-      setDocument({
-        ...document,
-        components: document.components.filter((c) => !rm.has(c.id)),
-        data_flows: document.data_flows.filter(
-          (f) => !rm.has(f.from_component) && !rm.has(f.to_component),
-        ),
-      });
-      try {
-        const cur = loadDiagramLayout();
-        for (const id of rm) delete cur[id];
-        sessionStorage.setItem("otm.web.diagramLayout", JSON.stringify(cur));
-      } catch {
-        /* ignore */
-      }
+      // Cascades to assets and trust boundaries too — pruning only components and flows
+      // leaves references the canonical schema rejects.
+      setDocument(removeComponents(document, [...rm]));
+      removeDiagramLayoutEntries(documentLayoutKey(document), [...rm]);
     },
     [document, setDocument, editMode],
   );
 
-  const onNodeDragStop = useCallback((_e: unknown, node: Node) => {
-    saveDiagramLayoutPatch(node.id, node.position);
-  }, []);
+  const onNodeDragStop = useCallback(
+    (_e: unknown, node: Node) => {
+      saveDiagramLayoutPatch(documentLayoutKey(document), node.id, node.position);
+    },
+    [document],
+  );
 
   const onSelectionChange = useCallback(({ nodes: sel }: { nodes: Node[] }) => {
     setSelectedId(sel.length === 1 ? sel[0].id : null);
@@ -166,11 +162,20 @@ function ThreatModelDiagramInner({
   const updateSelectedLabel = useCallback(
     (name: string) => {
       if (!selectedId || !editMode) return;
-      const label = sanitizeDiagramLabel(name);
+      // Grava o nome **tal como foi escrito**. Aqui corria `sanitizeDiagramLabel`, que é um filtro
+      // de exibição e é destrutivo por desenho: uma tecla apagava `<…>` do documento canónico
+      // ("Customer DB <unencrypted, internet-facing>" -> "Customer DB "), a perda sobrevivia ao
+      // reload e seguia para o JSON exportado e para a lista de Componentes, sem undo. E o campo é
+      // controlado sobre o `name` cru, por isso o utilizador via a string inteira até ela sumir.
+      //
+      // Não muda a superfície de XSS: `buildNodes`/`buildEdges` continuam a sanitizar ao desenhar,
+      // que é o que a docstring do filtro manda. O controlo real, medido, é o escaping de text
+      // node do React mais a CSP — um `<img src=x onerror>` num nome produz zero elementos `<img>`
+      // com ou sem este filtro.
       setDocument({
         ...document,
         components: document.components.map((c) =>
-          c.id === selectedId ? { ...c, name: label } : c,
+          c.id === selectedId ? { ...c, name } : c,
         ),
       });
     },
@@ -191,7 +196,7 @@ function ThreatModelDiagramInner({
   const addNode = useCallback(() => {
     const id = `n_${Date.now()}`;
     const pos = gridPos(document.components.length);
-    saveDiagramLayoutPatch(id, pos);
+    saveDiagramLayoutPatch(documentLayoutKey(document), id, pos);
     setDocument({
       ...document,
       components: [
@@ -208,20 +213,8 @@ function ThreatModelDiagramInner({
   const removeSelected = useCallback(() => {
     if (!selectedId || !editMode) return;
     const rm = selectedId;
-    setDocument({
-      ...document,
-      components: document.components.filter((c) => c.id !== rm),
-      data_flows: document.data_flows.filter(
-        (f) => f.from_component !== rm && f.to_component !== rm,
-      ),
-    });
-    try {
-      const cur = loadDiagramLayout();
-      delete cur[rm];
-      sessionStorage.setItem("otm.web.diagramLayout", JSON.stringify(cur));
-    } catch {
-      /* ignore */
-    }
+    setDocument(removeComponents(document, [rm]));
+    removeDiagramLayoutEntries(documentLayoutKey(document), [rm]);
     setSelectedId(null);
   }, [selectedId, editMode, document, setDocument]);
 

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import os
 from pathlib import Path
 
 import pytest
@@ -528,12 +527,12 @@ def test_export_analysis_markdown_harmonized_minimal_h3_heading_order_stable(
     ]
 
 
-def test_export_analysis_markdown_snapshot_minimal_harmonized() -> None:
+def test_export_analysis_markdown_snapshot_minimal_harmonized(monkeypatch: pytest.MonkeyPatch) -> None:
     """
     Este teste trava o output do exportador Markdown.
     Se mudar, deve ser intencional e revisado (não por refatoração acidental).
     """
-    os.environ["OTM_MARKDOWN_VIEW_MODE"] = "harmonized"
+    monkeypatch.setenv("OTM_MARKDOWN_VIEW_MODE", "harmonized")
     doc = load_document_from_yaml_path(_MINIMAL)
     result = analyze_document(doc)
     md = export_analysis_markdown(result)

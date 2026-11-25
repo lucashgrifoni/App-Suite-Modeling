@@ -171,7 +171,14 @@ class OwnershipRow(BaseModel):
     scope: str
     suggested_owner_role: str | None
     explanation: str
+    #: Amostra limitada, para o payload não crescer com o backlog. NÃO é a contagem: quem quiser
+    #: saber quantos itens o responsável tem lê `item_count`.
     backlog_item_ids: list[str] = Field(default_factory=list)
+    #: Quantos itens o responsável tem de facto. Existe porque o renderizador imprimia
+    #: `len(backlog_item_ids)`, que é o tecto assim que alguém passa dele: três responsáveis com
+    #: 75, 48 e 31 itens saíam todos como "30 itens", sem marca de truncagem, e a leitura era de
+    #: carga distribuída por igual. Ver `tests/test_p3_ownership_count_is_the_real_count.py`.
+    item_count: int = 0
 
 
 class RoadmapPhase(BaseModel):
@@ -233,10 +240,29 @@ class StrategicRecommendation(BaseModel):
     detail: str
 
 
+#: Contrato da listagem do apêndice: cada ameaça começa uma linha com este prefixo e o corpo vem
+#: na linha seguinte. É por aqui que o renderizador HTML volta a ler a listagem como estrutura
+#: para montar a tabela do PDF, e é por aqui que se conta quantas entradas ficaram à vista.
+APPENDIX_ENTRY_PREFIX = "### "
+
+
+def count_appendix_entries(listing: str) -> int:
+    """Entradas presentes na listagem — linhas iniciadas pelo prefixo, não ocorrências no texto."""
+    return sum(1 for line in listing.splitlines() if line.startswith(APPENDIX_ENTRY_PREFIX))
+
+
 class TechnicalAppendix(BaseModel):
     """Apêndice técnico (deep)."""
 
     full_threat_listing: str
+    total_threat_count: int = Field(
+        default=0,
+        description=(
+            "Ameaças que a análise produziu, antes de qualquer corte. `full_threat_listing` pode "
+            "trazer menos (orçamento de tamanho); quem renderiza declara 'N de M' a partir daqui, "
+            "e não do comprimento da listagem, que já vem cortada."
+        ),
+    )
     methodology_outputs_note: str
     import_evidence_note: str | None = None
 

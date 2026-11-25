@@ -17,6 +17,7 @@ export default {
             active: "var(--otm-primary-active)",
             subtle: "var(--otm-primary-subtle)",
             muted: "var(--otm-primary-muted)",
+            ink: "var(--otm-primary-ink)",
           },
           accent: "var(--otm-accent)",
           mint: {
@@ -34,6 +35,7 @@ export default {
           border: {
             DEFAULT: "var(--otm-border)",
             strong: "var(--otm-border-strong)",
+            control: "var(--otm-border-control)",
           },
           text: {
             DEFAULT: "var(--otm-text)",

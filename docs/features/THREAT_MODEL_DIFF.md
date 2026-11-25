@@ -68,7 +68,16 @@ otm diff baseline.otm.yaml revised.otm.yaml --summary-only
 
 # Dois ficheiros de análise
 otm diff-analysis old-analysis.json new-analysis.json
+
+# Gate de CI sob a metodologia configurada (ver aviso abaixo)
+otm diff baseline.otm.yaml revised.otm.yaml --methodology stride --pack cloud_native --fail-on high
 ```
+
+> **A metodologia do gate tem de coincidir com a da análise.** `otm diff` corre o motor nos
+> dois lados da comparação; sem `--methodology`/`--pack` corre a lente por omissão, que pode
+> não ser a lente usada em `otm analyze`. Nesse caso o gate julga um conjunto de ameaças
+> diferente do SARIF que é publicado — e pode dar `PASSED` num PR que introduz uma ameaça
+> HIGH sob a lente configurada. A action envia agora ambos os inputs para o passo do gate.
 
 ## Exemplos API
 

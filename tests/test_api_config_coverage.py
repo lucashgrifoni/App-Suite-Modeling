@@ -33,7 +33,8 @@ def test_cors_production_no_origins(monkeypatch: pytest.MonkeyPatch) -> None:
     p = resolve_cors_profile()
     assert p.environment == "production"
     assert p.origins == []
-    assert "GET" in p.allow_methods and "*" not in p.allow_methods
+    assert "GET" in p.allow_methods
+    assert "*" not in p.allow_methods
 
 
 def test_cors_production_explicit_origins(monkeypatch: pytest.MonkeyPatch) -> None:

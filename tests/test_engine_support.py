@@ -23,6 +23,7 @@ def test_existing_threat_keys_matches_document_threats_count() -> None:
 
 
 def test_existing_threat_keys_collapses_duplicate_stride_targets() -> None:
+    """Both declarations carry a risk: only a scored declaration counts as coverage now."""
     doc = load_document_from_yaml_path(_MINIMAL)
     base_threat = Threat(
         id="t1",
@@ -30,6 +31,7 @@ def test_existing_threat_keys_collapses_duplicate_stride_targets() -> None:
         stride=StrideCategory.SPOOFING,
         target_component_id="user",
         target_data_flow_id="http_in",
+        risk=RiskAssessment(likelihood=3, impact=3),
         treatment_status=TreatmentStatus.NEW,
     )
     doc2 = doc.model_copy(
@@ -42,6 +44,7 @@ def test_existing_threat_keys_collapses_duplicate_stride_targets() -> None:
                     stride=StrideCategory.SPOOFING,
                     target_component_id="user",
                     target_data_flow_id="http_in",
+                    risk=RiskAssessment(likelihood=2, impact=4),
                     treatment_status=TreatmentStatus.NEW,
                 ),
             ]

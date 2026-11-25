@@ -23,7 +23,9 @@ def test_security_hints_v3_scheme_entry_not_dict_skipped() -> None:
     present, names = oi._security_hints_v3(
         {"components": {"securitySchemes": {"good": {"type": "http"}, "bad": "x", "noType": {}}}}
     )
-    assert present and "good:http" in names and "noType" in names
+    assert present
+    assert "good:http" in names
+    assert "noType" in names
 
 
 def test_security_hints_v2_not_dict() -> None:
@@ -32,7 +34,8 @@ def test_security_hints_v2_not_dict() -> None:
 
 def test_security_hints_v2_ok() -> None:
     present, names = oi._security_hints_v2({"securityDefinitions": {"k": {"type": "apiKey"}}})
-    assert present and names == ["k"]
+    assert present
+    assert names == ["k"]
 
 
 def test_operation_security_required_variants() -> None:
@@ -45,7 +48,8 @@ def test_count_operations_edges() -> None:
     assert oi._count_operations(None) == (0, [])
     n, detail = oi._count_operations({"/p": {"get": {"operationId": "g"}, "bogus": 1, "post": {}}, "/q": "not-a-dict"})
     # get -> "g"; post (empty dict is still a dict) -> "post /p"; bogus(int) and /q(str) skipped
-    assert n == 2 and "g" in detail
+    assert n == 2
+    assert "g" in detail
 
 
 def test_root_security_required() -> None:
@@ -133,8 +137,11 @@ def test_corpus_openapi_normalized_ai_surface() -> None:
         "tags": [{"name": "ml"}, {"name": "ai"}, {"notname": 1}],
     }
     out = aic.build_openapi_import_signals_corpus(data)
-    assert "completion api" in out and "vector search" in out and "inference" in out
-    assert "ml" in out and "ai" in out
+    assert "completion api" in out
+    assert "vector search" in out
+    assert "inference" in out
+    assert "ml" in out
+    assert "ai" in out
 
 
 def test_corpus_kubernetes_model_annotations() -> None:

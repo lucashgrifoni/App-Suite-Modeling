@@ -1,2 +1,20 @@
 # Dependências de desenvolvimento + extras usados no CI/Snyk (grafo alinhado a ci.yml).
+#
+# Isto NÃO é um lockfile e não deve ser transformado em pinos aqui. Duas razões medidas:
+#
+# 1. Nada instala a partir deste ficheiro. O CI corre `pip install -e ".[dev,cli,api]"`
+#    directamente (github-ci-cd.yml:89 e :311); o único consumidor é o dependabot, que o lê como
+#    manifesto pip. Pinos aqui descreveriam uma resolução que ninguém executa — e um artefacto de
+#    supply chain que ninguém verifica apodrece em silêncio, que é exactamente o defeito que a
+#    SBOM sem componentes Python já tem.
+#
+# 2. Pinar aqui também não daria alvo ao Trivy. Medido com trivy 0.74.0: o analisador pip só
+#    reconhece o nome exacto `requirements.txt`. `requirements-dev.txt`, `requirements.lock.txt`,
+#    `requirements.lock` e `requirements-lock.txt` são todos ignorados (`Number of
+#    language-specific files num=0`), e um `requirements.txt` com duas linhas produz de imediato
+#    `Target: requirements.txt  Type: pip` e purls `pkg:pypi/...` na SBOM CycloneDX.
+#
+# O lock durável, quando for feito, é um `requirements.txt` (ou outro nome com
+# `--file-patterns 'pip:<nome>'` nos passos do Trivy) gerado com hashes, instalado no CI com
+# `--require-hashes`, apontado também pelo apps/api/Dockerfile e registado no dependabot.
 -e .[dev,cli,api]

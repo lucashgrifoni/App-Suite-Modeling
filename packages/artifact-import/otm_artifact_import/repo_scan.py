@@ -224,7 +224,7 @@ def _scan_js_file(text: str, rel: Path) -> list[dict[str, Any]]:
         out.append(
             {
                 "kind": "route",
-                "message": f"Rota HTTP encontrada em `{rel}`",
+                "message": f"Rota HTTP `{ev}` em `{rel}`",
                 "evidence": ev,
                 "confidence": "medium",
                 "inference_source": src,
@@ -236,7 +236,7 @@ def _scan_js_file(text: str, rel: Path) -> list[dict[str, Any]]:
         out.append(
             {
                 "kind": "route",
-                "message": f"Rota HTTP {method.upper()} (deteção AST leve) em `{rel}`",
+                "message": f"Rota HTTP {method.upper()} `{apath}` (deteção AST leve) em `{rel}`",
                 "evidence": f"{method.upper()} {apath}"[:120],
                 "confidence": "medium",
                 "inference_source": "ast_lite",
@@ -267,11 +267,19 @@ def _scan_js_file(text: str, rel: Path) -> list[dict[str, Any]]:
 
 
 def _dedupe_inferences(inferences: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Remove duplicados por (kind, message), mantendo a primeira ocorrência."""
-    seen: set[tuple[str, str]] = set()
+    """Remove duplicados por (kind, message, evidence), mantendo a primeira ocorrência.
+
+    A evidência entra na chave como rede de segurança. A convenção é a mensagem conter o que
+    distingue o achado -- `Rota FastAPI/Starlette provável \`/diff\` em ...` -- e enquanto isso
+    se cumprir a evidência não muda nada: medido, a varredura deste repositório dá 43 inferências
+    com uma chave e com a outra. Quando não se cumpre, colapsa achados distintos em silêncio, que
+    foi o que aconteceu às rotas Express: quatro declaradas, uma sobrevivente, e as que
+    desapareciam eram `/login`, `/admin/users` e `/accounts/:id`.
+    """
+    seen: set[tuple[str, str, str]] = set()
     unique: list[dict[str, Any]] = []
     for inf in inferences:
-        key = (inf.get("kind", ""), inf.get("message", ""))
+        key = (inf.get("kind", ""), inf.get("message", ""), str(inf.get("evidence", "")))
         if key in seen:
             continue
         seen.add(key)
@@ -432,6 +440,12 @@ def scan_node_express_repo(root: Path) -> dict[str, Any]:
     return {
         "root": str(root),
         "files_scanned": len(files),
+        # Caminhos relativos a `root`, para que o chamador possa recusar escrever por cima de um
+        # ficheiro que acabou de ler. `otm import repo` era o único comando de escrita do CLI que
+        # não passava `sources=` ao emissor, e destruía um `.js` lido segundos antes, com exit 0 —
+        # enquanto `export`, `analyze`, `diff` e `backlog` recusam o caso análogo com exit 1.
+        # Relativos e não absolutos: o artefacto continua portátil, e `root` já vai ao lado.
+        "files_scanned_paths": [str(path.relative_to(root)) for path, _ in files],
         "inferences": unique[:80],
         "directory_hints": dir_hints,
         "corpus_excerpt": "\n\n".join(corpus_chunks)[:8000],

@@ -8,11 +8,16 @@
     "export": "Exportar",
     "history": "Histórico",
     "diff": "Diff",
-    "newModel": "Novo modelo"
+    "newModel": "Novo modelo",
+    "confirmNewModel": "Começar um novo modelo descarta o modelo desta sessão, e esta é a única cópia. Continuar?"
+  },
+  "session": {
+    "confirmReplaceModel": "Isto substitui o modelo desta sessão, e esta é a única cópia. Continuar?"
   },
   "layout": {
     "brandSubtitle": "Threat modeling profissional",
     "footerNote": "A validação e o motor executam no servidor — a UI não duplica regras de negócio.",
+    "skipToContent": "Saltar para o conteúdo",
     "ariaMainNav": "Principal"
   },
   "theme": {
@@ -36,8 +41,19 @@
   "errorBoundary": {
     "title": "Algo correu mal na interface",
     "fallback": "Erro inesperado ao renderizar este ecrã.",
+    "detailsSummary": "Detalhes técnicos",
     "reload": "Recarregar página",
     "home": "Voltar ao início"
+  },
+  "apiErrors": {
+    "timeout": "A API não respondeu a tempo. Verifique se está em execução e acessível e tente novamente.",
+    "unreachable": "Não foi possível alcançar a API. Verifique se está em execução e acessível e tente novamente.",
+    "entityIdPattern": "Use apenas letras, dígitos, `_`, `.` ou `-`, começando por letra, dígito ou `_`.",
+    "reference": "Referência: {{id}} — cite este valor se reportar a falha.",
+    "codes": {
+      "IMPORT_ARTIFACT_INVALID": "Não foi possível ler o artefacto como YAML ou JSON. Verifique que o ficheiro abre num editor sem erros de sintaxe e volte a carregá-lo.",
+      "PDF_DEPENDENCY": "Este servidor não consegue gerar PDFs: o componente opcional de PDF não está disponível. Use \"Markdown premium\" para o mesmo relatório, ou \"Gerar PDF\" mais abaixo nesta página para criar um no navegador. O PDF no servidor volta assim que um operador instalar o extra report."
+    }
   },
   "home": {
     "eyebrow": "Threat modeling orientado a engenharia",
@@ -131,7 +147,8 @@
     "explanationsCode": "explanations",
     "unknownTitle": "Não inferido",
     "unknownSubtitle": "Limitações explícitas deste lote.",
-    "acceptedTypes": "Tipos aceites:"
+    "acceptedTypes": "Tipos aceites:",
+    "selectionClearedByType": "“{{name}}” não é um dos tipos que este artefacto aceita ({{accepted}}), por isso a selecção foi limpa. Escolha um ficheiro compatível."
   },
   "wizard": {
     "eyebrow": "Assistente guiado",
@@ -151,6 +168,7 @@
     "methodology": "Metodologia (alvo da análise)",
     "semanticProfile": "Perfil semântico do template (opcional)",
     "templateSemanticProfilePlaceholder": "ex.: api_backend_rest",
+    "templateSemanticProfileLabel": "Identificador do perfil",
     "semanticProfileBody": "Preencha se usar um template da galeria ou quiser desbloquear perguntas adaptativas. Ex.: <0>internal_admin_portal</0>, <1>file_handling_application</1>, <2>api_backend_rest</2>.",
     "adaptiveTitle": "Perguntas adaptativas ao contexto",
     "adaptiveBody": "Respostas são guardadas como etiquetas no modelo (export JSON inclui). Não substituem validação no servidor.",
@@ -161,6 +179,9 @@
     "componentsSubtitle": "Elementos do diagrama (processos, dados, utilizadores…).",
     "id": "ID",
     "idTrailingWhitespace": "O ID não pode ter espaço em branco no fim. Apague o que vier depois do último carácter visível.",
+    "idDuplicate": "O id “{{id}}” já é usado por outro componente. Os ids têm de ser únicos.",
+    "removeCascadedToFlows_one": "Remover “{{name}}” apagou também 1 fluxo de dados que o referenciava.",
+    "removeCascadedToFlows_other": "Remover “{{name}}” apagou também {{count}} fluxos de dados que o referenciavam.",
     "name": "Nome",
     "type": "Tipo",
     "remove": "Remover",
@@ -176,8 +197,10 @@
     "addFlow": "Adicionar fluxo",
     "reviewTitle": "Pronto para rever",
     "reviewBody": "Valide no servidor e avance para a vista de componentes e fluxos. Pode voltar a qualquer passo para ajustar.",
-    "reviewCountComponents": "{{count}} componentes",
-    "reviewCountFlows": "{{count}} fluxos",
+    "reviewCountComponents_one": "{{count}} componente",
+    "reviewCountComponents_other": "{{count}} componentes",
+    "reviewCountFlows_one": "{{count}} fluxo",
+    "reviewCountFlows_other": "{{count}} fluxos",
     "reviewMethodology": "Metodologia alvo: {{methodology}}",
     "contextSummary": "Resumo do contexto (assistente)",
     "contextSummaryBody": "Estas respostas são enviadas ao motor como etiquetas <0>wz:</0> e influenciam ranking e anti-patterns de forma explicável.",
@@ -209,6 +232,9 @@
       "web_application": "Aplicação web",
       "api_backend": "API / backend",
       "mobile_application": "Mobile",
+      "desktop": "Desktop",
+      "batch_data_pipeline": "Pipeline de dados / batch",
+      "iot_system": "Sistema IoT",
       "hybrid": "Híbrido",
       "other": "Outro"
     }
@@ -226,9 +252,11 @@
     "diagramCardSubtitle": "Por omissão: Editar (arrastar, ligar, apagar, rótulos). Botão «Visualizar» = só leitura.",
     "componentsTitle": "Componentes",
     "flowsTitle": "Fluxos",
-    "items": "{{count}} itens",
-    "links": "{{count}} ligações",
-    "trustTitle": "Trust boundaries",
+    "items_one": "{{count}} item",
+    "items_other": "{{count}} itens",
+    "links_one": "{{count}} ligação",
+    "links_other": "{{count}} ligações",
+    "trustTitle": "Fronteiras de confiança",
     "trustSubtitle": "Notas de inferência, fluxos que cruzam e validação manual (sem editar JSON).",
     "whyPrefix": "Porquê:",
     "crossingFlows": "Fluxos cruzando:",
@@ -281,13 +309,48 @@
     "toastRecommendFail": "Falha ao recomendar metodologia."
   },
   "methodologyMeta": {
-    "stride": { "hint": "Default técnico e mais maduro para web/API/cloud.", "bestFor": "Web, API, cloud-native", "maturity": "Mature", "category": "General security" },
-    "linddun": { "hint": "Privacidade: PII, consentimento, minimização e conformidade.", "bestFor": "LGPD/GDPR e dados pessoais", "maturity": "Evolving", "category": "Privacy" },
-    "nist_data_centric": { "hint": "Protecção de dados críticos e caminhos sensíveis.", "bestFor": "Dados críticos/classificados", "maturity": "Evolving", "category": "Data-centric" },
-    "octave_allegro": { "hint": "Risco de negócio orientado a ativos.", "bestFor": "Ativos e risco organizacional", "maturity": "Evolving", "category": "Business risk" },
-    "cia_die": { "hint": "Análise rápida e comunicação executiva.", "bestFor": "Workshops rápidos", "maturity": "Evolving", "category": "Executive" },
-    "pasta": { "hint": "Análise avançada risk-centric (ataque, vulnerabilidade, impacto).", "bestFor": "Contextos enterprise avançados", "maturity": "Specialized", "category": "Advanced risk" },
-    "plot4ai": { "hint": "Ameaças de IA/LLM (prompt, RAG, agentes, inferência).", "bestFor": "Sistemas AI/LLM", "maturity": "Specialized", "category": "AI/LLM" }
+    "stride": {
+      "hint": "Default técnico e mais maduro para web/API/cloud.",
+      "bestFor": "Web, API, cloud-native",
+      "maturity": "Madura",
+      "category": "Segurança geral"
+    },
+    "linddun": {
+      "hint": "Privacidade: PII, consentimento, minimização e conformidade.",
+      "bestFor": "LGPD/GDPR e dados pessoais",
+      "maturity": "Em evolução",
+      "category": "Privacidade"
+    },
+    "nist_data_centric": {
+      "hint": "Protecção de dados críticos e caminhos sensíveis.",
+      "bestFor": "Dados críticos/classificados",
+      "maturity": "Em evolução",
+      "category": "Centrada em dados"
+    },
+    "octave_allegro": {
+      "hint": "Risco de negócio orientado a ativos.",
+      "bestFor": "Ativos e risco organizacional",
+      "maturity": "Em evolução",
+      "category": "Risco de negócio"
+    },
+    "cia_die": {
+      "hint": "Análise rápida e comunicação executiva.",
+      "bestFor": "Workshops rápidos",
+      "maturity": "Em evolução",
+      "category": "Executiva"
+    },
+    "pasta": {
+      "hint": "Análise avançada risk-centric (ataque, vulnerabilidade, impacto).",
+      "bestFor": "Contextos enterprise avançados",
+      "maturity": "Especializada",
+      "category": "Risco avançado"
+    },
+    "plot4ai": {
+      "hint": "Ameaças de IA/LLM (prompt, RAG, agentes, inferência).",
+      "bestFor": "Sistemas de IA/LLM",
+      "maturity": "Especializada",
+      "category": "IA/LLM"
+    }
   },
   "runEngine": {
     "title": "Executar motor",
@@ -337,8 +400,10 @@
     "fitStride": "Fit STRIDE:",
     "fitPasta": "· PASTA:",
     "fitNist": "· NIST DC:",
-    "precheckReasons": "Razões do pré-check ({{count}} em falta)",
-    "antiPatterns": "Anti-padrões ({{count}})",
+    "precheckReasons_one": "Razão do pré-check ({{count}} em falta)",
+    "precheckReasons_other": "Razões do pré-check ({{count}} em falta)",
+    "antiPatterns_one": "Anti-padrão ({{count}})",
+    "antiPatterns_other": "Anti-padrões ({{count}})",
     "confHint": "· conf. {{hint}}"
   },
   "decisionCockpit": {
@@ -355,7 +420,8 @@
     "noGaps": "Sem lacunas críticas listadas pelo pré-check.",
     "strongSignals": "Sinais fortes",
     "noWizardSignals": "Sem sinais do assistente — preencha o questionário adaptativo para contextualizar.",
-    "antiPatternHits": "{{count}} anti-padrão(ões) de modelagem relevantes ao template.",
+    "antiPatternHits_one": "{{count}} anti-padrão de modelagem relevante ao template.",
+    "antiPatternHits_other": "{{count}} anti-padrões de modelagem relevantes ao template.",
     "auditTrail": "Rastreio da modelação guiada (audit trail)"
   },
   "plot4ai": {
@@ -376,7 +442,8 @@
     "stride": "STRIDE:",
     "liScore": "L×I {{score}}",
     "showing": "A mostrar {{shown}} de {{total}} ameaças ativas.",
-    "noneMatch": "Nenhuma ameaça corresponde aos filtros."
+    "noneMatch": "Nenhuma ameaça corresponde aos filtros.",
+    "noneAtAll": "O motor não produziu ameaças para este modelo. Complete-o no assistente — componentes e fluxos de dados — e volte a correr o motor."
   },
   "explanations": {
     "sectionTitle": "Explicabilidade do resultado",
@@ -393,7 +460,7 @@
     "synergyTitle": "Agrupamentos / sinergia",
     "topActions": "Top acções",
     "itemMeta": " · {{priority}} · esforço {{effort}}",
-    "quickWins": "Quick wins"
+    "quickWins": "Ganhos rápidos"
   },
   "methodologyInsights": {
     "title": "Insights da metodologia",
@@ -444,9 +511,9 @@
     "download": "Descarregar",
     "copyPreview": "Também pode copiar do preview técnico abaixo.",
     "exportResults": "Exportar resultados",
-    "optExecutive": "Executive",
-    "optStandard": "Standard",
-    "optDeep": "Deep technical",
+    "optExecutive": "Executivo",
+    "optStandard": "Padrão",
+    "optDeep": "Técnico aprofundado",
     "artifactLanguage": "Idioma das exportações Markdown / PDF",
     "artifactLangUi": "Igual à interface",
     "artifactLangPtBR": "Português (Brasil)",
@@ -470,6 +537,8 @@
     "helpTitle": "Baseline vs revisão",
     "helpBody": "A sessão actual é a <strong>baseline</strong>. Cole JSON exportado como revisão para comparar evolução estrutural e, opcionalmente, deltas do motor.",
     "revisionJson": "Revisão (JSON)",
+    "revisionFileLabel": "Ficheiro do modelo revisto (JSON)",
+    "readFail": "Não foi possível ler o ficheiro seleccionado.",
     "includeAnalysis": "Incluir análise (executa o motor nos dois documentos no servidor)",
     "packOptional": "Pack (opcional)",
     "comparing": "A comparar…",
@@ -479,10 +548,14 @@
     "toastFail": "Falha ao pedir comparação à API.",
     "invalidJson": "JSON inválido.",
     "expectedDoc": "Esperado objecto com `model` e `metadata` (documento canónico).",
-    "changes": "alterações",
-    "added": "+{{count}} adicionados",
-    "removed": "−{{count}} removidos",
-    "changed": "~{{count}} alterados",
+    "changesCount_one": "{{count}} alteração",
+    "changesCount_other": "{{count}} alterações",
+    "added_one": "+{{count}} adicionado",
+    "added_other": "+{{count}} adicionados",
+    "removed_one": "−{{count}} removido",
+    "removed_other": "−{{count}} removidos",
+    "changed_one": "~{{count}} alterado",
+    "changed_other": "~{{count}} alterados",
     "summary": "Resumo",
     "structural": "Estrutura",
     "analysis": "Análise",
@@ -507,10 +580,11 @@
     "keyInsights": "Insights principais",
     "whyStructured": "Porquê (diff estruturado)",
     "changesBySection": "Mudanças por secção (IDs)",
+    "noSectionChanges": "Nenhuma mudança em nenhuma secção.",
     "aggComponents": "Componentes",
     "aggAssets": "Ativos",
     "aggFlows": "Fluxos de dados",
-    "aggTrust": "Trust boundaries",
+    "aggTrust": "Fronteiras de confiança",
     "aggThreats": "Ameaças (canónicas)",
     "aggMitigations": "Mitigações",
     "fullJson": "JSON completo",
@@ -526,6 +600,7 @@
     "triggerAnalysis": "Análise",
     "triggerExport": "Exportação",
     "maxLi": "L×I máx.:",
+    "summaryLine": "{{title}} · L×I máx. {{score}}",
     "components": "Componentes:",
     "flows": "Fluxos:",
     "heuristicThreats": "Ameaças heurísticas:",
@@ -533,6 +608,7 @@
     "restore": "Restaurar",
     "goExport": "Ir para exportar",
     "pdfSnapshot": "PDF deste snapshot",
+    "pdfSnapshotLoading": "A gerar PDF…",
     "remove": "Remover",
     "confirmRestore": "Restaurar este snapshot substitui o modelo e a análise actuais na sessão. Continuar?",
     "toastRestored": "Snapshot restaurado.",
@@ -540,7 +616,9 @@
     "toastSession": "Sessão actualizada. Escolha os formatos em Exportar.",
     "toastPdfOk": "PDF gerado a partir do snapshot.",
     "toastPdfFail": "Falha ao gerar PDF.",
-    "toastRemoved": "Entrada removida."
+    "toastRemoved": "Entrada removida.",
+    "toastStorageFull": "O armazenamento do browser está cheio: este snapshot não foi adicionado ao Histórico. Remova entradas aí, ou exporte os resultados.",
+    "toastStorageEvicted": "O armazenamento do browser está cheio: snapshots mais antigos foram removidos para guardar este. O Histórico tem agora menos entradas do que o seu limite."
   },
   "templates": {
     "eyebrow": "Catálogo técnico",
@@ -557,13 +635,13 @@
     "cxLow": "Baixa",
     "cxMedium": "Média",
     "cxHigh": "Alta",
-    "catApplications": "Applications",
-    "catCloud": "Cloud & Infra",
-    "catIdentity": "Identity & Access",
-    "catIntegrations": "Integrations",
-    "catAi": "AI & LLM",
-    "catIndustry": "Industry",
-    "catObjective": "Objective-based",
+    "catApplications": "Aplicações",
+    "catCloud": "Cloud e infraestrutura",
+    "catIdentity": "Identidade e acessos",
+    "catIntegrations": "Integrações",
+    "catAi": "IA/LLM",
+    "catIndustry": "Sector",
+    "catObjective": "Por objectivo",
     "idealFor": "Ideal para:",
     "complexityBadge": "Complexidade: {{value}}",
     "packBadge": "Pack:",
@@ -577,24 +655,49 @@
   },
   "adaptive": {
     "internal_admin_portal": {
-      "approval": { "label": "Existem acções privilegiadas que exigem aprovação explícita?", "hint": "Segregação de funções e fluxos de aprovação." },
-      "segregation": { "label": "Há segregação clara de funções entre admin e utilizadores finais?" },
-      "jit": { "label": "Existem privilégios just-in-time ou elevação temporária?" }
+      "approval": {
+        "label": "Existem acções privilegiadas que exigem aprovação explícita?",
+        "hint": "Segregação de funções e fluxos de aprovação."
+      },
+      "segregation": {
+        "label": "Há segregação clara de funções entre admin e utilizadores finais?"
+      },
+      "jit": {
+        "label": "Existem privilégios just-in-time ou elevação temporária?"
+      }
     },
     "file_handling_application": {
-      "quarantine": { "label": "Há quarentena ou zona isolada antes do processamento?" },
-      "scan": { "label": "Antivírus, sandbox ou revalidação de conteúdo após upload?" },
-      "public_objects": { "label": "Objectos armazenados ficam expostos publicamente (URLs públicas)?" }
+      "quarantine": {
+        "label": "Há quarentena ou zona isolada antes do processamento?"
+      },
+      "scan": {
+        "label": "Antivírus, sandbox ou revalidação de conteúdo após upload?"
+      },
+      "public_objects": {
+        "label": "Objectos armazenados ficam expostos publicamente (URLs públicas)?"
+      }
     },
     "api_backend_rest": {
-      "auth": { "label": "Autenticação e autorização estão explicitamente modeladas para clientes?" },
-      "rate_limit": { "label": "Há rate limiting / throttling aplicado?" },
-      "edge_controls": { "label": "Cache, WAF ou políticas fortes no perímetro (gateway) estão representados?" }
+      "auth": {
+        "label": "Autenticação e autorização estão explicitamente modeladas para clientes?"
+      },
+      "rate_limit": {
+        "label": "Há rate limiting / throttling aplicado?"
+      },
+      "edge_controls": {
+        "label": "Cache, WAF ou políticas fortes no perímetro (gateway) estão representados?"
+      }
     },
     "industry_ecommerce": {
-      "checkout": { "label": "O fluxo de checkout e pagamento tem controlos contextuais claros?" },
-      "psp_boundary": { "label": "O processador de pagamentos (PSP) está como terceiro com boundary adequada?" },
-      "sensitive_data": { "label": "Dados sensíveis (conta, encomenda, pagamento) estão cobertos por ativos e classificação?" }
+      "checkout": {
+        "label": "O fluxo de checkout e pagamento tem controlos contextuais claros?"
+      },
+      "psp_boundary": {
+        "label": "O processador de pagamentos (PSP) está como terceiro com boundary adequada?"
+      },
+      "sensitive_data": {
+        "label": "Dados sensíveis (conta, encomenda, pagamento) estão cobertos por ativos e classificação?"
+      }
     }
   }
 }

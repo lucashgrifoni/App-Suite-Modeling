@@ -1,11 +1,24 @@
 # Opcional: instalar com `pip install pre-commit && pre-commit install`
 # Ver docs/architecture/PRE_COMMIT.md
+#
+# `rev` é um SHA de commit, não uma tag. Uma tag é móvel: quem controlar o repositório a
+# montante pode reapontá-la, e este hook executa na máquina do contribuidor, com as credenciais
+# dele, a cada `git commit` — a única dependência executável deste repositório que não corria num
+# runner descartável. Todas as ações GitHub aqui já estão fixadas em SHA; isto alinha o último
+# sítio onde a política não era aplicada. Actualizar com `pre-commit autoupdate --freeze`, que
+# escreve exactamente esta forma (SHA + comentário `frozen:`), nunca com `autoupdate` simples.
+#
+# A versão também foi alinhada: o pin estava em v0.9.10 enquanto o CI instala `ruff>=0.3` e
+# resolve a série 0.16.x, por isso o hook e o gate liam regras diferentes — o hook aprovava
+# código que o CI reprovava, e ao contrário.
 
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.9.10
+    rev: 7c55798a78262d14b2074abf623d8a992ebb70d4 # frozen: v0.16.2
     hooks:
-      - id: ruff
+      # `ruff-check` is the current id; `ruff` still resolves at this commit but only as a
+      # legacy alias, and an alias is one release away from being the reason hooks stop running.
+      - id: ruff-check
         args: [--fix]
         files: ^(packages|apps|tests)/.*\.py$
       - id: ruff-format

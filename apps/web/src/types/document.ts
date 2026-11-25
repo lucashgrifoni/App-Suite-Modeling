@@ -92,6 +92,9 @@ export const SYSTEM_TYPES = [
   { value: "web_application", label: "Aplicação web" },
   { value: "api_backend", label: "API / backend" },
   { value: "mobile_application", label: "Mobile" },
+  { value: "desktop", label: "Desktop" },
+  { value: "batch_data_pipeline", label: "Pipeline de dados" },
+  { value: "iot_system", label: "IoT" },
   { value: "hybrid", label: "Híbrido" },
   { value: "other", label: "Outro" },
 ] as const;

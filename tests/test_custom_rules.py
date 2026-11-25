@@ -52,18 +52,22 @@ def doc():  # noqa: ANN201 - pytest fixture
 
 def test_unknown_field_is_an_error_not_a_rule_that_never_matches() -> None:
     """O modo de falha caro: um typo cria uma regra que nunca dispara e ninguém repara."""
+    typo_on_component = _rule("a", {"component": {"suports_admin_operations": True}})
     with pytest.raises(ValueError, match="unknown component field"):
-        _ruleset(_rule("a", {"component": {"suports_admin_operations": True}}))
+        _ruleset(typo_on_component)
 
+    typo_on_flow = _rule("a", {"flow": {"encripted": False}})
     with pytest.raises(ValueError, match="unknown flow field"):
-        _ruleset(_rule("a", {"flow": {"encripted": False}}))
+        _ruleset(typo_on_flow)
 
 
 def test_error_message_lists_the_valid_fields() -> None:
     """Sem a lista, o autor da regra fica a adivinhar."""
+    rule = _rule("a", {"component": {"nope": 1}})
     with pytest.raises(ValueError) as exc:
-        _ruleset(_rule("a", {"component": {"nope": 1}}))
-    assert "kind" in str(exc.value) and "handles_credentials" in str(exc.value)
+        _ruleset(rule)
+    assert "kind" in str(exc.value)
+    assert "handles_credentials" in str(exc.value)
 
 
 @pytest.mark.parametrize(
@@ -77,22 +81,23 @@ def test_error_message_lists_the_valid_fields() -> None:
     ],
 )
 def test_a_rule_has_exactly_one_non_empty_subject(match: dict[str, object], expected: str) -> None:
+    rule = _rule("a", match)
     with pytest.raises(ValueError, match=expected):
-        _ruleset(_rule("a", match))
+        _ruleset(rule)
 
 
 def test_rule_ids_are_constrained_to_a_slug() -> None:
     """Ids entram em ids de ameaça e em tabelas Markdown; um slug evita escapar em cada saída."""
+    rule = _rule("Regra Com Espaços", {"component": {"kind": "process"}})
     with pytest.raises(ValueError):
-        _ruleset(_rule("Regra Com Espaços", {"component": {"kind": "process"}}))
+        _ruleset(rule)
 
 
 def test_duplicate_rule_ids_are_rejected() -> None:
+    first = _rule("same", {"component": {"kind": "process"}})
+    second = _rule("same", {"component": {"kind": "datastore"}})
     with pytest.raises(ValueError, match="duplicate rule id"):
-        _ruleset(
-            _rule("same", {"component": {"kind": "process"}}),
-            _rule("same", {"component": {"kind": "datastore"}}),
-        )
+        _ruleset(first, second)
 
 
 def test_matchable_fields_exclude_identifiers_and_free_text() -> None:
@@ -166,12 +171,14 @@ def test_asset_rule_targets_the_asset_not_a_component(doc) -> None:  # noqa: ANN
     assert fired == {"a"}
     for t in threats:
         assert t.target_asset_id is not None
-        assert t.target_component_id is None and t.target_data_flow_id is None
+        assert t.target_component_id is None
+        assert t.target_data_flow_id is None
 
 
 def test_asset_rule_rejects_an_unknown_field() -> None:
+    rule = _rule("a", {"asset": {"data_classifcation": "confidential"}})
     with pytest.raises(ValueError, match="unknown asset field"):
-        _ruleset(_rule("a", {"asset": {"data_classifcation": "confidential"}}))
+        _ruleset(rule)
 
 
 def test_the_same_rule_never_fires_twice_on_one_target(doc) -> None:  # noqa: ANN001
@@ -222,7 +229,8 @@ def test_base_heuristics_keep_their_refs_unchanged(doc) -> None:  # noqa: ANN001
     """A mudança no enriquecimento não pode alterar quem não trazia refs."""
     without = analyze_document(doc)
     base = [h for h in without.heuristic_threats if not h.id.startswith("custom_")]
-    assert base and all(h.framework_refs for h in base)
+    assert base
+    assert all(h.framework_refs for h in base)
 
 
 def test_control_hints_come_only_from_rules_that_fired(doc) -> None:  # noqa: ANN001

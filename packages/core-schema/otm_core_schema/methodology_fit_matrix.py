@@ -9,6 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
+from otm_core_schema.ai_context import has_any_stem, has_any_token, looks_like_ai_context
 from otm_core_schema.document import ThreatModelDocument
 from otm_core_schema.enums import ThreatModelMethodology
 
@@ -46,16 +47,25 @@ class _FitContext:
     flow_rich: float
     asset_count: int
     has_import_signals: bool
+    has_ai_context: bool
 
 
 def _build_fit_context(doc: ThreatModelDocument) -> _FitContext:
     bc = doc.business_context
-    has_privacy_cue = bool(
-        bc
-        and (
-            (bc.description and any(x in bc.description.lower() for x in ("pii", "lgpd", "gdpr", "dados pessoais")))
-            or (bc.regulatory_context and "priv" in bc.regulatory_context.lower())
-        )
+    # Os dois campos com o mesmo vocabulário. Antes a `description` era comparada com
+    # `pii`/`lgpd`/`gdpr`/`dados pessoais` e o `regulatory_context` **só** com `"priv"` — que como
+    # subcadeia casa com *privilegiado* e não casa com LGPD nem GDPR. O sinal ficava invertido: as
+    # duas regulações de privacidade mais óbvias do mercado deste produto não contavam, e um
+    # controlo de acesso contava. Ver `tests/test_p3_privacy_cue_reads_the_regulation.py`.
+    #
+    # Acrónimos por token; `privacidade`/`privacy` como radicais próprios, em vez do `priv` solto
+    # que colidia com privilégio.
+    privacy_text = " ".join(
+        filter(None, [(bc.description if bc else None), (bc.regulatory_context if bc else None)])
+    ).lower()
+    has_privacy_cue = bool(bc) and (
+        has_any_token(privacy_text, ("pii", "lgpd", "gdpr"))
+        or has_any_stem(privacy_text, ("dados pessoais", "privacidade", "privacy"))
     )
     return _FitContext(
         has_assets=len(doc.assets) > 0,
@@ -66,6 +76,7 @@ def _build_fit_context(doc: ThreatModelDocument) -> _FitContext:
         flow_rich=_rich_flow_ratio(doc),
         asset_count=len(doc.assets),
         has_import_signals=bool(doc.import_signals_corpus),
+        has_ai_context=looks_like_ai_context(doc),
     )
 
 
@@ -96,7 +107,15 @@ def _fit_linddun(c: _FitContext) -> FitLevel:
 
 
 def _fit_plot4ai(c: _FitContext) -> FitLevel:
-    return "partial" if c.has_import_signals else "weak"
+    # `has_import_signals` sozinho nunca chegava a "strong" e só fica verdadeiro em modelos
+    # vindos do import de artefactos — um modelo escrito à mão não tinha alvo nenhum para
+    # melhorar. O sinal certo é o mesmo que abre a lente PLOT4ai: se o motor considera isto
+    # um sistema de IA, a matriz não pode dizer o contrário.
+    if c.has_ai_context and c.has_assets and c.has_boundaries:
+        return "strong"
+    if c.has_ai_context or c.has_import_signals:
+        return "partial"
+    return "weak"
 
 
 def _fit_octave(c: _FitContext) -> FitLevel:
@@ -122,6 +141,14 @@ _FIT_FUNCS = {
 }
 
 
+def _fit_from_context(ctx: _FitContext, methodology: ThreatModelMethodology) -> FitLevel:
+    fn = _FIT_FUNCS.get(methodology)
+    if fn is not None:
+        return fn(ctx)
+    # Demais metodologias: conservador
+    return "partial" if (ctx.has_assets and ctx.has_boundaries) else "weak"  # pragma: no cover - unreachable
+
+
 def fit_for_methodology(
     doc: ThreatModelDocument,
     methodology: ThreatModelMethodology,
@@ -129,12 +156,7 @@ def fit_for_methodology(
     """
     Avalia se o documento tem contexto suficiente para a metodologia indicada.
     """
-    ctx = _build_fit_context(doc)
-    fn = _FIT_FUNCS.get(methodology)
-    if fn is not None:
-        return fn(ctx)
-    # Demais metodologias: conservador
-    return "partial" if (ctx.has_assets and ctx.has_boundaries) else "weak"  # pragma: no cover - unreachable
+    return _fit_from_context(_build_fit_context(doc), methodology)
 
 
 def build_methodology_fit_matrix(doc: ThreatModelDocument) -> dict[str, str]:
@@ -148,4 +170,7 @@ def build_methodology_fit_matrix(doc: ThreatModelDocument) -> dict[str, str]:
         ThreatModelMethodology.OCTAVE_ALLEGRO,
         ThreatModelMethodology.CIA_DIE,
     )
-    return {m.value: fit_for_methodology(doc, m) for m in keys}
+    # Contexto construído uma vez: `has_ai_context` percorre o documento inteiro para montar
+    # o corpus lexical, e sete chamadas a `fit_for_methodology` faziam-no sete vezes.
+    ctx = _build_fit_context(doc)
+    return {m.value: _fit_from_context(ctx, m) for m in keys}

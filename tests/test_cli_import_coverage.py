@@ -79,7 +79,7 @@ spec:
 """
 
 
-@pytest.fixture()
+@pytest.fixture
 def runner() -> CliRunner:
     return CliRunner()
 
@@ -105,9 +105,11 @@ def test_import_openapi_to_file_with_explain_and_summary(runner: CliRunner, tmp_
         ["import", "openapi", str(spec), "-o", str(out), "--explain-out", str(explain)],
     )
     assert r.exit_code == 0
-    assert out.is_file() and explain.is_file()
+    assert out.is_file()
+    assert explain.is_file()
     payload = json.loads(explain.read_text(encoding="utf-8"))
-    assert "document" in payload and "inferences" in payload
+    assert "document" in payload
+    assert "inferences" in payload
 
 
 def test_import_openapi_missing_file_errors(runner: CliRunner, tmp_path: Path) -> None:
@@ -136,7 +138,8 @@ def test_import_terraform_to_file_with_explain(runner: CliRunner, tmp_path: Path
         ["import", "terraform", str(tf), "-o", str(out), "--explain-out", str(explain)],
     )
     assert r.exit_code == 0
-    assert out.is_file() and explain.is_file()
+    assert out.is_file()
+    assert explain.is_file()
 
 
 def test_import_terraform_missing_path_errors(runner: CliRunner, tmp_path: Path) -> None:
@@ -165,7 +168,8 @@ def test_import_k8s_to_file_with_explain(runner: CliRunner, tmp_path: Path) -> N
         ["import", "k8s", str(man), "-o", str(out), "--explain-out", str(explain)],
     )
     assert r.exit_code == 0
-    assert out.is_file() and explain.is_file()
+    assert out.is_file()
+    assert explain.is_file()
 
 
 def test_import_k8s_missing_path_errors(runner: CliRunner, tmp_path: Path) -> None:

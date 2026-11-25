@@ -31,7 +31,7 @@ export function FileDropZone({
         e.stopPropagation();
       }}
       onDrop={handleDrop}
-      className={`group relative overflow-hidden rounded-otm-xl border-2 border-dashed border-otm-border-strong bg-otm-primary-muted px-6 py-10 text-center transition duration-otm hover:border-otm-mint-400/50 hover:bg-otm-surface-2/80 ${disabled ? "pointer-events-none opacity-50" : ""} ${className}`}
+      className={`group relative overflow-hidden rounded-otm-xl border-2 border-dashed border-otm-border-control bg-otm-primary-muted px-6 py-10 text-center transition duration-otm hover:border-otm-mint-400/50 hover:bg-otm-surface-2/80 ${disabled ? "pointer-events-none opacity-50" : ""} ${className}`}
     >
       <div
         className="pointer-events-none absolute inset-0 opacity-0 transition group-hover:opacity-100"

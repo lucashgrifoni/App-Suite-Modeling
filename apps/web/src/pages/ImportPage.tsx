@@ -1,8 +1,8 @@
-import { useState, type SyntheticEvent } from "react";
+import { useRef, useState, type SyntheticEvent } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router";
 import { importArtifact } from "../api/otmApi";
-import { ApiError } from "../api/client";
+import { apiErrorMessage } from "../api/apiErrorMessage";
 import { Alert } from "../components/ui/Alert";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
@@ -12,16 +12,22 @@ import { PageHeader } from "../components/patterns/PageHeader";
 import { FileDropZone } from "../components/patterns/FileDropZone";
 import { WorkflowGuide } from "../components/onboarding/WorkflowGuide";
 import { ContextHint } from "../components/onboarding/ContextHint";
-import { useSession } from "../context/SessionContext";
+import { normalizeSessionDocument, useSession } from "../context/SessionContext";
 import { useToast } from "../context/ToastContext";
+import { useConfirmReplaceModel } from "../hooks/useConfirmReplaceModel";
+import { fileMatchesAccept } from "../utils/fileAccept";
+import { hashDocument } from "../utils/documentIdentity";
+import { readImportReview, saveImportReview } from "../utils/importReviewStorage";
+import { clearWizardStep } from "../utils/wizardStepStorage";
 import type { ArtifactImportKind, ArtifactInference, ExplanationRecord } from "../types/api";
 import type { OtmDocument } from "../types/document";
 
 export function ImportPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { setDocument } = useSession();
+  const { document: sessionDocument, setDocument } = useSession();
   const toast = useToast();
+  const confirmReplaceModel = useConfirmReplaceModel();
 
   const KINDS: { value: ArtifactImportKind; labelKey: string; accept: string }[] = [
     { value: "openapi", labelKey: "import.kindOpenapi", accept: ".yaml,.yml,.json" },
@@ -31,16 +37,52 @@ export function ImportPage() {
 
   const [kind, setKind] = useState<ArtifactImportKind>("openapi");
   const [file, setFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [inferences, setInferences] = useState<ArtifactInference[] | null>(null);
-  const [unknowns, setUnknowns] = useState<string[] | null>(null);
-  const [structuredExplanations, setStructuredExplanations] = useState<ExplanationRecord[] | null>(null);
+
+  /**
+   * Seeded from sessionStorage, because this panel is the review step the product tells the
+   * user to perform and it used to be erased by a refresh — or by simply visiting another
+   * page — while the draft it describes survived. Only a review whose fingerprint still
+   * matches the document in session is restored. See utils/importReviewStorage.
+   */
+  const [restored] = useState(() => readImportReview(hashDocument(sessionDocument)));
+  const [inferences, setInferences] = useState<ArtifactInference[] | null>(
+    restored?.inferences ?? null,
+  );
+  const [unknowns, setUnknowns] = useState<string[] | null>(restored?.unknowns ?? null);
+  const [structuredExplanations, setStructuredExplanations] = useState<ExplanationRecord[] | null>(
+    restored?.explanations ?? null,
+  );
 
   function confidenceLabel(c: ArtifactInference["confidence"]): string {
     if (c === "high") return t("import.confidenceHigh");
     if (c === "medium") return t("import.confidenceMedium");
     return t("import.confidenceLow");
+  }
+
+  /**
+   * Drop a selection the new artifact type no longer accepts.
+   *
+   * The drop zone updated its "Accepted types" line while "Selected: main2.tf" stayed put,
+   * and submitting a perfectly well-formed Terraform file as OpenAPI answered "The artifact
+   * could not be read as YAML or JSON. Check the file opens in an editor without syntax
+   * errors" — sending the user to debug a healthy file instead of naming the type mismatch.
+   * The input's own value is reset too, or the browser keeps showing the file name next to
+   * a state that no longer has one.
+   *
+   * A `.yaml` that both OpenAPI and Kubernetes accept survives the switch: only a selection
+   * the app has just declared unacceptable is discarded.
+   */
+  function changeKind(next: ArtifactImportKind) {
+    setKind(next);
+    const accepted = KINDS.find((k) => k.value === next)?.accept ?? "";
+    if (!file || fileMatchesAccept(file.name, accepted)) return;
+    setFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    setError(null);
+    toast.info(t("import.selectionClearedByType", { name: file.name, accepted }));
   }
 
   async function onSubmit(e: SyntheticEvent) {
@@ -51,6 +93,7 @@ export function ImportPage() {
       toast.warning(msg);
       return;
     }
+    if (!confirmReplaceModel()) return;
     setError(null);
     setLoading(true);
     setInferences(null);
@@ -58,13 +101,30 @@ export function ImportPage() {
     setStructuredExplanations(null);
     try {
       const res = await importArtifact(kind, file);
-      setDocument(res.document as unknown as OtmDocument);
+      const draft = res.document as unknown as OtmDocument;
+      setDocument(draft);
+      // The draft has never been reviewed, so the wizard opens at step 1 instead of at
+      // whatever step the replaced model had reached. See utils/wizardStepStorage.
+      clearWizardStep();
       setInferences(res.inferences);
       setUnknowns(res.unknowns);
       setStructuredExplanations(res.explanations ?? null);
+      // Stored against the draft's own fingerprint, so the review outlives a refresh but
+      // can never be shown next to a different model. Hashed through the session's own
+      // normaliser: the session stores the normalised document, and a key taken from the
+      // raw response would miss it on every reload.
+      const draftKey = hashDocument(normalizeSessionDocument(draft));
+      if (draftKey !== null) {
+        saveImportReview({
+          documentKey: draftKey,
+          inferences: res.inferences,
+          unknowns: res.unknowns,
+          explanations: res.explanations ?? null,
+        });
+      }
       toast.success(t("import.toastImported"));
     } catch (err) {
-      const msg = err instanceof ApiError ? err.message : t("import.toastFail");
+      const msg = apiErrorMessage(err, t, "import.toastFail");
       setError(msg);
       toast.error(msg);
     } finally {
@@ -115,7 +175,7 @@ export function ImportPage() {
             <Select
               id="kind"
               value={kind}
-              onChange={(e) => setKind(e.target.value as ArtifactImportKind)}
+              onChange={(e) => changeKind(e.target.value as ArtifactImportKind)}
               className="mt-1 w-full max-w-md"
             >
               {KINDS.map((k) => (
@@ -137,6 +197,7 @@ export function ImportPage() {
               </Label>
               <input
                 id="file"
+                ref={fileInputRef}
                 type="file"
                 accept={meta?.accept}
                 className="mx-auto block w-full max-w-sm text-sm text-otm-text-muted file:mr-3 file:rounded-otm-md file:border file:border-otm-border file:bg-otm-surface-2 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-otm-text"

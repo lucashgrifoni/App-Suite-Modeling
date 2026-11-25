@@ -110,7 +110,8 @@ def test_within_band_worsening_does_not_trip_the_band_gate() -> None:
 def test_modified_threat_crossing_up_trips() -> None:
     diff = _diff(modified=[HeuristicThreatDelta(threat_id="m", change="modified", score_before=8, score_after=20)])
     result = evaluate_gate(diff, GatePolicy(fail_on="high"))
-    assert result.tripped and result.worsened_threats[0].severity_after == "critical"
+    assert result.tripped
+    assert result.worsened_threats[0].severity_after == "critical"
 
 
 def test_removals_and_improvements_never_trip() -> None:
@@ -165,7 +166,8 @@ def test_analysis_diff_marks_remapped_pairs_with_the_baseline_score() -> None:
     (added,) = ad.heuristic_threats.added
     assert added.match_kind == "signature_remap"
     assert added.paired_id == "old_id"
-    assert added.score_before == 9.0 and added.score_after == 25.0
+    assert added.score_before == 9.0
+    assert added.score_after == 25.0
     # ... and therefore the gate sees a medium -> critical crossing, not a "new" threat.
     assert evaluate_gate(ad, GatePolicy(fail_on="high")).worsened_threats
 
@@ -309,14 +311,97 @@ def test_methodology_switch_is_reported_as_not_evaluated_never_as_passed() -> No
     assert "methodology" in text.lower()
 
 
-def test_cli_methodology_switch_exits_zero(tmp_path: Path) -> None:
+# ------------------------------------------------------- the gate must judge under the configured lens
+#
+# `otm analyze` accepts `--methodology`, and the shipped composite action forwards its
+# `methodology` input to the Analyze step. The gate step ran `otm diff` with no lens at all, so
+# the analysis the gate judged was not the analysis the user configured. Both directions were
+# reproducible: a green build on a PR that adds a HIGH threat under the configured lens, and a
+# red build for a repo whose lens says the change is harmless.
+
+
+def test_diff_accepts_the_same_methodology_flag_as_analyze() -> None:
+    """A gate that silently ignores the configured lens is a silent-pass hole."""
+    r = CliRunner().invoke(app, ["diff", str(_MINIMAL), str(_MINIMAL), "--methodology", "stride"])
+    assert r.exit_code == 0, r.output
+    assert "No such option" not in r.output
+
+
+def _revised_with_bare_admin_actor(tmp_path: Path) -> Path:
+    """A change whose verdict genuinely depends on the lens.
+
+    Adding an unconnected external actor raises spoofing/repudiation concerns. STRIDE scores
+    the worst of them at 15 — `high`, and below the `critical` bar — while the LINDDUN lens
+    boosts the impact of that same finding to 20 and crosses it. The divergence therefore
+    comes from a lens *rescoring*, which is what a lens is for.
+
+    This used to read the divergence off `cia_die` instead, and justified it as "the CIA-DIE
+    lens — which scores impact on data, not actors — stays below the bar". That explanation
+    was false: `_apply_cia_die_lens` contained no rescoring code at all. It kept the ten
+    highest-scoring active threats and deleted the rest, so the actor's threats were not
+    scored below the bar, they were gone — from the gate, from the SARIF and from the report.
+    The test passed and specified the defect. The lens no longer truncates, and
+    `tests/test_p3_engine_cia_die_lens.py` pins the gate verdict under `cia_die`.
+
+    `_revised_with_new_risk` is unusable here: it also adds an unauthenticated plaintext flow
+    carrying sensitive data, which trips every lens and so could not detect the flag being
+    ignored.
+    """
+    doc = yaml.safe_load(_MINIMAL.read_text(encoding="utf-8"))
+    doc["components"].append({"id": "admin", "name": "Admin", "kind": "external_entity"})
+    out = tmp_path / "revised_actor.otm.yaml"
+    out.write_text(yaml.safe_dump(doc, allow_unicode=True, sort_keys=False), encoding="utf-8")
+    return out
+
+
+def test_gate_verdict_follows_the_requested_methodology(tmp_path: Path) -> None:
+    revised = _revised_with_bare_admin_actor(tmp_path)
+    runner = CliRunner()
+
+    under_stride = runner.invoke(
+        app, ["diff", str(_MINIMAL), str(revised), "--methodology", "stride", "--fail-on", "critical"]
+    )
+    under_linddun = runner.invoke(
+        app, ["diff", str(_MINIMAL), str(revised), "--methodology", "linddun", "--fail-on", "critical"]
+    )
+
+    # If the flag were ignored, both runs would return the same code — which is
+    # exactly the silent-pass/spurious-failure bug this guards.
+    assert under_stride.exit_code == 0, under_stride.output
+    assert under_linddun.exit_code == _GATE_TRIP, under_linddun.output
+
+
+def test_diff_rejects_methodology_and_auto_methodology_together() -> None:
+    """Mirrors the mutual exclusion `otm analyze` already enforces."""
+    r = CliRunner().invoke(
+        app,
+        ["diff", str(_MINIMAL), str(_MINIMAL), "--methodology", "stride", "--auto-methodology"],
+    )
+    assert r.exit_code != 0
+    assert r.exit_code != _GATE_TRIP
+
+
+def test_cli_methodology_switch_fails_the_armed_gate_closed(tmp_path: Path) -> None:
+    """Replaces `test_cli_methodology_switch_exits_zero`, which specified the defect.
+
+    That test asserted exit 0 for exactly the input that turned a FAILED verdict into a green
+    build: the methodology is declared *inside the model under review*, so the author of a PR
+    could add one line and switch the gate off. Exit 0 is the code CI reads as "no new risk", and
+    the engine never judged anything here. The verdict itself is unchanged — still `NOT
+    EVALUATED`, still `tripped=False` — only the exit code, which is the CI contract, is now the
+    same `1` that the engine-version and pack mismatches already return on `diff-analysis`.
+    """
     raw = yaml.safe_load(_MINIMAL.read_text(encoding="utf-8"))
     raw["model"]["methodology"] = "nist_data_centric"
     revised = tmp_path / "meth.otm.yaml"
     revised.write_text(yaml.safe_dump(raw, sort_keys=False), encoding="utf-8")
 
     r = CliRunner().invoke(app, ["diff", str(_MINIMAL), str(revised), "--fail-on", "high"])
-    assert r.exit_code == 0
+
+    assert r.exit_code == 1, r.output
+    assert "NOT EVALUATED" in r.output
+    # Without a gate armed the same pair is still diffable: only the armed path refuses.
+    assert CliRunner().invoke(app, ["diff", str(_MINIMAL), str(revised)]).exit_code == 0
 
 
 def test_within_band_worsening_of_a_non_maximum_threat_is_caught() -> None:

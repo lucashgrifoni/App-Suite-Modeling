@@ -19,6 +19,7 @@ from otm_exporters.analysis_markdown_i18n import (
     risk_category_key,
     risk_category_title,
 )
+from otm_exporters.markdown_text import md_code, md_inline
 
 
 def _target_of(h) -> str:
@@ -150,8 +151,15 @@ def _priority_score(h) -> float:
 def _markdown_view_mode() -> str:
     """
     Controle para comparação before/after sem alterar o JSON.
-    - legacy: sem supressão (apresenta tudo)
-    - harmonized: supressão conservadora + categorias top-N
+
+    - `legacy`: sem a redução de redundância **deste exportador** — apresenta todos os achados
+      activos, sem categorias top-N.
+    - `harmonized` (predefinição): supressão conservadora + categorias top-N.
+
+    O que `legacy` **não** faz, apesar de a docstring anterior prometer "apresenta tudo": repor os
+    achados que o motor já marcou `skipped_as_duplicate` antes de o exportador correr. Esses estão
+    fora de ambas as vistas e só voltam com `OTM_ENGINE_STRIDE_NOISE_SUPPRESSION=0`; quantos são é
+    agora dito no resumo executivo, em vez de o leitor ter de descobrir pelo JSON.
     """
     mode = (os.environ.get("OTM_MARKDOWN_VIEW_MODE") or "harmonized").strip().lower()
     return mode if mode in {"legacy", "harmonized"} else "harmonized"
@@ -210,7 +218,7 @@ def _append_risk_categories_block(
         for h in items:
             tgt = _target_of(h)
             sc = h.risk.score if h.risk.score is not None else "—"
-            lines.append(f"- {h.title} (`{h.id}`) {msgs.risk_item_in_target} `{tgt}` — score {sc}")
+            lines.append(f"- {md_inline(h.title)} (`{h.id}`) {msgs.risk_item_in_target} `{tgt}` — score {sc}")
         lines.append("")
 
 
@@ -248,7 +256,10 @@ def _format_framework_refs_compact(
 ) -> str:
     if not refs:
         return msgs.ref_none
-    parts = [f"`{r.framework}:{r.control_id}`" for r in refs[:max_items]]
+    # `md_code` e não crases à mão: o `control_id` de uma regra personalizada é texto livre do
+    # utilizador, e uma crase nele fechava o span e devolvia o controlo do Markdown ao ficheiro
+    # de regras. Este era o único sink deste ficheiro que ainda recebia o valor cru.
+    parts = [md_code(f"{r.framework}:{r.control_id}") for r in refs[:max_items]]
     if len(refs) > max_items:
         parts.append(msgs.ref_more.format(n=len(refs) - max_items))
     return ", ".join(parts)
@@ -283,16 +294,20 @@ def _append_heuristic_block(
 ) -> None:
     if not harmonized:
         return
-    lines.append(msgs.threats_harmonized_title)
+    # The heading described the harmonized view even when the harmonized view was not what got
+    # rendered: `OTM_MARKDOWN_VIEW_MODE=legacy` printed "(harmonizadas)" over the complete,
+    # unreduced list, so a reader holding the report could not tell which of the two they had.
+    complete = _markdown_view_mode() == "legacy"
+    lines.append(msgs.threats_complete_title if complete else msgs.threats_harmonized_title)
     lines.append("")
-    lines.append(msgs.threats_harmonized_blurb)
+    lines.append(msgs.threats_complete_blurb if complete else msgs.threats_harmonized_blurb)
     lines.append("")
     for h in harmonized[:max_heuristic_rows]:
         tgt = _target_of(h)
         sc = h.risk.score if h.risk.score is not None else "—"
         refs = _format_framework_refs_compact(h.framework_refs, msgs)
         lines.append(
-            f"- **{h.title}** (`{h.id}`) → {msgs.threat_target_label} `{tgt}` — score {sc}  \n"
+            f"- **{md_inline(h.title)}** (`{h.id}`) → {msgs.threat_target_label} `{tgt}` — score {sc}  \n"
             f"  - {msgs.threat_line_fw_label}: {refs}"
         )
     if len(harmonized) > max_heuristic_rows:
@@ -308,7 +323,7 @@ def _append_bullet_section(lines: list[str], header: str, items: list[str], limi
         return
     lines.append(header)
     for item in items[:limit]:
-        lines.append(f"  - {item}")
+        lines.append(f"  - {md_inline(item)}")
 
 
 def _append_plot4ai_ai_context_block(
@@ -321,10 +336,10 @@ def _append_plot4ai_ai_context_block(
         return
     lines.append(msgs.plot4ai_title)
     lines.append("")
-    lines.append(ctx.synopsis)
+    lines.append(md_inline(ctx.synopsis))
     lines.append("")
     if ctx.pattern_tags:
-        lines.append(f"{msgs.plot_patterns} {', '.join(ctx.pattern_tags)}")
+        lines.append(f"{msgs.plot_patterns} {md_inline(', '.join(ctx.pattern_tags))}")
     _append_bullet_section(lines, msgs.plot_surfaces, ctx.primary_risk_surfaces, 6)
     _append_bullet_section(lines, msgs.plot_recs, ctx.prioritized_recommendations, 7)
     _append_bullet_section(lines, msgs.plot_sensitive, ctx.sensitive_data_notes, 5)
@@ -350,13 +365,13 @@ def _append_methodology_insights_block(
     lines.append(msgs.methodology_insights_title)
     lines.append("")
     if insights.profile:
-        lines.append(f"{msgs.profile_prefix} **{insights.profile}**")
+        lines.append(f"{msgs.profile_prefix} **{md_inline(insights.profile)}**")
         lines.append("")
     for b in insights.blocks:
-        lines.append(f"#### {b.title}")
+        lines.append(f"#### {md_inline(b.title)}")
         lines.append("")
         for item in b.items:
-            lines.append(f"- {item}")
+            lines.append(f"- {md_inline(item)}")
         lines.append("")
 
 
@@ -378,6 +393,12 @@ def _append_executive_summary_from_harmonized(
             max_score=s.max_risk_score if s.max_risk_score is not None else "—",
         )
     )
+    # "Active" was accurate but incomplete: the engine had already withheld findings as duplicates
+    # before this exporter saw them, and the report said nowhere how many. A reader comparing the
+    # report against `otm analyze --json-out` found nine findings unaccounted for.
+    withheld = len(result.heuristic_threats) - len(active)
+    if withheld > 0:
+        lines.append(msgs.engine_dedup_notes.format(skipped=withheld))
     lines.append(f"{msgs.methodology_applied} **{result.methodology.value}**")
     if top:
         lines.append(msgs.immediate_priority)
@@ -385,7 +406,7 @@ def _append_executive_summary_from_harmonized(
             tgt = _target_of(h) or msgs.scope_general
             lines.append(
                 msgs.priority_item.format(
-                    title=h.title,
+                    title=md_inline(h.title),
                     score=h.risk.score,
                     tgt=tgt,
                     prep=msgs.risk_item_in_target,
@@ -411,7 +432,7 @@ def _append_explainability_compact(
     for ex in result.explanations[:max_items]:
         cat = getattr(ex.category, "value", ex.category)
         typ = getattr(ex.type, "value", ex.type)
-        lines.append(f"- **[{typ}/{cat}]** {ex.subject} — {ex.message}")
+        lines.append(f"- **[{typ}/{cat}]** {md_inline(ex.subject)} — {md_inline(ex.message)}")
     if len(result.explanations) > max_items:
         lines.append(msgs.explain_more.format(n=len(result.explanations) - max_items))
     lines.append("")
@@ -434,8 +455,8 @@ def _append_quality_block(lines: list[str], result: AnalysisResult, msgs: Analys
             )
         )
     if mc is not None:
-        reasons = "; ".join(mc.reasons[:3]) if mc.reasons else "—"
-        note = mc.note or ""
+        reasons = md_inline("; ".join(mc.reasons[:3])) if mc.reasons else "—"
+        note = md_inline(mc.note or "")
         note_suffix = f" · _{note}_" if note else ""
         lines.append(msgs.completeness_line.format(state=mc.state.value, reasons=reasons, note=note_suffix))
     lines.append("")
@@ -449,7 +470,7 @@ def _append_wizard_context_block(lines: list[str], result: AnalysisResult, msgs:
     lines.append(msgs.wizard_context_blurb)
     lines.append("")
     for note in result.wizard_context_notes[:8]:
-        lines.append(f"- {note}")
+        lines.append(f"- {md_inline(note)}")
     lines.append("")
 
 
@@ -464,12 +485,12 @@ def _append_audit_trail_block(lines: list[str], result: AnalysisResult, msgs: An
         areas = ", ".join(entry.impact_areas) if entry.impact_areas else "—"
         lines.append(
             msgs.audit_entry.format(
-                tag=entry.source_tag,
-                effect=entry.effect,
+                tag=md_inline(entry.source_tag),
+                effect=md_inline(entry.effect),
                 weight=entry.weight,
-                mechanism=entry.mechanism,
-                areas=areas,
-                explanation=entry.explanation,
+                mechanism=md_inline(entry.mechanism),
+                areas=md_inline(areas),
+                explanation=md_inline(entry.explanation),
             )
         )
     lines.append("")
@@ -485,7 +506,7 @@ def _append_model_gaps_block(lines: list[str], result: AnalysisResult, msgs: Ana
     lines.append(msgs.model_gaps_title)
     lines.append("")
     for c in failed:
-        lines.append(f"- [{c.code}] {c.message}")
+        lines.append(f"- [{md_inline(c.code)}] {md_inline(c.message)}")
     lines.append("")
 
 
@@ -496,7 +517,10 @@ def _append_anti_patterns_block(lines: list[str], result: AnalysisResult, msgs: 
     lines.append("")
     for hit in result.anti_pattern_hits[:10]:
         conf = getattr(hit, "confidence_hint", None) or "medium"
-        lines.append(f"- **{hit.name}** (`{hit.id}`){msgs.anti_pattern_confidence.format(conf=conf)}{hit.message}")
+        lines.append(
+            f"- **{md_inline(hit.name)}** (`{hit.id}`)"
+            f"{msgs.anti_pattern_confidence.format(conf=md_inline(conf))}{md_inline(hit.message)}"
+        )
     lines.append("")
 
 
@@ -513,65 +537,78 @@ def _append_guided_context_and_audit(
     _append_anti_patterns_block(lines, result, msgs)
 
 
-def _append_top_groups(lines: list[str], ar: dict[str, Any]) -> None:
+def _append_top_groups(lines: list[str], ar: dict[str, Any], msgs: AnalysisMarkdownMessages) -> None:
     for label, key in (
-        ("Componentes", "top_components"),
-        ("Fluxos", "top_flows"),
-        ("Ativos", "top_assets"),
+        (msgs.agg_top_components, "top_components"),
+        (msgs.agg_top_flows, "top_flows"),
+        (msgs.agg_top_assets, "top_assets"),
     ):
         items = ar.get(key) or []
         if items:
             lines.append(
-                f"- **{label} mais críticos:** "
-                + ", ".join(f"`{x.get('id')}` ({x.get('aggregate_score')})" for x in items[:4])
+                f"- **{label}:** "
+                + ", ".join(f"`{md_inline(x.get('id'))}` ({x.get('aggregate_score')})" for x in items[:4])
             )
 
 
-def _append_aggregate_block(lines: list[str], ar: dict[str, Any]) -> None:
+def _format_severity_distribution(dist: dict[str, Any]) -> str:
+    """`high: 13, medium: 3` — the raw `dict` used to be interpolated, so the delivered report
+    carried a Python repr, quotes and all: ``{'high': 13, 'medium': 3}``."""
+    return ", ".join(f"{band}: {count}" for band, count in dist.items())
+
+
+def _append_aggregate_block(lines: list[str], ar: dict[str, Any], msgs: AnalysisMarkdownMessages) -> None:
     lines.append(
-        f"- **Ameaças activas:** {ar.get('active_threat_count', '—')} · "
-        f"**Score total:** {ar.get('total_risk_score', '—')} · "
-        f"**Média / máx:** {ar.get('mean_risk_score', '—')} / {ar.get('max_risk_score', '—')}"
+        f"- **{msgs.agg_active_threats}:** {ar.get('active_threat_count', '—')} · "
+        f"**{msgs.agg_total_score}:** {ar.get('total_risk_score', '—')} · "
+        f"**{msgs.agg_mean_max}:** {ar.get('mean_risk_score', '—')} / {ar.get('max_risk_score', '—')}"
     )
     dist = ar.get("severity_distribution") or {}
     if dist:
-        lines.append(f"- **Distribuição por severidade:** `{dist}`")
+        lines.append(f"- **{msgs.agg_severity_distribution}:** {_format_severity_distribution(dist)}")
     top_t = ar.get("top_threats") or []
     if top_t:
-        lines.append("- **Top ameaças (score):**")
+        lines.append(f"- **{msgs.agg_top_threats}:**")
         for row in top_t[:5]:
-            lines.append(f"  - `{row.get('id')}` — {row.get('title', '')[:80]} (score {row.get('score')})")
-    _append_top_groups(lines, ar)
+            lines.append(
+                f"  - `{md_inline(row.get('id'))}` — {md_inline(row.get('title', ''))[:80]} (score {row.get('score')})"
+            )
+    _append_top_groups(lines, ar, msgs)
     themes = ar.get("dominant_themes") or []
     if themes:
-        lines.append("- **Temas dominantes:** " + "; ".join(str(t) for t in themes[:6]))
+        lines.append(f"- **{msgs.agg_dominant_themes}:** " + "; ".join(md_inline(t) for t in themes[:6]))
     starters = ar.get("mitigation_starters") or []
     if starters:
-        lines.append("- **Mitigação inicial:**")
+        lines.append(f"- **{msgs.agg_mitigation_starters}:**")
         for st in starters[:6]:
-            lines.append(f"  - {st}")
+            lines.append(f"  - {md_inline(st)}")
 
 
-def _append_cockpit_block(lines: list[str], dc: dict[str, Any]) -> None:
-    lines.append(f"- **Postura:** `{dc.get('risk_posture', '—')}` — {dc.get('headline', '')}")
+def _append_cockpit_block(lines: list[str], dc: dict[str, Any], msgs: AnalysisMarkdownMessages) -> None:
+    lines.append(
+        f"- **{msgs.cockpit_posture}:** `{md_inline(dc.get('risk_posture', '—'))}` — "
+        f"{md_inline(dc.get('headline', ''))}"
+    )
     for kd in dc.get("key_decisions") or []:
-        lines.append(f"  - {kd}")
+        lines.append(f"  - {md_inline(kd)}")
     for nr in (dc.get("next_reviews") or [])[:4]:
-        lines.append(f"  - *Rever:* {nr}")
+        lines.append(f"  - *{msgs.cockpit_next_review}:* {md_inline(nr)}")
 
 
-def _append_aggregate_risk_and_cockpit(lines: list[str], result: AnalysisResult) -> None:
+def _append_aggregate_risk_and_cockpit(
+    lines: list[str], result: AnalysisResult, msgs: AnalysisMarkdownMessages
+) -> None:
     """Bloco compacto de consolidação agregada e cockpit executivo (JSON em AnalysisResult)."""
     ar = result.aggregate_risk
     dc = result.decision_cockpit
     if not ar and not dc:
         return
-    lines.append("### Consolidação de risco e cockpit executivo")
+    lines.append(msgs.aggregate_cockpit_title)
     lines.append("")
     if ar:
-        _append_aggregate_block(lines, ar)
+        _append_aggregate_block(lines, ar, msgs)
     if dc:
-        _append_cockpit_block(lines, dc)
+        _append_cockpit_block(lines, dc, msgs)
     lines.append("")
 
 
@@ -618,7 +655,7 @@ def export_analysis_markdown(
         f"{msgs.bullet_methodology} `{result.methodology.value}`",
     ]
     if result.methodology_recommendation_reason:
-        lines.append(f"{msgs.bullet_recommendation} {result.methodology_recommendation_reason}")
+        lines.append(f"{msgs.bullet_recommendation} {md_inline(result.methodology_recommendation_reason)}")
     if result.industry_pack_id:
         lines.append(f"{msgs.bullet_industry_pack} `{result.industry_pack_id}`")
     lines.extend(
@@ -634,25 +671,25 @@ def export_analysis_markdown(
     if s.max_risk_score is not None:
         lines.append(f"{msgs.bullet_max_score} **{s.max_risk_score}**")
     _append_framework_aggregate(lines, result, msgs)
-    _append_aggregate_risk_and_cockpit(lines, result)
+    _append_aggregate_risk_and_cockpit(lines, result, msgs)
     lines.append("")
     if result.pack_control_hints:
         lines.append(msgs.pack_control_title)
         lines.append("")
         for hint in result.pack_control_hints:
-            lines.append(f"- {hint}")
+            lines.append(f"- {md_inline(hint)}")
         lines.append("")
     if result.structural_findings:
         lines.append(msgs.section_structural)
         lines.append("")
         for f in result.structural_findings:
-            lines.append(f"- [{f.severity}] {f.message}")
+            lines.append(f"- [{f.severity}] {md_inline(f.message)}")
         lines.append("")
     if result.trust_boundary_findings:
         lines.append(msgs.section_trust_flows)
         lines.append("")
         for tbf in result.trust_boundary_findings:
-            lines.append(f"- {tbf.message}")
+            lines.append(f"- {md_inline(tbf.message)}")
         lines.append("")
     _append_guided_context_and_audit(lines, result, msgs)
     active = _active_threats(result)

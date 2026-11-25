@@ -50,7 +50,19 @@ inputs:
   baseline:
     description: >-
       Baseline `.otm.yaml` to diff against. Required for the drift gate — without it,
-      `fail-on` has nothing to compare and is ignored.
+      `fail-on` has nothing to compare and is ignored. On a pull request this path is
+      read from the BASE branch, not from the pull request's checkout (see `baseline-ref`).
+    required: false
+    default: ""
+
+  baseline-ref:
+    description: >-
+      Git revision the `baseline` path is read from. Empty (the default) resolves it from the
+      pull request's base branch, and falls back to the checkout on events that have no base
+      ref (push, tag, schedule, dispatch). Set `worktree` to read the baseline from the
+      checkout even on a pull request — only safe when that file is protected by CODEOWNERS
+      or branch protection, because otherwise the author being judged can rewrite it.
+      Any other value is used verbatim as a revision (`v1.4.0`, a commit SHA, `origin/main`).
     required: false
     default: ""
 
@@ -74,6 +86,17 @@ inputs:
     required: false
     default: "false"
 
+  sarif-category:
+    description: >-
+      Categoria de code scanning sob a qual o SARIF é publicado. **Dê um valor distinto a cada
+      modelo** se correr esta action mais do que uma vez no mesmo repositório e ref: o GitHub
+      indexa os resultados por `(ref, categoria)`, por isso duas invocações com a mesma categoria
+      escrevem no mesmo balde e a segunda substitui a primeira — os alertas dos outros modelos
+      fecham-se como "no longer detected", sem que nenhum passo falhe. Num único modelo, deixe o
+      valor por omissão: mudá-lo deixaria os alertas já publicados órfãos sob a categoria antiga.
+    required: false
+    default: "otm-threat-model"
+
   working-directory:
     description: "Directory to run in."
     required: false
@@ -87,7 +110,10 @@ outputs:
     description: "Path to the analysis JSON, empty when it was disabled."
     value: ${{ steps.analyze.outputs.analysis-file }}
   gate-outcome:
-    description: "One of `passed`, `tripped`, `not-evaluated`, or `skipped` (no baseline given)."
+    description: >-
+      One of `passed`, `tripped`, `not-evaluated` (the gate declined to judge — not a clean bill
+      of health), `error` (the CLI could not run: usage or input error, no verdict either way), or
+      `skipped` (no baseline given). Always written, so an empty value means the step never ran.
     value: ${{ steps.gate.outputs.outcome }}
 
 runs:
@@ -98,9 +124,17 @@ runs:
       with:
         python-version: ${{ inputs.python-version }}
 
+    # Deliberately NOT `working-directory: ${{ inputs.working-directory }}`. That directory is
+    # the caller's checkout, which on a pull request is attacker-influenced by construction,
+    # and `python -m pip` resolves `pip` through `sys.path` with the CWD first. A file named
+    # `pip.py` at the root of the repository being scanned would therefore shadow the real
+    # pip and execute its module body as this job — with the caller's GITHUB_TOKEN, secrets
+    # and `$GITHUB_ENV` — before a single package was installed. The install has no reason to
+    # run in that tree at all, so it runs in the runner's temp directory instead, and
+    # PYTHONSAFEPATH keeps the CWD off `sys.path` as a second, independent barrier.
     - name: Install open-threat-model
       shell: bash
-      working-directory: ${{ inputs.working-directory }}
+      working-directory: ${{ runner.temp }}
       run: |
         set -euo pipefail
         if [ -n "${VERSION}" ]; then
@@ -113,6 +147,7 @@ runs:
         echo "otm $(python -c 'import importlib.metadata as m; print(m.version("open-threat-model"))')"
       env:
         VERSION: ${{ inputs.version }}
+        PYTHONSAFEPATH: "1"
 
     - name: Validate model
       shell: bash
@@ -128,7 +163,11 @@ runs:
       run: |
         set -euo pipefail
         args=("${MODEL}")
-        [ -n "${SARIF_OUT}" ] && args+=(--sarif-out "${SARIF_OUT}")
+        # O URI dentro do SARIF é marcado `%SRCROOT%`, que o GitHub resolve contra a raiz do
+        # repositório, mas o `otm` só vê o caminho relativo a ESTE directório. Sem o prefixo, um
+        # `working-directory` que não seja a raiz faz os alertas apontarem para o caminho errado —
+        # e, se lá existir um ficheiro, para o ficheiro errado.
+        [ -n "${SARIF_OUT}" ] && args+=(--sarif-out "${SARIF_OUT}" --sarif-uri-prefix "${WORKING_DIRECTORY}")
         [ -n "${ANALYSIS_OUT}" ] && args+=(--json-out "${ANALYSIS_OUT}")
         [ -n "${METHODOLOGY}" ] && args+=(--methodology "${METHODOLOGY}")
         [ -n "${PACK}" ] && args+=(--pack "${PACK}")
@@ -141,6 +180,7 @@ runs:
         ANALYSIS_OUT: ${{ inputs.analysis-out }}
         METHODOLOGY: ${{ inputs.methodology }}
         PACK: ${{ inputs.pack }}
+        WORKING_DIRECTORY: ${{ inputs.working-directory }}
 
     # The gate runs after the artifacts exist, so a failing run still leaves the evidence
     # behind — that is the run where you most want the SARIF and the diff.
@@ -156,7 +196,51 @@ runs:
           exit 0
         fi
 
-        args=("${BASELINE}" "${MODEL}" --fail-on "${FAIL_ON}")
+        # WHERE the baseline is read from decides whether this gate means anything. Addressed
+        # as a path, it resolves inside the pull request's own checkout — written by the same
+        # author the gate exists to judge. One pull request that both adds the risky component
+        # AND copies the new model over the baseline file turns a tripped gate into
+        # `gate-outcome: passed` and a green check, with no special access and no crafted
+        # input. So the baseline is a REVISION, not a path in the tree: on a pull request it
+        # is read from the base branch, and the copy sitting in the checkout is ignored.
+        baseline_file="${BASELINE#./}"
+        ref="${BASELINE_REF}"
+        if [ "${ref}" = "worktree" ]; then
+          echo "::warning::baseline-ref: worktree — the drift gate is comparing against '${BASELINE}' as it exists in THIS checkout, which the pull request can rewrite in the same commit. Protect that file with CODEOWNERS or branch protection, or leave baseline-ref empty to read it from the base branch."
+        else
+          if [ -z "${ref}" ] && [ -n "${GITHUB_BASE_REF:-}" ]; then
+            ref="origin/${GITHUB_BASE_REF}"
+            # A shallow checkout (the default) has no remote-tracking branch for the base, so
+            # fetch just its tip — and only when it is genuinely missing, because a --depth=1
+            # fetch into a full clone would make it shallow for every later step in the job.
+            # Failure is not fatal here: the `git show` below is the only thing that decides,
+            # and it fails closed.
+            if ! git rev-parse --verify --quiet "${ref}^{commit}" >/dev/null 2>&1; then
+              git fetch --no-tags --depth=1 origin "+refs/heads/${GITHUB_BASE_REF}:refs/remotes/origin/${GITHUB_BASE_REF}" >/dev/null 2>&1 || true
+            fi
+          fi
+          if [ -n "${ref}" ]; then
+            baseline_file="${RUNNER_TEMP:-/tmp}/otm-gate-baseline.otm.yaml"
+            if ! git show "${ref}:./${BASELINE#./}" > "${baseline_file}" 2>/dev/null; then
+              rm -f "${baseline_file}"
+              echo "outcome=not-evaluated" >> "$GITHUB_OUTPUT"
+              echo "::error::Could not read '${BASELINE}' from '${ref}', so the drift gate has no baseline it can trust and refuses to issue a verdict — a green check here would mean 'not measured', not 'no new risk'. Fix one of: give the checkout access to the base branch (actions/checkout with fetch-depth: 0), name the revision explicitly with baseline-ref, or set baseline-ref: worktree to accept the copy in this checkout as the baseline."
+              {
+                echo "### Threat-model drift gate — NOT EVALUATED"
+                echo ""
+                echo "The baseline could not be read from \`${ref}\`."
+              } >> "$GITHUB_STEP_SUMMARY"
+              exit 1
+            fi
+          fi
+        fi
+
+        # The gate MUST judge under the same lens and pack the Analyze step used. Without
+        # these the gate compared a different threat set than the SARIF it uploads, which
+        # could report `passed` on a PR that adds a HIGH threat under the configured lens.
+        args=("${baseline_file}" "${MODEL}" --fail-on "${FAIL_ON}")
+        [ -n "${METHODOLOGY}" ] && args+=(--methodology "${METHODOLOGY}")
+        [ -n "${PACK}" ] && args+=(--pack "${PACK}")
         [ "${RISK_INCREASE}" = "true" ] && args+=(--fail-on-risk-increase)
 
         set +e
@@ -173,16 +257,17 @@ runs:
           echo '```'
         } >> "$GITHUB_STEP_SUMMARY"
 
+        # The report is the authority on the verdict; the exit code only says whether to fail.
+        # Reading them the other way round hid the non-verdict entirely: this check used to live
+        # inside the `0)` arm, and the CLI never exits 0 in that state -- `gate.py` returns
+        # GATE_NOT_EVALUATED_EXIT_CODE = 1 whenever it declines to judge. So the branch was dead,
+        # `not-evaluated` was unreachable through the documented output, and a legitimate
+        # non-verdict (a methodology switch between the two models) was announced to the caller as
+        # their own usage error, with `gate-outcome` left empty -- which is precisely the
+        # distinction that output exists to make.
         case "${rc}" in
           0)
-            # Exit 0 covers both a real pass and a diff the gate declined to judge (for
-            # example a methodology switch). Distinguish them, because "not evaluated" is
-            # not a clean bill of health and a reader should not mistake it for one.
-            if printf '%s' "${report}" | grep -q "NOT EVALUATED"; then
-              echo "outcome=not-evaluated" >> "$GITHUB_OUTPUT"
-            else
-              echo "outcome=passed" >> "$GITHUB_OUTPUT"
-            fi
+            echo "outcome=passed" >> "$GITHUB_OUTPUT"
             ;;
           3)
             echo "outcome=tripped" >> "$GITHUB_OUTPUT"
@@ -190,8 +275,31 @@ runs:
             exit 1
             ;;
           *)
-            # Exit 1 from the CLI is a usage error, not a policy failure. Do not let a bad
-            # path masquerade as "your model got worse".
+            # `^`, and inside this arm: both matter, and each fixes a different way the verdict
+            # could be written by the person the gate exists to judge.
+            #
+            # The report quotes `metadata.title`, which is free text the schema accepts and
+            # `otm validate` passes. An unanchored `grep "NOT EVALUATED"` therefore matched a
+            # TITLE, and it ran before this `case`, so a pull request that added a HIGH threat and
+            # named its model "NOT EVALUATED" turned a real `tripped` (rc=3) into
+            # `gate-outcome=not-evaluated`, told the operator nothing had been judged, and offered
+            # remediation for a methodology switch that never happened -- in the same summary that
+            # listed the new threat. The build failed either way, so nothing got through; what was
+            # corrupted is the output other jobs read and the explanation a person acts on.
+            #
+            # `THREAT MODEL GATE: NOT EVALUATED` is written by the CLI at the start of its own
+            # line; a title only ever appears inside the summary sentence, so it cannot forge it.
+            # Living in this arm means a tripped gate is rc=3 and can no longer be reclassified at
+            # all. See `tests/test_p4_gate_verdict_is_not_model_controlled.py`.
+            if printf '%s' "${report}" | grep -q "^THREAT MODEL GATE: NOT EVALUATED"; then
+              echo "outcome=not-evaluated" >> "$GITHUB_OUTPUT"
+              echo "::error::The drift gate declined to issue a verdict, so nothing was judged: a green check here would mean 'not measured', not 'no new risk'. Pin one lens with methodology on both sides to get a verdict."
+              exit 1
+            fi
+            # Anything else really is a usage or input error. Do not let a bad path masquerade
+            # as "your model got worse" -- but do not leave `gate-outcome` empty either, or the
+            # caller cannot tell this apart from the non-verdict handled above.
+            echo "outcome=error" >> "$GITHUB_OUTPUT"
             echo "::error::otm diff failed with exit ${rc} (usage or input error, not a gate verdict)."
             exit "${rc}"
             ;;
@@ -199,13 +307,29 @@ runs:
       env:
         MODEL: ${{ inputs.model }}
         BASELINE: ${{ inputs.baseline }}
+        BASELINE_REF: ${{ inputs.baseline-ref }}
         FAIL_ON: ${{ inputs.fail-on }}
         RISK_INCREASE: ${{ inputs.fail-on-risk-increase }}
+        METHODOLOGY: ${{ inputs.methodology }}
+        PACK: ${{ inputs.pack }}
 
-    # `always()` so the findings still reach code scanning on the run where the gate tripped.
+    # `always()` so the findings still reach code scanning on the run where the gate tripped --
+    # that is the run where you most want them visible. But `always()` also covered the run where
+    # `Analyze` itself failed, and then there is no SARIF from this run at all: the step published
+    # whatever happened to sit at that path, including a file committed to the repository being
+    # scanned, labelled as this run's analysis. Whoever controls that repository controls both the
+    # contents of that file and whether the analysis fails, so a clean SARIF uploaded under the
+    # tool's category would close the real alerts as "no longer detected".
+    #
+    # `steps.analyze.outcome == 'success'` separates the two cases the single `always()` had
+    # conflated: "the gate rejected the change" (analysis ran, evidence is real, publish it) from
+    # "the analysis never ran" (nothing of ours to publish). It is deliberately not `steps.gate`:
+    # the gate's verdict must not decide whether findings are visible.
     - name: Upload SARIF
-      if: ${{ always() && inputs.upload-sarif == 'true' && inputs.sarif-out != '' }}
+      if: ${{ always() && steps.analyze.outcome == 'success' && inputs.upload-sarif == 'true' && inputs.sarif-out != '' }}
       uses: github/codeql-action/upload-sarif@d1ba80a13dd99fba24a470575428917156a28b43 # v4.37.5
       with:
         sarif_file: ${{ inputs.working-directory }}/${{ inputs.sarif-out }}
-        category: otm-threat-model
+        # Configurável porque `model` é um ficheiro só: modelar três serviços é correr esta action
+        # três vezes, e sem categorias distintas a última execução apagava os alertas das outras.
+        category: ${{ inputs.sarif-category }}

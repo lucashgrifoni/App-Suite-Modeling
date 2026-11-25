@@ -23,7 +23,8 @@ def test_compare_with_quality_and_methodology_and_pack_deltas() -> None:
     a_rev = analyze_document(doc_b, methodology=ThreatModelMethodology.LINDDUN)
     result = compare_threat_models(doc_a, doc_b, baseline_analysis=a_base, revised_analysis=a_rev)
     md = export_comparison_markdown(result)
-    assert md and isinstance(md, str)
+    assert md
+    assert isinstance(md, str)
 
 
 def test_compare_reverse_direction_improves() -> None:

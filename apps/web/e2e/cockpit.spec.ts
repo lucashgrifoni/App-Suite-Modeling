@@ -132,6 +132,8 @@ test("cockpit: blocos principais com análise enriquecida mockada", async ({ pag
   await expect(page.getByTestId("cockpit-gaps")).toContainText("Falta mapear fluxo sensível");
   await expect(page.getByTestId("cockpit-wizard-signals")).toContainText("Assistente:");
   await expect(page.getByTestId("model-quality-strip")).toBeVisible();
-  await expect(page.getByTestId("model-quality-strip")).toContainText("Anti-padrões");
+  // O fixture tem UM anti-padrão, e a tira escreve a forma singular desde 45b2994. A asserção
+  // exigia o plural, que era exactamente o defeito que esse commit corrigiu: "Anti-padrões (1)".
+  await expect(page.getByTestId("model-quality-strip")).toContainText("Anti-padrão (1)");
   await expect(page.getByTestId("cockpit-guided-trace")).toBeVisible();
 });

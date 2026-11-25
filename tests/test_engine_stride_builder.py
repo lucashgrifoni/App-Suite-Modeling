@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from otm_core_schema import Threat, TreatmentStatus, load_document_from_yaml_path
+from otm_core_schema import RiskAssessment, Threat, TreatmentStatus, load_document_from_yaml_path
 from otm_core_schema.enums import StrideCategory
 from otm_threat_engine.engine_stride_builder import (
     append_component_heuristics,
@@ -63,6 +63,13 @@ def test_append_flow_heuristics_dedupes_tampering_when_cross_and_unencrypted() -
 
 
 def test_append_component_heuristics_marks_duplicate_when_document_covers_key() -> None:
+    """The declared threat carries a risk assessment on purpose.
+
+    A declaration with no `risk` no longer counts as coverage: four content-free lines in the
+    file under review used to mark the matching heuristics duplicate, which removed them
+    before the diff was built and let the CI drift gate pass. See
+    `tests/test_p3_engine_declared_coverage.py`.
+    """
     doc = load_document_from_yaml_path(_MINIMAL)
     comp0 = doc.components[0]
     stride0 = StrideCategory.SPOOFING
@@ -74,6 +81,7 @@ def test_append_component_heuristics_marks_duplicate_when_document_covers_key() 
                     title="cover",
                     stride=stride0,
                     target_component_id=comp0.id,
+                    risk=RiskAssessment(likelihood=3, impact=3),
                     treatment_status=TreatmentStatus.NEW,
                 ),
             ]

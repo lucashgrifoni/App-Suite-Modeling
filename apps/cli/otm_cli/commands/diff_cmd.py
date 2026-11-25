@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 from typing import Annotated
 
@@ -14,10 +13,11 @@ from rich.panel import Panel
 from otm_cli.application.diff_service import run_model_diff
 from otm_cli.commands.bootstrap import console
 from otm_cli.commands.handle_errors import exit_on_cli_error
-from otm_cli.shared.emit import write_json_file
-from otm_cli.shared.enums import DiffFormat
+from otm_cli.shared.emit import input_paths, write_json_file
+from otm_cli.shared.enums import DiffFormat, MethodologyOption
 from otm_cli.shared.errors import CliUserError
-from otm_cli.shared.gate import GATE_TRIP_EXIT_CODE, parse_fail_on, render_gate_result
+from otm_cli.shared.gate import parse_fail_on, report_gate_verdict
+from otm_cli.shared.render import safe
 
 
 def _apply_gate(analysis_diff: AnalysisDiff | None, policy: GatePolicy) -> None:
@@ -28,10 +28,48 @@ def _apply_gate(analysis_diff: AnalysisDiff | None, policy: GatePolicy) -> None:
     """
     if not policy.active or analysis_diff is None:
         return
-    result = evaluate_gate(analysis_diff, policy)
-    print(render_gate_result(result), file=sys.stderr)
-    if result.tripped:
-        raise typer.Exit(GATE_TRIP_EXIT_CODE)
+    # `report_gate_verdict` owns the mapping (a gate that could not judge exits non-zero too) and
+    # the ordering: the code is decided before the report is written, so a closed pipe cannot turn
+    # a tripped gate into a green build.
+    code = report_gate_verdict(evaluate_gate(analysis_diff, policy))
+    if code:
+        raise typer.Exit(code)
+
+
+def _write_diff_json(payload: dict, output: Path, sources: tuple[Path, ...]) -> None:
+    """Write the `--json-out` artifact, or render the CLI error and exit with its code."""
+    try:
+        write_json_file(payload=payload, output=output, sources=sources)
+    except CliUserError as e:
+        exit_on_cli_error(console, e)
+    console.print(f"[green]Diff written to[/green] {safe(output.resolve())}")
+
+
+def _emit_diff(
+    fmt: DiffFormat,
+    *,
+    json_print: str | None,
+    md_text: str | None,
+    panel_text: str | None,
+    summary_only: bool,
+) -> None:
+    """`json` and `markdown` go to stdout verbatim so they stay pipeable; text gets a panel."""
+    if fmt == DiffFormat.json:
+        body = json_print or ""
+        print(body, end="" if body.endswith("\n") else "\n")
+        return
+    if fmt == DiffFormat.markdown:
+        print(md_text or "", end="")
+        return
+    # The panel body carries document titles AND its own `[metadata]`/`[components]`
+    # section headers; unescaped, Rich reads both as style tags and deletes them.
+    console.print(
+        Panel(
+            safe(panel_text or ""),
+            title="diff (summary)" if summary_only else "diff",
+            border_style="blue",
+        )
+    )
 
 
 def register(app: typer.Typer) -> None:
@@ -61,6 +99,29 @@ def register(app: typer.Typer) -> None:
             "-p",
             help="Industry pack when --with-analysis is set.",
         ),
+        rules: Path | None = typer.Option(
+            None,
+            "--rules",
+            help=(
+                "Organisation rule file (YAML) applied to BOTH sides when --with-analysis is set, "
+                "so an org-rule violation introduced by the change trips the gate."
+            ),
+        ),
+        methodology: MethodologyOption | None = typer.Option(
+            None,
+            "--methodology",
+            "-m",
+            help=(
+                "Methodology/engine used for BOTH sides of the comparison "
+                "(stride, linddun, nist_data_centric, octave_allegro, cia_die, pasta, plot4ai). "
+                "Must match the lens `otm analyze` runs, or the gate judges a different threat set."
+            ),
+        ),
+        auto_methodology: bool = typer.Option(
+            False,
+            "--auto-methodology",
+            help="If no explicit methodology, apply automatic recommendation to both sides.",
+        ),
         summary_only: bool = typer.Option(
             False,
             "--summary-only",
@@ -86,8 +147,17 @@ def register(app: typer.Typer) -> None:
     ) -> None:
         """Compare two threat model versions.
 
-        Exit codes: 0 no gate trip · 1 usage error · 3 gate tripped.
+        Exit codes: 0 no gate trip · 1 usage error, including an out-of-range `--fail-on` value,
+        or an armed gate with no verdict (methodology changed between the two models) · 2 parsing
+        error raised by Typer/Click: unknown flag, missing argument, invalid enum value on
+        `--methodology`/`--format` · 3 gate tripped.
         """
+        if methodology is not None and auto_methodology:
+            raise typer.BadParameter(
+                "`--methodology/-m` and `--auto-methodology` are mutually exclusive; pass only one.",
+                param_hint="--methodology / --auto-methodology",
+            )
+
         try:
             policy = GatePolicy(fail_on=parse_fail_on(fail_on), fail_on_risk_increase=fail_on_risk_increase)
         except CliUserError as e:
@@ -105,25 +175,24 @@ def register(app: typer.Typer) -> None:
                 pack=pack,
                 fmt=fmt,
                 summary_only=summary_only,
+                methodology=methodology,
+                auto_methodology=auto_methodology,
+                rules=rules,
             )
         except CliUserError as e:
             exit_on_cli_error(console, e)
 
         if json_out:
-            try:
-                write_json_file(payload=out_payload, output=json_out)
-            except CliUserError as e:
-                exit_on_cli_error(console, e)
-            console.print(f"[green]Diff written to[/green] {json_out.resolve()}")
+            # `rules` também é uma entrada: sem ela em `sources`, `--json-out` sobre o ficheiro
+            # de regras destruía a política da organização e saía 0.
+            _write_diff_json(out_payload, json_out, input_paths(baseline, revised, rules))
 
-        if fmt == DiffFormat.json:
-            body = json_print or ""
-            print(body, end="" if body.endswith("\n") else "\n")
-        elif fmt == DiffFormat.markdown:
-            print(md_text or "", end="")
-        elif summary_only:
-            console.print(Panel(panel_text or "", title="diff (summary)", border_style="blue"))
-        else:
-            console.print(Panel(panel_text or "", title="diff", border_style="blue"))
+        _emit_diff(
+            fmt,
+            json_print=json_print,
+            md_text=md_text,
+            panel_text=panel_text,
+            summary_only=summary_only,
+        )
 
         _apply_gate(analysis_diff, policy)

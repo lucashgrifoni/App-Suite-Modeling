@@ -22,4 +22,4 @@ def export_document_json_obj(doc: ThreatModelDocument) -> dict[str, Any]:
 
 def export_document_json(doc: ThreatModelDocument, *, indent: int = 2) -> str:
     """JSON estável com alias de schema e campos nulos omitidos (UTF-8 literal)."""
-    return json.dumps(export_document_json_obj(doc), indent=indent, ensure_ascii=False)
+    return json.dumps(export_document_json_obj(doc), indent=indent, ensure_ascii=False, allow_nan=False)

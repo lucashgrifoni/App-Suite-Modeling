@@ -38,9 +38,17 @@ Output is written to `gitpage/dist/`.
 npm run preview
 ```
 
-## Optional: repository URLs
+## Repository URLs (required for a fork)
 
-By default, primary links point to `https://github.com`. To wire CTAs to your real repository, create `gitpage/.env`:
+By default, every primary link points to this project's own repository,
+`https://github.com/lucashgrifoni/App-Suite-Modeling` — see `src/config/site.ts`, which explains why
+the fallback is a real repository and not a neutral placeholder. The GitHub Pages workflow never
+sets `VITE_REPO_URL`, so that default always applies.
+
+A fork that skips this step publishes a page whose every call to action — "View on GitHub",
+"Documentation", "Explore the repository", "Contribute", the footer link, and the derived docs and
+issues URLs — sends visitors to someone else's project. To point them at your repository, create
+`gitpage/.env`:
 
 ```bash
 cp .env.example .env
@@ -60,7 +68,7 @@ Rebuild after changing environment variables.
 
 ### Option A — GitHub Actions (recommended)
 
-The repository includes **`.github/workflows/deploy-gitpage.yml`**, which:
+The repository includes **`.github/workflows/deploy-github-pages.yml`**, which:
 
 - runs on **every push** to `main` or `master`, and on **Run workflow** (manual) in the Actions tab;
 - runs `npm ci` and `npm run build` inside `gitpage/`;

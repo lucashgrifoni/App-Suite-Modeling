@@ -21,8 +21,15 @@ Exemplos adicionais de tags semânticas:
 
 - `v7.3.0-rc1`
 - `v7.3.0`
-- `v.7.4` (product line tag aligned with `7.4.0` in `pyproject.toml`)
-- `v.7.5` (product line tag aligned with `7.5.0` in `pyproject.toml`)
+- `v.7.4` (product line tag aligned with `7.4.0` in `pyproject.toml`) — **forma histórica**
+- `v.7.5` (product line tag aligned with `7.5.0` in `pyproject.toml`) — **forma histórica**
+
+> **A forma `v.MAJOR.MINOR` não publica.** As onze tags dessa forma são todas anteriores a
+> 2026-05-28; o gate de release existe desde 2026-08-05, por isso nunca se cruzaram. Tirado o `v`,
+> `v.7.4` dá `.7.4`, que não é uma versão PEP 440, e
+> [`scripts/check_release_version_matches_tag.py`](../scripts/check_release_version_matches_tag.py)
+> recusa com essa razão. Para uma release nova use `vMAJOR.MINOR.PATCH` ou
+> `vMAJOR.MINOR.PATCH-rcN`.
 
 ## Regras práticas
 
