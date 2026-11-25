@@ -28,6 +28,7 @@ from pathlib import Path
 import pytest
 from otm_cli.cli import app
 from otm_cli.io_util import refuse_character_device
+from rich.text import Text
 from typer.testing import CliRunner
 
 _ROOT = Path(__file__).resolve().parents[1]
@@ -44,6 +45,7 @@ def runner() -> CliRunner:
 
 @pytest.fixture(autouse=True)
 def _wide_console(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("TERM", "xterm")
     monkeypatch.setenv("COLUMNS", "300")
 
 
@@ -209,8 +211,9 @@ def test_a_windows_reserved_name_errors_instead_of_hanging(command: str) -> None
 
 
 def _help(runner: CliRunner, command: str) -> str:
-    """Help text with the terminal's line wrapping collapsed, so assertions read as sentences."""
-    return " ".join(_out(runner.invoke(app, [command, "--help"])).split())
+    """Normalize terminal styling and line wrapping before checking the help text."""
+    text = Text.from_ansi(_out(runner.invoke(app, [command, "--help"]))).plain
+    return " ".join(text.split())
 
 
 @pytest.mark.parametrize("command", ["diff", "diff-analysis"])

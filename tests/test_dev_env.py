@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import shutil
+import subprocess
 import sys
 from pathlib import Path
+from unittest.mock import Mock
 
 import pytest
-from dev_env import npm_on_path, repo_root, venv_python
+from dev_env import npm_on_path, npm_popen, npm_run, repo_root, venv_python
 
 
 def test_repo_root_is_repo() -> None:
@@ -37,6 +39,8 @@ def test_npm_on_path_false_without_npm(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_npm_on_path_true_when_npm_found(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(sys, "platform", "linux")
+
     def _which(name: str) -> str | None:
         if name == "npm":
             return "/usr/bin/npm"
@@ -46,13 +50,23 @@ def test_npm_on_path_true_when_npm_found(monkeypatch: pytest.MonkeyPatch) -> Non
     assert npm_on_path() is True
 
 
-def test_npm_on_path_true_npm_cmd_on_windows(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_windows_npm_launches_its_cli_directly(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setattr(sys, "platform", "win32")
+    node = tmp_path / "node.exe"
+    node.touch()
+    cli = tmp_path / "node_modules" / "npm" / "bin" / "npm-cli.js"
+    cli.parent.mkdir(parents=True)
+    cli.touch()
+    paths = {"npm.cmd": str(tmp_path / "npm.cmd")}
+    monkeypatch.setattr(shutil, "which", paths.get)
+    run = Mock()
+    popen = Mock()
+    monkeypatch.setattr(subprocess, "run", run)
+    monkeypatch.setattr(subprocess, "Popen", popen)
 
-    def _which(name: str) -> str | None:
-        if name == "npm.cmd":
-            return r"C:\Program Files\nodejs\npm.cmd"
-        return None
-
-    monkeypatch.setattr(shutil, "which", _which)
+    cwd = tmp_path / "Workspace & checkout"
     assert npm_on_path() is True
+    npm_run(["ci"], cwd=cwd)
+    run.assert_called_once_with([str(node), str(cli), "ci"], cwd=cwd, check=True)
+    assert npm_popen(["run", "dev"], cwd=cwd) is popen.return_value
+    popen.assert_called_once_with([str(node), str(cli), "run", "dev"], cwd=cwd)

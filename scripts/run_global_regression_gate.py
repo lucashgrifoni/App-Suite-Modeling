@@ -7,9 +7,10 @@ import re
 import subprocess
 import sys
 import sysconfig
-import xml.etree.ElementTree as ET
 from datetime import UTC, datetime
 from pathlib import Path
+
+from dev_env import npm_command
 
 ROOT = Path(__file__).resolve().parent.parent
 ARTIFACTS_ROOT = ROOT / "artifacts" / "global-regression-gate"
@@ -122,21 +123,13 @@ def _provision_key() -> str:
     return digest.hexdigest()
 
 
-def _pytest_collected(xml_path: Path) -> int | None:
-    """Quantos testes o junitxml diz que correram, ou `None` se nao houver ficheiro legivel."""
+def _pytest_collected(count_path: Path) -> int | None:
+    """Lê o total recolhido pelo pytest, se o gate recebeu um valor positivo."""
     try:
-        root = ET.parse(xml_path).getroot()
-    except (OSError, ET.ParseError):
+        collected = int(count_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
         return None
-    suites = [root] if root.tag == "testsuite" else list(root.iter("testsuite"))
-    return sum(int(s.get("tests", 0)) for s in suites) or None
-
-
-def _cmd(exe: str) -> str:
-    # Windows resolves npm as npm.cmd when not using a shell
-    if os.name == "nt" and not exe.lower().endswith(".cmd"):
-        return f"{exe}.cmd"
-    return exe
+    return collected if collected > 0 else None
 
 
 def _run(cmd: list[str], *, cwd: Path, out_file: Path, env: dict[str, str] | None = None) -> int:
@@ -149,9 +142,9 @@ def _run(cmd: list[str], *, cwd: Path, out_file: Path, env: dict[str, str] | Non
 
 
 def main() -> int:
-    ts = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+    ts = datetime.now(UTC).strftime("%Y%m%dT%H%M%S%fZ")
     artifacts = ARTIFACTS_ROOT / ts
-    artifacts.mkdir(parents=True, exist_ok=True)
+    artifacts.mkdir(parents=True)
 
     summary: dict[str, object] = {"timestamp_utc": ts, "steps": []}
     steps: list[dict[str, object]] = summary["steps"]  # type: ignore[assignment]
@@ -294,14 +287,26 @@ def main() -> int:
     # Este gate corria dois ficheiros. Nao era decisao registada em lado nenhum: era heranca, e
     # escondia que 38 testes nem coleccionavam (f4df962) alem de deixar ~3480 por executar.
     junit = artifacts / "pytest-full.xml"
-    pystep("pytest_full_suite", ["-m", "pytest", "-q", f"--junitxml={junit}"])
+    count_file = artifacts / "pytest-full-count.txt"
+    pystep(
+        "pytest_full_suite",
+        [
+            "-m",
+            "pytest",
+            "-q",
+            "-p",
+            "scripts.pytest_gate_count",
+            f"--junitxml={junit}",
+            f"--gate-count-file={count_file}",
+        ],
+    )
 
     # E a prova de que o passo acima correu a suite, e nao um pedaco dela. Sem isto, um erro de
     # coleccao, um `testpaths` mal apontado ou um filtro esquecido dariam verde tendo medido
     # quase nada -- que e a classe de defeito que este gate existe para apanhar.
-    collected = _pytest_collected(junit)
+    collected = _pytest_collected(count_file)
     if collected is None:
-        blocked("pytest_full_suite_size", f"sem junitxml legivel em {junit}")
+        blocked("pytest_full_suite_size", f"sem contagem legível em {count_file}")
     else:
         steps.append(
             {
@@ -314,35 +319,46 @@ def main() -> int:
 
     # 3) Web build + e2e smoke (Windows portable path)
     web = ROOT / "apps" / "web"
-    npm = _cmd("npm")
-    step("web_npm_ci", [npm, "ci"], web)
-    step("web_build_portable", [npm, "run", "ci:build:portable"], web)
+    try:
+        npm = npm_command()
+    except FileNotFoundError as error:
+        blocked("web_npm", str(error))
+        npm = []
+
+    def webstep(name: str, args: list[str]) -> None:
+        if not npm:
+            blocked(name, "npm indisponível")
+            return
+        step(name, [*npm, *args], web)
+
+    webstep("web_npm_ci", ["ci"])
+    webstep("web_build_portable", ["run", "ci:build:portable"])
     # As 503 assercoes de vitest. O CI corre-as (`npm test`, job `web`), este gate nao corria —
     # a mesma assimetria que ja tinha sido corrigida neste ficheiro para o `e2e:critical`, e
     # que deixava o veredito local a afirmar mais do que tinha medido. Custa 8 s.
     # A outra ponta da mesma cadeia: `contracts/openapi.json` contra os tipos TS gerados e
     # versionados. Sem os dois lados, uma deriva no meio da cadeia fica invisivel — o contrato
     # pode estar alinhado com a app e os tipos do web nao, ou o inverso.
-    step("web_contracts_check", [npm, "run", "contracts:check"], web)
-    step("web_unit_tests", [npm, "test"], web)
+    webstep("web_contracts_check", ["run", "contracts:check"])
+    webstep("web_unit_tests", ["test"])
     # Avoid npx resolution variance: call local Playwright CLI
     step(
         "web_playwright_install_chromium",
         ["node", r".\node_modules\@playwright\test\cli.js", "install", "chromium"],
         web,
     )
-    step("web_e2e_smoke_portable", [npm, "run", "e2e:smoke:portable"], web)
+    webstep("web_e2e_smoke_portable", ["run", "e2e:smoke:portable"])
     # O conjunto critico tambem, que e o que o CI corre no job `web-e2e-critical`. Com so o
     # smoke aqui, uma asserção de `cockpit.spec.ts` ficou a exigir o plural que 45b2994 tinha
     # acabado de corrigir e o gate local continuou verde. `e2e:hybrid` NAO entra: precisa de
     # ligar um servidor em 127.0.0.1:8000, que nem toda a maquina permite, e um passo que pode
     # falhar por causa do ambiente nao pertence a um gate cujo veredito tem de significar algo.
-    step("web_e2e_critical", [npm, "run", "e2e:critical"], web)
+    webstep("web_e2e_critical", ["run", "e2e:critical"])
     # E o resto dos specs. Ate aqui o CI e este gate corriam so `smoke` + `critical`, o que
     # deixava `diagram`, `pdf`, `history`, `i18n` e `release` sem nenhum gate a executa-los —
     # incluindo o teste que fixa o defeito HIGH de perda de dados do inspector do diagrama
     # (02834b2). O conjunto inteiro corre em 35 s, por isso nao havia troca a fazer.
-    step("web_e2e_rest", [npm, "run", "e2e:rest"], web)
+    webstep("web_e2e_rest", ["run", "e2e:rest"])
 
     (artifacts / "summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
     print(json.dumps(summary, indent=2))

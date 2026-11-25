@@ -468,6 +468,7 @@ def test_fail_on_help_lists_its_allowed_values(monkeypatch: pytest.MonkeyPatch) 
     The width is pinned because Rich wraps help text to the terminal, and a wrapped line would
     split the token and fail the assertion for a reason that has nothing to do with the escape.
     """
+    monkeypatch.setenv("TERM", "xterm")
     monkeypatch.setenv("COLUMNS", "200")
     for command in ("diff", "diff-analysis"):
         out = CliRunner().invoke(app, [command, "--help"]).output
