@@ -146,16 +146,16 @@ otm report examples/minimal.otm.yaml -o REPORT.md
 
 ## Use it in your pipeline
 
-**GitHub Actions composite action.** The `v7.9.0` example validates the model, runs the engine and uploads SARIF. Enable code scanning in the calling repository before using `upload-sarif`.
+**GitHub Actions composite action.** The `v7.10.0` example validates the model, runs the engine and uploads SARIF. Enable code scanning in the calling repository before using `upload-sarif`.
 
 ```yaml
-- uses: lucashgrifoni/App-Suite-Modeling@v7.9.0
+- uses: lucashgrifoni/App-Suite-Modeling@v7.10.0
   with:
     model: threat-model.otm.yaml
     upload-sarif: "true"   # needs `security-events: write` on the job
 ```
 
-By default the action installs the engine from its own checkout. Pass `version: 7.9.0` to install that release from PyPI. The action exposes `sarif-file`, `analysis-file` and `gate-outcome`. Consult the `action.yml` at the exact ref you use for supported inputs and outcome values.
+By default the action installs the engine from its own checkout. Pass `version: 7.10.0` to install that release from PyPI. The action exposes `sarif-file`, `analysis-file` and `gate-outcome`. Consult the `action.yml` at the exact ref you use for supported inputs and outcome values.
 
 The action in this checkout also accepts an organisation `rules` file for analysis
 and drift. The SARIF export from a local YAML model points to the target entity's
@@ -182,20 +182,20 @@ If the base revision cannot be read, the newer action reports `gate-outcome: not
 ```yaml
 repos:
   - repo: https://github.com/lucashgrifoni/App-Suite-Modeling
-    rev: v7.9.0
+    rev: v7.10.0
     hooks:
       - id: otm-validate
 ```
 
 The hook validates every changed `.otm.yaml` against the canonical schema. `otm validate` accepts several files, so pre-commit needs no shell loop.
 
-> **Pin the commit SHA, not the tag.** The quick-start and pre-commit examples use `v7.9.0` for readability. A Git tag can move. Pin a 40-character commit SHA in both `uses:` and pre-commit's `rev:` to keep the code executed in CI and on developer machines fixed:
+> **Pin the commit SHA, not the tag.** The quick-start and pre-commit examples use `v7.10.0` for readability. A Git tag can move. Pin a 40-character commit SHA in both `uses:` and pre-commit's `rev:` to keep the code executed in CI and on developer machines fixed:
 >
 > ```yaml
-> - uses: lucashgrifoni/App-Suite-Modeling@<commit-sha>   # v7.9.0
+> - uses: lucashgrifoni/App-Suite-Modeling@<commit-sha>   # v7.10.0
 > ```
 >
-> Resolve it with `gh api repos/lucashgrifoni/App-Suite-Modeling/commits/v7.9.0 --jq .sha`, or let `pre-commit autoupdate --freeze` and Dependabot keep it current through reviewable pull requests. This repository holds itself to the same rule: every action reference in `.github/workflows/` and its own ruff hook are pinned to commit SHAs.
+> Resolve it with `gh api repos/lucashgrifoni/App-Suite-Modeling/commits/v7.10.0 --jq .sha`, or let `pre-commit autoupdate --freeze` and Dependabot keep it current through reviewable pull requests. This repository holds itself to the same rule: every action reference in `.github/workflows/` and its own ruff hook are pinned to commit SHAs.
 
 **Exit codes, for scripting:** `0` no gate trip · `1` usage error, or an armed gate that could not issue a verdict (the two models are not comparable — different methodology, engine version or pack) · `2` bad flag or bad flag value · `3` gate tripped. Only `0` means "no new risk": a script that treats anything else as a pass is treating a refusal as a clean bill of health. The gate report goes to stderr, so `--format json` keeps stdout parseable. Full recipes in [`docs/CI_AND_SECURITY_EVIDENCE.md`](docs/CI_AND_SECURITY_EVIDENCE.md) §8.
 

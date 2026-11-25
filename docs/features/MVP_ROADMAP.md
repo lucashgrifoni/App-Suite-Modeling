@@ -1,8 +1,8 @@
 # Plano de implementação — MVP
 
 > **Registo histórico, não o roadmap actual.** Este documento é o plano que levou o projecto ao MVP.
-> As fases 0 a 5 foram entregues; a versão corrente é a **7.9.0**, e a última alteração a este
-> ficheiro é de **2026-04-07**. As caixas por marcar descrevem o estado de então, não trabalho
+> As fases 0 a 5 foram entregues. A versão corrente consta no [índice de documentação](../README.md).
+> O plano original é de **2026-04-07**. As caixas por marcar descrevem o estado de então, não trabalho
 > pendente — preserva-se por valor histórico, como registo de como o produto foi construído.
 >
 > Para o que existe hoje: [`../README.md`](../README.md) e as páginas em
