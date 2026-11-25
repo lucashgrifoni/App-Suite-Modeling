@@ -13,7 +13,7 @@ export function Surface({
 >) {
   const SURFACE_STYLES: Record<NonNullable<typeof variant>, string> = {
     flat: "bg-transparent",
-    inset: "border border-otm-border/60 bg-otm-surface-1/50 shadow-inner",
+    inset: "border shadow-inner",
     raised: "border border-otm-border bg-otm-surface-2 shadow-otm-sm",
   };
   const v = SURFACE_STYLES[variant];

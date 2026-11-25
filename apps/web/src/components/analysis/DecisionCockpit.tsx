@@ -28,7 +28,7 @@ export function DecisionCockpit({ analysis }: Readonly<{ analysis: AnalysisResul
     <div data-testid="decision-cockpit">
       <Card className="space-y-4 p-5" variant="elevated">
         <div
-          className="rounded-otm-md border border-otm-border/60 bg-otm-surface-2/35 px-3 py-3"
+          className="rounded-otm-md border px-3 py-3"
           data-testid="cockpit-executive-strip"
         >
           <p className="text-[11px] font-semibold uppercase tracking-wide text-otm-text-subtle">
@@ -126,7 +126,7 @@ export function DecisionCockpit({ analysis }: Readonly<{ analysis: AnalysisResul
             {analysis.wizard_signal_trace && analysis.wizard_signal_trace.length > 0 ? (
               <details
                 data-testid="cockpit-guided-trace"
-                className="mt-3 rounded-otm-md border border-otm-border/70 bg-otm-surface-2/40 px-2 py-2"
+                className="mt-3 rounded-otm-md border px-2 py-2"
               >
                 <summary className="cursor-pointer text-[11px] font-semibold text-otm-text-subtle">
                   {t("decisionCockpit.auditTrail")}

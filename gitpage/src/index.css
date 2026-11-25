@@ -1,6 +1,21 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@config "../tailwind.config.js";
+
+@theme {
+  --blur-sm: 4px;
+  --color-emerald-200: #a7f3d0;
+  --color-emerald-300: #6ee7b7;
+}
+
+@layer base {
+  *,
+  ::before,
+  ::after,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: #e5e7eb;
+  }
+}
 
 :root {
   --color-midnight: #0c124c;

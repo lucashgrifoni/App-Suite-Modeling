@@ -37,7 +37,7 @@ export function SiteNav() {
           href="#top"
           className="group flex items-center gap-2 font-semibold tracking-tight text-mist"
         >
-          <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-mint/40 bg-mint/10 text-mint shadow-mint/20 shadow-[0_0_24px_-4px] transition group-hover:border-mint/70">
+          <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-mint/40 bg-mint/10 text-mint shadow-[0_0_24px_-4px_color-mix(in_srgb,var(--color-mint)_20%,transparent)] transition group-hover:border-mint/70">
             ASM
           </span>
           <span className="hidden sm:inline">App Suite Modeling</span>

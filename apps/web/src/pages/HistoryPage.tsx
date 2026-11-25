@@ -91,7 +91,7 @@ function HistoryCard({
           {t("history.heuristicThreats")} {countActiveThreats(entry)}
         </span>
       </div>
-      <details className="mt-3 rounded-otm-md border border-otm-border bg-otm-surface-1/50 p-2">
+      <details className="mt-3 rounded-otm-md border border-otm-border p-2">
         <summary className="cursor-pointer text-xs font-medium text-otm-text">
           {t("history.snapshotSummary")}
         </summary>

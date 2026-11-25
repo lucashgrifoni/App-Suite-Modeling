@@ -25,7 +25,7 @@ export function ThemeToggle() {
         id={id}
         value={preference}
         onChange={(e) => setPreference(e.target.value as ThemePreference)}
-        className="rounded-full border border-otm-border bg-otm-surface-2 px-2 py-1.5 text-xs font-medium text-otm-text focus:outline-none focus:ring-2 focus:ring-[color:var(--otm-ring)]"
+        className="rounded-full border border-otm-border bg-otm-surface-2 px-2 py-1.5 text-xs font-medium text-otm-text focus:outline-hidden focus:ring-2 focus:ring-[color:var(--otm-ring)]"
       >
         {options.map((o) => (
           <option key={o.value} value={o.value}>

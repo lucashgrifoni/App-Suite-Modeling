@@ -10,12 +10,12 @@ type InputProps = InputHTMLAttributes<HTMLInputElement> & {
 };
 
 const BASE =
-  "w-full rounded-otm-md border bg-otm-surface-1 px-3 py-2 text-sm text-otm-text placeholder:text-otm-text-subtle transition duration-otm ease-otm focus:outline-none focus:ring-2 disabled:cursor-not-allowed disabled:opacity-60";
+  "w-full rounded-otm-md border bg-otm-surface-1 px-3 py-2 text-sm text-otm-text placeholder:text-otm-text-subtle transition duration-otm ease-otm focus:outline-hidden focus:ring-2 disabled:cursor-not-allowed disabled:opacity-60";
 
 // --otm-border-control garante os 3:1 da WCAG 1.4.11 na fronteira do controlo;
 // --otm-border (1.27:1) deixava o campo sem limite percetível no tema escuro.
 const RESTING =
-  "border-otm-border-control focus:border-otm-mint-400/50 focus:ring-[color:var(--otm-ring)]";
+  "border-otm-border-control focus:ring-[color:var(--otm-ring)]";
 
 const INVALID =
   "border-otm-danger focus:border-otm-danger focus:ring-[color:var(--otm-danger)]";

@@ -290,7 +290,7 @@ export function WizardPage() {
                   </Select>
                   <p className="mt-1 text-xs text-otm-text-muted">{methodologyHintText()}</p>
                 </div>
-                <details className="rounded-otm-md border border-otm-border/80 bg-otm-surface-2/40 px-3 py-2 text-sm">
+                <details className="rounded-otm-md border px-3 py-2 text-sm">
                   <summary className="cursor-pointer font-medium text-otm-text">
                     {t("wizard.semanticProfile")}
                   </summary>
@@ -328,7 +328,7 @@ export function WizardPage() {
                 </details>
                 {templateProfile && adaptivePrompts.length > 0 ? (
                   <details
-                    className="rounded-otm-md border border-otm-mint-500/20 bg-emerald-950/10 px-3 py-2 text-sm"
+                    className="rounded-otm-md border bg-emerald-950/10 px-3 py-2 text-sm"
                     open
                   >
                     <summary className="cursor-pointer font-medium text-emerald-900 dark:text-emerald-100">
@@ -398,7 +398,7 @@ export function WizardPage() {
                     // every keystroke, unmounts the row mid-edit and drops focus to <body>,
                     // so the field accepts one character per click.
                     key={componentRowKeys.keyAt(idx)}
-                    className="grid gap-2 rounded-otm-md border border-otm-border bg-otm-surface-1/80 p-3 sm:grid-cols-12 sm:items-end"
+                    className="grid gap-2 rounded-otm-md border border-otm-border p-3 sm:grid-cols-12 sm:items-end"
                   >
                     <div className="sm:col-span-3">
                       <Label htmlFor={`comp-${idx}-id`}>{t("wizard.id")}</Label>
@@ -584,7 +584,7 @@ export function WizardPage() {
                     // the flow-ID rename propagation below, whose onFocus/onBlur pair cannot
                     // survive an element destroyed mid-edit.
                     key={flowRowKeys.keyAt(idx)}
-                    className="grid gap-2 rounded-otm-md border border-otm-border bg-otm-surface-1/80 p-3 sm:grid-cols-12 sm:items-end"
+                    className="grid gap-2 rounded-otm-md border border-otm-border p-3 sm:grid-cols-12 sm:items-end"
                   >
                     <div className="sm:col-span-2">
                       <Label htmlFor={`flow-${idx}-id`}>{t("wizard.flowId")}</Label>
@@ -756,7 +756,7 @@ export function WizardPage() {
                 <li>{t("wizard.reviewMethodology", { methodology })}</li>
               </ul>
               {wizardSummaryLines(adaptivePrompts).length > 0 ? (
-                <details className="mt-4 rounded-otm-md border border-otm-border/80 bg-otm-surface-2/50 px-3 py-2 text-sm">
+                <details className="mt-4 rounded-otm-md border px-3 py-2 text-sm">
                   <summary className="cursor-pointer font-medium text-otm-text">
                     {t("wizard.contextSummary")}
                   </summary>

@@ -157,7 +157,7 @@ export function TemplatesPage() {
             id="tpl-cat"
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            className="flex h-10 w-full rounded-otm-md border border-otm-border bg-otm-surface px-3 text-sm text-otm-text shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-otm-accent"
+            className="flex h-10 w-full rounded-otm-md border border-otm-border bg-[color:Field] px-3 text-sm text-otm-text shadow-sm focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-otm-accent"
           >
             {categoryOptions.map((o) => (
               <option key={o.value || "all"} value={o.value}>
@@ -172,7 +172,7 @@ export function TemplatesPage() {
             id="tpl-cx"
             value={complexity}
             onChange={(e) => setComplexity(e.target.value)}
-            className="flex h-10 w-full rounded-otm-md border border-otm-border bg-otm-surface px-3 text-sm text-otm-text shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-otm-accent"
+            className="flex h-10 w-full rounded-otm-md border border-otm-border bg-[color:Field] px-3 text-sm text-otm-text shadow-sm focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-otm-accent"
           >
             {complexityOptions.map((o) => (
               <option key={o.value || "any"} value={o.value}>

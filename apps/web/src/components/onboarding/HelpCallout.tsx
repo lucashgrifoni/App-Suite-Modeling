@@ -16,7 +16,7 @@ export function HelpCallout({
   const styles =
     tone === "tip"
       ? "border-otm-border-strong bg-otm-primary-muted"
-      : "border-otm-border bg-otm-surface-2/90";
+      : "border-otm-border";
   return (
     <aside
       className={`rounded-otm-lg border px-4 py-3 text-sm leading-relaxed text-otm-text-muted ${styles} ${className}`}

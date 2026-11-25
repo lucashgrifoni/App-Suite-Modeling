@@ -73,7 +73,7 @@ export function AiSection() {
         <motion.div style={{ x }} className="relative min-h-[320px] md:min-h-[400px]">
           <div className="absolute inset-0 rounded-3xl border border-mint/20 bg-gradient-to-br from-mint/10 via-transparent to-steel/20 p-[1px] shadow-[0_0_80px_-20px_rgba(8,185,139,0.7)]">
             <div className="relative h-full overflow-hidden rounded-3xl bg-midnight/80 p-8 backdrop-blur-xl">
-              <div className="font-mono text-[11px] leading-relaxed text-steel md:text-xs">
+              <div className="font-mono text-[11px] leading-relaxed text-steel md:text-xs/4">
                 <p className="text-mint">// plot4ai · structured threat trace</p>
                 <p className="mt-4 text-mist/90">
                   <span className="text-steel">model_surface:</span> inference_api

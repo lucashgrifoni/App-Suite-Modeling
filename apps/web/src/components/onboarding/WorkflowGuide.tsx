@@ -50,7 +50,7 @@ export function WorkflowGuide({
           <li key={s.id}>
             <Link
               to={s.to}
-              className="flex h-full flex-col rounded-otm-md border border-otm-border bg-otm-surface-2/80 px-3 py-3 shadow-otm-sm transition duration-otm hover:border-otm-border-strong hover:shadow-otm-glow focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--otm-ring)]"
+              className="flex h-full flex-col rounded-otm-md border border-otm-border px-3 py-3 shadow-otm-sm transition duration-otm hover:border-otm-border-strong hover:shadow-otm-glow focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--otm-ring)]"
             >
               <span className="text-[10px] font-semibold uppercase tracking-wider text-otm-text-subtle">
                 {String(idx + 1).padStart(2, "0")}
