@@ -8,7 +8,12 @@ from otm_artifact_import.helm_import import import_helm_path, import_helm_text
 from otm_artifact_import.k8s_import import import_kubernetes_path, import_kubernetes_text, kubernetes_manifest_files
 from otm_artifact_import.openapi_import import import_openapi_path, import_openapi_text
 from otm_artifact_import.repo_scan import scan_node_express_repo
-from otm_artifact_import.terraform_import import import_terraform_path, import_terraform_text, terraform_files
+from otm_artifact_import.terraform_import import (
+    import_terraform_path,
+    import_terraform_path_with_sources,
+    import_terraform_text,
+    terraform_files,
+)
 from otm_artifact_import.types import ArtifactImportResult, InferenceRecord
 
 __all__ = [
@@ -23,6 +28,7 @@ __all__ = [
     "import_openapi_path",
     "import_openapi_text",
     "import_terraform_path",
+    "import_terraform_path_with_sources",
     "import_terraform_text",
     "scan_node_express_repo",
 ]

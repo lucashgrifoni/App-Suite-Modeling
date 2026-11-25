@@ -1,8 +1,7 @@
 """
 Importação assistida a partir de ficheiros Terraform (.tf).
 
-Parsing intencionalmente conservador: extracção de blocos `resource` por chaves `{}`.
-Não executa `terraform graph`; não resolve módulos ou expressões HCL complexas.
+Parsing conservador de blocos `resource` e fontes literais de módulos locais.
 """
 
 from __future__ import annotations
@@ -15,7 +14,8 @@ from otm_core_schema import Component, DataFlow, TrustBoundary
 from otm_core_schema.enums import ComponentKind, IndustrySector, SystemType
 
 from otm_artifact_import.ai_import_corpus import build_terraform_import_signals_corpus
-from otm_artifact_import.builders import assemble_draft, slug_id
+from otm_artifact_import.builders import assemble_draft, stable_slug_id
+from otm_artifact_import.terraform_modules import read_local_modules
 from otm_artifact_import.types import ArtifactImportResult, InferenceRecord
 
 _BRACE = re.compile(r"[{}]")
@@ -112,8 +112,11 @@ def _map_resource_kind(rtype: str) -> tuple[ComponentKind, str | None]:
 
 
 def import_terraform_text(text: str, *, filename: str = "bundle.tf") -> ArtifactImportResult:
+    return _import_modules([("", text)], filename=filename, unknowns=[])
+
+
+def _import_modules(modules: list[tuple[str, str]], *, filename: str, unknowns: list[str]) -> ArtifactImportResult:
     inferences: list[InferenceRecord] = []
-    unknowns: list[str] = []
     inf_idx = 0
 
     def inf(msg: str, conf: str, *, related: list[str] | None = None) -> None:
@@ -129,11 +132,15 @@ def import_terraform_text(text: str, *, filename: str = "bundle.tf") -> Artifact
             )
         )
 
+    text = "\n\n".join(content for _, content in modules)
     if not text.strip():
         unknowns.append("Ficheiro Terraform vazio.")
-        text = "# empty"
 
-    resources = list(_iter_resource_blocks(text))
+    resources = [
+        (prefix, rtype, name, body)
+        for prefix, content in modules
+        for rtype, name, body in _iter_resource_blocks(content)
+    ]
     if not resources:
         unknowns.append(
             'Nenhum bloco `resource "tipo" "nome"` encontrado — ficheiro pode usar só módulos ou sintaxe não suportada.'
@@ -154,15 +161,15 @@ def import_terraform_text(text: str, *, filename: str = "bundle.tf") -> Artifact
         ),
     ]
 
-    comp_by_key: dict[tuple[str, str], str] = {}
     public_gateways: list[str] = []
 
-    for rtype, name, body in resources:
+    for prefix, rtype, name, body in resources:
         kind, tech = _map_resource_kind(rtype)
-        cid = slug_id(f"{rtype}_{name}", prefix="tf")
-        comp_by_key[(rtype, name)] = cid
+        address = f"{prefix}{rtype}.{name}"
+        readable_id = f"tf_{address}" if prefix else f"{rtype}_{name}"
+        cid = stable_slug_id(readable_id, prefix, rtype, name)
         boundary = tb_cloud
-        desc = f"Recurso Terraform `{rtype}.{name}` (corpo não interpretado linha-a-linha)."
+        desc = f"Recurso Terraform `{address}` (corpo não interpretado linha-a-linha)."
         wide_net = _public_ingress_hint(body)
         if kind == ComponentKind.GATEWAY and wide_net:
             boundary = tb_ext
@@ -170,19 +177,24 @@ def import_terraform_text(text: str, *, filename: str = "bundle.tf") -> Artifact
         elif wide_net:
             inf(
                 "Regra ou bloco com `0.0.0.0/0` em "
-                f"`{rtype}.{name}` — possível superfície alargada; confirmar SG/LB/firewall real.",
+                f"`{address}` — possível superfície alargada; confirmar SG/LB/firewall real.",
                 "low",
                 related=[cid],
             )
         components.append(
             Component(
                 id=cid,
-                name=f"{rtype}.{name}",
+                name=address,
                 kind=kind,
                 description=desc,
                 technology=tech,
                 in_trust_boundary=boundary,
-                metadata={"terraform_type": rtype, "terraform_name": name, "artifact": filename},
+                metadata={
+                    "terraform_type": rtype,
+                    "terraform_name": name,
+                    "terraform_address": address,
+                    "artifact": filename,
+                },
             )
         )
 
@@ -212,7 +224,7 @@ def import_terraform_text(text: str, *, filename: str = "bundle.tf") -> Artifact
         for gw in public_gateways:
             flows.append(
                 DataFlow(
-                    id=slug_id(f"flow_ext_{gw}", prefix="fl"),
+                    id=stable_slug_id(f"flow_ext_{gw}", ext_clients, gw),
                     name=f"Tráfego externo → {gw}",
                     from_component=ext_clients,
                     to_component=gw,
@@ -254,26 +266,32 @@ def import_terraform_text(text: str, *, filename: str = "bundle.tf") -> Artifact
         unknowns=unknowns,
         extra_assumptions=[
             "Relações entre recursos não seguem dependências `depends_on` nem `terraform graph`.",
-            "Módulos e ficheiros `.tf.json` são suportados apenas como texto HCL-equivalente bruto.",
+            "As chamadas a módulos locais são representadas pelo endereço declarado, sem avaliar count ou for_each.",
         ],
         import_signals_corpus=import_corpus or None,
     )
 
 
 def terraform_files(path: Path) -> list[Path]:
-    """Os ficheiros que `import_terraform_path` lê de um directório. Ver `kubernetes_manifest_files`."""
-    return sorted(path.glob("*.tf"))
+    """Os ficheiros lidos na importação de um directório Terraform."""
+    if not path.is_dir():
+        return []
+    root = path.resolve()
+    _, sources, _ = read_local_modules(root)
+    return [path / source.relative_to(root) for source in sources]
 
 
 def import_terraform_path(path: Path) -> ArtifactImportResult:
+    result, _ = import_terraform_path_with_sources(path)
+    return result
+
+
+def import_terraform_path_with_sources(path: Path) -> tuple[ArtifactImportResult, tuple[Path, ...]]:
+    """Return the draft and the input paths read during this import."""
     if path.is_dir():
-        parts: list[str] = []
-        for p in terraform_files(path):
-            parts.append(p.read_text(encoding="utf-8"))
-        text = "\n\n".join(parts)
-        label = f"{path.name}/"
-        combined = import_terraform_text(text, filename=label)
-        if not parts:
+        modules, sources, unknowns = read_local_modules(path)
+        combined = _import_modules(modules, filename=f"{path.name}/", unknowns=unknowns)
+        if not sources:
             combined.unknowns.append("Directório sem ficheiros `.tf`.")
-        return combined
-    return import_terraform_text(path.read_text(encoding="utf-8"), filename=path.name)
+        return combined, sources
+    return import_terraform_text(path.read_text(encoding="utf-8"), filename=path.name), (path,)

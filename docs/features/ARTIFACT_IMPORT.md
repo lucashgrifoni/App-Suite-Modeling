@@ -14,9 +14,16 @@ Geração **semiautomática** de rascunho (`ThreatModelDocument`) a partir de ev
 | Origem | Entrada | O que é inferido |
 |--------|---------|------------------|
 | OpenAPI 3 / Swagger 2 | YAML/JSON | Superfície REST agregada, contagem de operações, `servers`/host, pistas de `securitySchemes`, fluxo cliente→API, fronteiras pública vs aplicação. |
-| Terraform | `.tf` (ficheiro ou directório) | Blocos `resource "tipo" "nome"`; buckets/DB/filas/gateways/heurística `0.0.0.0/0`; **não** resolve módulos nem expressões HCL. |
+| Terraform | `.tf` ou directório raiz | Blocos `resource "tipo" "nome"`, módulos locais declarados, buckets/DB/filas/gateways e heurística `0.0.0.0/0`. |
 | Kubernetes | YAML multi-doc ou directório | Ingress, Service, Deployment e ConfigMap. O backend do Ingress e o Deployment com nome coincidente são procurados no mesmo namespace. Services LoadBalancer sugerem exposição externa. |
 | Helm | — | Apenas **menção** quando existe `helm_release` em Terraform; charts não são expandidos. |
+
+Na importação de um directório Terraform, cada chamada local é identificada pelo seu endereço,
+como `module.storefront.aws_s3_bucket.catalog`. Duas chamadas para a mesma pasta produzem
+recursos distintos. A ordem dos ficheiros e o nome da pasta escolhida ficam fora dos IDs.
+Use o directório raiz para incluir chamadas aninhadas com fontes literais dentro dessa pasta.
+Cada chamada representa uma declaração. Fontes remotas, expressões, `count` e `for_each` ficam
+fora da resolução estática. Os IDs curtos dos recursos na raiz preservam o formato anterior.
 
 Na importação Kubernetes, a identidade de cada recurso inclui tipo, namespace e nome. Um namespace
 ausente vale como `default`. A ordem dos manifestos, o nome do ficheiro e a presença de outros
