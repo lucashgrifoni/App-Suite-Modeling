@@ -1,12 +1,5 @@
 import type { ReactNode } from "react";
 
-const variants = {
-  default: "border border-otm-border bg-otm-surface-2/90 shadow-otm-sm",
-  glass: "otm-glass border-otm-border shadow-otm-md",
-  elevated:
-    "border border-otm-border-strong bg-otm-surface-2 shadow-otm-lg otm-perspective otm-card-lift",
-};
-
 export function Card({
   children,
   className = "",
@@ -18,12 +11,10 @@ export function Card({
   className?: string;
   title?: string;
   subtitle?: string;
-  variant?: keyof typeof variants;
+  variant?: "default" | "glass" | "elevated";
 }>) {
   return (
-    <section
-      className={`rounded-otm-xl p-5 md:p-6 ${variants[variant]} ${className}`}
-    >
+    <section data-surface={variant} className={`work-panel ${className}`}>
       {title && (
         <header className="mb-4">
           <h2 className="font-display text-lg font-semibold text-otm-text">{title}</h2>

@@ -117,6 +117,75 @@ def test_import_openapi_missing_file_errors(runner: CliRunner, tmp_path: Path) -
     assert r.exit_code == 1
 
 
+def test_openapi_diff_previews_changes_without_writing_files(runner: CliRunner, tmp_path: Path) -> None:
+    previous = tmp_path / "previous.yaml"
+    previous.write_text(
+        """
+openapi: 3.0.0
+info: {title: Orders API, version: 1.0.0}
+servers: [{url: 'https://api.example.com'}]
+paths:
+  /orders:
+    get: {operationId: listOrders}
+  /old:
+    delete: {operationId: removeOld}
+  /keep:
+    get: {operationId: keep}
+""",
+        encoding="utf-8",
+    )
+    revised = tmp_path / "revised.json"
+    revised.write_text(
+        json.dumps(
+            {
+                "openapi": "3.1.0",
+                "info": {"title": "Orders API", "version": "2.0.0"},
+                "servers": [{"url": "https://api.example.com"}],
+                "paths": {
+                    "/orders": {
+                        "get": {"operationId": "listOrders"},
+                        "post": {"operationId": "createOrder"},
+                        "parameters": [{"name": "limit", "in": "query", "schema": {"type": "integer"}}],
+                    },
+                    "/keep": {"get": {"operationId": "keep"}},
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    model = tmp_path / "orders.otm.yaml"
+    model.write_text("threats: [{id: T-001, treatment_status: accepted}]\n", encoding="utf-8")
+    files_before = {file.name: file.read_bytes() for file in tmp_path.iterdir()}
+
+    result = runner.invoke(app, ["import", "openapi-diff", str(previous), str(revised)])
+
+    assert result.exit_code == 0, result.output
+    assert json.loads(result.stdout) == {
+        "added": ["POST /orders"],
+        "removed": ["DELETE /old"],
+        "changed": ["GET /orders"],
+        "shared_sections_changed": ["openapi"],
+    }
+    assert {file.name: file.read_bytes() for file in tmp_path.iterdir()} == files_before
+
+
+def test_openapi_diff_rejects_unresolved_path_items(runner: CliRunner, tmp_path: Path) -> None:
+    previous = tmp_path / "previous.yaml"
+    previous.write_text(_OPENAPI, encoding="utf-8")
+    revised = tmp_path / "revised.yaml"
+    revised.write_text(
+        "openapi: '3.1.0'\npaths:\n  /pay:\n    $ref: './other.yaml#/path'\n",
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(app, ["import", "openapi-diff", str(previous), str(revised)])
+
+    assert result.exit_code == 1
+    assert result.stdout == ""
+    assert "Revised contract" in result.stderr
+    assert "Inline referenced OpenAPI path items" in result.stderr
+
+
 # --- Terraform ---
 
 

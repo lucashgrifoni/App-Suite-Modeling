@@ -91,7 +91,8 @@ test("catalog -> wizard -> review works for all template cases", async ({ page }
       await page.waitForTimeout(450);
       const row = page.getByTestId(`tpl-row-${item.template_id}`);
       await expect(row).toBeVisible({ timeout: 30000 });
-      const useBtn = row.getByRole("button", {
+      await row.getByRole("button").click();
+      const useBtn = page.getByRole("button", {
         name: /Usar este template|Use this template|Use template/i,
       });
       await expect(useBtn).toBeEnabled({ timeout: 60000 });
@@ -101,13 +102,13 @@ test("catalog -> wizard -> review works for all template cases", async ({ page }
       await expect(page.getByLabel(/Título do modelo|Model title/i)).toBeVisible({ timeout: 15000 });
 
       await page.goto("/review");
-      await expect(page.getByRole("button", { name: /Validar no servidor|Validate on server/i })).toBeVisible({
+      await expect(page.getByRole("button", { name: /Validar modelo|Validate on server/i })).toBeVisible({
         timeout: 15000,
       });
-      await page.getByRole("button", { name: /Validar no servidor|Validate on server/i }).click();
+      await page.getByRole("button", { name: /Validar modelo|Validate on server/i }).click();
       await expect(page.getByText(/schema/i)).toBeVisible({ timeout: 15000 });
 
-      await page.getByRole("link", { name: /Correr análise|Run analysis/i }).click();
+      await page.getByRole("link", { name: /Analisar modelo|Run analysis/i }).click();
       await expect(page).toHaveURL(/\/analysis$/);
       await expect(page.getByRole("button", { name: /Recomendar metodologia|Recommend methodology/i })).toBeVisible({
         timeout: 15000,

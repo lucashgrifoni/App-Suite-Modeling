@@ -37,6 +37,13 @@ inputs:
     required: false
     default: ""
 
+  rules:
+    description: >-
+      Organisation rule file, relative to working-directory. Pull requests and
+      merge queues read it from the event's base commit.
+    required: false
+    default: ""
+
   sarif-out:
     description: "Where to write SARIF 2.1.0. Empty disables SARIF output."
     required: false
@@ -156,6 +163,44 @@ runs:
       env:
         MODEL: ${{ inputs.model }}
 
+    - name: Resolve organisation rules
+      id: rules
+      if: inputs.rules != ''
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        set -euo pipefail
+        case "${RULES}" in
+          /*|[A-Za-z]:*|*\\*|..|../*|*/../*|*/..|*$'\n'*|*$'\r'*)
+            echo "::error::rules must name a file relative to working-directory."
+            exit 1
+            ;;
+        esac
+        directory="$(mktemp -d "${RUNNER_TEMP}/otm-rules.XXXXXX")"
+        file="${directory}/rules.yaml"
+        case "${GITHUB_EVENT_NAME:-}" in
+          pull_request*|merge_group)
+            if ! [[ "${EVENT_BASE}" =~ ^[[:xdigit:]]{40}$ ]]; then
+              echo "::error::The event did not provide a valid base commit for organisation rules."
+              exit 1
+            fi
+            if ! git cat-file -e "${EVENT_BASE}^{commit}" 2>/dev/null; then
+              git fetch --no-tags --depth=1 origin "${EVENT_BASE}"
+            fi
+            if ! git cat-file blob "${EVENT_BASE}:./${RULES#./}" > "${file}"; then
+              echo "::error::Could not read the configured organisation rules from the event's base commit."
+              exit 1
+            fi
+            ;;
+          *)
+            cp -- "${RULES}" "${file}"
+            ;;
+        esac
+        printf 'path=%s\n' "${file}" >> "${GITHUB_OUTPUT}"
+      env:
+        RULES: ${{ inputs.rules }}
+        EVENT_BASE: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+
     - name: Analyze
       id: analyze
       shell: bash
@@ -171,6 +216,7 @@ runs:
         [ -n "${ANALYSIS_OUT}" ] && args+=(--json-out "${ANALYSIS_OUT}")
         [ -n "${METHODOLOGY}" ] && args+=(--methodology "${METHODOLOGY}")
         [ -n "${PACK}" ] && args+=(--pack "${PACK}")
+        [ -n "${RULES_FILE:-}" ] && args+=(--rules "${RULES_FILE}")
         otm analyze "${args[@]}"
         echo "sarif-file=${SARIF_OUT}" >> "$GITHUB_OUTPUT"
         echo "analysis-file=${ANALYSIS_OUT}" >> "$GITHUB_OUTPUT"
@@ -180,6 +226,7 @@ runs:
         ANALYSIS_OUT: ${{ inputs.analysis-out }}
         METHODOLOGY: ${{ inputs.methodology }}
         PACK: ${{ inputs.pack }}
+        RULES_FILE: ${{ steps.rules.outputs.path }}
         WORKING_DIRECTORY: ${{ inputs.working-directory }}
 
     # The gate runs after the artifacts exist, so a failing run still leaves the evidence
@@ -241,6 +288,7 @@ runs:
         args=("${baseline_file}" "${MODEL}" --fail-on "${FAIL_ON}")
         [ -n "${METHODOLOGY}" ] && args+=(--methodology "${METHODOLOGY}")
         [ -n "${PACK}" ] && args+=(--pack "${PACK}")
+        [ -n "${RULES_FILE:-}" ] && args+=(--rules "${RULES_FILE}")
         [ "${RISK_INCREASE}" = "true" ] && args+=(--fail-on-risk-increase)
 
         set +e
@@ -312,6 +360,7 @@ runs:
         RISK_INCREASE: ${{ inputs.fail-on-risk-increase }}
         METHODOLOGY: ${{ inputs.methodology }}
         PACK: ${{ inputs.pack }}
+        RULES_FILE: ${{ steps.rules.outputs.path }}
 
     # `always()` so the findings still reach code scanning on the run where the gate tripped --
     # that is the run where you most want them visible. But `always()` also covered the run where

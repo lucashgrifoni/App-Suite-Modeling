@@ -1,11 +1,9 @@
 """What an MIT package installs should not be a surprise to whoever audits it.
 
 NOTICE was thorough about frameworks and taxonomies (CWE, CAPEC, ATLAS, ASVS, PLOT4ai, ISO) and
-said nothing at all about third-party *software* licences -- zero matches for lgpl, mozilla,
-third-party software or dependenc. Meanwhile the documented `pip install "open-threat-model[report]"`
-pulls xhtml2pdf, and xhtml2pdf pulls svglib (LGPL-3.0-or-later) and python-bidi (LGPL); certifi and
-pathspec (both MPL-2.0) arrive transitively. Four non-permissive dependencies of an MIT project,
-disclosed nowhere.
+said nothing about third-party software licences. The report extra pulls xhtml2pdf and svglib
+(LGPL-3.0-or-later), and older xhtml2pdf versions also pull python-bidi (LGPL). Certifi and
+pathspec (both MPL-2.0) arrive transitively.
 
 Nothing here is a legal conclusion and this file does not attempt one: pip installs these as
 separate, independently replaceable packages, nothing is vendored, and whether that is acceptable
@@ -39,8 +37,8 @@ _EXPRESSION_MAX_LENGTH = 60
 #: Copyleft families worth disclosing. `\b`-anchored so `MPL` does not match inside another word.
 _COPYLEFT = re.compile(r"\b(?:A|L)?GPL|MOZILLA PUBLIC|\bMPL[- ]|\bEUPL|\bCDDL")
 
-#: The four measured today. Kept as a floor so the detector itself cannot silently stop working.
-_KNOWN_COPYLEFT = {"certifi", "pathspec", "python-bidi", "svglib"}
+#: Positive controls present across the supported report-renderer versions.
+_KNOWN_COPYLEFT = {"certifi", "pathspec", "svglib"}
 
 
 def _declared_licence(metadata: object) -> str:

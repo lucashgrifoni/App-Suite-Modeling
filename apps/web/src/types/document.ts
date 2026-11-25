@@ -34,6 +34,8 @@ export interface OtmComponent {
   kind: string;
   description?: string | null;
   technology?: string | null;
+  responsibility?: string | null;
+  asset_ids?: string[];
   in_trust_boundary?: string | null;
 }
 
@@ -43,6 +45,7 @@ export interface OtmDataFlow {
   from_component: string;
   to_component: string;
   encrypted?: boolean | null;
+  protocol?: string | null;
 }
 
 export interface OtmTrustBoundary {
@@ -64,6 +67,34 @@ export interface OtmAsset {
   sensitivity?: string | null;
   related_component_ids?: string[];
   related_data_flow_ids?: string[];
+}
+
+export type DeclaredThreat = {
+  id: string;
+  title: string;
+  treatment_status?: string;
+  treatment_notes?: string | null;
+  assignee?: string | null;
+  metadata?: Record<string, unknown>;
+  [field: string]: unknown;
+};
+export function isDeclaredThreat(value: unknown): value is DeclaredThreat {
+  if (
+    !value ||
+    typeof value !== "object" ||
+    !("id" in value) ||
+    typeof value.id !== "string" ||
+    !("title" in value) ||
+    typeof value.title !== "string"
+  )
+    return false;
+  return (
+    (!("treatment_status" in value) || typeof value.treatment_status === "string") &&
+    (!("treatment_notes" in value) ||
+      value.treatment_notes == null ||
+      typeof value.treatment_notes === "string") &&
+    (!("assignee" in value) || value.assignee == null || typeof value.assignee === "string")
+  );
 }
 
 export interface OtmDocument {

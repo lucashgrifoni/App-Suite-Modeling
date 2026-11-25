@@ -36,11 +36,11 @@ def refuse_character_device(path: Path) -> None:
         raise OSError(errno.EINVAL, "not a document: this path is a character device, not a file", str(path))
 
 
-def load_doc(path: Path) -> ThreatModelDocument:
+def load_doc(path: Path, *, source_lines: dict[tuple[str, str], int] | None = None) -> ThreatModelDocument:
     """Load and validate against the canonical schema."""
     try:
         refuse_character_device(path)
-        return load_document_from_yaml_path(path)
+        return load_document_from_yaml_path(path, source_lines=source_lines)
     except ValidationError:
         raise
     except yaml.YAMLError as e:

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from pathlib import Path, PurePosixPath
 from typing import Annotated
 from urllib.parse import quote
@@ -78,6 +79,7 @@ def _emit_sarif_output(
     model: Path,
     uri_prefix: str | None = None,
     rules: Path | None = None,
+    source_lines: Mapping[tuple[str, str], int] | None = None,
 ) -> None:
     """Write the SARIF run, anchored on the model the user actually named.
 
@@ -86,7 +88,7 @@ def _emit_sarif_output(
     GitHub ingested pointed at a file that usually does not exist in the repository, and several
     models scanned in one run collapsed onto that same phantom path.
     """
-    sarif = export_analysis_sarif(result, model_uri=_model_uri(model, uri_prefix))
+    sarif = export_analysis_sarif(result, model_uri=_model_uri(model, uri_prefix), source_lines=source_lines)
     try:
         write_text_file(content=sarif, output=sarif_out, sources=input_paths(model, rules))
     except CliUserError as e:
@@ -212,6 +214,7 @@ def register(app: typer.Typer) -> None:
                 "`--methodology/-m` and `--auto-methodology` are mutually exclusive; pass only one.",
                 param_hint="--methodology / --auto-methodology",
             )
+        source_lines: dict[tuple[str, str], int] | None = {} if sarif_out is not None else None
         try:
             result = run_analyze(
                 path,
@@ -219,6 +222,7 @@ def register(app: typer.Typer) -> None:
                 methodology=methodology,
                 auto_methodology=auto_methodology,
                 rules=rules,
+                source_lines=source_lines,
             )
         except CliUserError as e:
             exit_on_cli_error(console, e)
@@ -226,7 +230,15 @@ def register(app: typer.Typer) -> None:
         if json_out:
             _emit_json_output(result, json_out, quiet=quiet, model=path, rules=rules)
         if sarif_out:
-            _emit_sarif_output(result, sarif_out, quiet=quiet, model=path, uri_prefix=sarif_uri_prefix, rules=rules)
+            _emit_sarif_output(
+                result,
+                sarif_out,
+                quiet=quiet,
+                model=path,
+                uri_prefix=sarif_uri_prefix,
+                rules=rules,
+                source_lines=source_lines,
+            )
         if quiet:
             raise typer.Exit(0)
 

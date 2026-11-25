@@ -79,11 +79,15 @@ def _codes(client: TestClient, *, count: int, header: str | None = None, rotate:
 # --- o defeito, com a mecânica real do uvicorn ----------------------------------------
 
 
-def test_uvicorn_rewrites_the_client_address_from_a_client_supplied_header() -> None:
-    """A premissa do defeito, verificada na configuração resolvida e não assumida."""
+def test_uvicorn_default_trust_includes_ipv4_loopback(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The test client uses IPv4 loopback across Uvicorn versions."""
+    monkeypatch.delenv("FORWARDED_ALLOW_IPS", raising=False)
     config = Config("otm_api.main:app")
-
-    assert (config.proxy_headers, config.forwarded_allow_ips) == (True, "127.0.0.1")
+    trusted_hosts = config.forwarded_allow_ips
+    if isinstance(trusted_hosts, str):
+        trusted_hosts = trusted_hosts.split(",")
+    assert config.proxy_headers
+    assert _LOOPBACK[0] in trusted_hosts
 
 
 def test_a_rotating_forwarded_header_cannot_mint_fresh_buckets(monkeypatch: pytest.MonkeyPatch) -> None:

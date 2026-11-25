@@ -270,7 +270,7 @@ def _dedupe_inferences(inferences: list[dict[str, Any]]) -> list[dict[str, Any]]
     """Remove duplicados por (kind, message, evidence), mantendo a primeira ocorrência.
 
     A evidência entra na chave como rede de segurança. A convenção é a mensagem conter o que
-    distingue o achado -- `Rota FastAPI/Starlette provável \`/diff\` em ...` -- e enquanto isso
+    distingue o achado, como o caminho `/diff` numa rota FastAPI/Starlette. Enquanto isso
     se cumprir a evidência não muda nada: medido, a varredura deste repositório dá 43 inferências
     com uma chave e com a outra. Quando não se cumpre, colapsa achados distintos em silêncio, que
     foi o que aconteceu às rotas Express: quatro declaradas, uma sobrevivente, e as que

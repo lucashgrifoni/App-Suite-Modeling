@@ -47,12 +47,12 @@ def _wide_console(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("COLUMNS", "300")
 
 
-def _break_the_import(monkeypatch: pytest.MonkeyPatch, error: BaseException) -> None:
-    """Make `from xhtml2pdf import pisa` fail the way a broken install fails."""
+def _break_the_import(monkeypatch: pytest.MonkeyPatch, error: BaseException, *, module: str = "xhtml2pdf") -> None:
+    """Make an optional PDF renderer import fail the way a broken install fails."""
     real_import: Callable[..., Any] = builtins.__import__
 
     def fake_import(name: str, *args: Any, **kwargs: Any) -> Any:
-        if name == "xhtml2pdf":
+        if name == module:
             raise error
         return real_import(name, *args, **kwargs)
 
@@ -96,7 +96,7 @@ def test_it_stays_an_import_error_so_existing_handlers_keep_working(
         html_to_pdf_bytes("<html><body>x</body></html>")
 
 
-@pytest.mark.parametrize("level", ["executive", "standard", "deep"])
+@pytest.mark.parametrize("level", ["executive", "deep"])
 def test_the_documented_command_reports_cleanly_instead_of_crashing(
     runner: CliRunner, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, level: str
 ) -> None:
@@ -166,3 +166,26 @@ def test_a_working_pdf_stack_still_produces_a_pdf(runner: CliRunner, tmp_path: P
 
     assert result.exit_code == 0, _out(result)
     assert target.read_bytes().startswith(b"%PDF")
+
+
+def test_the_standard_layout_renders_with_the_legacy_pdf_stack_unavailable(
+    runner: CliRunner, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    pytest.importorskip("reportlab")
+    _break_the_import(monkeypatch, _CAIRO_OSERROR)
+    target = tmp_path / "standard.pdf"
+    result = runner.invoke(app, ["report", str(_MINIMAL), "--format", "pdf", "-o", str(target)])
+    assert result.exit_code == 0, _out(result)
+    assert target.read_bytes().startswith(b"%PDF")
+
+
+def test_the_standard_layout_reports_a_missing_renderer_without_a_traceback(
+    runner: CliRunner, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    _break_the_import(monkeypatch, ImportError("No module named 'reportlab'"), module="styled_pdf")
+    target = tmp_path / "missing.pdf"
+    result = runner.invoke(app, ["report", str(_MINIMAL), "--format", "pdf", "-o", str(target)])
+    assert result.exit_code == 1
+    assert "open-threat-model[report]" in _out(result)
+    assert "Traceback" not in _out(result)
+    assert not target.exists()

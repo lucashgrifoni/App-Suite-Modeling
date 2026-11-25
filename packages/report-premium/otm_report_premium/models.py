@@ -8,6 +8,8 @@ from __future__ import annotations
 
 from typing import Literal
 
+from otm_core_schema import TreatmentStatus
+from otm_threat_engine.remediation import FindingRef
 from pydantic import BaseModel, Field
 
 from .enums import ReportLevel
@@ -101,6 +103,25 @@ class DistributionBlock(BaseModel):
     top_boundaries_ranked: list[tuple[str, float]]
 
 
+TreatmentDestination = Literal[
+    "action", "verify_mitigation", "confirm_false_positive", "review_no_fix", "review_accepted", "history"
+]
+
+
+class DeclaredThreatTreatment(BaseModel):
+    """Current treatment from the model, including threats without a risk score."""
+
+    id: str
+    title: str
+    treatment_status: TreatmentStatus
+    treatment_notes: str | None = None
+    destination: TreatmentDestination | None = None
+    has_score: bool = False
+    assignee: str | None = None
+    review_date: str | None = None
+    verification_reference: str | None = None
+
+
 class TopRiskItem(BaseModel):
     """Item na lista priorizada."""
 
@@ -128,6 +149,8 @@ class RootCauseGroup(BaseModel):
     display_name: str
     threat_count: int
     component_ids: list[str]
+    backlog_item_ids: list[str] = Field(default_factory=list)
+    finding_refs: list[FindingRef] = Field(default_factory=list)
     suggested_controls: list[str]
     single_fix_recommendation: str
 
@@ -299,6 +322,9 @@ class PremiumReportPayload(BaseModel):
     architecture: ArchitectureSummary
     distributions: DistributionBlock
     top_risks: list[TopRiskItem]
+    exposure_count: int | None = None
+    ranking_candidate_count: int | None = None
+    declared_treatments: list[DeclaredThreatTreatment] = Field(default_factory=list)
     root_cause_groups: list[RootCauseGroup]
     exploitability_profiles: list[ExploitabilityProfile]
     business_impacts: list[BusinessImpactRow]

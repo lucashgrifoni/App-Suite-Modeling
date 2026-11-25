@@ -60,6 +60,7 @@ export type ExportFormat = Schemas["ExportFormat"];
 export type ArtifactImportKind = Schemas["InferenceRecordBody"]["source"];
 export type ArtifactInference = Schemas["InferenceRecordBody"];
 export type ArtifactImportResponse = Schemas["ArtifactImportResponse"];
+export type OpenApiReimportPreview = Schemas["OpenApiReimportPreview"];
 
 /** Secções semânticas agregadas (heurística; não causalidade provada). */
 export interface SemanticDiffSections {

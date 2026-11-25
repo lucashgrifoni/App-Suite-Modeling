@@ -88,6 +88,20 @@ describe("SessionProvider analysis/document pairing", () => {
     expect(result.current.analysis).toBeNull();
   });
 
+  it("rejects a late analysis computed before a treatment decision changed the model", () => {
+    const { result } = renderHook(() => useSession(), { wrapper });
+    act(() => result.current.setDocument(makeDoc("Model A")));
+    const source = result.current.document!;
+    act(() =>
+      result.current.setDocument({ ...source, threats: [{ id: "t1", treatment_status: "triaged" }] }),
+    );
+    act(() => {
+      expect(result.current.setAnalysis(makeAnalysis("Model A"), source)).toBe(false);
+    });
+    expect(result.current.analysis).toBeNull();
+    expect(sessionStorage.getItem(ANALYSIS_KEY)).toBeNull();
+  });
+
   it("keeps the analysis when the same document is re-set", () => {
     // The wizard calls setDocument on every keystroke; re-normalising an
     // unchanged document must not throw the analysis away.

@@ -89,7 +89,7 @@ próxima mudança no motor não os deixe a mentir em silêncio. `/v1/remediation
 
 | Variável | Efeito |
 |----------|--------|
-| `OTM_MAX_DOCUMENT_ENTITIES` | Tecto de entidades (`components` + `data_flows` + `assets`) por documento submetido. Acima do tecto, **413** `DOCUMENT_TOO_LARGE` antes de o motor correr. Aplica-se a todas as rotas que recebem `document` (`/v1/models/*`, `/v1/exports`, `/v1/remediation/backlog`, `/v1/reports/premium`) e **não** às rotas `/v1/imports/*`. Por definir = sem tecto. Um valor que não seja um inteiro positivo aborta o arranque. |
+| `OTM_MAX_DOCUMENT_ENTITIES` | Tecto de entidades (`components` + `data_flows` + `assets`) por documento submetido. Acima do tecto, **413** `DOCUMENT_TOO_LARGE` antes de o motor correr. Aplica-se a todas as rotas que recebem `document` (`/v1/models/*`, `/v1/exports`, `/v1/remediation/backlog`, `/v1/reports`, `/v1/reports/premium`) e **não** às rotas `/v1/imports/*`. Por definir = sem tecto. Um valor que não seja um inteiro positivo aborta o arranque. |
 
 Não há tecto por omissão, e é uma decisão: um tecto útil teria de estar na ordem dos milhares, e é
 exatamente aí que recusaria trabalho legítimo — um `.tf` de 1,64 MiB, aceite pelo limite de 2 MiB da
@@ -115,10 +115,12 @@ capacidade; quando está ligado, o arranque escreve `document_entity_ceiling`.
 | `POST` | `/v1/templates/{template_id}/instantiate` | Gera documento a partir do template. |
 | `POST` | `/v1/exports` | Gera artefactos (`formats[]`, opcional `analysis`, `pack_id`). |
 | `POST` | `/v1/imports/openapi` | `multipart/form-data` campo `file` (OpenAPI/Swagger YAML/JSON). Resposta: rascunho canónico + `inferences` / `unknowns` / `assumptions` (não é análise). |
+| `POST` | `/v1/imports/openapi/reimport-preview` | `multipart/form-data` com os arquivos `previous`, `revised` e `document` (modelo atual em JSON). Resposta: `operations`, `changes`, `conflicts` e `document` proposto. Limite de 2 MiB por arquivo. |
 | `POST` | `/v1/imports/terraform` | Um ficheiro `.tf`. |
 | `POST` | `/v1/imports/kubernetes` | YAML multi-manifests. |
 | `POST` | `/v1/remediation/backlog` | Corpo: `document` + `analysis` **ou** `run_analysis: true`. Query: `format` = json (default) ou markdown; `group_by` opcional. Ver `docs/features/REMEDIATION_BACKLOG.md`. |
-| `POST` | `/v1/reports/premium` | Report premium: `document`, `analysis` ou `run_analysis`, opcional `baseline_analysis`, `level` (executive/standard/deep), `output_format` (markdown/pdf). Ver `docs/features/PREMIUM_REPORTS.md`. |
+| `POST` | `/v1/reports` | Relatório de riscos em PDF ou Markdown. Recebe `document` e `analysis`, ou `document` e `run_analysis: true`. Opções `baseline_analysis`, `locale` e `output_format`. [Guia do relatório](PREMIUM_REPORTS.md) |
+| `POST` | `/v1/reports/premium` | Rota de compatibilidade com os níveis `executive`, `standard` e `deep`. |
 
 Ver também `docs/features/ARTIFACT_IMPORT.md`.
 
@@ -219,8 +221,8 @@ Códigos estáveis usados nas rotas (sempre dentro de `detail`):
 |--------|------|----------|
 | `DOCUMENT_VALIDATION_ERROR` | 422 | `document` inválido para o schema canónico. |
 | `ANALYSIS_VALIDATION_ERROR` | 422 | Campo `analysis` não é um `AnalysisResult` válido. |
-| `ANALYSIS_DOCUMENT_MISMATCH` | 422 | A análise enviada não foi produzida para o documento enviado ao lado dela. Em `/v1/models/compare` aplica-se a cada par (`baseline`+`baseline_analysis`, `revised`+`revised_analysis`), e o `loc` de cada erro nomeia o campo em falta. Exceção deliberada: `baseline_analysis` em `/v1/reports/premium`, que é de outra versão por definição — está isento desta guarda de *mesma revisão*, mas não de `BASELINE_SYSTEM_MISMATCH`. |
-| `BASELINE_SYSTEM_MISMATCH` | 422 | O `baseline_analysis` de `/v1/reports/premium` não descreve o mesmo sistema que a análise actual, por isso a secção `## Baseline / diff` seria inventada. Relação deliberadamente mais fraca do que `ANALYSIS_DOCUMENT_MISMATCH`: um baseline é outra revisão por definição, e renomear o modelo ou acrescentar componentes continua a ser aceite. Mesmo critério que `otm report --baseline` e `otm diff-analysis` aplicam na CLI. |
+| `ANALYSIS_DOCUMENT_MISMATCH` | 422 | A análise enviada não foi produzida para o documento enviado ao lado dela. Em `/v1/models/compare` aplica-se a cada par (`baseline`+`baseline_analysis`, `revised`+`revised_analysis`), e o `loc` de cada erro nomeia o campo em falta. Exceção deliberada: `baseline_analysis` nas rotas de relatório, que é de outra versão por definição — está isento desta guarda de *mesma revisão*, mas não de `BASELINE_SYSTEM_MISMATCH`. |
+| `BASELINE_SYSTEM_MISMATCH` | 422 | O `baseline_analysis` das rotas de relatório não descreve o mesmo sistema que a análise actual, por isso a secção `## Baseline / diff` seria inventada. Relação deliberadamente mais fraca do que `ANALYSIS_DOCUMENT_MISMATCH`: um baseline é outra revisão por definição, e renomear o modelo ou acrescentar componentes continua a ser aceite. Mesmo critério que `otm report --baseline` e `otm diff-analysis` aplicam na CLI. |
 | `REMEDIATION_GROUP_BY_INVALID` | 422 | `group_by` fora de `root-cause` \| `control` \| `category`. Antes, um valor desconhecido devolvia 200 com o agrupamento por defeito. |
 | `REMEDIATION_INPUT` | 400 | Nem `analysis` nem `run_analysis: true` em `/v1/remediation/backlog`. |
 | `IMPORT_EMPTY_ARTIFACT` | 400 | Upload **sem conteúdo** em `/v1/imports/*`: zero bytes, só espaço em branco (`

@@ -3,6 +3,12 @@
 from __future__ import annotations
 
 from io import BytesIO
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from otm_core_schema import ThreatModelDocument
+
+    from .models import PremiumReportPayload
 
 
 class PdfSupportUnavailable(ImportError):
@@ -104,3 +110,17 @@ def html_to_pdf_bytes(html: str) -> bytes:
     if status.err:
         raise RuntimeError("PDF generation failed (xhtml2pdf reported an error).")  # noqa: E501  # pragma: no cover - defensive: xhtml2pdf error path
     return out.getvalue()
+
+
+def render_risk_report_pdf(
+    payload: PremiumReportPayload, document: ThreatModelDocument, *, analysis_generated: bool = False
+) -> bytes:
+    """Render the standard PDF without importing the optional backend for Markdown or JSON commands."""
+    try:
+        from .styled_pdf import build_styled_risk_pdf
+    except ImportError as exc:
+        raise PdfSupportUnavailable(
+            cause="the optional PDF renderer could not be loaded.",
+            next_step='install the extra: `pip install "open-threat-model[report]"`.',
+        ) from exc
+    return build_styled_risk_pdf(payload, document, analysis_generated=analysis_generated)

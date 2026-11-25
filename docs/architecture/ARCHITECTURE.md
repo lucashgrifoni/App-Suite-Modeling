@@ -63,4 +63,4 @@ flowchart TB
 
 ## Banco de dados (pós-MVP)
 
-SQLAlchemy entra quando houver **multi-usuário, histórico e busca**. O desenho alvo: linhas armazenam **documento canônico versionado** (ou patches), não um segundo modelo divergente.
+O extra `api` atende ao serviço atual, que funciona sem banco de dados. SQLAlchemy pode entrar com persistência para **multiusuário, histórico e busca**. O desenho prevê armazenar o documento canônico versionado ou seus patches.

@@ -15,10 +15,12 @@ product releases were indistinguishable while `otm --version` reported 7.9.0.
 from __future__ import annotations
 
 import importlib.metadata
+import json
 from pathlib import Path
 from typing import Any
 
 import pytest
+from otm_cli.cli import app
 from otm_core_schema import StrideCategory, load_document_from_yaml_path
 from otm_core_schema.enums import ThreatModelMethodology
 from otm_exporters import export_analysis_sarif, export_analysis_sarif_obj
@@ -26,6 +28,7 @@ from otm_exporters.analysis_sarif import product_version
 from otm_threat_engine import analyze_document
 from otm_threat_engine.result import AnalysisResult, HeuristicThreat
 from otm_threat_engine.risk_calc import build_risk_assessment
+from typer.testing import CliRunner
 
 _MINIMAL = Path(__file__).resolve().parents[1] / "examples" / "minimal.otm.yaml"
 
@@ -76,6 +79,24 @@ def test_the_region_anchors_at_the_first_line(stock_sarif: dict[str, Any]) -> No
     region = _results(stock_sarif)[0]["locations"][0]["physicalLocation"]["region"]
 
     assert region["startLine"] == 1
+    assert _results(stock_sarif)[0]["properties"]["locationPrecision"] == "model"
+
+
+def test_cli_sarif_links_to_distinct_yaml_target_lines(tmp_path: Path) -> None:
+    output = tmp_path / "model.sarif"
+    cli = CliRunner().invoke(app, ["analyze", str(_MINIMAL), "--sarif-out", str(output)])
+    assert cli.exit_code == 0, cli.output
+    result = json.loads(output.read_text(encoding="utf-8"))
+    model_lines = _MINIMAL.read_text(encoding="utf-8").splitlines()
+    distinct_lines = set()
+    for entry in _results(result):
+        if entry["properties"]["locationPrecision"] == "entity":
+            [location] = entry["locations"]
+            [logical] = location["logicalLocations"]
+            line = location["physicalLocation"]["region"]["startLine"]
+            assert model_lines[line - 1].strip().removeprefix("- ") == f"id: {logical['fullyQualifiedName']}"
+            distinct_lines.add(line)
+    assert len(distinct_lines) >= 2
 
 
 def test_the_logical_location_survives_next_to_the_physical_one(stock_sarif: dict[str, Any]) -> None:

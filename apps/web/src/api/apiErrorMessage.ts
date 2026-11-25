@@ -83,6 +83,7 @@ function topLevelEnvelope(body: unknown): Record<string, unknown> | undefined {
  */
 const REWORDED_CODES: ReadonlySet<string> = new Set([
   "IMPORT_ARTIFACT_INVALID",
+  "OPENAPI_REIMPORT_INVALID",
   "PDF_DEPENDENCY",
 ]);
 

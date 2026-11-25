@@ -233,11 +233,11 @@ def test_report_writes_markdown(runner: CliRunner) -> None:
     assert "#" in combined
 
 
-def test_report_premium_markdown_stdout(runner: CliRunner) -> None:
+def test_report_standard_markdown_stdout(runner: CliRunner) -> None:
     r = runner.invoke(app, ["report", str(_MINIMAL), "--level", "standard", "--format", "markdown"])
     assert r.exit_code == 0
     out = (r.stdout or "") + (r.stderr or "")
-    assert "Executive summary" in out
+    assert "Resumo executivo" in out
 
 
 def test_report_premium_pdf_file(tmp_path: Path, runner: CliRunner) -> None:

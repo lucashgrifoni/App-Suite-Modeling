@@ -6,18 +6,15 @@ Licensed under the MIT License. See LICENSE.
 Third-party software licences
 ================================================================================
 
-This distribution is MIT. Most of what it installs is MIT, BSD, Apache-2.0, ISC
-or PSF. Four dependencies are not, and a reader doing licence due diligence on
-an MIT package should not have to discover them by installing it.
+This distribution is MIT. Its optional extras also resolve dependencies under
+the copyleft licences listed below.
 
 THE COPYLEFT DEPENDENCIES, AND WHAT PULLS EACH ONE IN
 
   svglib          LGPL-3.0-or-later
   python-bidi     LGPL (declared by classifier, no SPDX expression published)
-    Both arrive through `xhtml2pdf`, which is the whole of the `[report]` extra
-    -- `pip install "open-threat-model[report]"`, the documented way to get the
-    premium PDF -- and which the `dev` extra also installs. Neither is reachable
-    from a bare `pip install open-threat-model`.
+    `svglib` arrives through `xhtml2pdf` in the `[report]` and `[dev]` extras.
+    `xhtml2pdf` versions before 0.2.24 also depend on `python-bidi`.
 
   certifi         MPL-2.0
   pathspec        MPL-2.0

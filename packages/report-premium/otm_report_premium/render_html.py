@@ -6,6 +6,7 @@ import html
 import re
 from typing import Literal
 
+from otm_exporters.threat_treatment import treatment_text
 from otm_threat_engine.severity import severity_for_score
 
 from .branding import report_logo_data_uri
@@ -492,6 +493,21 @@ def _html_top_risks(parts: list[str], payload: PremiumReportPayload) -> None:
     parts.append(_TABLE_SECTION_CLOSE)
 
 
+def _html_declared_treatments(parts: list[str], payload: PremiumReportPayload) -> None:
+    copy = treatment_text("en")
+    parts.extend([_HR_DIVIDER, f"<section class='section'><h2>{copy.heading}</h2>"])
+    if not payload.declared_treatments:
+        parts.append(f"<p>{copy.no_threats}</p>")
+    for threat in payload.declared_treatments:
+        # Paragraphs can span PDF pages. A long justification in a table cell cannot.
+        notes = (threat.treatment_notes or "").strip() or copy.missing_rationale
+        parts.append(f"<h3>{_esc(threat.title)} (<code>{_esc(threat.id)}</code>)</h3>")
+        parts.append(f"<p><strong>{copy.state}</strong> &mdash; {copy.statuses[threat.treatment_status]}</p>")
+        rationale = "<br/>".join(_esc(line) for line in notes.splitlines())
+        parts.append(f"<p><strong>{copy.rationale}</strong> &mdash; {rationale}</p>")
+    parts.append("</section>")
+
+
 def _html_root_cause_and_roadmap(parts: list[str], payload: PremiumReportPayload) -> None:
     if payload.root_cause_groups:
         parts.append(_HR_DIVIDER)
@@ -649,6 +665,7 @@ def render_premium_html(payload: PremiumReportPayload) -> str:
     _html_executive_summary(parts, payload)
     _html_severity_distribution(parts, payload)
     _html_top_risks(parts, payload)
+    _html_declared_treatments(parts, payload)
     _html_root_cause_and_roadmap(parts, payload)
     _html_quick_and_strategic(parts, payload)
     _html_detail_tables(parts, payload)

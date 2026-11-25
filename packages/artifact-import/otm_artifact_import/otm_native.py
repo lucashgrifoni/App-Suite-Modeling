@@ -94,7 +94,8 @@ _ASSET_INTEGRITY: dict[CriticalityLevel | None, int] = {
 @cache
 def _field_adapter(model: type[BaseModel], field: str) -> TypeAdapter[Any]:
     """Validador para um único campo canónico — usado para filtrar `attributes` de terceiros."""
-    return TypeAdapter(model.model_fields[field].annotation)
+    annotation = model.model_fields[field].annotation
+    return TypeAdapter(type(None) if annotation is None else annotation)
 
 
 def _attributes_to_otm(entity: BaseModel, slots: frozenset[str]) -> dict[str, Any]:

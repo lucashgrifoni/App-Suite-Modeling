@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import importlib.metadata
 import json
+from collections.abc import Mapping
 from typing import Any
 
 from otm_threat_engine.result import AnalysisResult, HeuristicThreat
@@ -91,22 +92,26 @@ def _logical_location(threat: HeuristicThreat) -> dict[str, Any] | None:
     return None
 
 
-def _physical_location(model_uri: str) -> dict[str, Any]:
+def _physical_location(model_uri: str, start_line: int) -> dict[str, Any]:
     """`physicalLocation` do modelo, obrigatório para o GitHub code scanning.
 
     O GitHub documenta `result.locations[]`, `location.physicalLocation`,
     `artifactLocation.uri` e `region.startLine` como necessários para ingerir um resultado; sem
     eles o upload que o `--sarif-out` e o `upload-sarif` da Action anunciam não produz alertas
     localizados. A ameaça não tem linha própria — é o documento inteiro que a origina — por isso
-    todas ancoram na linha 1 do modelo, que é a convenção para achados ao nível do ficheiro.
+    a linha indica a entidade de origem quando disponível e usa a linha 1 como âncora do arquivo.
     """
     return {
         "artifactLocation": {"uri": model_uri, "uriBaseId": _URI_BASE_ID},
-        "region": {"startLine": 1},
+        "region": {"startLine": start_line},
     }
 
 
-def _location(threat: HeuristicThreat, model_uri: str) -> dict[str, Any]:
+def _location(
+    threat: HeuristicThreat,
+    model_uri: str,
+    source_lines: Mapping[tuple[str, str], int],
+) -> tuple[dict[str, Any], str]:
     """The single `location` of a result: always the model file, plus the target when there is one.
 
     A threat that declares no component, data flow or asset — PASTA emits five of them, one per
@@ -114,14 +119,20 @@ def _location(threat: HeuristicThreat, model_uri: str) -> dict[str, Any]:
     as every other result. Anchoring it is what makes it ingestible; the `logicalLocations` entry
     is what makes it readable, and only that part depends on a target existing.
     """
-    location: dict[str, Any] = {"physicalLocation": _physical_location(model_uri)}
     logical = _logical_location(threat)
+    entity_line = source_lines.get((logical["kind"], logical["fullyQualifiedName"])) if logical else None
+    location: dict[str, Any] = {"physicalLocation": _physical_location(model_uri, entity_line or 1)}
     if logical:
         location["logicalLocations"] = [logical]
-    return location
+    return location, "entity" if entity_line else "model"
 
 
-def export_analysis_sarif_obj(result: AnalysisResult, *, model_uri: str = _DEFAULT_MODEL_URI) -> dict[str, Any]:
+def export_analysis_sarif_obj(
+    result: AnalysisResult,
+    *,
+    model_uri: str = _DEFAULT_MODEL_URI,
+    source_lines: Mapping[tuple[str, str], int] | None = None,
+) -> dict[str, Any]:
     """SARIF 2.1.0 object for the analysis result (one run, one result per active threat).
 
     `model_uri` is the artifact every result points at — the threat-model file the analysis came
@@ -132,6 +143,7 @@ def export_analysis_sarif_obj(result: AnalysisResult, *, model_uri: str = _DEFAU
     rules: list[dict[str, Any]] = []
     rule_index: dict[str, int] = {}
     sarif_results: list[dict[str, Any]] = []
+    source_lines = source_lines or {}
 
     for t in threats:
         rid = _rule_id(result, t)
@@ -163,7 +175,9 @@ def export_analysis_sarif_obj(result: AnalysisResult, *, model_uri: str = _DEFAU
                 "references": refs,
             },
         }
-        res["locations"] = [_location(t, model_uri)]
+        location, precision = _location(t, model_uri, source_lines)
+        res["locations"] = [location]
+        res["properties"]["locationPrecision"] = precision
         sarif_results.append(res)
 
     return {
@@ -193,8 +207,16 @@ def export_analysis_sarif_obj(result: AnalysisResult, *, model_uri: str = _DEFAU
     }
 
 
-def export_analysis_sarif(result: AnalysisResult, *, model_uri: str = _DEFAULT_MODEL_URI) -> str:
+def export_analysis_sarif(
+    result: AnalysisResult,
+    *,
+    model_uri: str = _DEFAULT_MODEL_URI,
+    source_lines: Mapping[tuple[str, str], int] | None = None,
+) -> str:
     """SARIF 2.1.0 JSON text for the analysis result."""
     return json.dumps(
-        export_analysis_sarif_obj(result, model_uri=model_uri), indent=2, ensure_ascii=False, allow_nan=False
+        export_analysis_sarif_obj(result, model_uri=model_uri, source_lines=source_lines),
+        indent=2,
+        ensure_ascii=False,
+        allow_nan=False,
     )

@@ -8,7 +8,9 @@ from __future__ import annotations
 
 import importlib.metadata
 from collections import Counter, defaultdict
+from collections.abc import Callable
 from datetime import date
+from functools import partial
 from typing import Any, Literal
 
 from otm_core_schema import ComponentKind
@@ -19,6 +21,7 @@ from otm_exporters.markdown_text import md_block, md_inline
 from otm_threat_engine import build_remediation_backlog
 from otm_threat_engine.analysis_diff import diff_analysis_results
 from otm_threat_engine.methodologies import recommend_methodology
+from otm_threat_engine.remediation import RemediationBacklog
 from otm_threat_engine.remediation.classify import ComponentIndex
 from otm_threat_engine.result import AnalysisResult, HeuristicThreat
 from otm_threat_engine.semantic_comparison import semantic_diff_from_analyses_only
@@ -32,6 +35,7 @@ from .models import (
     ArchitectureSummary,
     BaselineDiffSection,
     CoverPage,
+    DeclaredThreatTreatment,
     DedupeGroup,
     DistributionBlock,
     ExecutiveSummaryBlock,
@@ -47,13 +51,15 @@ from .models import (
     TechnicalAppendix,
     TopRiskItem,
 )
-from .prioritize import assign_priority_tier, composite_priority_score, horizon_for_tier
+from .prioritize import RestrictedAssetTargets, assign_priority_tier, composite_priority_score, horizon_for_tier
 from .report_i18n import PremiumBuilderCopy, premium_builder_copy, root_cause_display_name
 from .risk_context import (
     ai_business_labels_if_applicable,
     build_business_impact_row,
     infer_exploitability,
 )
+from .treatment_overview import treatment_follow_up
+from .treatment_policy import report_suggestions, report_treatment_decisions
 
 
 def _app_version() -> str:
@@ -311,14 +317,13 @@ def _build_distributions(
     doc: ThreatModelDocument,
     backlog: Any,
     active: list[HeuristicThreat],
-    meth: Any,
     tb_by_component: dict[str, str],
-    index: ComponentIndex,
+    priority_score: Callable[[HeuristicThreat], float],
 ) -> DistributionBlock:
     comp_scores: dict[str, float] = defaultdict(float)
     for t in active:
         if t.target_component_id:
-            comp_scores[t.target_component_id] += composite_priority_score(t, doc, meth, index=index)
+            comp_scores[t.target_component_id] += priority_score(t)
     tb_scores: dict[str, float] = defaultdict(float)
     for cid, sc in comp_scores.items():
         bid = tb_by_component.get(cid)
@@ -349,6 +354,7 @@ def _build_top_risks(
     backlog: Any,
     b: PremiumBuilderCopy,
     index: ComponentIndex,
+    priority_score: Callable[[HeuristicThreat], float],
 ) -> list[TopRiskItem]:
     top_risks: list[TopRiskItem] = []
     for i, t in enumerate(sorted_threats[:10]):
@@ -374,7 +380,7 @@ def _build_top_risks(
                 exploitability_summary=ex.notes,
                 business_impact_labels=list(dict.fromkeys(bi_labels))[:8],
                 priority_tier=tier,
-                composite_score=composite_priority_score(t, doc, meth, index=index),
+                composite_score=priority_score(t),
                 recommended_action=action,
                 suggested_horizon=horizon_for_tier(tier),
             )
@@ -382,7 +388,7 @@ def _build_top_risks(
     return top_risks
 
 
-def _build_root_cause_groups(backlog: Any, loc: PremiumReportLocale) -> list[RootCauseGroup]:
+def _build_root_cause_groups(backlog: RemediationBacklog, loc: PremiumReportLocale) -> list[RootCauseGroup]:
     rc_groups: list[RootCauseGroup] = []
     # `item_ids` visto como conjunto. Testar pertença contra uma **lista**, uma vez por item e
     # por grupo, é O(grupos x itens x ids): 0,44 s num único relatório de 1500 entidades, e a
@@ -409,6 +415,10 @@ def _build_root_cause_groups(backlog: Any, loc: PremiumReportLocale) -> list[Roo
                 display_name=root_cause_display_name(root_key, loc),
                 threat_count=len(items),
                 component_ids=sorted(comps)[:20],
+                backlog_item_ids=[item.id for item in items],
+                finding_refs=list(
+                    {(ref.kind, ref.id): ref for item in items for ref in item.related_findings}.values()
+                ),
                 suggested_controls=controls,
                 single_fix_recommendation=items[0].rationale[:500] if items else "",
             )
@@ -699,6 +709,7 @@ def build_premium_report_payload(
     app_version: str | None = None,
     include_mermaid: bool = True,
     locale: str | None = None,
+    consolidated: bool = False,
 ) -> PremiumReportPayload:
     """
     Constrói o payload premium. `baseline` opcional alimenta secção de diff/trend.
@@ -709,7 +720,19 @@ def build_premium_report_payload(
     b = premium_builder_copy(loc)
     meth = result.methodology
     active: list[HeuristicThreat] = [h for h in result.heuristic_threats if not h.skipped_as_duplicate]
-    backlog = build_remediation_backlog(result, doc)
+    exposure_doc = doc
+    outside_action: set[str] = set()
+    if consolidated:
+        decisions = report_treatment_decisions(doc)
+        outside_action = {d.id for d in decisions if d.destination in ("review_accepted", "history")}
+        closed = {d.id for d in decisions if d.destination == "history"}
+        exposure_doc = doc.model_copy(update={"threats": [t for t in doc.threats if t.id not in closed]})
+        active = report_suggestions(doc.threats, result.heuristic_threats, outside_action)
+        backlog_result = result.model_copy(update={"heuristic_threats": active})
+    else:
+        decisions = [DeclaredThreatTreatment.model_validate(t, from_attributes=True) for t in doc.threats]
+        backlog_result = result
+    backlog = build_remediation_backlog(backlog_result, doc)
     recommendation = recommend_methodology(doc)
     app_v = app_version or _app_version()
 
@@ -722,7 +745,14 @@ def build_premium_report_payload(
     # quadro de severidade: era o veredito da capa que discordava do resto da própria página.
     # O rótulo diz `Risk (heuristic)` no HTML e continua a medir isso, senão o rótulo é que
     # passava a mentir. Ver `tests/test_p3_premium_cover_sees_declared_threats.py`.
-    status_key, status_display = _overall_status(_overall_max_score(max_score, doc), b)
+    if consolidated:
+        max_score = max(
+            (h.risk.score if h.risk.score is not None else float(h.risk.likelihood * h.risk.impact) for h in active),
+            default=None,
+        )
+    overall_max = _overall_max_score(max_score, exposure_doc)
+    status_key, status_display = _overall_status(overall_max, b)
+    risk_label_score = overall_max if consolidated else max_score
 
     comp_names = {c.id: c.name for c in doc.components}
     # Um índice para todo o pipeline: sem ele cada classificação por ameaça revarre
@@ -731,10 +761,11 @@ def build_premium_report_payload(
     tb_by_component = _trust_boundary_by_component(doc)
 
     sev_counter, stride_counter, comp_counter, tb_counter, heatmap = _build_distribution_counters(
-        active, doc, tb_by_component
+        active, exposure_doc, tb_by_component
     )
 
-    methodology_dist = {meth.value: len(active) + len(doc.threats)}
+    exposure_count = len(active) + len(exposure_doc.threats)
+    methodology_dist = {meth.value: exposure_count}
     total_threats = len(active) + len(doc.threats)
 
     top_boundaries = [_boundary_name(doc, bid) or bid for bid, _n in tb_counter.most_common(5)]
@@ -744,18 +775,21 @@ def build_premium_report_payload(
     # prioritarios", do "Top 5" executivo e dos perfis de exploitability, num relatorio cuja capa,
     # urgencia, quadro de severidade, mapa e contador de fronteiras ja as contavam: um RCE declarado
     # de severidade 25 nao aparecia em lado nenhum da tabela accionavel, abaixo de heuristicas de 12.
-    declared_rankable, declared_without_risk = _declared_as_rankable(doc)
-    sorted_threats = sorted(
-        [*active, *declared_rankable],
-        key=lambda x: composite_priority_score(x, doc, meth, index=index),
-        reverse=True,
+    declared_rankable, declared_without_risk = _declared_as_rankable(exposure_doc)
+    rankable = [*active, *(t for t in declared_rankable if t.id not in outside_action)]
+    priority_score = partial(
+        composite_priority_score,
+        doc=doc,
+        methodology=meth,
+        index=index,
+        restricted_targets=RestrictedAssetTargets.of(doc) if consolidated else None,
     )
+    sorted_threats = sorted(rankable, key=priority_score, reverse=True)
     top5_titles = [t.title for t in sorted_threats[:5]]
 
     # As três leituras da mesma página têm de concordar. `_overall_status` já usa o máximo das duas
     # origens; estas duas ficaram na pontuação só-heurística, e o relatório executivo saía a dizer
     # "Requer atenção imediata", "Urgência: medium" e "critical | 1" no mesmo bloco.
-    overall_max = _overall_max_score(max_score, doc)
     urgency = _urgency_level(overall_max or 0)
 
     readiness = [
@@ -766,7 +800,7 @@ def build_premium_report_payload(
 
     exec_conclusion = b.exec_conclusion.format(
         total_threats=total_threats,
-        risk_label=_risk_label(max_score, b),
+        risk_label=_risk_label(risk_label_score, b),
     )
 
     arch = _build_architecture(doc, b, meth, recommendation, include_mermaid=include_mermaid, level=level)
@@ -782,13 +816,18 @@ def build_premium_report_payload(
         comp_names=comp_names,
         doc=doc,
         backlog=backlog,
-        active=active,
-        meth=meth,
+        active=[*active, *declared_rankable] if consolidated else active,
         tb_by_component=tb_by_component,
-        index=index,
+        priority_score=priority_score,
     )
 
-    top_risks = _build_top_risks(sorted_threats, doc, meth, backlog, b, index)
+    top_risks = _build_top_risks(sorted_threats, doc, meth, backlog, b, index, priority_score)
+    if consolidated:
+        decisions_by_id = {d.id: d for d in decisions}
+        for risk in top_risks:
+            decision = decisions_by_id.get(risk.threat_id)
+            if decision and decision.destination != "action":
+                risk.recommended_action = treatment_follow_up(decision, loc)
     rc_groups = _build_root_cause_groups(backlog, loc)
 
     exploit_profiles = [infer_exploitability(t, doc, index=index) for t in sorted_threats[:15]]
@@ -812,7 +851,7 @@ def build_premium_report_payload(
         summary=b.disclaimer_summary,
         bullets=disclaimer_bullets,
     )
-    cover = _build_cover(doc, meth, app_v, max_score, status_key, status_display, b)
+    cover = _build_cover(doc, meth, app_v, risk_label_score, status_key, status_display, b)
     exec_summary = _build_exec_summary(
         total_threats=total_threats,
         sev_counter=sev_counter,
@@ -836,6 +875,9 @@ def build_premium_report_payload(
         architecture=arch,
         distributions=distributions,
         top_risks=top_risks,
+        exposure_count=exposure_count if consolidated else None,
+        ranking_candidate_count=len(rankable) if consolidated else None,
+        declared_treatments=decisions,
         root_cause_groups=rc_groups[:20],
         exploitability_profiles=exploit_profiles,
         business_impacts=business_rows,

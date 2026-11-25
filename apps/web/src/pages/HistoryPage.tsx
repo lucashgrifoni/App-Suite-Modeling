@@ -9,7 +9,9 @@ import { PageHeader } from "../components/patterns/PageHeader";
 import { EmptyState } from "../components/patterns/EmptyState";
 import { useAnalysisHistory } from "../context/AnalysisHistoryContext";
 import { useToast } from "../context/ToastContext";
-import { downloadPdfBlob, generateReportPdfBlob } from "../lib/generateReportPdf";
+import { fetchRiskReport, type RiskReportFormat } from "../api/otmApi";
+import { apiErrorMessage } from "../api/apiErrorMessage";
+import { downloadBlob } from "../utils/exportArtifactHelpers";
 import type { AnalysisHistoryEntry } from "../types/analysisHistory";
 
 function countActiveThreats(entry: AnalysisHistoryEntry): number {
@@ -38,24 +40,20 @@ function compactSnapshotPreview(entry: AnalysisHistoryEntry): string {
 
 function HistoryCard({
   entry,
-  activeId,
-  pdfPendingId,
+  reportPending,
   onRestore,
   onExport,
-  onPdf,
+  onReport,
   onRemove,
 }: Readonly<{
   entry: AnalysisHistoryEntry;
-  activeId: string | null;
-  /** The snapshot currently being rendered to PDF, if any. */
-  pdfPendingId: string | null;
+  reportPending: { id: string; format: RiskReportFormat } | null;
   onRestore: (id: string) => void;
   onExport: (id: string) => void;
-  onPdf: (id: string) => void;
+  onReport: (id: string, format: RiskReportFormat) => void;
   onRemove: (id: string) => void;
 }>) {
   const { t, i18n } = useTranslation();
-  const isActive = activeId === entry.id;
   const locale = i18n.language.startsWith("pt") ? "pt-BR" : "en-US";
   let whenStr: string;
   try {
@@ -69,12 +67,7 @@ function HistoryCard({
   const triggerLabel =
     entry.trigger === "analysis" ? t("history.triggerAnalysis") : t("history.triggerExport");
   return (
-    <Card
-      variant={isActive ? "elevated" : "glass"}
-      className={isActive ? "ring-2 ring-[color:var(--otm-ring)]" : ""}
-      title={entry.title}
-      subtitle={`${whenStr} · ${triggerLabel}`}
-    >
+    <Card variant="default" title={entry.title} subtitle={`${whenStr} · ${triggerLabel}`}>
       <div className="flex flex-wrap items-center gap-2 text-sm text-otm-text-muted">
         <Badge tone="neutral">{entry.systemType}</Badge>
         <span>
@@ -106,32 +99,44 @@ function HistoryCard({
           {compactSnapshotPreview(entry)}
         </pre>
       </details>
-      <div className="mt-4 flex flex-wrap gap-2">
-        <Button type="button" variant="secondary" className="!py-1.5 !text-xs" onClick={() => onRestore(entry.id)}>
+      <p className="mt-4 text-xs text-otm-text-muted">{t("work.restoreEffect")}</p>
+      <div className="mt-2 flex flex-wrap gap-2">
+        <Button
+          type="button"
+          variant="secondary"
+          className="!py-1.5 !text-xs"
+          onClick={() => onRestore(entry.id)}
+        >
           {t("history.restore")}
         </Button>
-        <Button type="button" variant="secondary" className="!py-1.5 !text-xs" onClick={() => onExport(entry.id)}>
+        <Button
+          type="button"
+          variant="secondary"
+          className="!py-1.5 !text-xs"
+          onClick={() => onExport(entry.id)}
+        >
           {t("history.goExport")}
         </Button>
-        {/*
-          Client-side jsPDF rendering takes seconds on a real model, and this button used to
-          give no sign it had started: no disabled state, no label change. Three clicks —
-          the natural response to a control that appears to do nothing — started three full
-          renders and dropped three identical files into the Downloads folder. Every PDF
-          button on the export page already guards this way.
-        */}
+        {(["pdf", "markdown"] as const).map((format) => (
+          <Button
+            type="button"
+            key={format}
+            variant="ghost"
+            className="!py-1.5 !text-xs"
+            disabled={reportPending !== null}
+            onClick={() => onReport(entry.id, format)}
+          >
+            {reportPending?.id === entry.id && reportPending.format === format
+              ? t("export.generating")
+              : t(format === "pdf" ? "history.pdfSnapshot" : "history.markdownSnapshot")}
+          </Button>
+        ))}
         <Button
           type="button"
           variant="ghost"
           className="!py-1.5 !text-xs"
-          disabled={pdfPendingId !== null}
-          onClick={() => {
-            onPdf(entry.id);
-          }}
+          onClick={() => onRemove(entry.id)}
         >
-          {pdfPendingId === entry.id ? t("history.pdfSnapshotLoading") : t("history.pdfSnapshot")}
-        </Button>
-        <Button type="button" variant="ghost" className="!py-1.5 !text-xs" onClick={() => onRemove(entry.id)}>
           {t("history.remove")}
         </Button>
       </div>
@@ -144,11 +149,12 @@ export function HistoryPage() {
   const { entries, restore, remove } = useAnalysisHistory();
   const toast = useToast();
   const navigate = useNavigate();
-  const [pdfPendingId, setPdfPendingId] = useState<string | null>(null);
-  const pdfRunning = useRef(false);
+  const [reportPending, setReportPending] = useState<{ id: string; format: RiskReportFormat } | null>(null);
+  const reportRunning = useRef(false);
 
-  /** Destaque do snapshot mais recente (primeiro da lista). */
-  const newestId = entries[0]?.id ?? null;
+  const [selectedId, setSelectedId] = useState("");
+  const selected = entries.find((entry) => entry.id === selectedId) ?? entries[0];
+  const locale = i18n.language.startsWith("pt") ? "pt-BR" : "en-US";
 
   function confirmRestore(id: string) {
     if (!globalThis.confirm(t("history.confirmRestore"))) {
@@ -168,32 +174,39 @@ export function HistoryPage() {
     navigate("/export");
   }
 
-  async function handlePdf(id: string) {
+  async function handleReport(id: string, format: RiskReportFormat) {
     const e = entries.find((x) => x.id === id);
     if (!e) return;
     // The rendered buttons are disabled while one render is in flight; this closes the gap
     // for a double-click delivered before that state reaches the DOM.
-    if (pdfRunning.current) return;
-    pdfRunning.current = true;
-    setPdfPendingId(id);
+    if (reportRunning.current) return;
+    reportRunning.current = true;
+    setReportPending({ id, format });
     try {
-      const blob = await generateReportPdfBlob(e.document, e.analysis, {
+      const { blob, filename } = await fetchRiskReport({
+        document: e.document,
+        analysis: e.analysis,
+        outputFormat: format,
         locale: resolveExportArtifactLocale(undefined, i18n.language),
+        snapshotDate: e.createdAt,
       });
-      const safe = e.title.replaceAll(/[^\w-]+/g, "_").slice(0, 40);
-      downloadPdfBlob(blob, `otm-report-${safe}-${e.createdAt}.pdf`);
-      toast.success(t("history.toastPdfOk"));
-    } catch {
-      toast.error(t("history.toastPdfFail"));
+      downloadBlob(blob, filename);
+      toast.success(t("history.reportReady"));
+    } catch (error) {
+      toast.error(apiErrorMessage(error, t, "export.reportUnavailable"));
     } finally {
-      pdfRunning.current = false;
-      setPdfPendingId(null);
+      reportRunning.current = false;
+      setReportPending(null);
     }
   }
 
   return (
-    <div className="space-y-8">
-      <PageHeader eyebrow={t("history.eyebrow")} title={t("history.title")} description={t("history.description")} />
+    <div className="work-page">
+      <PageHeader
+        eyebrow={t("history.eyebrow")}
+        title={t("history.title")}
+        description={t("history.description")}
+      />
 
       {entries.length === 0 ? (
         <EmptyState
@@ -206,24 +219,56 @@ export function HistoryPage() {
           }
         />
       ) : (
-        <ul className="space-y-4" data-testid="history-list">
-          {entries.map((e) => (
-            <li key={e.id}>
-              <HistoryCard
-                entry={e}
-                activeId={newestId}
-                pdfPendingId={pdfPendingId}
-                onRestore={confirmRestore}
-                onExport={handleExport}
-                onPdf={handlePdf}
-                onRemove={(id) => {
-                  remove(id);
-                  toast.info(t("history.toastRemoved"));
-                }}
-              />
-            </li>
-          ))}
-        </ul>
+        <div className="work-split">
+          <Card title={t("work.savedRecords")}>
+            <ul data-testid="history-list">
+              {entries.map((entry) => (
+                <li key={entry.id}>
+                  <button
+                    type="button"
+                    className="work-select-row grid-cols-[minmax(0,1.4fr)_minmax(70px,1fr)_auto]"
+                    aria-pressed={entry.id === selected.id}
+                    onClick={() => setSelectedId(entry.id)}
+                  >
+                    <span>
+                      <b>
+                        {t(
+                          entry.trigger === "analysis"
+                            ? "history.triggerAnalysis"
+                            : "history.triggerExport",
+                        )}
+                      </b>
+                      <small>{entry.title}</small>
+                    </span>
+                    <small>
+                      {new Date(entry.createdAt).toLocaleString(locale, {
+                        dateStyle: "short",
+                        timeStyle: "short",
+                      })}
+                    </small>
+                    <span className="work-score" title={t("metrics.maxLi")}>
+                      {entry.maxScore ?? "—"}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </Card>
+          <aside>
+            <HistoryCard
+              key={selected.id}
+              entry={selected}
+              reportPending={reportPending}
+              onRestore={confirmRestore}
+              onExport={handleExport}
+              onReport={handleReport}
+              onRemove={(id) => {
+                remove(id);
+                toast.info(t("history.toastRemoved"));
+              }}
+            />
+          </aside>
+        </div>
       )}
     </div>
   );

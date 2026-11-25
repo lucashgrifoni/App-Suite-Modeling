@@ -30,7 +30,7 @@ quem o liga escolhe o número para a sua capacidade.
 
 O tecto vive no funil `routers/_errors.document_from_payload_or_422`, por onde passam todas as
 rotas que recebem um documento (`/v1/models/*`, `/v1/exports`, `/v1/remediation/backlog`,
-`/v1/reports/premium`) e **nenhuma** rota de importação.
+`/v1/reports`, `/v1/reports/premium`) e **nenhuma** rota de importação.
 """
 
 from __future__ import annotations

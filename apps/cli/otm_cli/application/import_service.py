@@ -9,6 +9,7 @@ from typing import Any, TypeVar
 
 import yaml
 from otm_core_schema import ThreatModelDocument, dump_document_to_yaml
+from otm_core_schema.io import MAX_DOCUMENT_BYTES
 from pydantic import ValidationError
 
 from otm_cli.shared.emit import write_json_file
@@ -60,6 +61,29 @@ def import_openapi(spec: Path) -> tuple[str, dict[str, Any] | None, list[Any]]:
         "assumptions": result.assumptions,
     }
     return yaml_text, explain_payload, list(result.inferences)
+
+
+def compare_openapi(previous: Path, revised: Path) -> dict[str, list[str]]:
+    from otm_artifact_import.openapi_import import compare_openapi_operations
+
+    snapshots = []
+    for path in (previous, revised):
+        try:
+            if not path.is_file():
+                raise ValueError("expected a regular contract file.")
+            with path.open("rb") as stream:
+                content = stream.read(MAX_DOCUMENT_BYTES + 1)
+            if len(content) > MAX_DOCUMENT_BYTES:
+                raise ValueError(f"the file exceeds {MAX_DOCUMENT_BYTES} bytes.")
+            snapshots.append(content.decode("utf-8-sig"))
+        except (OSError, ValueError) as error:
+            raise CliUserError(
+                exit_code=1,
+                failed=f"reading OpenAPI contract `{path}`.",
+                cause=str(error),
+                next_step="pass a readable UTF-8 YAML or JSON contract.",
+            ) from error
+    return _parsed_or_user_error("OpenAPI comparison", revised, lambda: compare_openapi_operations(*snapshots))
 
 
 def import_terraform(target: Path) -> tuple[str, dict[str, Any] | None, list[Any]]:

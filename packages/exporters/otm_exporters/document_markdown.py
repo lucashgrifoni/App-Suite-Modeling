@@ -12,6 +12,7 @@ from otm_core_schema.trust_membership import resolve_component_boundaries
 
 from otm_exporters.document_markdown_i18n import DocumentMarkdownMessages, document_markdown_messages
 from otm_exporters.markdown_text import md_block, md_inline
+from otm_exporters.threat_treatment import TreatmentText, markdown_treatment_fields, treatment_text
 
 
 def _append_header(lines: list[str], doc: ThreatModelDocument, msgs: DocumentMarkdownMessages) -> None:
@@ -96,7 +97,9 @@ def _append_trust_boundaries(lines: list[str], doc: ThreatModelDocument, msgs: D
     _append_bulleted(lines, [f"- **{md_inline(b.name)}** (`{b.id}`)" for b in doc.trust_boundaries])
 
 
-def _append_threats(lines: list[str], doc: ThreatModelDocument, msgs: DocumentMarkdownMessages) -> None:
+def _append_threats(
+    lines: list[str], doc: ThreatModelDocument, msgs: DocumentMarkdownMessages, treatment: TreatmentText
+) -> None:
     if not doc.threats:
         return
     _append_section(lines, msgs.section_threats)
@@ -108,6 +111,7 @@ def _append_threats(lines: list[str], doc: ThreatModelDocument, msgs: DocumentMa
             if t.risk.score is not None:
                 risk += f"{msgs.threat_risk_score}{t.risk.score})"
         items.append(f"- **{md_inline(t.title)}** (`{t.id}`) [{t.stride.value}]{risk}")
+        items.extend(markdown_treatment_fields(t.treatment_status, t.treatment_notes, treatment))
     _append_bulleted(lines, items)
 
 
@@ -131,7 +135,7 @@ def export_document_markdown(doc: ThreatModelDocument, *, locale: str | None = N
     _append_components(lines, doc, msgs)
     _append_data_flows(lines, doc, msgs)
     _append_trust_boundaries(lines, doc, msgs)
-    _append_threats(lines, doc, msgs)
+    _append_threats(lines, doc, msgs, treatment_text(locale))
     _append_mitigations(lines, doc, msgs)
 
     return "\n".join(lines).rstrip() + "\n"

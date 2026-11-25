@@ -83,7 +83,7 @@ def test_every_enforced_operation_declares_security(spec: dict[str, Any]) -> Non
 
 def test_the_v1_surface_under_test_is_the_whole_surface(spec: dict[str, Any]) -> None:
     """Se o número mudar, alguém acrescentou rotas — e este ficheiro tem de as ver."""
-    assert len(_v1_operations(spec)) == 17
+    assert len(_v1_operations(spec)) == 19
 
 
 def test_both_credentials_are_offered_as_alternatives(spec: dict[str, Any]) -> None:

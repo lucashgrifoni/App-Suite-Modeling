@@ -119,7 +119,7 @@ interface SessionState {
   document: OtmDocument | null;
   analysis: AnalysisResult | null;
   setDocument: (d: OtmDocument | null) => void;
-  setAnalysis: (a: AnalysisResult | null) => void;
+  setAnalysis: (a: AnalysisResult | null, source?: OtmDocument) => boolean;
   reset: () => void;
 }
 
@@ -169,12 +169,15 @@ export function SessionProvider({ children }: Readonly<{ children: ReactNode }>)
     }
   }, []);
 
-  const setAnalysisValue = useCallback((a: AnalysisResult | null) => {
+  const setAnalysisValue = useCallback((a: AnalysisResult | null, source?: OtmDocument) => {
+    // A decision can edit the model while the previous analysis request is still in flight.
+    if (source && hashDocument(source) !== hashDocument(documentRef.current)) return false;
     const n = a ? normalizeAnalysis(a) : null;
     setAnalysis(n);
     const key = n ? hashDocument(documentRef.current) : null;
     setAnalysisDocKey(key);
     persistAnalysisPair(n, key);
+    return true;
   }, []);
 
   const reset = useCallback(() => {

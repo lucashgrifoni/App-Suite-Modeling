@@ -65,7 +65,7 @@ app = FastAPI(
         },
         {
             "name": "Reports",
-            "description": "Premium executive/standard/deep reports (Markdown and PDF).",
+            "description": "Risk reports in Markdown and PDF.",
         },
     ],
 )

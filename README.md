@@ -93,15 +93,19 @@ Deeper maps: [MONOREPO.md](docs/MONOREPO.md) · [REPOSITORY_LAYOUT.md](docs/REPO
 - **Node 22+** if you work on the web UI (matches CI; Node 20 reached end-of-life on 2026-04-30)
 - On Linux, full **dev** installs that pull PDF stacks may need **Cairo** dev packages (see [CONTRIBUTING.md](CONTRIBUTING.md))
 
-**Install the CLI (users)**
+**Run your first analysis from PyPI**
+
+In a new directory, use a Python virtual environment if you want to isolate the install.
 
 ```bash
-pip install open-threat-model
-otm init my-model.otm.yaml
+python -m pip install open-threat-model
+otm init my-model.otm.yaml --template saas-web
 otm validate my-model.otm.yaml
+otm analyze my-model.otm.yaml --methodology stride
+otm report my-model.otm.yaml -o risk-report.md
 ```
 
-That is the whole setup — `otm` ships with the industry packs and framework mappings embedded, so there is nothing else to download.
+The commands create an editable model and a Markdown report. When adapting the template to your service, confirm the components, flows and trust boundaries before acting on the suggested threats.
 
 **Install from a clone (CLI + API + dev tools, for contributors)**
 
@@ -142,25 +146,25 @@ otm report examples/minimal.otm.yaml -o REPORT.md
 
 ## Use it in your pipeline
 
-**GitHub Actions — composite action.** Validates the model, runs the engine, writes SARIF, and optionally fails the build when a pull request adds risk:
+**GitHub Actions composite action.** The `v7.9.0` example validates the model, runs the engine and uploads SARIF. Enable code scanning in the calling repository before using `upload-sarif`.
 
 ```yaml
 - uses: lucashgrifoni/App-Suite-Modeling@v7.9.0
   with:
     model: threat-model.otm.yaml
-    # Drift gate. On a pull request this path is read from the BASE branch, not from the
-    # pull request's own checkout — see "Where the baseline comes from" below.
-    baseline: baseline/threat-model.otm.yaml
-    fail-on: high
     upload-sarif: "true"   # needs `security-events: write` on the job
 ```
 
-By default the action installs the engine from its own checkout, so the CLI is exactly the version you pinned in `uses:` — there is no skew between the action and the tool. Pass `version: 7.9.0` to install that release from PyPI instead. Outputs: `sarif-file`, `analysis-file`, and `gate-outcome` (`passed`, `tripped`, `not-evaluated`, `error`, or `skipped`). See [`action.yml`](action.yml) for every input.
+By default the action installs the engine from its own checkout. Pass `version: 7.9.0` to install that release from PyPI. The action exposes `sarif-file`, `analysis-file` and `gate-outcome`. Consult the `action.yml` at the exact ref you use for supported inputs and outcome values.
 
-**Modelling more than one system? Give each run its own `sarif-category`.** `model` names a single file, so covering three services means running this action three times — and GitHub indexes code scanning results by `(ref, category)`. Left at the default, the last upload of the run replaces the others and their alerts close as "no longer detected", with no step failing and nothing to notice. One line per matrix entry avoids it:
+The action in this checkout also accepts an organisation `rules` file for analysis
+and drift. The SARIF export from a local YAML model points to the target entity's
+line when available. See the [custom rules guide](docs/features/CUSTOM_RULES.md).
+
+**Modelling more than one system? Give each run its own `sarif-category`.** `model` names a single file, so covering three services means running this action three times — and GitHub indexes code scanning results by `(ref, category)`. Left at the default, the last upload replaces the earlier results. Pin a revision whose `action.yml` declares `sarif-category`. This input was added after `v7.9.0`.
 
 ```yaml
-- uses: lucashgrifoni/App-Suite-Modeling@v7.9.0
+- uses: lucashgrifoni/App-Suite-Modeling@<commit-sha>
   with:
     model: ${{ matrix.model }}
     upload-sarif: "true"
@@ -169,9 +173,9 @@ By default the action installs the engine from its own checkout, so the CLI is e
 
 A single model needs nothing: keep the default, because changing the category orphans the alerts already published under the old one.
 
-**Where the baseline comes from — and why it is not a file path.** A baseline addressed as a path resolves inside the pull request's own checkout, which is written by the same author the gate exists to judge: one pull request that adds the risky component *and* copies the new model over the baseline file reports `gate-outcome: passed` and a green check. So on a `pull_request` event the action reads `baseline` from the **base branch** (`git show origin/$GITHUB_BASE_REF:<baseline>`) and ignores the copy in the checkout. On `push`, tags and schedules there is no pull request to tamper with, so the file in the tree is used.
+**Compare against the pull request base branch.** Pin a published commit whose `action.yml` declares `baseline-ref`. Supply `baseline` and `fail-on`. The action reads the baseline from the base branch on pull requests and from the checkout on events without a base branch. `v7.9.0` reads the file from the checkout on all events. See the [custom rules example](docs/features/CUSTOM_RULES.md#in-ci) for inputs supported by the newer action.
 
-If the base revision cannot be read — a shallow checkout with no network access to the base branch, for instance — the gate **refuses to issue a verdict**: `gate-outcome: not-evaluated`, an `::error::` annotation, and a failing step. A green check there would mean "not measured", not "no new risk". Three ways out, in order of preference: check out with `fetch-depth: 0`; name the revision yourself with `baseline-ref: v1.4.0`; or set `baseline-ref: worktree` to accept the copy in the checkout, which is only safe when that file is protected by CODEOWNERS or branch protection.
+If the base revision cannot be read, the newer action reports `gate-outcome: not-evaluated` and fails the step. Start with `fetch-depth: 0`. With `baseline-ref`, you can also name a Git revision explicitly. Use `baseline-ref: worktree` only where repository rules protect the baseline from unreviewed changes.
 
 **pre-commit — catch a malformed model before it is committed:**
 
@@ -185,7 +189,7 @@ repos:
 
 The hook validates every changed `.otm.yaml` against the canonical schema. `otm validate` accepts several files, so pre-commit needs no shell loop.
 
-> **Pin the commit SHA, not the tag.** Both snippets above name `v7.9.0` because it is readable, but a git tag is mutable: anyone who can push to this repository can move it, and both of these execute code — the action inside your CI job, with your `GITHUB_TOKEN` and secrets; the hook on your developers' machines, on every commit. `uses:` and pre-commit's `rev:` both accept a 40-character commit SHA, and that is what a security gate deserves:
+> **Pin the commit SHA, not the tag.** The quick-start and pre-commit examples use `v7.9.0` for readability. A Git tag can move. Pin a 40-character commit SHA in both `uses:` and pre-commit's `rev:` to keep the code executed in CI and on developer machines fixed:
 >
 > ```yaml
 > - uses: lucashgrifoni/App-Suite-Modeling@<commit-sha>   # v7.9.0

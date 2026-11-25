@@ -420,6 +420,16 @@ def test_publish_job_is_the_only_environment_bound_job():
     assert "environment" not in jobs["build"]
 
 
+def test_gitleaks_reads_pull_request_commits_without_write_permissions():
+    job = "secrets-history-gitleaks"
+    assert _load(SECURITY_WF)["jobs"][job]["permissions"] == {"contents": "read", "pull-requests": "read"}
+    checkout = _step(SECURITY_WF, job, "Checkout")["with"]
+    assert checkout["fetch-depth"] == 0
+    assert checkout["persist-credentials"] is False
+    scan_env = _step(SECURITY_WF, job, "Scan git history for leaked secrets")["env"]
+    assert scan_env["GITLEAKS_ENABLE_COMMENTS"] == "false"
+
+
 # ---------------------------------------------------------------------------------------
 # Executable references this repository resolves itself must be immutable (findings #14/#31)
 # ---------------------------------------------------------------------------------------

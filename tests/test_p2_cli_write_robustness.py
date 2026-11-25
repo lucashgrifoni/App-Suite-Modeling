@@ -12,6 +12,7 @@ Two defects, both of them in how the destination file is opened:
 
 from __future__ import annotations
 
+import errno
 import os
 from pathlib import Path
 
@@ -37,25 +38,40 @@ def _out(result: Result) -> str:
     return (getattr(result, "stdout", "") or "") + (getattr(result, "stderr", "") or "")
 
 
+@pytest.fixture
+def rejected_destination(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    destination = tmp_path / "rejected.json"
+    replace = os.replace
+
+    def reject_destination(src: Path, dst: Path) -> None:
+        if dst == destination:
+            raise OSError(errno.EINVAL, "Invalid filename")
+        replace(src, dst)
+
+    monkeypatch.setattr(os, "replace", reject_destination)
+    return destination
+
+
 # --- every OSError, not just PermissionError -----------------------------------------------
 
 
-def test_a_filename_the_os_rejects_is_a_clean_error(runner: CliRunner, tmp_path: Path) -> None:
-    result = runner.invoke(app, ["analyze", _MINIMAL, "-q", "--json-out", str(tmp_path / "out?.json")])
+def test_a_filename_the_os_rejects_is_a_clean_error(runner: CliRunner, rejected_destination: Path) -> None:
+    result = runner.invoke(app, ["analyze", _MINIMAL, "-q", "--json-out", str(rejected_destination)])
 
     assert result.exit_code == 1
 
 
-def test_a_filename_the_os_rejects_does_not_escape_as_an_oserror(runner: CliRunner, tmp_path: Path) -> None:
-    result = runner.invoke(app, ["analyze", _MINIMAL, "-q", "--json-out", str(tmp_path / "out?.json")])
+def test_a_filename_the_os_rejects_does_not_escape_as_an_oserror(runner: CliRunner, rejected_destination: Path) -> None:
+    result = runner.invoke(app, ["analyze", _MINIMAL, "-q", "--json-out", str(rejected_destination)])
 
     assert not isinstance(result.exception, OSError)
 
 
-def test_a_filename_the_os_rejects_names_the_destination(runner: CliRunner, tmp_path: Path) -> None:
-    result = runner.invoke(app, ["analyze", _MINIMAL, "-q", "--json-out", str(tmp_path / "out?.json")])
+def test_a_filename_the_os_rejects_names_the_destination(runner: CliRunner, rejected_destination: Path) -> None:
+    result = runner.invoke(app, ["analyze", _MINIMAL, "-q", "--json-out", str(rejected_destination)])
 
     assert "cannot write to" in _out(result)
+    assert rejected_destination.name in _out(result)
 
 
 def test_writing_through_an_existing_file_does_not_escape_as_an_oserror(runner: CliRunner, tmp_path: Path) -> None:

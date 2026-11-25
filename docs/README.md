@@ -128,14 +128,19 @@ Checklists de publicação, RC, *prepublish*, playbooks.
 
 ### Comece aqui (instalação resumida)
 
+Use Python 3.11 ou mais recente. Para experimentar a ferramenta sem clonar o repositório, execute em um diretório novo:
+
 ```bash
-python -m venv .venv
-# Windows: .venv\Scripts\activate | Linux/macOS: source .venv/bin/activate
-pip install -e ".[dev,cli,api]"
-python scripts/setup_dev.py
+python -m pip install open-threat-model
+otm init my-model.otm.yaml --template saas-web
+otm validate my-model.otm.yaml
+otm analyze my-model.otm.yaml --methodology stride
+otm report my-model.otm.yaml -o risk-report.md
 ```
 
-Atalhos: `python scripts/run_dev.py` — API + UI (ver [`README.md`](../README.md)).
+Revise o rascunho e as ameaças sugeridas antes de usar o relatório em uma decisão.
+
+Para contribuir ou rodar a aplicação web a partir de um clone, siga a [instalação para desenvolvimento](../README.md#quick-start).
 
 ---
 

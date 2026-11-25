@@ -7,7 +7,7 @@ from otm_industry_packs.models import TemplateInfo
 from rich.panel import Panel
 
 from otm_cli.application import templates_service as tmpl
-from otm_cli.commands.bootstrap import console
+from otm_cli.commands.bootstrap import console, listing_console
 from otm_cli.commands.handle_errors import exit_on_cli_error
 from otm_cli.shared.enums import TemplateComplexity
 from otm_cli.shared.errors import CliUserError
@@ -24,17 +24,17 @@ def _print_template_infos(infos: list[TemplateInfo]) -> None:
     nenhuma entrada é a leitura errada.
     """
     if not infos:
-        console.print("[yellow]No templates match the given filters.[/yellow]")
+        listing_console.print("[yellow]No templates match the given filters.[/yellow]")
         return
-    console.print("[bold]Templates[/bold] (use: [cyan]otm init -t ID[/cyan]):")
+    listing_console.print("[bold]Templates[/bold] (use: [cyan]otm init -t ID[/cyan]):")
     for info in infos:
-        console.print(f"  • [cyan]{safe(info.id)}[/cyan] — {safe(info.title)}")
+        listing_console.print(f"  • [cyan]{safe(info.id)}[/cyan] — {safe(info.title)}")
         if info.suggested_pack:
-            console.print(f"    suggested pack: {safe(info.suggested_pack)}")
+            listing_console.print(f"    suggested pack: {safe(info.suggested_pack)}")
         if info.complexity:
-            console.print(f"    complexity: {safe(info.complexity)}")
+            listing_console.print(f"    complexity: {safe(info.complexity)}")
         if info.category_label:
-            console.print(f"    category: {safe(info.category_label)}")
+            listing_console.print(f"    category: {safe(info.category_label)}")
 
 
 def build_templates_app() -> typer.Typer:

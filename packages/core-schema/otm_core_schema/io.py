@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from yaml.nodes import MappingNode, Node
+from yaml.nodes import MappingNode, Node, ScalarNode, SequenceNode
 
 from otm_core_schema.document import ThreatModelDocument
 
@@ -262,14 +262,53 @@ def _json_depth_exceeds(text: str, limit: int) -> bool:
     return False
 
 
-def load_document_from_yaml(text: str) -> ThreatModelDocument:
-    data = _safe_load_bounded(text)
+def _entity_source_lines(root: Node | None) -> dict[tuple[str, str], int]:
+    if not isinstance(root, MappingNode):
+        return {}
+    groups = {key.value: value for key, value in root.value if isinstance(key, ScalarNode)}
+    lines: dict[tuple[str, str], int] = {}
+    for field, kind in (("components", "component"), ("data_flows", "dataflow"), ("assets", "asset")):
+        group = groups.get(field)
+        if not isinstance(group, SequenceNode):
+            continue
+        for entry in group.value:
+            if not isinstance(entry, MappingNode) or entry.start_mark.index < group.start_mark.index:
+                continue
+            for key, value in entry.value:
+                if isinstance(key, ScalarNode) and key.value == "id" and isinstance(value, ScalarNode):
+                    lines[kind, value.value] = key.start_mark.line + 1
+    return lines
+
+
+def load_document_from_yaml(
+    text: str,
+    *,
+    source_lines: dict[tuple[str, str], int] | None = None,
+) -> ThreatModelDocument:
+    if source_lines is None:
+        data = _safe_load_bounded(text)
+    else:
+        # Use the same bounded parse for validation and source positions.
+        loader = _BoundedSafeLoader(text)
+        try:
+            node = loader.get_single_node()
+            positions = _entity_source_lines(node)
+            data = loader.construct_document(node) if node is not None else None
+        finally:
+            loader.dispose()
     if not isinstance(data, dict):
         raise ValueError("YAML root must be a mapping")
-    return ThreatModelDocument.model_validate(data)
+    document = ThreatModelDocument.model_validate(data)
+    if source_lines is not None:
+        source_lines.update(positions)
+    return document
 
 
-def load_document_from_yaml_path(path: Path | str) -> ThreatModelDocument:
+def load_document_from_yaml_path(
+    path: Path | str,
+    *,
+    source_lines: dict[tuple[str, str], int] | None = None,
+) -> ThreatModelDocument:
     p = Path(path)
     limit = _limit_from_env(ENV_MAX_DOCUMENT_BYTES, MAX_DOCUMENT_BYTES)
     size = p.stat().st_size
@@ -277,7 +316,10 @@ def load_document_from_yaml_path(path: Path | str) -> ThreatModelDocument:
         raise ValueError(
             f"document file is {size} bytes; the limit is {limit} bytes (override with {ENV_MAX_DOCUMENT_BYTES})."
         )
-    return load_document_from_yaml(p.read_text(encoding="utf-8"))
+    return load_document_from_yaml(
+        p.read_text(encoding="utf-8"),
+        source_lines=source_lines if p.suffix.lower() != ".json" else None,
+    )
 
 
 def dump_document_to_yaml(document: ThreatModelDocument) -> str:

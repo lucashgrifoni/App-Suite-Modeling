@@ -110,6 +110,7 @@ describe("DiffPage after unticking Include analysis", () => {
     const user = await compareIncludingAnalysis();
     await screen.findByText("15");
 
+    await user.click(screen.getByRole("button", { name: i18n.t("work.comparisonInputs") }));
     await user.click(screen.getByLabelText(i18n.t("diff.includeAnalysis")));
 
     expect(compareMock).toHaveBeenCalledTimes(1);
@@ -119,6 +120,7 @@ describe("DiffPage after unticking Include analysis", () => {
 
   it("still sends the checkbox state on the NEXT comparison", async () => {
     const user = await compareIncludingAnalysis();
+    await user.click(screen.getByRole("button", { name: i18n.t("work.comparisonInputs") }));
     await user.click(screen.getByLabelText(i18n.t("diff.includeAnalysis")));
 
     compareMock.mockResolvedValueOnce(withAnalysis());

@@ -79,7 +79,7 @@ def _run_to_completion(argv: list[str]) -> int:
 # --- the closed pipe -------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("command", [["templates"], ["packs"]])
+@pytest.mark.parametrize("command", [["templates"], ["templates", "list"], ["packs"]])
 def test_a_reader_that_walks_away_is_not_a_failure(command: list[str]) -> None:
     assert _run_and_close_the_pipe(["otm", *command]) == 0
 

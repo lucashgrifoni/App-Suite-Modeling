@@ -8,7 +8,9 @@ from collections.abc import Callable
 
 import yaml
 from fastapi import APIRouter, File, HTTPException, UploadFile, status
+from otm_artifact_import.openapi_reimport import OpenApiReimportPreview, preview_openapi_reimport
 from otm_artifact_import.types import ArtifactImportResult
+from starlette.concurrency import run_in_threadpool
 
 from otm_api.api_error_messages import (
     msg_import_artifact_invalid,
@@ -17,7 +19,7 @@ from otm_api.api_error_messages import (
     msg_import_too_large,
 )
 from otm_api.error_models import API_ERROR_RESPONSES
-from otm_api.routers._errors import error_detail
+from otm_api.routers._errors import document_from_payload_or_422, error_detail
 from otm_api.schemas.bodies import ArtifactImportResponse, InferenceRecordBody
 from otm_api.services.imports import (
     import_kubernetes_bytes,
@@ -201,6 +203,37 @@ async def _draft_from_upload(
 )
 async def import_openapi_route(file: UploadFile = File(...)) -> ArtifactImportResponse:
     return await _draft_from_upload(file, import_openapi_bytes)
+
+
+@router.post(
+    "/openapi/reimport-preview",
+    summary="Preview changes to an existing model from two OpenAPI contracts",
+    description="Read-only comparison. Conflicting fields and removed entities are retained in the proposed model.",
+)
+async def preview_openapi_reimport_route(
+    previous: UploadFile = File(...),
+    revised: UploadFile = File(...),
+    document: UploadFile = File(...),
+) -> OpenApiReimportPreview:
+    previous_data, _ = await _read_limited(previous)
+    revised_data, _ = await _read_limited(revised)
+    document_data, _ = await _read_limited(document)
+    try:
+        payload = json.loads(document_data.decode("utf-8-sig"))
+        if not isinstance(payload, dict):
+            raise ValueError("Expected a model object.")
+        active = document_from_payload_or_422(payload)
+        preview = await run_in_threadpool(
+            preview_openapi_reimport, previous_data.decode("utf-8-sig"), revised_data.decode("utf-8-sig"), active
+        )
+        document_from_payload_or_422(preview.document)
+    except (ValueError, AttributeError, TypeError, RecursionError) as exc:
+        raise _import_error(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            code="OPENAPI_REIMPORT_INVALID",
+            message="Use two OpenAPI YAML or JSON contracts with inline path items and a valid JSON model.",
+        ) from exc
+    return preview
 
 
 @router.post(

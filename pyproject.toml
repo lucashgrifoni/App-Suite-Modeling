@@ -58,14 +58,12 @@ api = [
   # FastAPI 0.141 no longer exposes for `include_router` routes — so it silently enforced
   # nothing. `limits` was already the transitive engine underneath it; it is now direct.
   "limits>=4.0",
-  # Reservado para persistência pós-MVP (multi-utilizador / histórico); a API atual não importa SQLAlchemy.
-  "sqlalchemy>=2.0",
 ]
 # Kept as a no-op alias: the CLI dependencies moved to the base install (see above), but
 # `pip install "open-threat-model[cli]"` and `pip install -e ".[dev,cli,api]"` stay valid.
 cli = []
 # PDF premium (xhtml2pdf); instalar com: pip install -e ".[report]"
-report = ["xhtml2pdf>=0.2.15"]
+report = ["xhtml2pdf>=0.2.15", "reportlab>=4.0.4,<5"]
 dev = [
   "pytest>=7.4",
   "pytest-cov>=4.0",

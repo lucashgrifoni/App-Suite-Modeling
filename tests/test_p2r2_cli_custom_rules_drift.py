@@ -16,6 +16,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+import yaml
 from click.testing import Result
 from otm_cli.cli import app
 from typer.testing import CliRunner
@@ -61,6 +62,20 @@ rules:
 """
 
 _CUSTOM_THREAT_ID = "custom_orgpolicy_no_debug_in_prod_app"
+
+
+def test_composite_action_shares_the_resolved_rules_file() -> None:
+    root = Path(__file__).resolve().parents[1]
+    action = yaml.safe_load((root / "action.yml").read_text(encoding="utf-8"))
+    steps = {step.get("id"): step for step in action["runs"]["steps"]}
+    assert action["inputs"]["rules"]["default"] == ""
+    assert steps["rules"]["env"]["EVENT_BASE"] == (
+        "${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}"
+    )
+    for stepid in ("analyze", "gate"):
+        step = steps[stepid]
+        assert step["env"]["RULES_FILE"] == "${{ steps.rules.outputs.path }}"
+        assert 'args+=(--rules "${RULES_FILE}")' in step["run"]
 
 
 @pytest.fixture

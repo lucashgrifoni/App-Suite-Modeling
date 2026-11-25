@@ -894,6 +894,64 @@
         ]
       }
     },
+    "/v1/imports/openapi/reimport-preview": {
+      "post": {
+        "tags": [
+          "Assisted import"
+        ],
+        "summary": "Preview changes to an existing model from two OpenAPI contracts",
+        "description": "Read-only comparison. Conflicting fields and removed entities are retained in the proposed model.",
+        "operationId": "preview_openapi_reimport_route_v1_imports_openapi_reimport_preview_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_preview_openapi_reimport_route_v1_imports_openapi_reimport_preview_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpenApiReimportPreview"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Pedido inválido: envelope (`ApiProblem`) ou domínio (`ApiErrorEnvelope`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ApiErrorEnvelope"
+                    }
+                  ],
+                  "title": "Response 422 Preview Openapi Reimport Route V1 Imports Openapi Reimport Preview Post"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyHeader": []
+          },
+          {
+            "BearerToken": []
+          }
+        ]
+      }
+    },
     "/v1/imports/terraform": {
       "post": {
         "tags": [
@@ -1110,13 +1168,80 @@
         }
       }
     },
+    "/v1/reports": {
+      "post": {
+        "tags": [
+          "Reports"
+        ],
+        "summary": "Risk report (Markdown or PDF)",
+        "description": "Builds the risk report. Requires a document and either analysis or run_analysis=true.",
+        "operationId": "post_risk_report_v1_reports_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RiskReportBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Markdown report or binary PDF.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              },
+              "text/markdown": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/pdf": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Pedido inválido: envelope (`ApiProblem`) ou domínio (`ApiErrorEnvelope`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ApiErrorEnvelope"
+                    }
+                  ],
+                  "title": "Response 422 Post Risk Report V1 Reports Post"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyHeader": []
+          },
+          {
+            "BearerToken": []
+          }
+        ]
+      }
+    },
     "/v1/reports/premium": {
       "post": {
         "tags": [
           "Reports"
         ],
-        "summary": "Premium report (Markdown or PDF)",
-        "description": "Builds the consolidated premium report from analysis, backlog, diff, and explainability. Requires `document` and either `analysis` or `run_analysis: true`.",
+        "summary": "Legacy report (Markdown or PDF)",
+        "description": "Compatibility route for existing integrations and explicit report levels.",
         "operationId": "post_premium_report_v1_reports_premium_post",
         "requestBody": {
           "content": {
@@ -1130,7 +1255,7 @@
         },
         "responses": {
           "200": {
-            "description": "Corpo = Markdown (`output_format=markdown`) ou PDF binário (`output_format=pdf`).",
+            "description": "Markdown report or binary PDF.",
             "content": {
               "application/json": {
                 "schema": {}
@@ -1167,6 +1292,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "ApiKeyHeader": []
@@ -2167,6 +2293,32 @@
           "file"
         ],
         "title": "Body_import_terraform_route_v1_imports_terraform_post"
+      },
+      "Body_preview_openapi_reimport_route_v1_imports_openapi_reimport_preview_post": {
+        "properties": {
+          "previous": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "Previous"
+          },
+          "revised": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "Revised"
+          },
+          "document": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "Document"
+          }
+        },
+        "type": "object",
+        "required": [
+          "previous",
+          "revised",
+          "document"
+        ],
+        "title": "Body_preview_openapi_reimport_route_v1_imports_openapi_reimport_preview_post"
       },
       "CompareBody": {
         "properties": {
@@ -3379,6 +3531,47 @@
         ],
         "title": "ModifiedEntity"
       },
+      "OpenApiReimportPreview": {
+        "properties": {
+          "document": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Document"
+          },
+          "operations": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Operations"
+          },
+          "changes": {
+            "items": {
+              "$ref": "#/components/schemas/FieldChange"
+            },
+            "type": "array",
+            "title": "Changes"
+          },
+          "conflicts": {
+            "items": {
+              "$ref": "#/components/schemas/FieldChange"
+            },
+            "type": "array",
+            "title": "Conflicts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "document",
+          "operations",
+          "changes",
+          "conflicts"
+        ],
+        "title": "OpenApiReimportPreview"
+      },
       "PackHintsDelta": {
         "properties": {
           "added": {
@@ -3494,17 +3687,6 @@
             "title": "Auto Recommend Methodology",
             "default": false
           },
-          "level": {
-            "type": "string",
-            "enum": [
-              "executive",
-              "standard",
-              "deep"
-            ],
-            "title": "Level",
-            "description": "Profundidade do relatório.",
-            "default": "standard"
-          },
           "output_format": {
             "type": "string",
             "enum": [
@@ -3526,6 +3708,17 @@
             ],
             "title": "Locale",
             "description": "Idioma dos textos estruturais do relatório (pt-BR | en). Omitido = pt-BR."
+          },
+          "level": {
+            "type": "string",
+            "enum": [
+              "executive",
+              "standard",
+              "deep"
+            ],
+            "title": "Level",
+            "description": "Profundidade do relatório.",
+            "default": "standard"
           }
         },
         "additionalProperties": false,
@@ -3534,7 +3727,7 @@
           "document"
         ],
         "title": "PremiumReportBody",
-        "description": "Report premium — mesmo padrão de análise que `/remediation/backlog`."
+        "description": "Legacy report request with a selectable level."
       },
       "QualityCheckItem": {
         "properties": {
@@ -3985,6 +4178,104 @@
         },
         "type": "object",
         "title": "RiskDeltaSummary"
+      },
+      "RiskReportBody": {
+        "properties": {
+          "document": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Document",
+            "description": "Raiz compatível com `ThreatModelDocument` (aliases YAML respeitados)."
+          },
+          "analysis": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Analysis",
+            "description": "`AnalysisResult` em JSON; obrigatório se `run_analysis` é false."
+          },
+          "baseline_analysis": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline Analysis",
+            "description": "Análise anterior para secção baseline/diff (opcional)."
+          },
+          "run_analysis": {
+            "type": "boolean",
+            "title": "Run Analysis",
+            "description": "Se true e `analysis` ausente, executa o motor no documento.",
+            "default": false
+          },
+          "pack_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pack Id",
+            "description": "Pack quando `run_analysis` é usado."
+          },
+          "methodology": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ThreatModelMethodology"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "auto_recommend_methodology": {
+            "type": "boolean",
+            "title": "Auto Recommend Methodology",
+            "default": false
+          },
+          "output_format": {
+            "type": "string",
+            "enum": [
+              "markdown",
+              "pdf"
+            ],
+            "title": "Output Format",
+            "description": "markdown = texto; pdf = binário application/pdf.",
+            "default": "markdown"
+          },
+          "locale": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Locale",
+            "description": "Idioma dos textos estruturais do relatório (pt-BR | en). Omitido = pt-BR."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "document"
+        ],
+        "title": "RiskReportBody",
+        "description": "Risk report for a document and its analysis."
       },
       "SemanticDiffSectionsModel": {
         "properties": {
@@ -4700,7 +4991,7 @@
     },
     {
       "name": "Reports",
-      "description": "Premium executive/standard/deep reports (Markdown and PDF)."
+      "description": "Risk reports in Markdown and PDF."
     }
   ]
 }

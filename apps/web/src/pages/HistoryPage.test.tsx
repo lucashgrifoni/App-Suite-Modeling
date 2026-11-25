@@ -12,18 +12,16 @@ import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { HistoryPage } from "./HistoryPage";
-import { downloadPdfBlob, generateReportPdfBlob } from "../lib/generateReportPdf";
+import { fetchRiskReport } from "../api/otmApi";
+import { downloadBlob } from "../utils/exportArtifactHelpers";
 import { AnalysisHistoryProvider } from "../context/AnalysisHistoryContext";
 import { SessionProvider } from "../context/SessionContext";
 import { ToastProvider } from "../context/ToastContext";
 import i18n from "../i18n/i18n";
 import type { AnalysisHistoryEntry } from "../types/analysisHistory";
 
-// jsPDF pulls a large canvas/font stack that jsdom cannot run and this page never exercises.
-vi.mock("../lib/generateReportPdf", () => ({
-  generateReportPdfBlob: vi.fn(),
-  downloadPdfBlob: vi.fn(),
-}));
+vi.mock("../api/otmApi", () => ({ fetchRiskReport: vi.fn() }));
+vi.mock("../utils/exportArtifactHelpers", () => ({ downloadBlob: vi.fn() }));
 
 const HISTORY_KEY = "otm.analysis.history";
 
@@ -125,31 +123,23 @@ describe("HistoryPage snapshot summary line", () => {
   });
 });
 
-/**
- * "PDF from this snapshot" had no in-flight state at all: the label never changed, the
- * button never disabled, and client-side jsPDF rendering takes seconds on a real model. The
- * natural response to a control that appears to do nothing is to click it again — three
- * clicks ~200 ms apart produced three full renders and three identically named files in the
- * Downloads folder, with no feedback at any point. Every PDF button on the export page
- * already gates on its loading flag and swaps its label.
- */
 describe("HistoryPage snapshot PDF", () => {
   // `restoreMocks` only resets spies, and these two come from a module factory, so their
   // call history would otherwise carry over between tests and make the counts meaningless.
   beforeEach(() => {
-    vi.mocked(generateReportPdfBlob).mockReset();
-    vi.mocked(downloadPdfBlob).mockReset();
+    vi.mocked(fetchRiskReport).mockReset();
+    vi.mocked(downloadBlob).mockReset();
   });
 
   /** A render that never settles, i.e. what the user is looking at while it works. */
   function pendingRender() {
-    const gen = vi.mocked(generateReportPdfBlob);
-    gen.mockReturnValue(new Promise<Blob>(() => {}));
+    const gen = vi.mocked(fetchRiskReport);
+    gen.mockReturnValue(new Promise<Awaited<ReturnType<typeof fetchRiskReport>>>(() => {}));
     return gen;
   }
 
   function pdfButton() {
-    return screen.getByRole("button", { name: /PDF/i });
+    return screen.getByRole("button", { name: /PDF|Generating|Gerando|A gerar/i });
   }
 
   it("tells the user the render started", async () => {
@@ -158,7 +148,7 @@ describe("HistoryPage snapshot PDF", () => {
 
     await userEvent.click(pdfButton());
 
-    expect(screen.getByText(i18n.t("history.pdfSnapshotLoading"))).toBeInTheDocument();
+    expect(screen.getByText(i18n.t("export.generating"))).toBeInTheDocument();
   });
 
   it("disables the button while it works", async () => {
@@ -182,7 +172,7 @@ describe("HistoryPage snapshot PDF", () => {
     expect(gen).toHaveBeenCalledTimes(1);
   });
 
-  it("produces exactly one file for those three clicks", async () => {
+  it("waits for the report before downloading", async () => {
     pendingRender();
     render(<HistoryPage />, { wrapper: Providers });
 
@@ -191,22 +181,22 @@ describe("HistoryPage snapshot PDF", () => {
     await user.click(pdfButton());
     await user.click(pdfButton());
 
-    expect(vi.mocked(downloadPdfBlob)).not.toHaveBeenCalled();
+    expect(vi.mocked(downloadBlob)).not.toHaveBeenCalled();
   });
 
   it("downloads the file and re-enables the button once the render finishes", async () => {
-    vi.mocked(generateReportPdfBlob).mockResolvedValue(new Blob(["%PDF-1.4"]));
+    vi.mocked(fetchRiskReport).mockResolvedValue({ blob: new Blob(["%PDF-1.4"]), filename: "report.pdf" });
     render(<HistoryPage />, { wrapper: Providers });
 
     await userEvent.click(pdfButton());
 
-    await waitFor(() => expect(vi.mocked(downloadPdfBlob)).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(vi.mocked(downloadBlob)).toHaveBeenCalledTimes(1));
     expect(pdfButton()).toBeEnabled();
   });
 
   /** A failed render must not leave the control disabled for the rest of the session. */
   it("re-enables the button when the render fails", async () => {
-    vi.mocked(generateReportPdfBlob).mockRejectedValue(new Error("jsPDF exploded"));
+    vi.mocked(fetchRiskReport).mockRejectedValue(new Error("service unavailable"));
     render(<HistoryPage />, { wrapper: Providers });
 
     await userEvent.click(pdfButton());
@@ -215,7 +205,7 @@ describe("HistoryPage snapshot PDF", () => {
   });
 
   it("shows the ordinary label again after a successful render", async () => {
-    vi.mocked(generateReportPdfBlob).mockResolvedValue(new Blob(["%PDF-1.4"]));
+    vi.mocked(fetchRiskReport).mockResolvedValue({ blob: new Blob(["%PDF-1.4"]), filename: "report.pdf" });
     render(<HistoryPage />, { wrapper: Providers });
 
     await userEvent.click(pdfButton());

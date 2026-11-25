@@ -1,5 +1,6 @@
 import {
   apiErrorFromResponseText,
+  ApiMalformedResponseError,
   apiFetch,
   fetchWithTimeout,
   REPORT_TIMEOUT_MS,
@@ -10,6 +11,7 @@ import type {
   ArtifactImportResponse,
   ExportFormat,
   MethodologyRecommendation,
+  OpenApiReimportPreview,
   RemediationBacklogResponse,
   TemplateListItem,
   ThreatModelComparisonResult,
@@ -152,21 +154,17 @@ export async function exportArtifacts(body: {
 
 const API_PREFIX = import.meta.env.VITE_API_PREFIX ?? "/api";
 
-export type PremiumReportLevel = "executive" | "standard" | "deep";
+export type RiskReportFormat = "markdown" | "pdf";
 
-/**
- * Report premium (Markdown ou PDF) via API — mesma lógica que `otm report --level`.
- */
-export async function fetchPremiumReport(args: {
+export async function fetchRiskReport(args: {
   document: OtmDocument;
   analysis: AnalysisResult | null;
-  level: PremiumReportLevel;
-  outputFormat: "markdown" | "pdf";
-  /** pt-BR | en — alinhado ao export Markdown e ao normalizador da API */
-  locale?: "pt-BR" | "en";
+  outputFormat: RiskReportFormat;
+  locale: "pt-BR" | "en";
+  snapshotDate?: number;
 }): Promise<{ blob: Blob; filename: string }> {
   const res = await fetchWithTimeout(
-    `${API_PREFIX}/v1/reports/premium`,
+    `${API_PREFIX}/v1/reports`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -174,31 +172,25 @@ export async function fetchPremiumReport(args: {
         document: args.document,
         analysis: args.analysis,
         run_analysis: args.analysis === null,
-        level: args.level,
         output_format: args.outputFormat,
-        ...(args.locale ? { locale: args.locale } : {}),
+        locale: args.locale,
       }),
     },
     REPORT_TIMEOUT_MS,
   );
   if (!res.ok) {
-    // Built by the shared helper, not by hand: this route answers 501 PDF_DEPENDENCY when
-    // the server cannot render PDFs, and that coded envelope only reaches the presentation
-    // layer if `body` carries the PARSED response. See `apiErrorFromResponseText`.
     throw apiErrorFromResponseText(res.status, res.statusText, await res.text());
   }
-  const ext = args.outputFormat === "pdf" ? "pdf" : "md";
-  if (args.outputFormat === "pdf") {
-    const buf = await res.arrayBuffer();
-    return {
-      blob: new Blob([buf], { type: "application/pdf" }),
-      filename: `otm-premium-${args.level}.${ext}`,
-    };
+  const pdf = args.outputFormat === "pdf";
+  const mediaType = pdf ? "application/pdf" : "text/markdown";
+  if (res.headers.get("content-type")?.split(";")[0].trim().toLowerCase() !== mediaType) {
+    throw new ApiMalformedResponseError(res.status);
   }
-  const text = await res.text();
+  const safeTitle = args.document.metadata.title.replaceAll(/[^\w-]+/g, "_").slice(0, 60) || "model";
+  const revision = args.snapshotDate ? `-${args.snapshotDate}` : "";
   return {
-    blob: new Blob([text], { type: "text/markdown; charset=utf-8" }),
-    filename: `otm-premium-${args.level}.${ext}`,
+    blob: await res.blob(),
+    filename: `otm-report-${safeTitle}${revision}.${pdf ? "pdf" : "md"}`,
   };
 }
 
@@ -226,4 +218,16 @@ export async function importArtifact(
     method: "POST",
     body: fd,
   });
+}
+
+export async function previewOpenApiReimport(
+  previous: File,
+  revised: File,
+  document: OtmDocument,
+): Promise<OpenApiReimportPreview> {
+  const body = new FormData();
+  body.append("previous", previous);
+  body.append("revised", revised);
+  body.append("document", new Blob([JSON.stringify(document)], { type: "application/json" }), "model.json");
+  return apiFetch("/v1/imports/openapi/reimport-preview", { method: "POST", body });
 }

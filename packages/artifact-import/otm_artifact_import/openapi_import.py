@@ -99,6 +99,68 @@ def _count_operations(paths: dict[str, Any] | None) -> tuple[int, list[str]]:
     return n, detail[:40]
 
 
+def _operation_snapshot(data: dict[str, Any]) -> dict[str, tuple[dict[str, Any], dict[str, Any]]]:
+    version = data.get("openapi")
+    if not (isinstance(version, str) and version.startswith("3.")) and data.get("swagger") != "2.0":
+        raise ValueError("Expected OpenAPI 3.x or Swagger 2.0.")
+    paths = data.get("paths")
+    if not isinstance(paths, dict):
+        raise ValueError("Expected an OpenAPI paths object. Use paths: {} for a contract with no operations.")
+
+    operations: dict[str, tuple[dict[str, Any], dict[str, Any]]] = {}
+    for path, item in paths.items():
+        if isinstance(path, str) and path.startswith("x-"):
+            continue
+        if not isinstance(path, str) or not path.startswith("/") or not isinstance(item, dict):
+            raise ValueError("Each OpenAPI path must start with '/' and have an object definition.")
+        if "$ref" in item:
+            raise ValueError("Inline referenced OpenAPI path items before comparing operations.")
+        shared = {field: item[field] for field in ("parameters", "servers", "security") if field in item}
+        for method in _HTTP_METHODS & item.keys():
+            operation = item[method]
+            if not isinstance(operation, dict):
+                raise ValueError("Each HTTP operation must have an object definition.")
+            operations[f"{method.upper()} {path}"] = (operation, shared)
+    return operations
+
+
+def compare_openapi_operations(previous: str, revised: str) -> dict[str, list[str]]:
+    """Compare operation definitions in two snapshots without altering their source or an OTM model."""
+    snapshots = []
+    for label, content in (("Previous contract", previous), ("Revised contract", revised)):
+        try:
+            contract = load_object_from_text(content)
+            snapshots.append((contract, _operation_snapshot(contract)))
+        except ValueError as error:
+            raise ValueError(f"{label}: {error}") from error
+    (before, previous_ops), (after, revised_ops) = snapshots
+    shared = (
+        "openapi",
+        "swagger",
+        "components",
+        "definitions",
+        "host",
+        "basePath",
+        "schemes",
+        "servers",
+        "security",
+        "securityDefinitions",
+        "parameters",
+        "responses",
+        "consumes",
+        "produces",
+        "webhooks",
+    )
+    return {
+        "added": sorted(revised_ops.keys() - previous_ops.keys()),
+        "removed": sorted(previous_ops.keys() - revised_ops.keys()),
+        "changed": sorted(
+            key for key in previous_ops.keys() & revised_ops.keys() if previous_ops[key] != revised_ops[key]
+        ),
+        "shared_sections_changed": sorted(field for field in shared if before.get(field) != after.get(field)),
+    }
+
+
 def _detect_openapi_header(data: dict[str, Any]) -> tuple[str, list[str], bool, list[str], str, str | None]:
     """Devolve (version, servers, has_auth, scheme_names, title, unknown_msg-ou-None) por dialecto."""
     if "openapi" in data:

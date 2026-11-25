@@ -634,6 +634,97 @@ def test_import_openapi_accepts_small_spec(client: TestClient) -> None:
     assert "inferences" in body
 
 
+def test_reimport_openapi_previews_conflicts_and_preserves_decisions(client: TestClient) -> None:
+    before = """openapi: 3.0.0
+info: {title: Orders, version: '1'}
+paths:
+  /orders:
+    get: {operationId: listOrders}
+  /old:
+    get: {operationId: legacy}
+"""
+    after = """openapi: 3.0.0
+info: {title: Orders, version: '2'}
+paths:
+  /orders:
+    get: {operationId: listOrders, summary: List active orders}
+    post: {operationId: createOrder}
+  /orders/latest:
+    get: {operationId: latest}
+"""
+    initial = client.post("/v1/imports/openapi", files={"file": ("first.yaml", before)})
+    assert initial.status_code == 200, initial.text
+    document = initial.json()["document"]
+    api = document["components"][1]
+    api["description"] = "Scope reviewed with the owner."
+    document["trust_boundaries"][1]["name"] = "Reviewed service boundary"
+    document["threats"] = [
+        {
+            "id": "threat_accepted",
+            "title": "Order exposure",
+            "target_component_id": api["id"],
+            "stride": "information_disclosure",
+            "treatment_status": "accepted_risk",
+            "treatment_notes": "Compensating control reviewed.",
+            "assignee": "Orders team",
+            "metadata": {"risk_review_date": "2026-12-01"},
+        }
+    ]
+
+    result = client.post(
+        "/v1/imports/openapi/reimport-preview",
+        files={
+            "previous": ("first.yaml", before),
+            "revised": ("second.yaml", after),
+            "document": ("model.json", json.dumps(document), "application/json"),
+        },
+    )
+
+    assert result.status_code == 200, result.text
+    preview = result.json()
+    assert preview["operations"] == {
+        "added": ["GET /orders/latest", "POST /orders"],
+        "removed": ["GET /old"],
+        "changed": ["GET /orders"],
+        "shared_sections_changed": [],
+    }
+    assert [(change["field"], change["before"]) for change in preview["conflicts"]] == [
+        (f"components.{api['id']}.description", api["description"]),
+    ]
+    merged = preview["document"]
+    assert merged["components"][1]["description"] == api["description"]
+    assert merged["data_flows"][0]["metadata"]["openapi_operations_count"] == 3
+    assert merged["trust_boundaries"] == document["trust_boundaries"]
+    assert {key: merged["threats"][0][key] for key in document["threats"][0]} == document["threats"][0]
+    assert client.post("/v1/models/validate", json={"document": merged}).status_code == 200
+
+
+def test_reimport_openapi_preserves_entities_when_the_last_operation_is_removed(client: TestClient) -> None:
+    base = "openapi: 3.0.0\ninfo: {title: Orders, version: '1'}\n"
+    before = base + "paths: {/orders: {get: {operationId: listOrders}}}\n"
+    after = base + "paths: {}\n"
+    document = client.post("/v1/imports/openapi", files={"file": ("first.yaml", before)}).json()["document"]
+
+    result = client.post(
+        "/v1/imports/openapi/reimport-preview",
+        files={
+            "previous": ("first.yaml", before),
+            "revised": ("second.yaml", after),
+            "document": ("model.json", json.dumps(document), "application/json"),
+        },
+    )
+
+    assert result.status_code == 200, result.text
+    preview = result.json()
+    assert preview["operations"]["removed"] == ["GET /orders"]
+    assert {field["field"] for field in preview["conflicts"]} == {
+        "data_flows.flow_clients_to_api",
+        "assets.asset_api_payloads",
+    }
+    assert preview["document"]["data_flows"] == document["data_flows"]
+    assert preview["document"]["assets"] == document["assets"]
+
+
 def test_import_openapi_rejects_oversized_artifact(client: TestClient) -> None:
     # One byte over the 2 MiB cap must be rejected with 413, regardless of content.
     oversized = b"x" * (_IMPORT_MAX_BYTES + 1)

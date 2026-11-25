@@ -37,7 +37,6 @@ function flatten(bundle: Bundle, prefix = ""): Record<string, string> {
  * Portuguese copy already uses elsewhere in the same screen ("Templates", "Diff", "Pack:").
  */
 const INTENTIONALLY_IDENTICAL: ReadonlySet<string> = new Set([
-  "artifactPdf.threatBullet",
   "diff.baseline",
   "diff.documentJson",
   "diff.revisionPlaceholder",

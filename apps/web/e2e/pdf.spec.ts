@@ -3,6 +3,9 @@ import { setupPhase4ApiMocks } from "./_phase4Mocks";
 
 test("export: gerar PDF inicia descarga", async ({ page }) => {
   await setupPhase4ApiMocks(page);
+  await page.route("**/api/v1/reports", (route) =>
+    route.fulfill({ status: 200, contentType: "application/pdf", body: "%PDF-1.4" }),
+  );
   await page.goto("/");
   await page.getByRole("button", { name: "Criar novo modelo" }).click();
   // createBlankModel is async; wizard navigation alone is not enough for a full page.load of /export

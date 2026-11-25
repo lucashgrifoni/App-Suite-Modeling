@@ -28,11 +28,7 @@ import { ToastProvider } from "../context/ToastContext";
 import i18n from "../i18n/i18n";
 import type { OtmDocument } from "../types/document";
 
-// jsPDF pulls a canvas/font stack jsdom cannot run; the server-side buttons are the subject.
-vi.mock("../lib/generateReportPdf", () => ({
-  generateReportPdfBlob: vi.fn(),
-  downloadPdfBlob: vi.fn(),
-}));
+
 
 const DOC_KEY = "otm.web.document";
 
@@ -77,15 +73,15 @@ function respondWith(status: number, statusText: string, body: string) {
   );
 }
 
-async function clickPremiumPdf() {
+async function clickReportPdf() {
   render(<ExportPage />, { wrapper: Providers });
-  await userEvent.click(screen.getByTestId("export-premium-pdf"));
+  await userEvent.click(screen.getByTestId("export-pdf"));
   return screen.findAllByRole("alert");
 }
 
 /** Everything the page put in front of the user, alerts and toasts alike. */
 async function messages(): Promise<string> {
-  const alerts = await clickPremiumPdf();
+  const alerts = await clickReportPdf();
   return alerts.map((a) => a.textContent ?? "").join("\n");
 }
 
@@ -98,7 +94,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("premium PDF against a server with no PDF backend", () => {
+describe("risk report PDF against a server with no PDF backend", () => {
   const PDF_501 = JSON.stringify({
     detail: {
       code: "PDF_DEPENDENCY",
@@ -116,7 +112,7 @@ describe("premium PDF against a server with no PDF backend", () => {
   it("points at the alternative that works on this same page", async () => {
     respondWith(501, "Not Implemented", PDF_501);
 
-    expect(await messages()).toContain(i18n.t("export.premiumMd"));
+    expect(await messages()).toContain(i18n.t("export.reportMarkdown"));
   });
 
   it("does not show a server-side pip command to a browser user", async () => {
@@ -132,7 +128,7 @@ describe("premium PDF against a server with no PDF backend", () => {
   });
 });
 
-describe("premium PDF against a server that crashed", () => {
+describe("risk report PDF against a server that crashed", () => {
   const INTERNAL_500 = JSON.stringify({
     code: "INTERNAL_ERROR",
     message: "An unexpected error occurred.",
@@ -158,4 +154,11 @@ describe("premium PDF against a server that crashed", () => {
 
     expect(await messages()).toContain("Internal Server Error");
   });
+});
+
+
+it("offers a retry when the local report service is offline", async () => {
+  respondWith(502, "Bad Gateway", "");
+  expect(await messages()).toContain(i18n.t("apiErrors.unreachable"));
+  expect(screen.getByTestId("export-pdf")).toBeEnabled();
 });

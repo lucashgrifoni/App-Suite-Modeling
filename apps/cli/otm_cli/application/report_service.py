@@ -1,4 +1,4 @@
-"""Use case: legacy or premium report."""
+"""Application use case for generating a risk report."""
 
 from __future__ import annotations
 
@@ -11,6 +11,8 @@ from otm_report_premium import (
     html_to_pdf_bytes,
     render_premium_html,
     render_premium_markdown,
+    render_risk_report_markdown,
+    render_risk_report_pdf,
 )
 from otm_report_premium.enums import ReportFormat as PremiumReportFormat
 from otm_report_premium.enums import ReportLevel as PremiumReportLevel
@@ -23,15 +25,9 @@ from otm_cli.application.analysis_match import (
     require_baseline_describes_same_system,
 )
 from otm_cli.application.engine_refusals import engine_refusals_as_cli_errors
-from otm_cli.reporting import export_full_report_markdown
 from otm_cli.shared.document_loader import load_otm_document, load_pack_or_raise
 from otm_cli.shared.errors import CliUserError
 from otm_cli.shared.version_util import installed_version
-
-
-@dataclass
-class ReportLegacyResult:
-    text: str
 
 
 @dataclass
@@ -55,37 +51,6 @@ class ReportPremiumPdfResult:
 _PDF_BUILD_LOCALE = "en"
 
 
-def _reject_premium_only_flags_without_level(
-    *,
-    report_format: PremiumReportFormat,
-    baseline_json: Path | None,
-    locale: str | None,
-) -> None:
-    """Refuse flags the legacy branch cannot honour instead of discarding them.
-
-    Without `--level` this function's caller returns before `report_format`, `--locale` and
-    `--baseline` are ever read. `-f pdf` therefore used to write Markdown bytes into the `.pdf`
-    path the user named, print a success line and exit 0 — a corrupt deliverable in an evidence
-    pack, with nothing on screen to suggest it. Refusing is the only option that neither lies
-    about the artifact nor silently substitutes a different one.
-    """
-    requested = []
-    if report_format == PremiumReportFormat.PDF:
-        requested.append("--format pdf")
-    if locale is not None:
-        requested.append("--locale")
-    if baseline_json is not None:
-        requested.append("--baseline")
-    if not requested:
-        return
-    raise CliUserError(
-        exit_code=2,
-        failed="`otm report` without `--level`.",
-        cause=f"{', '.join(requested)} applies to the premium report only.",
-        next_step=("add `--level executive|standard|deep`, or drop the flag for the legacy Markdown report."),
-    )
-
-
 def _pdf_locale_notice(requested_locale: str, build_locale: str) -> str | None:
     """Say that the PDF is not in the requested locale, or stay quiet when it is."""
     if requested_locale == build_locale:
@@ -105,13 +70,9 @@ def run_report(
     analysis_json: Path | None,
     baseline_json: Path | None,
     locale: str | None = None,
-) -> ReportLegacyResult | ReportPremiumMarkdownResult | ReportPremiumPdfResult:
-    if level is None:
-        _reject_premium_only_flags_without_level(
-            report_format=report_format,
-            baseline_json=baseline_json,
-            locale=locale,
-        )
+) -> ReportPremiumMarkdownResult | ReportPremiumPdfResult:
+    level = level or PremiumReportLevel.STANDARD
+    default_report = level == PremiumReportLevel.STANDARD
     doc = load_otm_document(
         path,
         failed=f"report generation for `{path}`.",
@@ -133,10 +94,6 @@ def run_report(
         with engine_refusals_as_cli_errors(failed=f"the report for `{path}`."):
             result = analyze_document(doc, pack=pack_def)
 
-    if level is None:
-        text = export_full_report_markdown(doc, result)
-        return ReportLegacyResult(text=text)
-
     baseline: AnalysisResult | None = None
     if baseline_json:
         baseline = load_analysis_result_from_path(baseline_json)
@@ -148,7 +105,7 @@ def run_report(
 
     requested_locale = normalize_premium_locale(locale)
     is_pdf = report_format == PremiumReportFormat.PDF
-    build_locale = _PDF_BUILD_LOCALE if is_pdf else requested_locale
+    build_locale = _PDF_BUILD_LOCALE if is_pdf and not default_report else requested_locale
     payload = build_premium_report_payload(
         doc,
         result,
@@ -156,13 +113,22 @@ def run_report(
         baseline=baseline,
         app_version=installed_version(),
         locale=build_locale,
+        consolidated=default_report,
     )
-    if report_format == PremiumReportFormat.MARKDOWN:
-        return ReportPremiumMarkdownResult(text=render_premium_markdown(payload))
+    if not is_pdf:
+        text = (
+            render_risk_report_markdown(payload, doc, analysis_generated=analysis_json is None)
+            if default_report
+            else render_premium_markdown(payload)
+        )
+        return ReportPremiumMarkdownResult(text=text)
 
-    html = render_premium_html(payload)
     try:
-        pdf_bytes = html_to_pdf_bytes(html)
+        pdf_bytes = (
+            render_risk_report_pdf(payload, doc, analysis_generated=analysis_json is None)
+            if default_report
+            else html_to_pdf_bytes(render_premium_html(payload))
+        )
     except PdfSupportUnavailable as e:
         # The renderer now names the reason and the remedy, in English and already split into the
         # two halves this layer prints. Restating them here hard-coded the "not installed" case
@@ -170,7 +136,7 @@ def run_report(
         # library is missing — to install the extra they already have.
         raise CliUserError(
             exit_code=1,
-            failed="PDF output for the premium report.",
+            failed="PDF output for the risk report.",
             cause=e.cause,
             next_step=e.next_step,
         ) from e
@@ -180,7 +146,7 @@ def run_report(
         # is how the missing-Cairo `OSError` became a raw traceback in the first place.
         raise CliUserError(
             exit_code=1,
-            failed="PDF output for the premium report.",
+            failed="PDF output for the risk report.",
             cause="the optional PDF support could not be loaded.",
             next_step='install the extra: `pip install "open-threat-model[report]"`.',
         ) from e

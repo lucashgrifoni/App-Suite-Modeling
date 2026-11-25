@@ -304,6 +304,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/imports/openapi/reimport-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview changes to an existing model from two OpenAPI contracts
+         * @description Read-only comparison. Conflicting fields and removed entities are retained in the proposed model.
+         */
+        post: operations["preview_openapi_reimport_route_v1_imports_openapi_reimport_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/imports/terraform": {
         parameters: {
             query?: never;
@@ -364,6 +384,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Risk report (Markdown or PDF)
+         * @description Builds the risk report. Requires a document and either analysis or run_analysis=true.
+         */
+        post: operations["post_risk_report_v1_reports_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/reports/premium": {
         parameters: {
             query?: never;
@@ -374,8 +414,9 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Premium report (Markdown or PDF)
-         * @description Builds the consolidated premium report from analysis, backlog, diff, and explainability. Requires `document` and either `analysis` or `run_analysis: true`.
+         * Legacy report (Markdown or PDF)
+         * @deprecated
+         * @description Compatibility route for existing integrations and explicit report levels.
          */
         post: operations["post_premium_report_v1_reports_premium_post"];
         delete?: never;
@@ -905,6 +946,15 @@ export interface components {
         Body_import_terraform_route_v1_imports_terraform_post: {
             /** File */
             file: string;
+        };
+        /** Body_preview_openapi_reimport_route_v1_imports_openapi_reimport_preview_post */
+        Body_preview_openapi_reimport_route_v1_imports_openapi_reimport_preview_post: {
+            /** Previous */
+            previous: string;
+            /** Revised */
+            revised: string;
+            /** Document */
+            document: string;
         };
         /**
          * CompareBody
@@ -1498,6 +1548,21 @@ export interface components {
             /** Changes */
             changes?: components["schemas"]["FieldChange"][];
         };
+        /** OpenApiReimportPreview */
+        OpenApiReimportPreview: {
+            /** Document */
+            document: {
+                [key: string]: unknown;
+            };
+            /** Operations */
+            operations: {
+                [key: string]: string[];
+            };
+            /** Changes */
+            changes: components["schemas"]["FieldChange"][];
+            /** Conflicts */
+            conflicts: components["schemas"]["FieldChange"][];
+        };
         /** PackHintsDelta */
         PackHintsDelta: {
             /** Added */
@@ -1522,7 +1587,7 @@ export interface components {
         };
         /**
          * PremiumReportBody
-         * @description Report premium — mesmo padrão de análise que `/remediation/backlog`.
+         * @description Legacy report request with a selectable level.
          */
         PremiumReportBody: {
             /**
@@ -1564,13 +1629,6 @@ export interface components {
              */
             auto_recommend_methodology: boolean;
             /**
-             * Level
-             * @description Profundidade do relatório.
-             * @default standard
-             * @enum {string}
-             */
-            level: "executive" | "standard" | "deep";
-            /**
              * Output Format
              * @description markdown = texto; pdf = binário application/pdf.
              * @default markdown
@@ -1582,6 +1640,13 @@ export interface components {
              * @description Idioma dos textos estruturais do relatório (pt-BR | en). Omitido = pt-BR.
              */
             locale?: string | null;
+            /**
+             * Level
+             * @description Profundidade do relatório.
+             * @default standard
+             * @enum {string}
+             */
+            level: "executive" | "standard" | "deep";
         };
         /**
          * QualityCheckItem
@@ -1768,6 +1833,62 @@ export interface components {
              * @default false
              */
             document_residual_aggregate_changed: boolean;
+        };
+        /**
+         * RiskReportBody
+         * @description Risk report for a document and its analysis.
+         */
+        RiskReportBody: {
+            /**
+             * Document
+             * @description Raiz compatível com `ThreatModelDocument` (aliases YAML respeitados).
+             */
+            document: {
+                [key: string]: unknown;
+            };
+            /**
+             * Analysis
+             * @description `AnalysisResult` em JSON; obrigatório se `run_analysis` é false.
+             */
+            analysis?: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Baseline Analysis
+             * @description Análise anterior para secção baseline/diff (opcional).
+             */
+            baseline_analysis?: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Run Analysis
+             * @description Se true e `analysis` ausente, executa o motor no documento.
+             * @default false
+             */
+            run_analysis: boolean;
+            /**
+             * Pack Id
+             * @description Pack quando `run_analysis` é usado.
+             */
+            pack_id?: string | null;
+            methodology?: components["schemas"]["ThreatModelMethodology"] | null;
+            /**
+             * Auto Recommend Methodology
+             * @default false
+             */
+            auto_recommend_methodology: boolean;
+            /**
+             * Output Format
+             * @description markdown = texto; pdf = binário application/pdf.
+             * @default markdown
+             * @enum {string}
+             */
+            output_format: "markdown" | "pdf";
+            /**
+             * Locale
+             * @description Idioma dos textos estruturais do relatório (pt-BR | en). Omitido = pt-BR.
+             */
+            locale?: string | null;
         };
         /** SemanticDiffSectionsModel */
         SemanticDiffSectionsModel: {
@@ -2593,6 +2714,39 @@ export interface operations {
             };
         };
     };
+    preview_openapi_reimport_route_v1_imports_openapi_reimport_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_preview_openapi_reimport_route_v1_imports_openapi_reimport_preview_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OpenApiReimportPreview"];
+                };
+            };
+            /** @description Pedido inválido: envelope (`ApiProblem`) ou domínio (`ApiErrorEnvelope`). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiProblem"] | components["schemas"]["ApiErrorEnvelope"];
+                };
+            };
+        };
+    };
     import_terraform_route_v1_imports_terraform_post: {
         parameters: {
             query?: never;
@@ -2703,6 +2857,41 @@ export interface operations {
             };
         };
     };
+    post_risk_report_v1_reports_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RiskReportBody"];
+            };
+        };
+        responses: {
+            /** @description Markdown report or binary PDF. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                    "text/markdown": string;
+                    "application/pdf": string;
+                };
+            };
+            /** @description Pedido inválido: envelope (`ApiProblem`) ou domínio (`ApiErrorEnvelope`). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiProblem"] | components["schemas"]["ApiErrorEnvelope"];
+                };
+            };
+        };
+    };
     post_premium_report_v1_reports_premium_post: {
         parameters: {
             query?: never;
@@ -2716,7 +2905,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Corpo = Markdown (`output_format=markdown`) ou PDF binário (`output_format=pdf`). */
+            /** @description Markdown report or binary PDF. */
             200: {
                 headers: {
                     [name: string]: unknown;

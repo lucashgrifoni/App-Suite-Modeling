@@ -149,6 +149,18 @@ def build_import_app() -> typer.Typer:
             # Only when the draft went to a file: on stdout the panel would corrupt the YAML.
             _print_inference_summary(inferences)
 
+    @import_cmd.command("openapi-diff")
+    def cmd_openapi_diff(
+        previous: Annotated[Path, typer.Argument(help="Previous OpenAPI/Swagger contract.")],
+        revised: Annotated[Path, typer.Argument(help="Revised OpenAPI/Swagger contract.")],
+    ) -> None:
+        """Preview OpenAPI operation changes before reimporting a contract."""
+        try:
+            result = import_app.compare_openapi(previous, revised)
+        except CliUserError as error:
+            exit_on_cli_error(console, error)
+        print(json.dumps(result, indent=2, ensure_ascii=True))
+
     @import_cmd.command("terraform")
     def cmd_import_terraform(
         target: Annotated[Path, typer.Argument(help="`.tf` file or directory containing `.tf`.")],

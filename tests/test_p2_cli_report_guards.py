@@ -119,53 +119,40 @@ def test_report_accepts_the_matching_baseline(runner: CliRunner, tmp_path: Path)
     assert result.exit_code == 0
 
 
-# --- `-f pdf` without `--level` ------------------------------------------------------------
+# --- Unified report defaults ---------------------------------------------------------------
 
 
-def test_report_pdf_without_level_is_a_usage_error(runner: CliRunner, tmp_path: Path) -> None:
+def test_report_pdf_without_level_writes_a_pdf_in_portuguese(runner: CliRunner, tmp_path: Path) -> None:
+    pytest.importorskip("reportlab")
+    pypdf = pytest.importorskip("pypdf")
     out = tmp_path / "deliverable.pdf"
-
     result = runner.invoke(app, ["report", _MINIMAL, "-f", "pdf", "-o", str(out)])
-
-    assert result.exit_code == 2
-
-
-def test_report_pdf_without_level_writes_no_file(runner: CliRunner, tmp_path: Path) -> None:
-    """It used to write Markdown bytes into the `.pdf` path and report success."""
-    out = tmp_path / "deliverable2.pdf"
-
-    runner.invoke(app, ["report", _MINIMAL, "-f", "pdf", "-o", str(out)])
-
-    assert not out.exists()
-
-
-def test_report_pdf_without_level_names_the_missing_flag(runner: CliRunner, tmp_path: Path) -> None:
-    result = runner.invoke(app, ["report", _MINIMAL, "-f", "pdf", "-o", str(tmp_path / "d3.pdf")])
-
-    assert "--level" in _text(result)
-
-
-def test_report_locale_without_level_is_a_usage_error(runner: CliRunner) -> None:
-    result = runner.invoke(app, ["report", _MINIMAL, "--locale", "en"])
-
-    assert result.exit_code == 2
-
-
-def test_report_baseline_without_level_is_a_usage_error(runner: CliRunner, tmp_path: Path) -> None:
-    own = _analysis_of(runner, tmp_path, _MINIMAL, "own3.json")
-
-    result = runner.invoke(app, ["report", _MINIMAL, "--baseline", str(own)])
-
-    assert result.exit_code == 2
-
-
-def test_report_markdown_without_level_still_works(runner: CliRunner, tmp_path: Path) -> None:
-    """`--format markdown` is the default and describes the legacy output truthfully."""
-    out = tmp_path / "legacy.md"
-
-    result = runner.invoke(app, ["report", _MINIMAL, "-f", "markdown", "-o", str(out)])
-
     assert result.exit_code == 0
+    assert out.read_bytes().startswith(b"%PDF-")
+    content = " ".join(page.extract_text() or "" for page in pypdf.PdfReader(out).pages)
+    assert "Resumo executivo" in content
+    assert "Decisões de tratamento" in content
+
+
+def test_report_locale_without_level_selects_english(runner: CliRunner) -> None:
+    result = runner.invoke(app, ["report", _MINIMAL, "--locale", "en"])
+    assert result.exit_code == 0
+    assert "## Executive summary" in result.stdout
+
+
+def test_report_baseline_without_level_renders_a_comparison(runner: CliRunner, tmp_path: Path) -> None:
+    own = _analysis_of(runner, tmp_path, _MINIMAL, "own3.json")
+    result = runner.invoke(app, ["report", _MINIMAL, "--baseline", str(own), "--locale", "en"])
+    assert result.exit_code == 0
+    assert "Baseline" in result.stdout
+
+
+def test_report_markdown_without_level_matches_explicit_standard(runner: CliRunner) -> None:
+    default = runner.invoke(app, ["report", _MINIMAL])
+    standard = runner.invoke(app, ["report", _MINIMAL, "--level", "standard", "-f", "markdown"])
+    assert default.exit_code == standard.exit_code == 0
+    assert default.stdout == standard.stdout
+    assert "Resumo executivo" in default.stdout
 
 
 # --- `--locale` on the PDF branch ----------------------------------------------------------

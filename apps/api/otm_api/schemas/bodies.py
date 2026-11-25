@@ -205,8 +205,8 @@ class ArtifactImportResponse(BaseModel):
     explanations: list[ExplanationRecord] = Field(default_factory=list)
 
 
-class PremiumReportBody(DocumentBody):
-    """Report premium — mesmo padrão de análise que `/remediation/backlog`."""
+class RiskReportBody(DocumentBody):
+    """Risk report for a document and its analysis."""
 
     analysis: dict[str, Any] | None = Field(
         default=None,
@@ -223,10 +223,6 @@ class PremiumReportBody(DocumentBody):
     pack_id: str | None = Field(default=None, description="Pack quando `run_analysis` é usado.")
     methodology: ThreatModelMethodology | None = Field(default=None)
     auto_recommend_methodology: bool = Field(default=False)
-    level: Literal["executive", "standard", "deep"] = Field(
-        default="standard",
-        description="Profundidade do relatório.",
-    )
     output_format: Literal["markdown", "pdf"] = Field(
         default="markdown",
         description="markdown = texto; pdf = binário application/pdf.",
@@ -234,4 +230,13 @@ class PremiumReportBody(DocumentBody):
     locale: str | None = Field(
         default=None,
         description="Idioma dos textos estruturais do relatório (pt-BR | en). Omitido = pt-BR.",
+    )
+
+
+class PremiumReportBody(RiskReportBody):
+    """Legacy report request with a selectable level."""
+
+    level: Literal["executive", "standard", "deep"] = Field(
+        default="standard",
+        description="Profundidade do relatório.",
     )

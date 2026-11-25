@@ -248,7 +248,7 @@ async def threat_id_collision_handler(_request: Request, exc: Exception) -> Resp
 
     Os dois sujeitos vão em `errors[]` para que uma UI os possa realçar sem analisar a frase.
     """
-    exc = cast(ThreatIdCollisionError, exc)
+    collision = cast(ThreatIdCollisionError, exc)
     return SurrogateSafeJSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
         content={
@@ -259,9 +259,9 @@ async def threat_id_collision_handler(_request: Request, exc: Exception) -> Resp
                     {
                         "type": "threat_id_collision",
                         "loc": ["document"],
-                        "msg": str(exc),
-                        "threat_id": exc.threat_id,
-                        "subjects": [exc.first, exc.second],
+                        "msg": str(collision),
+                        "threat_id": collision.threat_id,
+                        "subjects": [collision.first, collision.second],
                     }
                 ],
             }

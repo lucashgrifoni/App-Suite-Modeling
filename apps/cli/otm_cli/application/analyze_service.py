@@ -19,12 +19,14 @@ def run_analyze(
     methodology: MethodologyOption | None,
     auto_methodology: bool,
     rules: Path | None = None,
+    source_lines: dict[tuple[str, str], int] | None = None,
 ) -> AnalysisResult:
     doc = load_otm_document(
         path,
         failed=f"analysis of `{path}`.",
         validation_next_step="run `otm validate` and fix errors before analyzing.",
         runtime_next_step="confirm the file path and YAML format.",
+        source_lines=source_lines,
     )
     pack_def = None
     if pack:

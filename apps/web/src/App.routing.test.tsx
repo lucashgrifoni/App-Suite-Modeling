@@ -44,7 +44,7 @@ const DOC_KEY = "otm.web.document";
  * which locale jsdom negotiates.
  */
 const ROUTE_HEADING_KEY: Record<(typeof APP_ROUTES)[number], string> = {
-  "/": "home.title",
+  "/": "work.overview",
   "/templates": "templates.title",
   "/import": "import.title",
   "/wizard": "wizard.title",
@@ -159,7 +159,7 @@ describe("route table", () => {
     // `replace` is deliberate: Back must not bounce the user into the dead URL again.
     const { path: settledPath, heading } = await settled();
     expect(settledPath).toBe("/");
-    expect(heading).toBe(i18n.t("home.title"));
+    expect(heading).toBe(i18n.t("work.overview"));
   });
 
   /**

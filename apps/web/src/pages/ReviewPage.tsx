@@ -14,6 +14,7 @@ import { PageHeader } from "../components/patterns/PageHeader";
 import { ThreatModelDiagram } from "../components/diagram/ThreatModelDiagram";
 import { useSession } from "../context/SessionContext";
 import { useToast } from "../context/ToastContext";
+import { boundaryFor } from "../utils/diagramTopology";
 import { updateArrayItem } from "../utils/collections";
 import type { OtmAsset, OtmTrustBoundary } from "../types/document";
 
@@ -21,6 +22,9 @@ export function ReviewPage() {
   const { t } = useTranslation();
   const { document, setDocument } = useSession();
   const toast = useToast();
+  const [inventory, setInventory] = useState<"components" | "flows" | "boundaries" | "assets">(
+    "components",
+  );
   const [showJson, setShowJson] = useState(false);
   const [meta, setMeta] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -71,14 +75,14 @@ export function ReviewPage() {
       <PageHeader
         eyebrow={t("review.eyebrow")}
         title={t("review.title")}
-        description={t("review.description")}
+        description={doc.metadata.title}
         actions={
           <>
             <Button variant="secondary" onClick={() => void quickValidate()}>
               {t("review.validateServer")}
             </Button>
-            <Link to="/analysis">
-              <Button>{t("review.runAnalysis")}</Button>
+            <Link className="work-action primary" to="/analysis">
+              {t("review.runAnalysis")}
             </Link>
           </>
         }
@@ -87,166 +91,215 @@ export function ReviewPage() {
       {meta && <Alert variant="success">{meta}</Alert>}
       {err && <Alert>{err}</Alert>}
 
-      <Card
-        title={t("review.diagramCardTitle")}
-        subtitle={t("review.diagramCardSubtitle")}
-        variant="glass"
-      >
-        <ThreatModelDiagram document={doc} setDocument={setDocument} />
-      </Card>
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card
-          title={t("review.componentsTitle")}
-          subtitle={t("review.items", { count: doc.components.length })}
-          variant="glass"
-        >
-          <ul className="divide-y divide-otm-border">
-            {doc.components.map((c) => (
-              <li key={c.id} className="flex flex-wrap items-center gap-2 py-2 text-sm">
-                <span className="font-mono text-xs text-otm-text-subtle">{c.id}</span>
-                <span className="font-medium text-otm-text">{c.name}</span>
-                <Badge tone="neutral">{c.kind}</Badge>
-              </li>
-            ))}
-          </ul>
-        </Card>
-        <Card
-          title={t("review.flowsTitle")}
-          subtitle={t("review.links", { count: doc.data_flows.length })}
-          variant="glass"
-        >
-          <ul className="divide-y divide-otm-border">
-            {doc.data_flows.map((f) => (
-              <li key={f.id} className="py-2 text-sm text-otm-text-muted">
-                <span className="font-mono text-xs text-otm-text-subtle">{f.id}</span>
-                <div className="mt-0.5">
-                  <span className="font-medium text-otm-text">{f.from_component}</span>
-                  <span className="mx-2 text-otm-text-subtle">→</span>
-                  <span className="font-medium text-otm-text">{f.to_component}</span>
-                  {f.name && (
-                    <span className="ml-2 text-otm-text-subtle">({f.name})</span>
-                  )}
+      <ThreatModelDiagram
+        document={doc}
+        setDocument={setDocument}
+        renderInventory={(selectComponent, inspectedId) => (
+          <section className="work-inventory">
+            <h2 className="work-section-title">{t("work.elements")}</h2>
+            <div className="work-tabs" role="group" aria-label={t("work.elements")}>
+              {(
+                [
+                  ["components", "review.componentsTitle", doc.components.length],
+                  ["flows", "review.flowsTitle", doc.data_flows.length],
+                  ["boundaries", "review.trustTitle", doc.trust_boundaries.length],
+                  ["assets", "review.assetsTitle", doc.assets.length],
+                ] as const
+              ).map(([key, label, count]) => (
+                <button
+                  type="button"
+                  key={key}
+                  aria-pressed={inventory === key}
+                  onClick={() => setInventory(key)}
+                >
+                  {t(label)} · {count}
+                </button>
+              ))}
+            </div>
+            {inventory === "components" && (
+              <Card
+                title={t("review.componentsTitle")}
+                subtitle={t("review.items", { count: doc.components.length })}
+                variant="glass"
+              >
+                <div className="work-list-head inventory-columns" aria-hidden="true">
+                  <span>{t("work.component")}</span>
+                  <span>{t("diagram.kind")}</span>
+                  <span>{t("work.trustBoundary")}</span>
                 </div>
-              </li>
-            ))}
-          </ul>
-        </Card>
-      </div>
+                <ul>
+                  {doc.components.map((c) => (
+                    <li key={c.id}>
+                      <button
+                        type="button"
+                        className="work-select-row inventory-columns"
+                        aria-label={c.name}
+                        aria-pressed={inspectedId === c.id}
+                        onClick={() => selectComponent(c.id)}
+                      >
+                        <span>
+                          <b>{c.name}</b>
+                          <small>{c.id}</small>
+                        </span>
+                        <span>{t(`document.componentKinds.${c.kind}`, { defaultValue: c.kind })}</span>
+                        <span>{boundaryFor(doc, c.id, c.in_trust_boundary)?.name ?? "—"}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </Card>
+            )}
+            {inventory === "flows" && (
+              <Card
+                title={t("review.flowsTitle")}
+                subtitle={t("review.links", { count: doc.data_flows.length })}
+                variant="glass"
+              >
+                <ul className="divide-y divide-otm-border">
+                  {doc.data_flows.map((f) => (
+                    <li key={f.id} className="py-2 text-sm text-otm-text-muted">
+                      <span className="font-mono text-xs text-otm-text-subtle">{f.id}</span>
+                      <div className="mt-0.5">
+                        <span className="font-medium text-otm-text">{f.from_component}</span>
+                        <span className="mx-2 text-otm-text-subtle">→</span>
+                        <span className="font-medium text-otm-text">{f.to_component}</span>
+                        {f.name && <span className="ml-2 text-otm-text-subtle">({f.name})</span>}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </Card>
+            )}
 
-      {doc.trust_boundaries.length > 0 ? (
-        <Card title={t("review.trustTitle")} subtitle={t("review.trustSubtitle")} variant="glass">
-          <ul className="divide-y divide-otm-border">
-            {doc.trust_boundaries.map((b, idx) => (
-              <li key={b.id} className="space-y-2 py-4 first:pt-0">
-                <div className="flex flex-wrap items-baseline gap-2">
-                  <span className="font-mono text-xs text-otm-text-subtle">{b.id}</span>
-                  <span className="font-medium text-otm-text">{b.name}</span>
-                </div>
-                {b.inference_note ? (
-                  <p className="text-xs text-otm-text-muted">
-                    <span className="font-semibold text-otm-text-subtle">{t("review.whyPrefix")} </span>
-                    {b.inference_note}
-                  </p>
-                ) : null}
-                {(b.crossing_flow_ids?.length ?? 0) > 0 ? (
-                  <p className="text-xs text-otm-text-muted">
-                    <span className="font-semibold text-otm-text-subtle">{t("review.crossingFlows")} </span>
-                    {(b.crossing_flow_ids ?? []).join(", ")}
-                  </p>
-                ) : null}
-                <div className="grid gap-2 sm:grid-cols-2">
-                  <div>
-                    <Label htmlFor={`inf-${b.id}`}>{t("review.noteOverride")}</Label>
-                    <Input
-                      id={`inf-${b.id}`}
-                      className="mt-1 text-sm"
-                      value={b.inference_note ?? ""}
-                      onChange={(e) => updateTrustBoundary(idx, { inference_note: e.target.value || null })}
-                      placeholder={t("review.trustPlaceholder")}
-                    />
-                  </div>
-                  <label className="flex cursor-pointer items-center gap-2 pt-6 text-sm text-otm-text-muted">
-                    <Checkbox
-                      checked={b.user_validated === true}
-                      onChange={(e) => updateTrustBoundary(idx, { user_validated: e.target.checked })}
-                    />
-                    {t("review.validatedByModeler")}
-                  </label>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </Card>
-      ) : null}
-
-      {doc.assets.length > 0 ? (
-        <Card title={t("review.assetsTitle")} subtitle={t("review.assetsSubtitle")} variant="glass">
-          <ul className="divide-y divide-otm-border">
-            {doc.assets.map((a, idx) => {
-              return (
-                <li key={a.id} className="space-y-2 py-4 first:pt-0">
-                  <div className="flex flex-wrap items-baseline gap-2">
-                    <span className="font-mono text-xs text-otm-text-subtle">{a.id}</span>
-                    <span className="font-medium text-otm-text">{a.name}</span>
-                    {a.asset_kind ? <Badge tone="neutral">{a.asset_kind}</Badge> : null}
-                  </div>
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    <div>
-                      <Label htmlFor={`bc-${a.id}`}>{t("review.criticality")}</Label>
-                      <Input
-                        id={`bc-${a.id}`}
-                        className="mt-1 text-sm"
-                        value={a.business_criticality ?? ""}
-                        onChange={(e) => updateAsset(idx, { business_criticality: e.target.value || undefined })}
-                        placeholder={t("review.placeholderCriticality")}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor={`cl-${a.id}`}>{t("review.classification")}</Label>
-                      <Input
-                        id={`cl-${a.id}`}
-                        className="mt-1 text-sm"
-                        value={a.data_classification ?? a.sensitivity ?? ""}
-                        onChange={(e) =>
-                          updateAsset(idx, {
-                            data_classification: e.target.value || undefined,
-                            sensitivity: e.target.value || undefined,
-                          })
-                        }
-                        placeholder={t("review.placeholderClassification")}
-                      />
-                    </div>
-                  </div>
-                  {(a.related_component_ids?.length ?? 0) > 0 ||
-                  (a.related_data_flow_ids?.length ?? 0) > 0 ? (
-                    <p className="text-xs text-otm-text-muted">
-                      {(a.related_component_ids?.length ?? 0) > 0 ? (
-                        <>
+            {inventory === "boundaries" ? (
+              <Card title={t("review.trustTitle")} subtitle={t("review.trustSubtitle")} variant="glass">
+                <ul className="divide-y divide-otm-border">
+                  {doc.trust_boundaries.map((b, idx) => (
+                    <li key={b.id} className="space-y-2 py-4 first:pt-0">
+                      <div className="flex flex-wrap items-baseline gap-2">
+                        <span className="font-mono text-xs text-otm-text-subtle">{b.id}</span>
+                        <span className="font-medium text-otm-text">{b.name}</span>
+                      </div>
+                      {b.inference_note ? (
+                        <p className="text-xs text-otm-text-muted">
                           <span className="font-semibold text-otm-text-subtle">
-                            {t("review.relatedComponentsLabel")}{" "}
+                            {t("review.whyPrefix")}{" "}
                           </span>
-                          {(a.related_component_ids ?? []).join(", ")}
-                        </>
+                          {b.inference_note}
+                        </p>
                       ) : null}
-                      {(a.related_data_flow_ids?.length ?? 0) > 0 ? (
-                        <>
-                          {" "}
+                      {(b.crossing_flow_ids?.length ?? 0) > 0 ? (
+                        <p className="text-xs text-otm-text-muted">
                           <span className="font-semibold text-otm-text-subtle">
-                            {t("review.relatedFlowsLabel")}{" "}
+                            {t("review.crossingFlows")}{" "}
                           </span>
-                          {(a.related_data_flow_ids ?? []).join(", ")}
-                        </>
+                          {(b.crossing_flow_ids ?? []).join(", ")}
+                        </p>
                       ) : null}
-                    </p>
-                  ) : null}
-                </li>
-              );
-            })}
-          </ul>
-        </Card>
-      ) : null}
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        <div>
+                          <Label htmlFor={`inf-${b.id}`}>{t("review.noteOverride")}</Label>
+                          <Input
+                            id={`inf-${b.id}`}
+                            className="mt-1 text-sm"
+                            value={b.inference_note ?? ""}
+                            onChange={(e) =>
+                              updateTrustBoundary(idx, { inference_note: e.target.value || null })
+                            }
+                            placeholder={t("review.trustPlaceholder")}
+                          />
+                        </div>
+                        <label className="flex cursor-pointer items-center gap-2 pt-6 text-sm text-otm-text-muted">
+                          <Checkbox
+                            checked={b.user_validated === true}
+                            onChange={(e) =>
+                              updateTrustBoundary(idx, { user_validated: e.target.checked })
+                            }
+                          />
+                          {t("review.validatedByModeler")}
+                        </label>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </Card>
+            ) : null}
 
+            {inventory === "assets" ? (
+              <Card
+                title={t("review.assetsTitle")}
+                subtitle={t("review.assetsSubtitle")}
+                variant="glass"
+              >
+                <ul className="divide-y divide-otm-border">
+                  {doc.assets.map((a, idx) => {
+                    return (
+                      <li key={a.id} className="space-y-2 py-4 first:pt-0">
+                        <div className="flex flex-wrap items-baseline gap-2">
+                          <span className="font-mono text-xs text-otm-text-subtle">{a.id}</span>
+                          <span className="font-medium text-otm-text">{a.name}</span>
+                          {a.asset_kind ? <Badge tone="neutral">{a.asset_kind}</Badge> : null}
+                        </div>
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          <div>
+                            <Label htmlFor={`bc-${a.id}`}>{t("review.criticality")}</Label>
+                            <Input
+                              id={`bc-${a.id}`}
+                              className="mt-1 text-sm"
+                              value={a.business_criticality ?? ""}
+                              onChange={(e) =>
+                                updateAsset(idx, { business_criticality: e.target.value || undefined })
+                              }
+                              placeholder={t("review.placeholderCriticality")}
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor={`cl-${a.id}`}>{t("review.classification")}</Label>
+                            <Input
+                              id={`cl-${a.id}`}
+                              className="mt-1 text-sm"
+                              value={a.data_classification ?? a.sensitivity ?? ""}
+                              onChange={(e) =>
+                                updateAsset(idx, {
+                                  data_classification: e.target.value || undefined,
+                                  sensitivity: e.target.value || undefined,
+                                })
+                              }
+                              placeholder={t("review.placeholderClassification")}
+                            />
+                          </div>
+                        </div>
+                        {(a.related_component_ids?.length ?? 0) > 0 ||
+                        (a.related_data_flow_ids?.length ?? 0) > 0 ? (
+                          <p className="text-xs text-otm-text-muted">
+                            {(a.related_component_ids?.length ?? 0) > 0 ? (
+                              <>
+                                <span className="font-semibold text-otm-text-subtle">
+                                  {t("review.relatedComponentsLabel")}{" "}
+                                </span>
+                                {(a.related_component_ids ?? []).join(", ")}
+                              </>
+                            ) : null}
+                            {(a.related_data_flow_ids?.length ?? 0) > 0 ? (
+                              <>
+                                {" "}
+                                <span className="font-semibold text-otm-text-subtle">
+                                  {t("review.relatedFlowsLabel")}{" "}
+                                </span>
+                                {(a.related_data_flow_ids ?? []).join(", ")}
+                              </>
+                            ) : null}
+                          </p>
+                        ) : null}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </Card>
+            ) : null}
+          </section>
+        )}
+      />
       <Card title={t("review.advancedTitle")} subtitle={t("review.advancedSubtitle")} variant="elevated">
         <Button variant="ghost" className="mb-2 !px-0" onClick={() => setShowJson((v) => !v)}>
           {showJson ? t("review.hideJson") : t("review.showJson")}

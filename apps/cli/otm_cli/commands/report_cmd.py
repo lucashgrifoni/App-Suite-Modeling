@@ -11,7 +11,6 @@ from otm_report_premium.enums import ReportFormat as PremiumReportFormat
 from otm_report_premium.enums import ReportLevel as PremiumReportLevel
 
 from otm_cli.application.report_service import (
-    ReportLegacyResult,
     ReportPremiumMarkdownResult,
     ReportPremiumPdfResult,
     run_report,
@@ -87,7 +86,7 @@ def _emit_pdf_report(
         )
     if locale_notice:
         console.print(f"[yellow]Note:[/yellow] {safe(locale_notice)}")
-    console.print(f"[green]Report premium (PDF)[/green] → {safe(output.resolve())}")
+    console.print(f"[green]Risk report (PDF)[/green] → {safe(output.resolve())}")
 
 
 def register(app: typer.Typer) -> None:
@@ -110,8 +109,8 @@ def register(app: typer.Typer) -> None:
                 "--level",
                 "-l",
                 help=(
-                    "Premium report: executive | standard | deep. "
-                    "If omitted, generates legacy report (model + analysis in Markdown)."
+                    "Standard risk report by default. "
+                    "The executive and deep levels remain available for existing commands."
                 ),
             ),
         ] = None,
@@ -120,7 +119,7 @@ def register(app: typer.Typer) -> None:
             typer.Option(
                 "--format",
                 "-f",
-                help="With --level: markdown (default) or pdf.",
+                help="Output format: markdown (default) or pdf.",
             ),
         ] = PremiumReportFormat.MARKDOWN,
         analysis_json: Annotated[
@@ -134,18 +133,18 @@ def register(app: typer.Typer) -> None:
             Path | None,
             typer.Option(
                 "--baseline",
-                help="Prior analysis JSON for baseline/diff section in premium report.",
+                help="Prior analysis JSON for the comparison section.",
             ),
         ] = None,
         locale: Annotated[
             str | None,
             typer.Option(
                 "--locale",
-                help="Premium report structural text locale: pt-BR (default) or en.",
+                help="Report language: pt-BR (default) or en.",
             ),
         ] = None,
     ) -> None:
-        """Legacy report (Markdown) or premium report (executive/standard/deep)."""
+        """Generate the risk report in Markdown or PDF."""
         _require_supported_locale(locale)
 
         try:
@@ -163,12 +162,8 @@ def register(app: typer.Typer) -> None:
 
         inputs = input_paths(path, analysis_json, baseline_json)
 
-        if isinstance(outcome, ReportLegacyResult):
-            _emit_text_report(outcome.text, output=output, label="Report", sources=inputs)
-            return
-
         if isinstance(outcome, ReportPremiumMarkdownResult):
-            _emit_text_report(outcome.text, output=output, label="Report premium (Markdown)", sources=inputs)
+            _emit_text_report(outcome.text, output=output, label="Risk report (Markdown)", sources=inputs)
             return
 
         if isinstance(outcome, ReportPremiumPdfResult):
