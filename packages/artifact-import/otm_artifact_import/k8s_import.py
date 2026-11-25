@@ -6,8 +6,6 @@ Modelo de fluxo simplificado: clientes → Ingress → Service → Deployment no
 
 from __future__ import annotations
 
-import hashlib
-import json
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -17,7 +15,7 @@ from otm_core_schema.enums import AssetKind, ComponentKind, IndustrySector, Syst
 
 from otm_artifact_import._yamljson import iter_yaml_documents
 from otm_artifact_import.ai_import_corpus import build_kubernetes_import_signals_corpus
-from otm_artifact_import.builders import assemble_draft, slug_id
+from otm_artifact_import.builders import assemble_draft, stable_slug_id
 from otm_artifact_import.types import ArtifactImportResult, InferenceRecord
 
 
@@ -41,22 +39,13 @@ def _display_name(key: ResourceName) -> str:
     return name if namespace == _DEFAULT_NAMESPACE else f"{namespace}/{name}"
 
 
-def _stable_id(value: str, *identity: str) -> str:
-    readable = slug_id(value)
-    if readable == value:
-        return readable
-    # Include the full identity when slug_id normalizes or truncates the name.
-    digest = hashlib.sha256(json.dumps(identity).encode()).hexdigest()[:16]
-    return f"{readable[:37].rstrip('_')}___{digest}"
-
-
 def _resource_id(prefix: str, key: ResourceName) -> str:
     namespace, name = key
     qualified = name if namespace == _DEFAULT_NAMESPACE else f"{namespace}__{name}"
     if "_" in namespace or "_" in name:
         # Keep "__" reserved for namespace separation in readable IDs.
         qualified = f"{namespace}/{name}"
-    return _stable_id(f"{prefix}_{qualified}", prefix, namespace, name)
+    return stable_slug_id(f"{prefix}_{qualified}", prefix, namespace, name)
 
 
 def _extract_hosts_from_rules(rules: Any) -> list[str]:
@@ -344,7 +333,7 @@ def _build_ingress_flows(
                 continue
             flows.append(
                 DataFlow(
-                    id=_stable_id(f"fl_{ing_id}_{sid}", ing_id, sid),
+                    id=stable_slug_id(f"fl_{ing_id}_{sid}", ing_id, sid),
                     name=f"Ingress → {svc_name}",
                     from_component=ing_id,
                     to_component=sid,
@@ -367,7 +356,7 @@ def _build_service_workload_flows(
         svc_name = _display_name(key)
         flows.append(
             DataFlow(
-                id=_stable_id(f"fl_{sid}_{dep_id}", sid, dep_id),
+                id=stable_slug_id(f"fl_{sid}_{dep_id}", sid, dep_id),
                 name=f"Service → Deployment ({svc_name})",
                 from_component=sid,
                 to_component=dep_id,
@@ -389,7 +378,7 @@ def _build_ext_ingress_flows(ingresses: list[IngressRef], ext: str, filename: st
     for ing_id, key, _hosts in ingresses:
         flows.append(
             DataFlow(
-                id=_stable_id(f"fl_ext_{ing_id}", ext, ing_id),
+                id=stable_slug_id(f"fl_ext_{ing_id}", ext, ing_id),
                 name=f"Clientes → Ingress {_display_name(key)}",
                 from_component=ext,
                 to_component=ing_id,

@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Annotated, Any
 
 import typer
-from otm_artifact_import import kubernetes_manifest_files, terraform_files
+from otm_artifact_import import kubernetes_manifest_files
 from rich.panel import Panel
 
 from otm_cli.application import import_service as import_app
@@ -163,7 +163,7 @@ def build_import_app() -> typer.Typer:
 
     @import_cmd.command("terraform")
     def cmd_import_terraform(
-        target: Annotated[Path, typer.Argument(help="`.tf` file or directory containing `.tf`.")],
+        target: Annotated[Path, typer.Argument(help="`.tf` file or root directory of a Terraform configuration.")],
         output: Annotated[
             Path | None,
             typer.Option("--output", "-o", help="Write draft `.otm.yaml`."),
@@ -175,7 +175,7 @@ def build_import_app() -> typer.Typer:
     ) -> None:
         """Draft from Terraform resources (conservative parser)."""
         try:
-            yaml_text, explain_payload, inferences = import_app.import_terraform(target)
+            yaml_text, explain_payload, inferences, sources = import_app.import_terraform(target)
         except CliUserError as e:
             exit_on_cli_error(console, e)
 
@@ -185,7 +185,7 @@ def build_import_app() -> typer.Typer:
             output=output,
             explain_out=explain_out,
             source=target,
-            extra_sources=tuple(terraform_files(target)) if target.is_dir() else (),
+            extra_sources=sources,
         )
         if inferences and output:
             # Same rule as `import openapi`: the caveats are shown only when the draft went to a

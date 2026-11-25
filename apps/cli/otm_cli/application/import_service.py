@@ -86,8 +86,8 @@ def compare_openapi(previous: Path, revised: Path) -> dict[str, list[str]]:
     return _parsed_or_user_error("OpenAPI comparison", revised, lambda: compare_openapi_operations(*snapshots))
 
 
-def import_terraform(target: Path) -> tuple[str, dict[str, Any] | None, list[Any]]:
-    from otm_artifact_import import import_terraform_path
+def import_terraform(target: Path) -> tuple[str, dict[str, Any] | None, list[Any], tuple[Path, ...]]:
+    from otm_artifact_import import import_terraform_path_with_sources
 
     if not target.exists():
         raise CliUserError(
@@ -96,7 +96,7 @@ def import_terraform(target: Path) -> tuple[str, dict[str, Any] | None, list[Any
             cause=f"path does not exist: {target}",
             next_step=_CONFIRM_PATH,
         )
-    result = _parsed_or_user_error("Terraform", target, lambda: import_terraform_path(target))
+    result, sources = _parsed_or_user_error("Terraform", target, lambda: import_terraform_path_with_sources(target))
     yaml_text = dump_document_to_yaml(result.document)
     explain_payload = {
         "document": result.document.model_dump(mode="json", by_alias=True),
@@ -104,7 +104,7 @@ def import_terraform(target: Path) -> tuple[str, dict[str, Any] | None, list[Any
         "unknowns": result.unknowns,
         "assumptions": result.assumptions,
     }
-    return yaml_text, explain_payload, list(result.inferences)
+    return yaml_text, explain_payload, list(result.inferences), sources
 
 
 def import_kubernetes(target: Path) -> tuple[str, dict[str, Any] | None, list[Any]]:

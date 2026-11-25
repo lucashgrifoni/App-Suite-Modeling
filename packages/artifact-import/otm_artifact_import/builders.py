@@ -6,6 +6,8 @@ Não contém parsing de artefactos — apenas consistência de fronteiras e text
 
 from __future__ import annotations
 
+import hashlib
+import json
 import re
 from typing import Any, Literal
 
@@ -31,6 +33,7 @@ SourceKind = Literal["openapi", "terraform", "kubernetes", "helm"]
 #: por uma constante. Se divergirem, o schema é a autoridade e este `slug_id` passa a reescrever
 #: ids que o schema aceitava — o teste de round-trip apanha isso.
 _ALREADY_VALID_ID = re.compile(r"^[a-zA-Z0-9_][a-zA-Z0-9_.-]*$")
+_MAX_ID_LENGTH = 56
 
 
 def slug_id(text: str, *, prefix: str = "c") -> str:
@@ -49,13 +52,23 @@ def slug_id(text: str, *, prefix: str = "c") -> str:
     título de OpenAPI que já sejam ids válidos passam a sobreviver tal como o autor os escreveu.
     Texto livre que **não** é um id continua a ser slugificado exatamente como antes.
     """
-    if _ALREADY_VALID_ID.match(text) and len(text) <= 56:
+    if _ALREADY_VALID_ID.match(text) and len(text) <= _MAX_ID_LENGTH:
         return text
     s = re.sub(r"[^a-zA-Z0-9_.-]+", "_", text.strip().lower())
     s = s.strip("._-") or "x"
     if not re.match(r"^\w", s, re.ASCII):
         s = f"{prefix}_{s}"  # pragma: no cover - defensive: sanitized slug always starts with a word char
-    return s[:56]
+    return s[:_MAX_ID_LENGTH]
+
+
+def stable_slug_id(value: str, *identity: str) -> str:
+    """Keep a readable ID and retain the full identity if normalization changes it."""
+    readable = slug_id(value)
+    if readable == value:
+        return readable
+    digest = hashlib.sha256(json.dumps(identity).encode()).hexdigest()[:16]
+    suffix = f"___{digest}"
+    return f"{readable[: _MAX_ID_LENGTH - len(suffix)].rstrip('_')}{suffix}"
 
 
 def _dedup_by_id(items: list[Any], *, kind: str, notes: list[str]) -> list[Any]:
