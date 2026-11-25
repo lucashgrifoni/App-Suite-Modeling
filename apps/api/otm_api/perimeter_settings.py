@@ -123,17 +123,15 @@ def describe_weak_api_key_consequence(api_key: ApiKeyPerimeter) -> str | None:
     ``None`` quando não há nada a dizer: perímetro desligado, segredo em branco (esse caso já
     tem a sua linha, ``api_key=misconfigured``), ou segredo com comprimento suficiente.
 
-    O valor **nunca** aparece na mensagem: esta linha vai para o stdout do processo, que é
-    recolhido, e o segredo não pode ir com ela.
+    A mensagem é igual para todas as chaves abaixo do mínimo. O stdout do processo pode
+    ser recolhido, por isso o aviso omite o valor e o comprimento exato da chave.
     """
     if not api_key.enforced or api_key.secret is None:
         return None
     if len(api_key.secret) >= _WEAK_API_KEY_LENGTH:
         return None
     return (
-        f"api_key_weak OTM_API_KEY is {len(api_key.secret)} characters long, below the "
-        f"{_WEAK_API_KEY_LENGTH} this deployment asks for. The perimeter is ON and the startup line "
-        "reads api_key=enforced either way, so nothing else distinguishes this from a strong secret. "
+        f"api_key_weak OTM_API_KEY is shorter than the recommended {_WEAK_API_KEY_LENGTH} characters. "
         'Replace it with python -c "import secrets; print(secrets.token_urlsafe(32))" '
         "(docs/features/API.md)."
     )
