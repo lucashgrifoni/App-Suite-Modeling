@@ -63,11 +63,6 @@ _SWITCH_LIKE_API_KEYS = frozenset(
 #: `has_weak_api_key`). 16 carateres de uma fonte aleatória é o mínimo que
 #: `token_urlsafe` produz de forma confortável e o valor que a documentação passa a pedir.
 _WEAK_API_KEY_LENGTH = 16
-WEAK_API_KEY_WARNING = (
-    f"api_key_weak OTM_API_KEY is shorter than the recommended {_WEAK_API_KEY_LENGTH} characters. "
-    'Replace it with python -c "import secrets; print(secrets.token_urlsafe(32))" '
-    "(docs/features/API.md)."
-)
 
 
 def _switch_like_api_key_error(value: str) -> ApiKeyConfigError:

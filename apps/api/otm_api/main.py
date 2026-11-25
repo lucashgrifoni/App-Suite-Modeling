@@ -30,7 +30,6 @@ from otm_api.observability import (
 )
 from otm_api.openapi_security import api_key_header, bearer_token
 from otm_api.perimeter_settings import (
-    WEAK_API_KEY_WARNING,
     describe_effective_perimeter,
     describe_shared_bucket_consequence,
     has_weak_api_key,
@@ -116,7 +115,12 @@ if _shared_bucket_line:
 # um interruptor, recusado em `resolve_api_key_perimeter`), mas não pode ficar indistinguível
 # de um forte na única evidência que o operador tem.
 if has_weak_api_key(_api_key):
-    LOG.warning(WEAK_API_KEY_WARNING, extra={"event_name": "api_key_weak"})
+    LOG.warning(
+        "api_key_weak OTM_API_KEY is shorter than the recommended minimum. "
+        'Replace it with python -c "import secrets; print(secrets.token_urlsafe(32))" '
+        "(docs/features/API.md).",
+        extra={"event_name": "api_key_weak"},
+    )
 
 # Resolvido no arranque para que uma gralha em `OTM_MAX_DOCUMENT_ENTITIES` aborte o deploy em
 # vez de aparecer como um 500 no primeiro pedido com documento — e anunciado quando está
