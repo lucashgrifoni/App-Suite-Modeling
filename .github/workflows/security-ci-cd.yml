@@ -48,7 +48,7 @@
 # Harden-Runner egress — CURRENT STATE: audit, in all 24 invocations across the five
 # workflows. Audit mode OBSERVES egress; it blocks nothing. Say that plainly rather than let
 # the presence of the action read as enforcement: every job here runs third-party install
-# scripts (`npm ci`, `pip install`, `npm install -g snyk`, `python -m build`), and in audit
+# scripts (`npm ci`, `pip install`, `python -m build`), and in audit
 # mode any of them can reach any host.
 #   - The burn-in this staged rollout was waiting for has elapsed. What is missing is the
 #     evidence, not the decision: the `allowed-endpoints` list has to come from the
@@ -318,7 +318,7 @@ jobs:
       - name: Install Snyk CLI
         # Snyk needs a token + repo secrets, which Dependabot runs do not get.
         if: ${{ needs.preflight.outputs.is_dependabot == 'false' && needs.preflight.outputs.snyk_enabled == 'true' }}
-        run: npm install -g snyk
+        run: bash scripts/install-snyk-cli.sh
 
       - name: Report that Snyk cannot run without a token
         # A pull request from a fork gets no secrets, so SNYK_TOKEN is empty, the auth step
@@ -464,7 +464,7 @@ jobs:
 
       - name: Install Snyk CLI
         if: ${{ needs.preflight.outputs.is_dependabot == 'false' && needs.preflight.outputs.snyk_enabled == 'true' }}
-        run: npm install -g snyk
+        run: bash scripts/install-snyk-cli.sh
 
       - name: Report that Snyk cannot run without a token
         # A pull request from a fork gets no secrets, so SNYK_TOKEN is empty, the auth step

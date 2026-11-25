@@ -112,6 +112,39 @@ def _action_step(name: str) -> dict:
     raise AssertionError(f"action.yml has no step named '{name}'")
 
 
+def test_snyk_jobs_share_the_verified_cli_installer() -> None:
+    for job_id in ("sast-snyk-code", "sca-snyk"):
+        install = _step(SECURITY_WF, job_id, "Install Snyk CLI")
+        assert install["run"] == "bash scripts/install-snyk-cli.sh"
+
+
+def test_snyk_installer_rejects_a_mismatched_download(tmp_path: pathlib.Path) -> None:
+    path_file = tmp_path / "github-path"
+    path_file.write_text("", encoding="utf-8")
+    installer = (REPO_ROOT / "scripts" / "install-snyk-cli.sh").as_posix()
+    result = _run_bash(
+        """
+        curl() {
+          while [ "$#" -gt 1 ]; do
+            if [ "$1" = "--output" ]; then
+              printf 'checksum test fixture' > "$2"
+              return
+            fi
+            shift
+          done
+          return 2
+        }
+        export -f curl
+        bash "$INSTALLER"
+        """,
+        {"INSTALLER": installer, "RUNNER_TEMP": tmp_path.as_posix(), "GITHUB_PATH": path_file.as_posix()},
+        tmp_path,
+    )
+    assert result.returncode == 1, result.stderr
+    assert "FAILED" in result.stdout, result.stdout
+    assert path_file.read_text(encoding="utf-8") == ""
+
+
 def _run_bash(script: str, env: dict[str, str], tmp_path: pathlib.Path) -> subprocess.CompletedProcess[str]:
     assert BASH is not None, "these pipeline tests need a POSIX shell; install git-bash or run on Linux"
     full_env = dict(os.environ)
