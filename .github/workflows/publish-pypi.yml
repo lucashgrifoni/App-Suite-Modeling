@@ -92,8 +92,8 @@ jobs:
       - name: Build
         run: |
           set -euo pipefail
-          python -m pip install --quiet build twine
-          python -m build
+          python -m pip install --require-hashes --only-binary :all: -r requirements-release.txt
+          python -m build --no-isolation
           ls -la dist/
 
       - name: Verify metadata renders on PyPI
@@ -116,10 +116,7 @@ jobs:
         # sempre recusado, com uma mensagem a culpar o `pyproject.toml`. Um shell inline não se
         # testa; um script testa-se — ver `tests/test_p5_release_version_matches_tag.py`, que fixa
         # tanto a aceitação das grafias equivalentes como a recusa de uma divergência genuína.
-        run: |
-          set -euo pipefail
-          python -m pip install --quiet packaging
-          python scripts/check_release_version_matches_tag.py
+        run: python scripts/check_release_version_matches_tag.py
 
       - name: Smoke-test the wheel in a clean environment
         # Proves the published artifact is actually usable: the console script runs and the
@@ -128,7 +125,9 @@ jobs:
         run: |
           set -euo pipefail
           python -m venv /tmp/smoke
-          /tmp/smoke/bin/python -m pip install --quiet dist/*.whl
+          /tmp/smoke/bin/python -m pip install --require-hashes --only-binary :all: -r requirements-cli.txt
+          /tmp/smoke/bin/python -m pip install --no-index --no-deps dist/*.whl
+          /tmp/smoke/bin/python -m pip check
           /tmp/smoke/bin/otm --help > /dev/null
           /tmp/smoke/bin/otm validate examples/minimal.otm.yaml
           /tmp/smoke/bin/otm packs
