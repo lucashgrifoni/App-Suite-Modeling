@@ -1,3 +1,4 @@
+import * as fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import type { OtmDocument } from "../types/document";
 import {
@@ -318,5 +319,21 @@ describe("removeDataFlows", () => {
   it("is a no-op for an empty id list", () => {
     const doc = docWithReferences();
     expect(removeDataFlows(doc, [])).toBe(doc);
+  });
+});
+
+describe("entity ID properties", () => {
+  it("returns an empty edit or a valid ID and stabilizes after one pass", () => {
+    fc.assert(
+      fc.property(fc.string({ unit: "grapheme", maxLength: 128 }), (raw) => {
+        const id = sanitizeEntityIdInput(raw);
+        expect(id === "" || OTM_ENTITY_ID_REGEX.test(id)).toBe(true);
+        expect(sanitizeEntityIdInput(id)).toBe(id);
+      }),
+      {
+        numRuns: 500,
+        examples: [["..-Portal da API"], ["José 🚀"], ["..."], [""]],
+      },
+    );
   });
 });

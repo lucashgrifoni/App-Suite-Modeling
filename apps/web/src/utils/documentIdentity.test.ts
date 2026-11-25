@@ -1,3 +1,4 @@
+import * as fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import type { OtmDocument } from "../types/document";
 import { hashDocument } from "./documentIdentity";
@@ -97,5 +98,29 @@ describe("hashDocument", () => {
     const plain = hashDocument(minimalDoc({ metadata: { title: "Pagamentos ", tags: [] } }));
     expect(grin).toMatch(/^[0-9a-f]{8}$/);
     expect(new Set([grin, beam, plain]).size).toBe(3);
+  });
+});
+
+describe("document identity properties", () => {
+  it("ignores metadata and component key order after a JSON round trip", () => {
+    const text = fc.string({ unit: "grapheme", maxLength: 40 });
+    fc.assert(
+      fc.property(text, text, fc.array(text, { maxLength: 4 }), (title, name, tags) => {
+        const before = minimalDoc({
+          metadata: { title, tags },
+          components: [{ id: "gateway", name, kind: "process" }],
+        });
+        const after: OtmDocument = JSON.parse(
+          JSON.stringify({
+            ...before,
+            metadata: { tags, title },
+            components: [{ kind: "process", name, id: "gateway" }],
+          }),
+        );
+
+        expect(hashDocument(after)).toBe(hashDocument(before));
+      }),
+      { numRuns: 300 },
+    );
   });
 });
