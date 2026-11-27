@@ -29,6 +29,7 @@ PUBLISH_WF = WORKFLOWS / "publish-pypi.yml"
 ACTION_YML = REPO_ROOT / "action.yml"
 PRE_COMMIT_CONFIG = REPO_ROOT / ".pre-commit-config.yaml"
 PRE_COMMIT_HOOKS = REPO_ROOT / ".pre-commit-hooks.yaml"
+SNYK_POLICY = REPO_ROOT / ".snyk"
 README = REPO_ROOT / "README.md"
 EVIDENCE_DOC = REPO_ROOT / "docs" / "CI_AND_SECURITY_EVIDENCE.md"
 
@@ -74,6 +75,13 @@ BASH = _resolve_bash()
 
 def _load(path: pathlib.Path) -> dict:
     return yaml.safe_load(path.read_text(encoding="utf-8"))
+
+
+def test_snyk_uses_the_python_version_that_builds_the_lockfiles() -> None:
+    assert SNYK_POLICY.is_file(), "Snyk otherwise uses the organization's Python version"
+    snyk_python = _load(SNYK_POLICY)["language-settings"]["python"]
+    assert snyk_python == _load(PROJECT_WF)["env"]["PYTHON_VERSION"]
+    assert snyk_python == _load(PUBLISH_WF)["env"]["PYTHON_VERSION"]
 
 
 def test_security_event_write_is_granted_to_upload_jobs_only() -> None:
