@@ -1,0 +1,4 @@
+# Match the Python version used to generate the root lock files and run CI.
+version: v1.25.0
+language-settings:
+  python: '3.12'
