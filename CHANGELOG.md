@@ -8,7 +8,7 @@ This project follows **Keep a Changelog** and **Semantic Versioning**.
 
 ## [Unreleased]
 
-## [7.10.1] — 2026-11-25
+## [7.10.1] — 2026-11-27
 
 ### Fixed
 
@@ -24,6 +24,7 @@ This project follows **Keep a Changelog** and **Semantic Versioning**.
 ### Security
 
 - Verify Python dependency hashes in CI, the API image, and the package build. Verify the Snyk CLI binary before running scans.
+- Align the Snyk GitHub integration with Python 3.12 for the repository lockfiles.
 - Narrow workflow permissions and keep API credential values and lengths out of the startup warning.
 
 ## [7.10.0] — 2026-11-25
