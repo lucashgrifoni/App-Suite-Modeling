@@ -2,7 +2,7 @@
 
 Ponto de entrada único para navegar o `/docs`. O mapa editorial (público vs interno) está em **[`DOCUMENTATION_STRUCTURE.md`](DOCUMENTATION_STRUCTURE.md)**.
 
-**Versão de produto:** `7.10.0` — fonte canónica: [`pyproject.toml`](../pyproject.toml); histórico: [`CHANGELOG.md`](../CHANGELOG.md).
+**Versão de produto:** `7.10.1` — fonte canónica: [`pyproject.toml`](../pyproject.toml); histórico: [`CHANGELOG.md`](../CHANGELOG.md).
 
 ---
 
